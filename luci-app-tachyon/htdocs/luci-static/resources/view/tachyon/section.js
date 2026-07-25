@@ -9408,43 +9408,69 @@ function createTracerSearchWidget(sectionRef) {
 
     clearEl.style.display = "inline-block";
     resultsEl.style.display = "block";
-    resultsEl.innerHTML = `<div style="color: var(--text-color-medium, #666); display: flex; align-items: center; gap: 0.5rem; font-size: 90%;">
-      <span class="pdk-spinner" style="border: 2px solid var(--border-color, #ccc); border-top: 2px solid var(--primary-color, #4a90d9); border-radius: 50%; width: 12px; height: 12px; display: inline-block; animation: spin 1s linear infinite;"></span>
-      <span>${_("Tracing routing rules...")}</span>
-    </div>`;
+    resultsEl.innerHTML = "";
+    resultsEl.appendChild(
+      E("div", { style: "color: var(--text-color-medium, #666); display: flex; align-items: center; gap: 0.5rem; font-size: 90%;" }, [
+        E("span", {
+          class: "pdk-spinner",
+          style: "border: 2px solid var(--border-color, #ccc); border-top: 2px solid var(--primary-color, #4a90d9); border-radius: 50%; width: 12px; height: 12px; display: inline-block; animation: spin 1s linear infinite;"
+        }),
+        E("span", {}, _("Tracing routing rules..."))
+      ])
+    );
 
     try {
       const result = await performTrace(query);
+      resultsEl.innerHTML = "";
       if (result && result.matched) {
         let actionBadgeColor = ACTION_COLORS[result.action] || "#7f8c8d";
-        let actionLabel = result.action.toUpperCase();
+        let actionLabel = String(result.action || "").toUpperCase();
 
-        resultsEl.innerHTML = `
-          <div style="padding: 0.4rem 0.6rem; border-radius: 4px; background: var(--background-color-low, #f9f9f9); border-left: 3px solid ${actionBadgeColor}; font-size: 90%; line-height: 1.4;">
-            <div style="display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;">
-              <strong>${_("Match Found")}:</strong>
-              <span>${result.label} <span style="background: ${actionBadgeColor}; color: #fff; padding: 1px 4px; border-radius: 3px; font-weight: bold; font-size: 80%; margin-left: 0.1rem;">${actionLabel}</span></span>
-              <span style="color: var(--text-color-medium, #666);">|</span>
-              <span><strong>${_("Rule")}:</strong> <code>${result.ruleType}</code> (${result.pattern})</span>
-              <span style="color: var(--text-color-medium, #666);">|</span>
-              <span><strong>${_("Priority")}:</strong> ${result.priority}/${result.totalSections}</span>
-            </div>
-          </div>
-        `;
+        const matchDiv = E("div", {
+          style: `padding: 0.4rem 0.6rem; border-radius: 4px; background: var(--background-color-low, #f9f9f9); border-left: 3px solid ${actionBadgeColor}; font-size: 90%; line-height: 1.4;`
+        }, [
+          E("div", { style: "display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;" }, [
+            E("strong", {}, _("Match Found") + ":"),
+            E("span", {}, [
+              result.label || "",
+              " ",
+              E("span", {
+                style: `background: ${actionBadgeColor}; color: #fff; padding: 1px 4px; border-radius: 3px; font-weight: bold; font-size: 80%; margin-left: 0.1rem;`
+              }, actionLabel)
+            ]),
+            E("span", { style: "color: var(--text-color-medium, #666);" }, "|"),
+            E("span", {}, [
+              E("strong", {}, _("Rule") + ": "),
+              E("code", {}, result.ruleType || ""),
+              ` (${result.pattern || ""})`
+            ]),
+            E("span", { style: "color: var(--text-color-medium, #666);" }, "|"),
+            E("span", {}, [
+              E("strong", {}, _("Priority") + ": "),
+              `${result.priority}/${result.totalSections}`
+            ])
+          ])
+        ]);
+        resultsEl.appendChild(matchDiv);
       } else {
-        resultsEl.innerHTML = `
-          <div style="padding: 0.4rem 0.6rem; border-radius: 4px; background: var(--background-color-low, #f9f9f9); border-left: 3px solid var(--warning-color, #f1c40f); font-size: 90%; color: var(--text-color-high, #333);">
-            <strong>${_("No Custom Rules Matched")}:</strong> ${_("Traffic will go through the default route (Direct/Default).")}
-          </div>
-        `;
+        const noMatchDiv = E("div", {
+          style: "padding: 0.4rem 0.6rem; border-radius: 4px; background: var(--background-color-low, #f9f9f9); border-left: 3px solid var(--warning-color, #f1c40f); font-size: 90%; color: var(--text-color-high, #333);"
+        }, [
+          E("strong", {}, _("No Custom Rules Matched") + ": "),
+          _("Traffic will go through the default route (Direct/Default).")
+        ]);
+        resultsEl.appendChild(noMatchDiv);
       }
     } catch (e) {
       console.error(e);
-      resultsEl.innerHTML = `
-        <div style="padding: 0.6rem 0.8rem; border-radius: 4px; background: var(--background-color-low, #f9f9f9); border-left: 3px solid var(--error-color, #e74c3c); color: var(--error-color, #e74c3c); font-size: 90%;">
-          <strong>${_("Error running trace:")}</strong> ${e.message || e}
-        </div>
-      `;
+      resultsEl.innerHTML = "";
+      const errorDiv = E("div", {
+        style: "padding: 0.6rem 0.8rem; border-radius: 4px; background: var(--background-color-low, #f9f9f9); border-left: 3px solid var(--error-color, #e74c3c); color: var(--error-color, #e74c3c); font-size: 90%;"
+      }, [
+        E("strong", {}, _("Error running trace:")),
+        " " + (e?.message || String(e))
+      ]);
+      resultsEl.appendChild(errorDiv);
     }
   }
 
