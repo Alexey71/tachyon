@@ -5,6 +5,14 @@ let uci_core = require("core.uci");
 let connections = require("config.connections");
 let subscription_share_link = require("subscription.share_link");
 
+function core_url_module_or_null() {
+    try {
+        return require("core.url");
+    } catch (e) {
+        return null;
+    }
+}
+
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const TMP_SING_BOX_FOLDER = getenv("TMP_SING_BOX_FOLDER") || "/tmp/sing-box";
@@ -1524,63 +1532,68 @@ function download_subscription(url, filepath, http_proxy_address, headers_filepa
     if (headers_tmpfile != "")
         unlink_path(headers_tmpfile);
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        let args = [
-            "curl", "-fL", "-sS",
-            "--connect-timeout", timeout,
-            "--speed-time", timeout,
-            "--speed-limit", "1",
-            "--max-redirs", "5",
-            "--max-filesize", "15728640"
-        ];
+    let core_url_mod = core_url_module_or_null();
+    let candidates = core_url_mod && type(core_url_mod.download_candidates) == "function" ? core_url_mod.download_candidates(url) : [ url ];
 
-        if (http_proxy_address != "") {
-            push(args, "-x");
-            push(args, "http://" + http_proxy_address);
-        }
-        if (headers_tmpfile != "") {
-            push(args, "-D");
-            push(args, headers_tmpfile);
-        }
+    for (let target_url in candidates) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            let args = [
+                "curl", "-fL", "-sS",
+                "--connect-timeout", timeout,
+                "--speed-time", timeout,
+                "--speed-limit", "1",
+                "--max-redirs", "5",
+                "--max-filesize", "15728640"
+            ];
 
-        push(args, "-o");
-        push(args, tmpfile);
-        let request_headers = [
-            "User-Agent: " + get_subscription_user_agent(effective_user_agent),
-            "X-HWID: " + get_subscription_hwid(effective_hwid)
-        ];
-        for (let header in device_request_headers(device_headers))
-            push(request_headers, header);
-        for (let header in request_headers) {
-            push(args, "-H");
-            push(args, header);
-        }
-        push(args, url);
-
-        let status = command_status_from_args(args);
-        if (status == 0 && file_nonempty(tmpfile)) {
-            move_file(tmpfile, filepath);
-            if (headers_filepath != "") {
-                if (file_nonempty(headers_tmpfile))
-                    move_file(headers_tmpfile, headers_filepath);
-                else {
-                    unlink_path(headers_filepath);
-                    unlink_path(headers_tmpfile);
-                }
+            if (http_proxy_address != "") {
+                push(args, "-x");
+                push(args, "http://" + http_proxy_address);
             }
-            return 0;
+            if (headers_tmpfile != "") {
+                push(args, "-D");
+                push(args, headers_tmpfile);
+            }
+
+            push(args, "-o");
+            push(args, tmpfile);
+            let request_headers = [
+                "User-Agent: " + get_subscription_user_agent(effective_user_agent),
+                "X-HWID: " + get_subscription_hwid(effective_hwid)
+            ];
+            for (let header in device_request_headers(device_headers))
+                push(request_headers, header);
+            for (let header in request_headers) {
+                push(args, "-H");
+                push(args, header);
+            }
+            push(args, target_url);
+
+            let status = command_status_from_args(args);
+            if (status == 0 && file_nonempty(tmpfile)) {
+                move_file(tmpfile, filepath);
+                if (headers_filepath != "") {
+                    if (file_nonempty(headers_tmpfile))
+                        move_file(headers_tmpfile, headers_filepath);
+                    else {
+                        unlink_path(headers_filepath);
+                        unlink_path(headers_tmpfile);
+                    }
+                }
+                return 0;
+            }
+
+            unlink_path(tmpfile);
+            unlink_path(headers_tmpfile);
+
+            if (status == 5 || status == 6) {
+                resolution_failed = true;
+                break;
+            }
+
+            if (attempt < retries)
+                system("sleep " + int(wait_seconds));
         }
-
-        unlink_path(tmpfile);
-        unlink_path(headers_tmpfile);
-
-        if (status == 5 || status == 6) {
-            resolution_failed = true;
-            break;
-        }
-
-        if (attempt < retries)
-            system("sleep " + int(wait_seconds));
     }
 
     unlink_path(tmpfile);

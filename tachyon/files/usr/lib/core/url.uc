@@ -180,6 +180,32 @@ function query_params(value) {
     return result;
 }
 
+function download_candidates(value) {
+    value = as_string(value);
+    if (value == "")
+        return [];
+
+    let candidates = [ value ];
+    let is_github = index(value, "github.com") >= 0 ||
+                    index(value, "raw.githubusercontent.com") >= 0 ||
+                    index(value, "githubusercontent.com") >= 0;
+    let is_http = substr(value, 0, 7) == "http://" || substr(value, 0, 8) == "https://";
+
+    if (is_github || is_http) {
+        let mirrors = [
+            "https://ghproxy.net/",
+            "https://mirror.ghproxy.com/",
+            "https://gh-proxy.com/"
+        ];
+        for (let prefix in mirrors) {
+            if (index(value, prefix) != 0)
+                push(candidates, prefix + value);
+        }
+    }
+
+    return candidates;
+}
+
 return {
     decode,
     scheme,
@@ -190,5 +216,6 @@ return {
     port,
     userinfo,
     path,
-    query_params
+    query_params,
+    download_candidates
 };

@@ -2956,3 +2956,9 @@ msgstr "Обновлено/дубликатов: "
 
 msgid "Successfully imported %d DNS record(s)"
 msgstr "Успешно импортировано %d DNS-записей"
+
+msgid "Load Current Records"
+msgstr "Загрузить текущие записи"
+
+msgid "Loaded %d current record(s)"
+msgstr "Загружено %d текущих записей"

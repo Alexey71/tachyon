@@ -501,6 +501,36 @@ function showImportHostsModal(section_id, optionRef) {
     _("Choose Hosts File..."),
   );
 
+  const loadCurrentBtn = E(
+    "button",
+    {
+      class: "cbi-button cbi-button-action",
+      type: "button",
+      click: function () {
+        let existingEntries = [];
+        const uiEl = optionRef ? optionRef.getUIElement(section_id) : null;
+        if (uiEl && typeof uiEl.getValue === "function") {
+          const v = uiEl.getValue();
+          if (Array.isArray(v)) existingEntries = v;
+          else if (typeof v === "string" && v)
+            existingEntries = v.split("\n").map(l => l.trim()).filter(l => l);
+        }
+        if (!existingEntries.length) {
+          const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+          existingEntries = Array.isArray(uciVal)
+            ? uciVal
+            : uciVal
+              ? [uciVal]
+              : [];
+        }
+        textArea.value = existingEntries.join("\n");
+        fileStatus.textContent = _("Loaded %d current record(s)").format(existingEntries.length);
+        updatePreview();
+      },
+    },
+    _("Load Current Records"),
+  );
+
   const fileStatus = E(
     "span",
     {
@@ -740,9 +770,10 @@ function showImportHostsModal(section_id, optionRef) {
   });
 
   const modalBody = E("div", { class: "cbi-map" }, [
-    E("div", { style: "margin-bottom:12px;" }, [
+    E("div", { style: "margin-bottom:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;" }, [
       fileInput,
       fileSelectBtn,
+      loadCurrentBtn,
       fileStatus,
     ]),
     E(

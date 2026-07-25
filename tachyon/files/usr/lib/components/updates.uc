@@ -3,6 +3,14 @@
 let fs = require("fs");
 let uci_core = require("core.uci");
 let connections = require("config.connections");
+
+function core_url_module_or_null() {
+    try {
+        return require("core.url");
+    } catch (e) {
+        return null;
+    }
+}
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const BIN_PATH = getenv("TACHYON_BIN") || "/usr/bin/tachyon";
@@ -1936,19 +1944,30 @@ function service_proxy_address(settings, purpose) {
 }
 
 function download_to_file(url, filepath, proxy_address) {
-    let attempt = 1;
-    while (attempt <= 3) {
-        let command = command_from_args([ "wget", "-O", filepath, url ]);
-        if (as_string(proxy_address) != "")
-            command = "http_proxy=" + shell_quote("http://" + as_string(proxy_address)) +
-                " https_proxy=" + shell_quote("http://" + as_string(proxy_address)) + " " + command;
+    let core_url_mod = core_url_module_or_null();
+    let candidates = core_url_mod && type(core_url_mod.download_candidates) == "function" ? core_url_mod.download_candidates(url) : [ url ];
 
-        if (command_success(command))
-            return true;
+    for (let candidate in candidates) {
+        let attempt = 1;
+        while (attempt <= 2) {
+            let command = command_from_args([ "wget", "-q", "-T", "10", "-t", "2", "-O", filepath, candidate ]);
+            if (as_string(proxy_address) != "")
+                command = "http_proxy=" + shell_quote("http://" + as_string(proxy_address)) +
+                    " https_proxy=" + shell_quote("http://" + as_string(proxy_address)) + " " + command;
 
-        log_message("Attempt " + attempt + "/3 to download " + as_string(url) + " failed", "warn");
-        command_success_from_args([ "sleep", "2" ]);
-        attempt++;
+            if (command_success(command) && file_nonempty(filepath)) {
+                if (candidate != url)
+                    log_message("Successfully downloaded " + as_string(url) + " via mirror " + candidate, "info");
+                return true;
+            }
+
+            attempt++;
+        }
+    }
+
+    if (file_nonempty(filepath)) {
+        log_message("Failed to download " + as_string(url) + " (tried direct and ghproxy mirrors); keeping existing cached file on disk", "warn");
+        return true;
     }
 
     return false;
