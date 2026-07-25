@@ -2908,3 +2908,51 @@ msgstr "Сгенерировать случайный 16-символьный ш
 
 msgid "Leave empty to omit this header"
 msgstr "Оставьте пустым, чтобы опустить этот заголовок"
+
+msgid "Import Hosts File"
+msgstr "Импортировать hosts-файл"
+
+msgid "Choose Hosts File..."
+msgstr "Выбрать hosts-файл..."
+
+msgid "No file selected"
+msgstr "Файл не выбран"
+
+msgid "Or paste hosts file content:"
+msgstr "Или вставьте содержимое hosts-файла:"
+
+msgid "Skip loopback & local entries (127.0.0.1, ::1, 0.0.0.0, localhost)"
+msgstr "Пропускать локальные и loopback-записи (127.0.0.1, ::1, 0.0.0.0, localhost)"
+
+msgid "Overwrite existing records (if unchecked, merge with existing records)"
+msgstr "Перезаписать существующие записи (если сброшено — объединить)"
+
+msgid "Paste content or upload a file to preview imported DNS records."
+msgstr "Вставьте содержимое или загрузите файл для предварительного просмотра."
+
+msgid "Import"
+msgstr "Импортировать"
+
+msgid "Import (%d records)"
+msgstr "Импортировать (%d записей)"
+
+msgid "Total lines: "
+msgstr "Всего строк: "
+
+msgid "Parsed records: "
+msgstr "Распознано записей: "
+
+msgid "Skipped loopback: "
+msgstr "Пропущено loopback: "
+
+msgid "Skipped comments/invalid: "
+msgstr "Пропущено комментариев/некорректных: "
+
+msgid "New domains: "
+msgstr "Новых доменов: "
+
+msgid "Updated/duplicates: "
+msgstr "Обновлено/дубликатов: "
+
+msgid "Successfully imported %d DNS record(s)"
+msgstr "Успешно импортировано %d DNS-записей"

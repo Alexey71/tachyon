@@ -3,6 +3,7 @@
 "require uci";
 "require baseclass";
 "require fs";
+"require ui";
 "require tools.widgets as widgets";
 "require view.tachyon.main as main";
 
@@ -397,6 +398,413 @@ function createSmartDetectSectionsWidget(section_id) {
   return wrapper;
 }
 
+function parseHostsFile(text, options) {
+  options = options || {};
+  const skipLoopback = options.skipLoopback !== false;
+  const lines = (text || "").split(/\r?\n/);
+  const entries = [];
+  let skippedComments = 0;
+  let skippedLoopback = 0;
+  let skippedInvalid = 0;
+
+  const loopbackIPs = new Set([
+    "127.0.0.1",
+    "0.0.0.0",
+    "::1",
+    "0:0:0:0:0:0:0:1",
+    "0000:0000:0000:0000:0000:0000:0000:0001",
+  ]);
+  const loopbackHosts = new Set([
+    "localhost",
+    "localhost.localdomain",
+    "local",
+    "broadcasthost",
+  ]);
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) continue;
+
+    const hashIdx = line.indexOf("#");
+    if (hashIdx !== -1) {
+      if (hashIdx === 0) {
+        skippedComments++;
+        continue;
+      }
+      line = line.substring(0, hashIdx).trim();
+      if (!line) {
+        skippedComments++;
+        continue;
+      }
+    }
+
+    const parts = line.split(/\s+/);
+    if (parts.length < 2) {
+      skippedInvalid++;
+      continue;
+    }
+
+    const ip = parts[0].trim();
+    const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+    const isIPv6 = ip.indexOf(":") !== -1 && /^[0-9a-fA-F:]+$/.test(ip);
+    if (!isIPv4 && !isIPv6) {
+      skippedInvalid++;
+      continue;
+    }
+
+    const isIpLoopback = loopbackIPs.has(ip);
+
+    for (let j = 1; j < parts.length; j++) {
+      const domain = parts[j].toLowerCase().trim();
+      if (!domain) continue;
+
+      const isHostLoopback = loopbackHosts.has(domain);
+      if (skipLoopback && (isIpLoopback || isHostLoopback)) {
+        skippedLoopback++;
+        continue;
+      }
+
+      if (domain.length > 253 || /^[^a-z0-9_.-]/i.test(domain)) {
+        skippedInvalid++;
+        continue;
+      }
+
+      entries.push({ domain: domain, ip: ip });
+    }
+  }
+
+  return {
+    entries: entries,
+    skippedComments: skippedComments,
+    skippedLoopback: skippedLoopback,
+    skippedInvalid: skippedInvalid,
+    totalLines: lines.length,
+  };
+}
+
+function showImportHostsModal(section_id, optionRef) {
+  const fileInput = E("input", {
+    type: "file",
+    accept: ".txt,.hosts,hosts,*",
+    style: "display:none",
+  });
+
+  const fileSelectBtn = E(
+    "button",
+    {
+      class: "cbi-button cbi-button-neutral",
+      type: "button",
+      click: function () {
+        fileInput.click();
+      },
+    },
+    _("Choose Hosts File..."),
+  );
+
+  const fileStatus = E(
+    "span",
+    {
+      style:
+        "margin-left:10px;font-size:0.85rem;color:var(--text-color-medium,#888);",
+    },
+    _("No file selected"),
+  );
+
+  const textArea = E("textarea", {
+    class: "cbi-input-textarea",
+    rows: 8,
+    style:
+      "width:100%;font-family:monospace;font-size:0.85rem;margin-top:8px;resize:vertical;",
+    placeholder:
+      "127.0.0.1 localhost\n192.168.1.100 server.local\n10.0.0.5 example.com alias.com",
+  });
+
+  const skipLoopbackCb = E("input", {
+    type: "checkbox",
+    id: "hosts-skip-loopback",
+    checked: true,
+    style: "margin-right:6px;vertical-align:middle;",
+  });
+
+  const overwriteCb = E("input", {
+    type: "checkbox",
+    id: "hosts-overwrite",
+    checked: false,
+    style: "margin-right:6px;vertical-align:middle;",
+  });
+
+  const previewBox = E(
+    "div",
+    {
+      style:
+        "margin-top:12px;padding:10px 14px;background:var(--background-color-secondary,#f8f9fa);border:1px solid var(--border-color-medium,#e0e0e0);border-radius:4px;font-size:0.85rem;line-height:1.5;",
+    },
+    [
+      E(
+        "em",
+        {},
+        _("Paste content or upload a file to preview imported DNS records."),
+      ),
+    ],
+  );
+
+  const importBtn = E(
+    "button",
+    {
+      class: "cbi-button cbi-button-action",
+      type: "button",
+      disabled: true,
+    },
+    _("Import"),
+  );
+
+  let currentParsedResult = null;
+
+  function updatePreview() {
+    const text = textArea.value;
+    const skipLoopback = skipLoopbackCb.checked;
+    const overwrite = overwriteCb.checked;
+
+    if (!text.trim()) {
+      previewBox.innerHTML = "";
+      previewBox.appendChild(
+        E(
+          "em",
+          {},
+          _("Paste content or upload a file to preview imported DNS records."),
+        ),
+      );
+      importBtn.disabled = true;
+      importBtn.textContent = _("Import");
+      currentParsedResult = null;
+      return;
+    }
+
+    const result = parseHostsFile(text, { skipLoopback: skipLoopback });
+    currentParsedResult = result;
+
+    let existingEntries = [];
+    const uiEl = optionRef ? optionRef.getUIElement(section_id) : null;
+    if (uiEl && typeof uiEl.getValue === "function") {
+      const v = uiEl.getValue();
+      if (Array.isArray(v)) existingEntries = v;
+      else if (typeof v === "string" && v) existingEntries = [v];
+    }
+    if (!existingEntries.length) {
+      const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+      existingEntries = Array.isArray(uciVal)
+        ? uciVal
+        : uciVal
+          ? [uciVal]
+          : [];
+    }
+
+    const domainMap = new Map();
+    if (!overwrite) {
+      for (const entry of existingEntries) {
+        const parts = `${entry}`.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          domainMap.set(parts[0].toLowerCase(), parts[1]);
+        }
+      }
+    }
+
+    let newCount = 0;
+    let updatedCount = 0;
+    for (const item of result.entries) {
+      if (domainMap.has(item.domain.toLowerCase())) {
+        updatedCount++;
+      } else {
+        newCount++;
+      }
+      domainMap.set(item.domain.toLowerCase(), item.ip);
+    }
+
+    previewBox.innerHTML = "";
+    previewBox.appendChild(
+      E(
+        "div",
+        {
+          style:
+            "display:grid;grid-template-columns:1fr 1fr;gap:6px;row-gap:4px;",
+        },
+        [
+          E("div", {}, [
+            E("strong", {}, _("Total lines: ")),
+            `${result.totalLines}`,
+          ]),
+          E("div", {}, [
+            E("strong", {}, _("Parsed records: ")),
+            `${result.entries.length}`,
+          ]),
+          E("div", {}, [
+            E("strong", {}, _("Skipped loopback: ")),
+            `${result.skippedLoopback}`,
+          ]),
+          E("div", {}, [
+            E("strong", {}, _("Skipped comments/invalid: ")),
+            `${result.skippedComments + result.skippedInvalid}`,
+          ]),
+          E("div", {}, [
+            E("strong", {}, _("New domains: ")),
+            `${newCount}`,
+          ]),
+          E("div", {}, [
+            E("strong", {}, _("Updated/duplicates: ")),
+            `${updatedCount}`,
+          ]),
+        ],
+      ),
+    );
+
+    if (result.entries.length > 0) {
+      importBtn.disabled = false;
+      importBtn.textContent = _("Import (%d records)").format(
+        result.entries.length,
+      );
+    } else {
+      importBtn.disabled = true;
+      importBtn.textContent = _("Import");
+    }
+  }
+
+  fileInput.addEventListener("change", function (ev) {
+    const file = ev.target.files[0];
+    if (!file) return;
+    fileStatus.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      textArea.value = e.target.result || "";
+      updatePreview();
+    };
+    reader.readAsText(file);
+  });
+
+  textArea.addEventListener("input", updatePreview);
+  skipLoopbackCb.addEventListener("change", updatePreview);
+  overwriteCb.addEventListener("change", updatePreview);
+
+  importBtn.addEventListener("click", function () {
+    if (!currentParsedResult || !currentParsedResult.entries.length) return;
+
+    const overwrite = overwriteCb.checked;
+    const uiEl = optionRef ? optionRef.getUIElement(section_id) : null;
+    let existingEntries = [];
+    if (uiEl && typeof uiEl.getValue === "function") {
+      const v = uiEl.getValue();
+      if (Array.isArray(v)) existingEntries = v;
+      else if (typeof v === "string" && v) existingEntries = [v];
+    }
+    if (!existingEntries.length) {
+      const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+      existingEntries = Array.isArray(uciVal)
+        ? uciVal
+        : uciVal
+          ? [uciVal]
+          : [];
+    }
+
+    const domainMap = new Map();
+    if (!overwrite) {
+      for (const entry of existingEntries) {
+        const parts = `${entry}`.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          domainMap.set(parts[0].toLowerCase(), parts[1]);
+        }
+      }
+    }
+
+    for (const item of currentParsedResult.entries) {
+      domainMap.set(item.domain.toLowerCase(), item.ip);
+    }
+
+    const finalEntries = [];
+    for (const [domain, ip] of domainMap.entries()) {
+      finalEntries.push(`${domain} ${ip}`);
+    }
+
+    uci.set(UCI_PACKAGE, section_id, "dns_hosts", finalEntries);
+    if (uiEl && typeof uiEl.setValue === "function") {
+      uiEl.setValue(finalEntries);
+    }
+
+    ui.hideModal();
+    ui.addNotification(
+      null,
+      _("Successfully imported %d DNS record(s)").format(finalEntries.length),
+      "info",
+    );
+  });
+
+  const modalBody = E("div", { class: "cbi-map" }, [
+    E("div", { style: "margin-bottom:12px;" }, [
+      fileInput,
+      fileSelectBtn,
+      fileStatus,
+    ]),
+    E(
+      "label",
+      { style: "display:block;margin-bottom:4px;font-weight:bold;" },
+      _("Or paste hosts file content:"),
+    ),
+    textArea,
+    E("div", { style: "margin-top:10px;" }, [
+      E(
+        "label",
+        {
+          style:
+            "display:flex;align-items:center;cursor:pointer;margin-bottom:6px;",
+        },
+        [
+          skipLoopbackCb,
+          E(
+            "span",
+            {},
+            _(
+              "Skip loopback & local entries (127.0.0.1, ::1, 0.0.0.0, localhost)",
+            ),
+          ),
+        ],
+      ),
+      E(
+        "label",
+        { style: "display:flex;align-items:center;cursor:pointer;" },
+        [
+          overwriteCb,
+          E(
+            "span",
+            {},
+            _(
+              "Overwrite existing records (if unchecked, merge with existing records)",
+            ),
+          ),
+        ],
+      ),
+    ]),
+    previewBox,
+  ]);
+
+  ui.showModal(
+    _("Import Hosts File"),
+    [
+      modalBody,
+      E("div", { class: "button-row", style: "margin-top:16px;" }, [
+        importBtn,
+        E(
+          "button",
+          {
+            class: "btn cbi-button cbi-button-neutral",
+            type: "button",
+            click: () => ui.hideModal(),
+          },
+          _("Close"),
+        ),
+      ]),
+    ],
+    "cbi-modal",
+  );
+}
+
 function createSettingsContent(section, capabilities) {
   let o = section.option(
     form.ListValue,
@@ -524,19 +932,40 @@ function createSettingsContent(section, capabilities) {
     return true;
   };
 
-  o = section.option(
+  const dnsHostsOpt = section.option(
     form.DynamicList,
     "dns_hosts",
     _("Custom DNS Records (Hosts)"),
     _("Map domains to specific IP addresses (A/AAAA). Format: <code>example.com 192.168.1.100</code>"),
   );
-  o.validate = function(section_id, value) {
+  dnsHostsOpt.validate = function(section_id, value) {
     if (!value) return true;
     var parts = value.trim().split(/\s+/);
     if (parts.length !== 2) {
       return _("Invalid format. Use: domain ip");
     }
     return true;
+  };
+  const originalRenderDnsHosts = dnsHostsOpt.renderWidget;
+  dnsHostsOpt.renderWidget = function(section_id, option_index, cfgvalue) {
+    const node = originalRenderDnsHosts.call(this, section_id, option_index, cfgvalue);
+    const container = E("div", { class: "cbi-value-field-extra" }, [
+      node,
+      E("div", { style: "margin-top: 8px;" }, [
+        E(
+          "button",
+          {
+            class: "cbi-button cbi-button-action",
+            type: "button",
+            click: ui.createHandlerFn(this, function() {
+              showImportHostsModal(section_id, dnsHostsOpt);
+            }),
+          },
+          _("Import Hosts File"),
+        ),
+      ]),
+    ]);
+    return container;
   };
 
   o = section.option(form.ListValue, "dns_strategy", _("DNS Strategy"));
