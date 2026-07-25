@@ -1160,8 +1160,8 @@ msgstr "Неверный домен"
 msgid "Invalid format. Use an IP address or CIDR subnet"
 msgstr "Неверный формат. Используйте IP-адрес или подсеть CIDR"
 
-msgid "Invalid format. Use: domain ip"
-msgstr ""
+msgid "Invalid line: \"%s\". Use: domain ip"
+msgstr "Неверный формат строки: \"%s\". Используйте: домен ip"
 
 msgid "Invalid HY2 URL: insecure must be 0 or 1"
 msgstr "Неверный URL Hysteria2: параметр insecure должен быть 0 или 1"
@@ -1412,8 +1412,8 @@ msgstr "Основной DNS"
 msgid "Main DNS server. If multiple servers are selected, a timeout switches to a backup."
 msgstr "Основной DNS-сервер. Если выбрать несколько, то при таймауте произойдёт переключение на резервный."
 
-msgid "Map domains to specific IP addresses (A/AAAA). Format: <code>example.com 192.168.1.100</code>"
-msgstr "Сопоставление доменов с IP-адресами (A/AAAA). Формат: <code>example.com 192.168.1.100</code>"
+msgid "One record per line: <code>example.com 192.168.1.100</code>. Lines starting with <code>#</code> are ignored."
+msgstr "По одной записи на строку: <code>example.com 192.168.1.100</code>. Строки, начинающиеся с <code>#</code>, игнорируются."
 
 msgid "MASQUE Access Token"
 msgstr "Токен доступа MASQUE"

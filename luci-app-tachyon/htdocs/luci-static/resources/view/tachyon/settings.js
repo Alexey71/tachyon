@@ -588,7 +588,8 @@ function showImportHostsModal(section_id, optionRef) {
     if (uiEl && typeof uiEl.getValue === "function") {
       const v = uiEl.getValue();
       if (Array.isArray(v)) existingEntries = v;
-      else if (typeof v === "string" && v) existingEntries = [v];
+      else if (typeof v === "string" && v)
+        existingEntries = v.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#"));
     }
     if (!existingEntries.length) {
       const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
@@ -693,7 +694,8 @@ function showImportHostsModal(section_id, optionRef) {
     if (uiEl && typeof uiEl.getValue === "function") {
       const v = uiEl.getValue();
       if (Array.isArray(v)) existingEntries = v;
-      else if (typeof v === "string" && v) existingEntries = [v];
+      else if (typeof v === "string" && v)
+        existingEntries = v.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#"));
     }
     if (!existingEntries.length) {
       const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
@@ -725,7 +727,8 @@ function showImportHostsModal(section_id, optionRef) {
 
     uci.set(UCI_PACKAGE, section_id, "dns_hosts", finalEntries);
     if (uiEl && typeof uiEl.setValue === "function") {
-      uiEl.setValue(finalEntries);
+      const _curVal = typeof uiEl.getValue === "function" ? uiEl.getValue() : null;
+      uiEl.setValue(Array.isArray(_curVal) ? finalEntries : finalEntries.join("\n"));
     }
 
     ui.hideModal();
@@ -933,39 +936,67 @@ function createSettingsContent(section, capabilities) {
   };
 
   const dnsHostsOpt = section.option(
-    form.DynamicList,
+    form.TextValue,
     "dns_hosts",
     _("Custom DNS Records (Hosts)"),
-    _("Map domains to specific IP addresses (A/AAAA). Format: <code>example.com 192.168.1.100</code>"),
+    _("One record per line: <code>example.com 192.168.1.100</code>. Lines starting with <code>#</code> are ignored."),
   );
+  dnsHostsOpt.rows = 12;
+  dnsHostsOpt.cfgvalue = function(section_id) {
+    const val = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+    if (!val) return "";
+    if (Array.isArray(val)) return val.join("\n");
+    return String(val || "");
+  };
+  dnsHostsOpt.write = function(section_id, formvalue) {
+    const lines = String(formvalue || "").split("\n")
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith("#"));
+    if (lines.length === 0) {
+      uci.unset(UCI_PACKAGE, section_id, "dns_hosts");
+    } else {
+      uci.set(UCI_PACKAGE, section_id, "dns_hosts", lines);
+    }
+  };
+  dnsHostsOpt.remove = function(section_id) {
+    uci.unset(UCI_PACKAGE, section_id, "dns_hosts");
+  };
   dnsHostsOpt.validate = function(section_id, value) {
     if (!value) return true;
-    var parts = value.trim().split(/\s+/);
-    if (parts.length !== 2) {
-      return _("Invalid format. Use: domain ip");
+    const lines = value.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const parts = trimmed.split(/\s+/);
+      if (parts.length !== 2) {
+        return _('Invalid line: "%s". Use: domain ip').format(
+          trimmed.length > 40 ? trimmed.substring(0, 40) + "…" : trimmed,
+        );
+      }
     }
     return true;
   };
-  const originalRenderDnsHosts = dnsHostsOpt.renderWidget;
+  const _origDnsHostsRenderWidget = dnsHostsOpt.renderWidget;
   dnsHostsOpt.renderWidget = function(section_id, option_index, cfgvalue) {
-    const node = originalRenderDnsHosts.call(this, section_id, option_index, cfgvalue);
-    const container = E("div", { class: "cbi-value-field-extra" }, [
+    const node = _origDnsHostsRenderWidget.call(this, section_id, option_index, cfgvalue);
+    const ta = node.tagName === "TEXTAREA" ? node : node.querySelector("textarea");
+    if (ta) {
+      ta.style.fontFamily = "monospace";
+      ta.style.fontSize = "0.85rem";
+      ta.style.resize = "vertical";
+    }
+    return E("div", {}, [
       node,
-      E("div", { style: "margin-top: 8px;" }, [
-        E(
-          "button",
-          {
-            class: "cbi-button cbi-button-action",
-            type: "button",
-            click: ui.createHandlerFn(this, function() {
-              showImportHostsModal(section_id, dnsHostsOpt);
-            }),
-          },
-          _("Import Hosts File"),
-        ),
+      E("div", { style: "margin-top:8px;" }, [
+        E("button", {
+          class: "cbi-button cbi-button-action",
+          type: "button",
+          click: ui.createHandlerFn(this, function() {
+            showImportHostsModal(section_id, dnsHostsOpt);
+          }),
+        }, _("Import Hosts File")),
       ]),
     ]);
-    return container;
   };
 
   o = section.option(form.ListValue, "dns_strategy", _("DNS Strategy"));
