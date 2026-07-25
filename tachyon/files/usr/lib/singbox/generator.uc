@@ -395,29 +395,13 @@ function base_config(settings, service_address, runtime_context) {
     let dns_rules = [];
     
     let dns_hosts = common.list_option(settings, "dns_hosts");
-    let dns_hosts_idx = 0;
-    let dns_hosts_servers = [];
+    let dns_static_hosts = {};
     for (let host_entry in dns_hosts) {
         let parts = split(trim(host_entry), /[ \t]+/);
         if (length(parts) >= 2) {
-            dns_hosts_idx++;
-            let tag = "static-host-" + dns_hosts_idx;
             let domain = parts[0];
             let ip = parts[1];
-            let is_ipv6 = index(ip, ":") != -1;
-            
-            push(dns_hosts_servers, {
-                type: "fakeip",
-                tag: tag,
-                inet4_range: is_ipv6 ? null : ip + "/32",
-                inet6_range: is_ipv6 ? ip + "/128" : null
-            });
-            
-            push(dns_rules, {
-                action: "route",
-                server: tag,
-                domain: [domain]
-            });
+            dns_static_hosts[domain] = [ip];
         }
     }
     
@@ -436,8 +420,6 @@ function base_config(settings, service_address, runtime_context) {
         push(dns_rules, rule);
 
     let dns_servers = [];
-    for (let server in dns_hosts_servers)
-        push(dns_servers, server);
     for (let server in dns_config.servers)
         push(dns_servers, server);
     push(dns_servers, {
@@ -464,19 +446,23 @@ function base_config(settings, service_address, runtime_context) {
     runtime_context.dns_health_inbounds = dns_config.sniff_inbounds;
     runtime_context.default_domain_resolver = runtime_dns.default_domain_resolver(settings);
 
+    let dns_section = {
+        servers: dns_servers,
+        rules: dns_rules,
+        final: runtime_constants.DNS_SERVER_TAG,
+        strategy: option(settings, "dns_strategy", "prefer_ipv4"),
+        independent_cache: true
+    };
+    if (length(keys(dns_static_hosts)) > 0)
+        dns_section["hosts"] = dns_static_hosts;
+
     return {
         log: {
             disabled: false,
             level: log_level,
             timestamp: false
         },
-        dns: {
-            servers: dns_servers,
-            rules: dns_rules,
-            final: runtime_constants.DNS_SERVER_TAG,
-            strategy: option(settings, "dns_strategy", "prefer_ipv4"),
-            independent_cache: true
-        },
+        dns: dns_section,
         ntp: {},
         certificate: {},
         endpoints: [],
