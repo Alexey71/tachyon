@@ -615,11 +615,64 @@ function latest_tachyon_version() {
     return trim(helper_output_input(response, "object-get-default", [ "tag_name", "" ]));
 }
 
+function core_url_module_or_null() {
+    try {
+        return require("core.url");
+    } catch (e) {
+        return null;
+    }
+}
+
+function fetch_github_release_tag_fallback(owner, repo) {
+    let url = "https://github.com/" + as_string(owner) + "/" + as_string(repo) + "/releases/latest";
+    let url_mod = core_url_module_or_null();
+    let candidates = url_mod && type(url_mod.download_candidates) == "function" ? url_mod.download_candidates(url) : [ url ];
+
+    for (let target_url in candidates) {
+        let args = [ "curl", "-sI", "--connect-timeout", "6", "-m", "12" ];
+        let proxy_addr = service_proxy_address();
+        if (proxy_addr != "") {
+            push(args, "-x");
+            push(args, "http://" + proxy_addr);
+        }
+        push(args, target_url);
+        let output = command_output_from_args(args);
+        if (output != "") {
+            let loc_idx = index(lc(output), "location:");
+            if (loc_idx >= 0) {
+                let line = substr(output, loc_idx);
+                let end_line = index(line, "\r");
+                if (end_line < 0) end_line = index(line, "\n");
+                if (end_line >= 0) line = substr(line, 0, end_line);
+                let tag_idx = rindex(line, "/");
+                if (tag_idx >= 0) {
+                    let tag = trim(substr(line, tag_idx + 1));
+                    if (tag != "")
+                        return tag;
+                }
+            }
+        }
+    }
+
+    return "";
+}
+
 function fetch_tachyon_latest_release_metadata() {
+    let parts = split(TACHYON_RELEASE_REPO, "/");
     let response = latest_tachyon_release_json();
-    if (response == "")
-        return "";
-    return trim(helper_output_input(response, "release-metadata-tsv", []));
+    if (response != "") {
+        let metadata = trim(helper_output_input(response, "release-metadata-tsv", []));
+        if (metadata != "")
+            return metadata;
+    }
+
+    if (length(parts) == 2 && as_string(parts[0]) != "" && as_string(parts[1]) != "") {
+        let fallback_tag = fetch_github_release_tag_fallback(parts[0], parts[1]);
+        if (fallback_tag != "")
+            return fallback_tag + "\thttps://github.com/" + parts[0] + "/" + parts[1] + "/releases/tag/" + fallback_tag;
+    }
+
+    return "";
 }
 
 function write_tachyon_latest_version_cache(value, timestamp) {
