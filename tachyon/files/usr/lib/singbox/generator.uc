@@ -395,13 +395,17 @@ function base_config(settings, service_address, runtime_context) {
     let dns_rules = [];
     
     let dns_hosts = common.list_option(settings, "dns_hosts");
-    let dns_static_hosts = {};
     for (let host_entry in dns_hosts) {
         let parts = split(trim(host_entry), /[ \t]+/);
         if (length(parts) >= 2) {
             let domain = parts[0];
             let ip = parts[1];
-            dns_static_hosts[domain] = [ip];
+            let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
+            push(dns_rules, {
+                action: "predefined",
+                domain: [domain],
+                answer: [domain + ". 60 IN " + rr_type + " " + ip]
+            });
         }
     }
     
@@ -453,8 +457,6 @@ function base_config(settings, service_address, runtime_context) {
         strategy: option(settings, "dns_strategy", "prefer_ipv4"),
         independent_cache: true
     };
-    if (length(keys(dns_static_hosts)) > 0)
-        dns_section["hosts"] = dns_static_hosts;
 
     return {
         log: {
