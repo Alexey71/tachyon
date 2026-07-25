@@ -207,12 +207,22 @@ ensure_po2lmo() {
   (
     cd "$ipk_sdk_dir"
     if [[ ! -d feeds/luci ]]; then
-      ./scripts/feeds update luci >&2
+      ./scripts/feeds update luci >&2 || true
+      ./scripts/feeds install -p luci luci-base >&2 || ./scripts/feeds install -a >&2 || true
+    fi
+    if [[ ! -d feeds/luci/modules/luci-base/src ]]; then
+      mkdir -p feeds
+      git clone --depth 1 https://github.com/openwrt/luci.git feeds/luci >&2 || true
     fi
   )
 
-  if [[ ! -f "$luci_src_dir/po2lmo" ]]; then
-    make -C "$luci_src_dir" po2lmo >&2
+  if [[ -f "$luci_src_dir/po2lmo.c" && ! -x "$luci_src_dir/po2lmo" ]]; then
+    gcc -O2 -o "$luci_src_dir/po2lmo" "$luci_src_dir/po2lmo.c" "$luci_src_dir/template_lmo.c" >&2 || make -C "$luci_src_dir" po2lmo >&2
+  fi
+
+  if [[ -x "$luci_src_dir/po2lmo" ]]; then
+    printf '%s\n' "$luci_src_dir/po2lmo"
+    return 0
   fi
 
   printf '%s\n' "$luci_src_dir/po2lmo"
