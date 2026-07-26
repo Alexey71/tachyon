@@ -2,6 +2,7 @@
 
 let fs = require("fs");
 let common = require("core.common");
+let core_ip = require("core.ip");
 let uci_core = require("core.uci");
 let runtime_constants = require("singbox.constants");
 let runtime_country = require("singbox.country");
@@ -394,8 +395,19 @@ function base_config(settings, service_address, runtime_context) {
 
     let dns_rules = [];
     
-    let dns_hosts = common.list_option(settings, "dns_hosts");
-    for (let host_entry in dns_hosts) {
+    let raw_dns_hosts = settings["dns_hosts"];
+    let dns_hosts_entries = [];
+    if (type(raw_dns_hosts) == "array") {
+        for (let item in raw_dns_hosts) {
+            for (let line in split(as_string(item), "\n"))
+                push(dns_hosts_entries, line);
+        }
+    } else if (raw_dns_hosts != null && raw_dns_hosts != "") {
+        for (let line in split(as_string(raw_dns_hosts), "\n"))
+            push(dns_hosts_entries, line);
+    }
+
+    for (let host_entry in dns_hosts_entries) {
         let entry_str = trim(host_entry);
         if (entry_str == "" || substr(entry_str, 0, 1) == "#") continue;
         let parts = split(entry_str, /[ \t]+/);

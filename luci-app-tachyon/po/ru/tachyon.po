@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-22 21:48+0300\n"
-"PO-Revision-Date: 2026-07-22 21:48+0300\n"
+"POT-Creation-Date: 2026-07-26 09:37+0300\n"
+"PO-Revision-Date: 2026-07-26 09:37+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -19,6 +19,9 @@ msgstr ""
 
 msgid "-- Select --"
 msgstr "-- Выбрать --"
+
+msgid ".lst списки"
+msgstr ""
 
 msgid "+ Add JSON outbound"
 msgstr "+ Добавить JSON outbound"
@@ -59,6 +62,12 @@ msgstr "Выберите файл с расширением .conf"
 msgid "Готово"
 msgstr "Готово"
 
+msgid "Действие секции"
+msgstr ""
+
+msgid "Домены (Domains)"
+msgstr ""
+
 msgid "Загружено!"
 msgstr "Загружено!"
 
@@ -68,11 +77,20 @@ msgstr "Загрузить .conf"
 msgid "Загрузить конфиг .conf"
 msgstr "Загрузить конфиг .conf"
 
+msgid "Закрыть"
+msgstr ""
+
 msgid "Импортировать настройки AmneziaWG из файла .conf"
 msgstr "Импортировать настройки AmneziaWG из файла .conf"
 
 msgid "Конфиг AmneziaWG успешно загружен!"
 msgstr "Конфиг AmneziaWG успешно загружен!"
+
+msgid "Наборы правил (.srs / .json)"
+msgstr ""
+
+msgid "Не заданы"
+msgstr ""
 
 msgid "Не удалось разобрать файл:"
 msgstr ""
@@ -82,6 +100,21 @@ msgstr ""
 
 msgid "Ошибка чтения"
 msgstr "Ошибка чтения"
+
+msgid "Порты"
+msgstr ""
+
+msgid "Правила"
+msgstr ""
+
+msgid "Содержимое правил секции"
+msgstr ""
+
+msgid "Списки сообщества (Community Lists)"
+msgstr ""
+
+msgid "Устройства-источники"
+msgstr ""
 
 msgid "Accept external proxy connections and route them with sing-box."
 msgstr "Принимает внешние прокси-подключения и маршрутизирует их через sing-box."
@@ -371,9 +404,6 @@ msgstr "Проверить обновление"
 msgid "Check URL"
 msgstr "URL проверки"
 
-msgid "checked"
-msgstr "проверено"
-
 msgid "Checking Connection..."
 msgstr ""
 
@@ -398,11 +428,17 @@ msgstr "Проверки пройдены"
 msgid "Checks passed with manual DHCP"
 msgstr "Проверки пройдены с ручным DHCP"
 
+msgid "Choose Hosts File..."
+msgstr "Выбрать hosts-файл..."
+
 msgid "CIDR must be between 0 and 32 for IPv4 or 0 and 128 for IPv6"
 msgstr "CIDR должен быть от 0 до 32 для IPv4 или от 0 до 128 для IPv6"
 
 msgid "Cipher"
 msgstr "Шифрование"
+
+msgid "Clean Comments"
+msgstr "Очистить комментарии"
 
 msgid "Clear"
 msgstr "Сбросить"
@@ -515,6 +551,9 @@ msgstr "Текущая секция не может скачивать собс�
 msgid "Currently unavailable"
 msgstr "Временно недоступно"
 
+msgid "Custom device headers"
+msgstr "Кастомные заголовки устройства"
+
 msgid "Custom DNS Records (Hosts)"
 msgstr "Пользовательские записи DNS (Hosts)"
 
@@ -596,6 +635,9 @@ msgstr "Отображаемое имя"
 msgid "DNS Check Interval"
 msgstr "Период проверки DNS"
 
+msgid "DNS Failures Before Switching"
+msgstr "Ошибок DNS перед переключением"
+
 msgid "DNS on router"
 msgstr "DNS на роутере"
 
@@ -637,6 +679,9 @@ msgstr "DNS-серверы"
 
 msgid "DNS Strategy"
 msgstr "Стратегия DNS"
+
+msgid "DNS Successful Checks Before Recovery"
+msgstr "Успешных проверок DNS перед восстановлением"
 
 msgid "DNS through proxy"
 msgstr "DNS через прокси"
@@ -812,14 +857,8 @@ msgstr "Введите полный объект outbound для sing-box"
 msgid "Enter a display name"
 msgstr "Введите отображаемое имя"
 
-msgid "Enter a domain, IP address, or port to test routing. The tracer will show which section intercepts the traffic and which rule matches."
-msgstr "Введите домен, IP-адрес или порт для проверки маршрутизации. Трассировщик покажет, в какую секцию попадет трафик и какое именно правило сработает."
-
 msgid "Enter a level name"
 msgstr "Введите название уровня"
-
-msgid "Enter a valid DNS server address"
-msgstr "Введите корректный адрес DNS сервера"
 
 msgid "Enter HWID"
 msgstr "Введите HWID"
@@ -977,8 +1016,14 @@ msgstr "Proxy protocol для фронтинга"
 msgid "Fuzzing is not supported here because Tachyon needs deterministic runtime validation."
 msgstr "Фаззинг здесь не поддерживается, так как Tachyon требует детерминированной валидации во время выполнения."
 
+msgid "Generate a random 16-character hexadecimal HWID"
+msgstr "Сгенерировать случайный 16-символьный шестнадцатеричный HWID"
+
 msgid "Generate bug report"
 msgstr "Сгенерировать баг-репорт"
+
+msgid "Generate HWID"
+msgstr "Сгенерировать HWID"
 
 msgid "Generate HWID from router hardware information for this subscription"
 msgstr "Генерировать HWID из аппаратной информации роутера для этой подписки"
@@ -993,6 +1038,9 @@ msgid "Generated!"
 msgstr ""
 
 msgid "Generating…"
+msgstr ""
+
+msgid "GeoSite / GeoIP"
 msgstr ""
 
 msgid "Get global check"
@@ -1079,6 +1127,15 @@ msgstr "HWID"
 msgid "Idle timeout"
 msgstr "Таймаут простоя"
 
+msgid "Import"
+msgstr "Импортировать"
+
+msgid "Import (%d records)"
+msgstr "Импортировать (%d записей)"
+
+msgid "Import Hosts File"
+msgstr "Импортировать hosts-файл"
+
 msgid "Import subscription URLTest groups"
 msgstr "Импортировать группы URLTest подписки"
 
@@ -1160,9 +1217,6 @@ msgstr "Неверный домен"
 msgid "Invalid format. Use an IP address or CIDR subnet"
 msgstr "Неверный формат. Используйте IP-адрес или подсеть CIDR"
 
-msgid "Invalid line: \"%s\". Use: domain ip"
-msgstr "Неверный формат строки: \"%s\". Используйте: домен ip"
-
 msgid "Invalid HY2 URL: insecure must be 0 or 1"
 msgstr "Неверный URL Hysteria2: параметр insecure должен быть 0 или 1"
 
@@ -1210,6 +1264,9 @@ msgstr "Неверный IP-адрес"
 
 msgid "Invalid JSON format"
 msgstr "Неверный формат JSON"
+
+msgid "Invalid line: \"%s\". Use: domain ip or ip domain"
+msgstr ""
 
 msgid "Invalid NFQWS2 strategy"
 msgstr "Некорректная стратегия NFQWS2"
@@ -1301,6 +1358,9 @@ msgstr "Неверный URL VLESS: ошибка разбора"
 msgid "Invalid VMess URL: parsing failed"
 msgstr "Некорректный VMess URL: ошибка разбора"
 
+msgid "IP-адреса и подсети (IP CIDR)"
+msgstr ""
+
 msgid "IPs"
 msgstr "IP-адреса"
 
@@ -1361,6 +1421,9 @@ msgstr "Установлена последняя версия"
 msgid "Latest version:"
 msgstr "Последняя версия:"
 
+msgid "Leave empty to omit this header"
+msgstr "Оставьте пустым, чтобы опустить этот заголовок"
+
 msgid "Level"
 msgstr "Уровень"
 
@@ -1384,6 +1447,12 @@ msgstr "Порт прослушивания"
 
 msgid "Listening port"
 msgstr "Слушающий порт"
+
+msgid "Load Current Records"
+msgstr "Загрузить текущие записи"
+
+msgid "Loaded %d current record(s)"
+msgstr "Загружено %d текущих записей"
 
 msgid "Loading client link..."
 msgstr "Загрузка клиентской ссылки..."
@@ -1412,9 +1481,6 @@ msgstr "Основной DNS"
 msgid "Main DNS server. If multiple servers are selected, a timeout switches to a backup."
 msgstr "Основной DNS-сервер. Если выбрать несколько, то при таймауте произойдёт переключение на резервный."
 
-msgid "One record per line: <code>example.com 192.168.1.100</code>. Lines starting with <code>#</code> are ignored."
-msgstr "По одной записи на строку: <code>example.com 192.168.1.100</code>. Строки, начинающиеся с <code>#</code>, игнорируются."
-
 msgid "MASQUE Access Token"
 msgstr "Токен доступа MASQUE"
 
@@ -1432,9 +1498,6 @@ msgstr "Совпадение по портам назначения. Испол�
 
 msgid "Match Found"
 msgstr "Совпадение найдено"
-
-msgid "Matching Rule"
-msgstr "Сработавшее правило"
 
 msgid "Maximum time to wait for example.com to resolve during a DNS health check."
 msgstr "Максимальное время ожидания разрешения example.com при проверке доступности DNS."
@@ -1490,6 +1553,9 @@ msgstr "Сетевой интерфейс"
 msgid "Network interface settings"
 msgstr "Настройки сетевого интерфейса"
 
+msgid "New domains:"
+msgstr ""
+
 msgid "New version %s is available for %s"
 msgstr "Доступна новая версия %s для %s"
 
@@ -1520,9 +1586,6 @@ msgstr "Нет активных клиентов"
 msgid "No active connections"
 msgstr "Нет активных подключений"
 
-msgid "No active routing section intercepts this traffic. Traffic will bypass the custom routing logic and be handled by the default route (Direct/Default)."
-msgstr "Этот трафик не перехватывается ни одной активной секцией маршрутизации. Он пойдет в обход кастомных правил и будет обработан маршрутом по умолчанию (Напрямую/Дефолт)."
-
 msgid "No active routing sections found."
 msgstr "Активные секции маршрутизации не найдены."
 
@@ -1540,6 +1603,9 @@ msgstr "Домены пока не обнаружены"
 
 msgid "No enabled server inbounds configured"
 msgstr "Включённые серверные inbounds не настроены"
+
+msgid "No file selected"
+msgstr "Файл не выбран"
 
 msgid "No other marking rules found"
 msgstr "Другие правила маркировки не найдены"
@@ -1610,11 +1676,20 @@ msgstr "Уведомлять о перезапусках службы"
 msgid "Notify on Subscription Updates"
 msgstr "Уведомлять об обновлениях подписок"
 
+msgid "Number of consecutive failed checks required before switching DNS servers."
+msgstr "Количество последовательных неудачных проверок, необходимое для переключения DNS-сервера."
+
+msgid "Number of consecutive successful checks required before returning to a higher-priority DNS server."
+msgstr "Количество последовательных успешных проверок, необходимое для возврата к DNS-серверу с более высоким приоритетом."
+
 msgid "Obfuscation"
 msgstr "Обфускация"
 
 msgid "Obfuscation password"
 msgstr "Пароль обфускации"
+
+msgid "One record per line: <code>example.com 192.168.1.100</code> or <code>192.168.1.100 example.com</code>. Lines starting with <code>#</code> are ignored."
+msgstr ""
 
 msgid "Only from the specified countries."
 msgstr "Только из указанных стран."
@@ -1667,8 +1742,8 @@ msgstr "Опциональные значения должны быть указ
 msgid "Optional values must be attached with '=' here; a separate token would be ignored by nfqws2."
 msgstr "Опциональные значения должны быть указаны через '=' здесь; отдельный токен будет проигнорирован nfqws2."
 
-msgid "out of"
-msgstr "из"
+msgid "Or paste hosts file content:"
+msgstr "Или вставьте содержимое hosts-файла:"
 
 msgid "outbounds must be a non-empty array of strings"
 msgstr "outbounds должен быть непустым массивом строк"
@@ -1676,17 +1751,29 @@ msgstr "outbounds должен быть непустым массивом стр
 msgid "Output Network Interface"
 msgstr "Выходной сетевой интерфейс"
 
+msgid "Override the default OpenWrt device headers for this subscription"
+msgstr "Переопределить стандартные заголовки OpenWrt для этой подписки"
+
+msgid "Overwrite existing records (if unchecked, merge with existing records)"
+msgstr "Перезаписать существующие записи (если сброшено — объединить)"
+
 msgid "P2P Leak Protection"
 msgstr "Изоляция торрент-трафика (P2P)"
 
 msgid "Padding"
 msgstr "Padding"
 
+msgid "Parsed records:"
+msgstr ""
+
 msgid "Password"
 msgstr "Пароль"
 
 msgid "Password cannot be empty"
 msgstr "Пароль не может быть пустым"
+
+msgid "Paste content or upload a file to preview imported DNS records."
+msgstr "Вставьте содержимое или загрузите файл для предварительного просмотра."
 
 msgid "Path cannot be empty"
 msgstr "Путь не может быть пустым"
@@ -1832,6 +1919,9 @@ msgstr "Reality short ID"
 msgid "Reality short ID must contain 1-8 hex digits"
 msgstr "Reality short ID должен содержать 1-8 hex-символов"
 
+msgid "Records: %d"
+msgstr "Записей: %d"
+
 msgid "Refill"
 msgstr "Сброс"
 
@@ -1901,8 +1991,8 @@ msgstr "Правила маршрутизации"
 msgid "Routing section"
 msgstr "Секция маршрутизации"
 
-msgid "Routing Section"
-msgstr "Секция маршрутизации"
+msgid "Rule"
+msgstr ""
 
 msgid "Rule set must be an HTTP(S) URL or a local .srs / .json path"
 msgstr "Набор правил должен быть HTTP(S) URL или локальным путём .srs / .json"
@@ -2174,7 +2264,16 @@ msgstr "Сервис sing-box существует"
 msgid "Sing-box version is compatible (newer than 1.12.4)"
 msgstr "Версия Sing-box совместима (новее 1.12.4)"
 
+msgid "Skip loopback & local entries (127.0.0.1, ::1, 0.0.0.0, localhost)"
+msgstr "Пропускать локальные и loopback-записи (127.0.0.1, ::1, 0.0.0.0, localhost)"
+
 msgid "Skip TLS certificate verification (not recommended)"
+msgstr ""
+
+msgid "Skipped comments/invalid:"
+msgstr ""
+
+msgid "Skipped loopback:"
 msgstr ""
 
 msgid "Smart Detect"
@@ -2185,6 +2284,9 @@ msgstr "Настройки Smart Detect сохранены"
 
 msgid "Snell Version"
 msgstr "Версия Snell"
+
+msgid "Sort Alphabetically"
+msgstr "Сортировать по алфавиту"
 
 msgid "Sort by latency"
 msgstr "Сортировка по задержке"
@@ -2296,6 +2398,9 @@ msgstr "Подписки обновлены"
 
 msgid "Success"
 msgstr ""
+
+msgid "Successfully imported %d DNS record(s)"
+msgstr "Успешно импортировано %d DNS-записей"
 
 msgid "System info"
 msgstr "Системная информация"
@@ -2474,6 +2579,9 @@ msgstr "Допуск"
 msgid "Top level has the highest priority; lower levels are used as fallback"
 msgstr "Верхний уровень имеет наивысший приоритет; нижние уровни используются как резерв"
 
+msgid "Total lines:"
+msgstr ""
+
 msgid "Trace"
 msgstr "Проверить"
 
@@ -2491,6 +2599,9 @@ msgstr "Трафик с этих IP-адресов никогда не буде�
 
 msgid "Traffic Total"
 msgstr "Всего трафика"
+
+msgid "Traffic will go through the default route (Direct/Default)."
+msgstr ""
 
 msgid "Transparent proxy mode is incompatible with action=byedpi because Tachyon connects to ciadpi through SOCKS."
 msgstr "Режим прозрачного прокси несовместим с action=byedpi, так как Tachyon подключается к ciadpi через SOCKS."
@@ -2596,6 +2707,9 @@ msgstr "Обновить подписки"
 
 msgid "Update this subscription automatically"
 msgstr "Автоматически обновлять эту подписку"
+
+msgid "Updated/duplicates:"
+msgstr ""
 
 msgid "Uplink"
 msgstr "Исходящий"
@@ -2798,6 +2912,33 @@ msgstr "sing-box outbound для Zapret2 настроен"
 msgid "Zapret2 sing-box outbound is not configured"
 msgstr "sing-box outbound для Zapret2 не настроен"
 
+msgid "checked"
+msgstr "проверено"
+
+msgid "Enter a domain, IP address, or port to test routing. The tracer will show which section intercepts the traffic and which rule matches."
+msgstr "Введите домен, IP-адрес или порт для проверки маршрутизации. Трассировщик покажет, в какую секцию попадет трафик и какое именно правило сработает."
+
+msgid "Enter a valid DNS server address"
+msgstr "Введите корректный адрес DNS сервера"
+
+msgid "Invalid line: \"%s\". Use: domain ip"
+msgstr "Неверный формат строки: \"%s\". Используйте: домен ip"
+
+msgid "One record per line: <code>example.com 192.168.1.100</code>. Lines starting with <code>#</code> are ignored."
+msgstr "По одной записи на строку: <code>example.com 192.168.1.100</code>. Строки, начинающиеся с <code>#</code>, игнорируются."
+
+msgid "Matching Rule"
+msgstr "Сработавшее правило"
+
+msgid "No active routing section intercepts this traffic. Traffic will bypass the custom routing logic and be handled by the default route (Direct/Default)."
+msgstr "Этот трафик не перехватывается ни одной активной секцией маршрутизации. Он пойдет в обход кастомных правил и будет обработан маршрутом по умолчанию (Напрямую/Дефолт)."
+
+msgid "out of"
+msgstr "из"
+
+msgid "Routing Section"
+msgstr "Секция маршрутизации"
+
 msgid "Add URLs or local paths to .lst lists. Only domain rules are supported."
 msgstr "Добавьте URL или локальные пути к .lst спискам. Поддерживаются только доменные правила."
 
@@ -2882,60 +3023,6 @@ msgstr "Принудительная маршрутизация по IP (Dest)"
 msgid "All traffic to these destination IPs will be routed through the section unconditionally, ignoring all other conditions."
 msgstr "Весь трафик к этим IP назначения будет направлен через секцию безусловно, игнорируя все остальные условия."
 
-msgid "DNS Failures Before Switching"
-msgstr "Ошибок DNS перед переключением"
-
-msgid "DNS Successful Checks Before Recovery"
-msgstr "Успешных проверок DNS перед восстановлением"
-
-msgid "Number of consecutive failed checks required before switching DNS servers."
-msgstr "Количество последовательных неудачных проверок, необходимое для переключения DNS-сервера."
-
-msgid "Number of consecutive successful checks required before returning to a higher-priority DNS server."
-msgstr "Количество последовательных успешных проверок, необходимое для возврата к DNS-серверу с более высоким приоритетом."
-
-msgid "Custom device headers"
-msgstr "Кастомные заголовки устройства"
-
-msgid "Override the default OpenWrt device headers for this subscription"
-msgstr "Переопределить стандартные заголовки OpenWrt для этой подписки"
-
-msgid "Generate HWID"
-msgstr "Сгенерировать HWID"
-
-msgid "Generate a random 16-character hexadecimal HWID"
-msgstr "Сгенерировать случайный 16-символьный шестнадцатеричный HWID"
-
-msgid "Leave empty to omit this header"
-msgstr "Оставьте пустым, чтобы опустить этот заголовок"
-
-msgid "Import Hosts File"
-msgstr "Импортировать hosts-файл"
-
-msgid "Choose Hosts File..."
-msgstr "Выбрать hosts-файл..."
-
-msgid "No file selected"
-msgstr "Файл не выбран"
-
-msgid "Or paste hosts file content:"
-msgstr "Или вставьте содержимое hosts-файла:"
-
-msgid "Skip loopback & local entries (127.0.0.1, ::1, 0.0.0.0, localhost)"
-msgstr "Пропускать локальные и loopback-записи (127.0.0.1, ::1, 0.0.0.0, localhost)"
-
-msgid "Overwrite existing records (if unchecked, merge with existing records)"
-msgstr "Перезаписать существующие записи (если сброшено — объединить)"
-
-msgid "Paste content or upload a file to preview imported DNS records."
-msgstr "Вставьте содержимое или загрузите файл для предварительного просмотра."
-
-msgid "Import"
-msgstr "Импортировать"
-
-msgid "Import (%d records)"
-msgstr "Импортировать (%d записей)"
-
 msgid "Total lines: "
 msgstr "Всего строк: "
 
@@ -2953,12 +3040,3 @@ msgstr "Новых доменов: "
 
 msgid "Updated/duplicates: "
 msgstr "Обновлено/дубликатов: "
-
-msgid "Successfully imported %d DNS record(s)"
-msgstr "Успешно импортировано %d DNS-записей"
-
-msgid "Load Current Records"
-msgstr "Загрузить текущие записи"
-
-msgid "Loaded %d current record(s)"
-msgstr "Загружено %d текущих записей"
