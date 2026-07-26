@@ -8729,6 +8729,20 @@ function createSectionContent(section) {
   o.default = "all";
   o.rmempty = false;
   o.modalonly = true;
+  // Only show for proxy sections - block/bypass/dns ignore geoip_country in the backend
+  // and a block+non-ru+invert:true rule would reject ALL foreign traffic
+  o.depends("action", "connection");
+  o.depends("action", "awg");
+  o.depends("action", "warp");
+  o.depends("action", "anytls");
+  o.depends("action", "snell");
+  o.depends("action", "mieru");
+  o.depends("action", "sudoku");
+  o.depends("action", "masque");
+  o.depends("action", "openvpn");
+  o.depends("action", "zapret");
+  o.depends("action", "zapret2");
+  o.depends("action", "byedpi");
 
   addTextConditionField(section, {
     key: "domain_suffix",
