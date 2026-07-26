@@ -1782,6 +1782,35 @@ function dnsTypeChoices() {
   ];
 }
 
+function optionListValues(option, section_id) {
+  const value = option.cfgvalue
+    ? option.cfgvalue(section_id)
+    : uci.get(UCI_PACKAGE, section_id, option.option);
+  return L.toArray(value)
+    .map((item) => `${item || ""}`.trim())
+    .filter(Boolean);
+}
+
+function configureDnsList(option, choices, defaultValue) {
+  if (choices) {
+    Object.entries(choices).forEach(([key, label]) => {
+      option.value(key, _(label));
+    });
+  }
+  option.default = [defaultValue];
+  option.rmempty = false;
+  option.validate = function (_section_id, value) {
+    const normalized = `${value || ""}`.trim();
+    if (!normalized) {
+      return optionListValues(option, _section_id).length > 0
+        ? true
+        : _("Add at least one DNS server");
+    }
+    const validation = main.validateDNS(normalized);
+    return validation.valid ? true : validation.message;
+  };
+}
+
 function isConnectionNetworkInterfaceAllowed(deviceName, device) {
   if (CONNECTIONS_BLOCKED_INTERFACES.includes(deviceName)) {
     return false;
@@ -7241,22 +7270,14 @@ function createSectionContent(section) {
 
   o = section.taboption(
     "settings",
-    form.Value,
+    form.DynamicList,
     "dns_server",
     _("DNS server"),
     _("DNS server used by the resolver"),
   );
   o.depends("action", "dns");
-  o.rmempty = false;
   o.modalonly = true;
-  o.validate = function (_section_id, value) {
-    const normalized = `${value || ""}`.trim();
-    if (!normalized) {
-      return _("DNS server address cannot be empty");
-    }
-    const validation = main.validateDNS(normalized);
-    return validation.valid ? true : _("Enter a valid DNS server address");
-  };
+  configureDnsList(o, main.DNS_SERVER_OPTIONS, "8.8.8.8");
 
   o = section.taboption(
     "settings",

@@ -396,16 +396,35 @@ function base_config(settings, service_address, runtime_context) {
     
     let dns_hosts = common.list_option(settings, "dns_hosts");
     for (let host_entry in dns_hosts) {
-        let parts = split(trim(host_entry), /[ \t]+/);
+        let entry_str = trim(host_entry);
+        if (entry_str == "" || startsWith(entry_str, "#")) continue;
+        let parts = split(entry_str, /[ \t]+/);
         if (length(parts) >= 2) {
-            let domain = parts[0];
-            let ip = parts[1];
-            let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
-            push(dns_rules, {
-                action: "predefined",
-                domain: [domain],
-                answer: [domain + ". 60 IN " + rr_type + " " + ip]
-            });
+            let p1 = parts[0];
+            let p2 = parts[1];
+            if (core_ip.valid_ip(p1)) {
+                let ip = p1;
+                let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
+                for (let i = 1; i < length(parts); i++) {
+                    let d = parts[i];
+                    if (d != "" && !startsWith(d, "#")) {
+                        push(dns_rules, {
+                            action: "predefined",
+                            domain: [d],
+                            answer: [d + ". 60 IN " + rr_type + " " + ip]
+                        });
+                    }
+                }
+            } else if (core_ip.valid_ip(p2)) {
+                let domain = p1;
+                let ip = p2;
+                let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
+                push(dns_rules, {
+                    action: "predefined",
+                    domain: [domain],
+                    answer: [domain + ". 60 IN " + rr_type + " " + ip]
+                });
+            }
         }
     }
     

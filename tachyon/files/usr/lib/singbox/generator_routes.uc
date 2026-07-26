@@ -931,8 +931,10 @@ function single_or_array(values) {
     return length(values) == 1 ? values[0] : values;
 }
 
-function dns_action_server_tag(section_name) {
-    return runtime_constants.tag(section_name, "dns-server");
+function dns_action_server_tag(section_name, idx) {
+    if (idx == null)
+        return runtime_constants.tag(section_name, "dns-server");
+    return runtime_constants.tag(section_name, "dns-server-" + idx);
 }
 
 function dns_action_detour_tag(section) {
@@ -943,15 +945,28 @@ function dns_action_detour_tag(section) {
 }
 
 function add_dns_server_for_section(config, section) {
-    let server = runtime_dns.server_from_options(
-        dns_action_server_tag(section[".name"]),
-        option(section, "dns_type", "udp"),
-        option(section, "dns_server", ""),
-        dns_action_detour_tag(section)
-    );
-    if (server.unsupported)
-        ctx.runtime_generate_unsupported(server.unsupported);
-    push(config.dns.servers, server);
+    let section_name = section[".name"];
+    let servers = list_option(section, "dns_server");
+    let dns_type = option(section, "dns_type", "udp");
+    let detour = dns_action_detour_tag(section);
+    let server_tags = [];
+
+    for (let idx, s_val in servers) {
+        let tag_name = length(servers) <= 1
+            ? dns_action_server_tag(section_name)
+            : dns_action_server_tag(section_name, idx + 1);
+        let server = runtime_dns.server_from_options(
+            tag_name,
+            dns_type,
+            s_val,
+            detour
+        );
+        if (server.unsupported)
+            ctx.runtime_generate_unsupported(server.unsupported);
+        push(config.dns.servers, server);
+        push(server_tags, tag_name);
+    }
+    return server_tags;
 }
 
 function add_dns_action_rules_for_section(config, section) {
@@ -982,7 +997,15 @@ function add_dns_action_rules_for_section(config, section) {
     );
 
     let rewrite_ttl = int_option(ctx.runtime_settings(), "dns_rewrite_ttl", "60");
-    let server_tag = dns_action_server_tag(section_name);
+    let section_servers = list_option(section, "dns_server");
+    let server_tags = [];
+    if (length(section_servers) <= 1) {
+        push(server_tags, dns_action_server_tag(section_name));
+    } else {
+        for (let idx, s_val in section_servers)
+            push(server_tags, dns_action_server_tag(section_name, idx + 1));
+    }
+    let server_tag = single_or_array(server_tags);
     let has_inline_domains = length(domain) > 0 || length(domain_suffix) > 0 ||
         length(domain_keyword) > 0 || length(domain_regex) > 0;
 

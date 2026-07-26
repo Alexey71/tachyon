@@ -1383,9 +1383,13 @@ function validate_dns_action(section, sections, context) {
     let dns_type = option(section, "dns_type", "udp");
     if (!contains([ "udp", "dot", "doh" ], dns_type))
         fail_validation("DNS rule '" + name + "' uses unsupported protocol '" + dns_type + "'. Use udp, dot, or doh. Aborted.");
-    let dns_server = option(section, "dns_server", "");
-    if (!dns_server_value_valid(dns_server))
-        fail_validation("DNS rule '" + name + "' has an invalid DNS server '" + dns_server + "'. Aborted.");
+    let dns_servers = list_option(section, "dns_server");
+    if (length(dns_servers) == 0)
+        fail_validation("DNS rule '" + name + "' has no DNS server specified. Aborted.");
+    for (let dns_server in dns_servers) {
+        if (!dns_server_value_valid(dns_server))
+            fail_validation("DNS rule '" + name + "' has an invalid DNS server '" + dns_server + "'. Aborted.");
+    }
     if (length(connections.rule_sets_with_subnets(section)) > 0)
         fail_validation("DNS rule '" + name + "' can use domain-only rule sets, but subnet extraction is enabled. Disable 'Include IP addresses and subnets'. Aborted.");
     if (!dns_action_has_domain_matchers(section))

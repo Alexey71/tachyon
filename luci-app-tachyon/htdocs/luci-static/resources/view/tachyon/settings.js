@@ -970,7 +970,7 @@ function createSettingsContent(section, capabilities) {
     form.TextValue,
     "dns_hosts",
     _("Custom DNS Records (Hosts)"),
-    _("One record per line: <code>example.com 192.168.1.100</code>. Lines starting with <code>#</code> are ignored."),
+    _("One record per line: <code>example.com 192.168.1.100</code> or <code>192.168.1.100 example.com</code>. Lines starting with <code>#</code> are ignored."),
   );
   dnsHostsOpt.rows = 12;
   dnsHostsOpt.cfgvalue = function(section_id) {
@@ -999,8 +999,8 @@ function createSettingsContent(section, capabilities) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
       const parts = trimmed.split(/\s+/);
-      if (parts.length !== 2) {
-        return _('Invalid line: "%s". Use: domain ip').format(
+      if (parts.length < 2) {
+        return _('Invalid line: "%s". Use: domain ip or ip domain').format(
           trimmed.length > 40 ? trimmed.substring(0, 40) + "…" : trimmed,
         );
       }
@@ -1014,18 +1014,70 @@ function createSettingsContent(section, capabilities) {
     if (ta) {
       ta.style.fontFamily = "monospace";
       ta.style.fontSize = "0.85rem";
+      ta.style.lineHeight = "1.4";
       ta.style.resize = "vertical";
     }
+
+    const countBadge = E("span", {
+      style: "font-weight:600;font-size:0.85rem;margin-left:auto;color:var(--text-color-medium,#666);",
+    });
+
+    function updateCount() {
+      const text = ta ? ta.value : "";
+      const validLines = text.split("\n").filter(l => l.trim() && !l.trim().startsWith("#"));
+      countBadge.textContent = _("Records: %d").format(validLines.length);
+    }
+
+    if (ta) {
+      ta.addEventListener("input", updateCount);
+      setTimeout(updateCount, 50);
+    }
+
+    const importBtn = E("button", {
+      class: "cbi-button cbi-button-action",
+      type: "button",
+      click: ui.createHandlerFn(this, function() {
+        showImportHostsModal(section_id, dnsHostsOpt);
+      }),
+    }, _("Import Hosts File"));
+
+    const sortBtn = E("button", {
+      class: "cbi-button cbi-button-neutral",
+      type: "button",
+      style: "margin-left:6px;",
+      click: ui.createHandlerFn(this, function() {
+        if (!ta) return;
+        const lines = ta.value.split("\n")
+          .map(l => l.trim())
+          .filter(Boolean);
+        const comments = lines.filter(l => l.startsWith("#"));
+        const records = lines.filter(l => !l.startsWith("#")).sort();
+        ta.value = [...comments, ...records].join("\n");
+        updateCount();
+      }),
+    }, _("Sort Alphabetically"));
+
+    const cleanBtn = E("button", {
+      class: "cbi-button cbi-button-neutral",
+      type: "button",
+      style: "margin-left:6px;",
+      click: ui.createHandlerFn(this, function() {
+        if (!ta) return;
+        const lines = ta.value.split("\n")
+          .map(l => l.trim())
+          .filter(l => l && !l.startsWith("#"));
+        ta.value = lines.join("\n");
+        updateCount();
+      }),
+    }, _("Clean Comments"));
+
     return E("div", {}, [
       node,
-      E("div", { style: "margin-top:8px;" }, [
-        E("button", {
-          class: "cbi-button cbi-button-action",
-          type: "button",
-          click: ui.createHandlerFn(this, function() {
-            showImportHostsModal(section_id, dnsHostsOpt);
-          }),
-        }, _("Import Hosts File")),
+      E("div", { style: "display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;" }, [
+        importBtn,
+        sortBtn,
+        cleanBtn,
+        countBadge,
       ]),
     ]);
   };
