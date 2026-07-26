@@ -146,11 +146,12 @@ function smart_detect_get_proxy_sections() {
     let c = uci_core.cursor();
     if (!c) return [];
     c.load(CONFIG_NAME);
+    let connections = require("config.connections");
     let secs = [];
     c.foreach(CONFIG_NAME, "section", function(s) {
         if (s.enabled != "1") return;
         let act = as_string(s.action || "");
-        if (act == "proxy" || act == "connection" || act == "outbound" || act == "vpn") {
+        if (act != "bypass" && act != "block" && act != "dns" && act != "") {
             push(secs, s[".name"]);
         }
     });
