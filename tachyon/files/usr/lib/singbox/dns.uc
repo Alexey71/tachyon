@@ -132,15 +132,15 @@ function server_from_options(tag_name, dns_type, dns_server, detour) {
 
     if (dns_type == "udp") {
         if (port != "")
-            result.server_port = int(port, 10);
+            result.server_port = int(port);
     }
     else if (dns_type == "dot") {
         result.type = "tls";
-        result.server_port = port != "" ? int(port, 10) : 853;
+        result.server_port = port != "" ? int(port) : 853;
     }
     else if (dns_type == "doh") {
         result.type = "https";
-        result.server_port = port != "" ? int(port, 10) : 443;
+        result.server_port = port != "" ? int(port) : 443;
         let path = runtime_url.path(dns_server);
         if (path != "")
             result.path = path;
@@ -164,7 +164,7 @@ function bootstrap_server(tag_name, value) {
         type: "udp",
         tag: tag_name,
         server: server != "" ? server : value,
-        server_port: port != "" ? int(port, 10) : 53
+        server_port: port != "" ? int(port) : 53
     };
 }
 
