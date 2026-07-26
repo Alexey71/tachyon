@@ -1705,6 +1705,9 @@ function nft_add_subnet_file_for_section(section, filepath, table, common_set, i
     if (!section_needs_priority_sets(section))
         return true;
 
+    if (!nft_create_priority_sets(table, sets))
+        return false;
+
     if (ports != "")
         return nft_add_file_chunks_to_family_sets(filepath, table, sets.ip_ports, sets.ip6_ports, "ip-port-from-ip", ports, chunk_size_text);
 
@@ -1743,6 +1746,9 @@ function nft_add_json_ruleset_subnets_for_section(section, json_path, label, tab
 
     if (!section_needs_priority_sets(section))
         return true;
+
+    if (!nft_create_priority_sets(table, sets))
+        return false;
 
     routing_rulesets.extract_ip_cidr_nft_elements(
         json_path,
