@@ -971,7 +971,7 @@ function createSettingsContent(section, capabilities) {
     "dns_turbo_cache",
     _("DNS Turbo Cache"),
     _(
-      "Keeps the FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup, reducing first-visit latency to 0\u00a0ms.",
+      "Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0\u00a0ms.",
     ),
   );
   o.default = "0";

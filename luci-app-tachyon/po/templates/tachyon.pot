@@ -4235,5 +4235,13 @@ msgid "DNS Turbo Cache"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js
-msgid "Keeps the FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup, reducing first-visit latency to 0u00a0ms."
+msgid "Enable DNS Turbo Cache"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js
+msgid "Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0 ms."
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js
+msgid "Saving…"
 msgstr ""

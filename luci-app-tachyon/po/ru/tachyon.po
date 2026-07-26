@@ -3063,7 +3063,13 @@ msgid "🇨🇳 CN Only (China)"
 msgstr "🇨🇳 Только Китай (China)"
 
 msgid "DNS Turbo Cache"
-msgstr "u0411u044bu0441u0442u0440u044bu0439 DNS-u043au044du0448"
+msgstr "Быстрый DNS-кэш"
 
-msgid "Keeps the FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup, reducing first-visit latency to 0u00a0ms."
-msgstr "u0421u043eu0445u0440u0430u043du044fu0435u0442 FakeIP-u043au044du0448 u043cu0435u0436u0434u0443 u043fu0435u0440u0435u0437u0430u0433u0440u0443u0437u043au0430u043cu0438 u0438 u0437u0430u0440u0430u043du0435u0435 u0440u0435u0437u043eu043bu0432u0438u0442 u043fu043eu043fu0443u043bu044fu0440u043du044bu0435 u0437u0430u0431u043bu043eu043au0438u0440u043eu0432u0430u043du043du044bu0435 u0434u043eu043cu0435u043du044b u043fu0440u0438 u0441u0442u0430u0440u0442u0435 u2014 u0437u0430u0434u0435u0440u0436u043au0430 u043fu0440u0438 u043fu0435u0440u0432u043eu043c u0432u0438u0437u0438u0442u0435 0u00a0u043cu0441."
+msgid "Enable DNS Turbo Cache"
+msgstr "Включить быстрый DNS-кэш"
+
+msgid "Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0 ms."
+msgstr "Сохраняет FakeIP-кэш между перезагрузками и заранее резолвит популярные заблокированные домены при старте — задержка при первом визите 0 мс."
+
+msgid "Saving…"
+msgstr "Сохранение…"
