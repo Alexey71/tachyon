@@ -790,6 +790,10 @@ function start_main() {
 }
 
 function start_impl() {
+    // Start Watchdog & Telegram Bot early so they remain active even if proxy configuration fails
+    module_status(WATCHDOG_UC, [ "start-runtime" ]);
+    module_status(TELEGRAM_UC, [ "start-runtime" ]);
+
     let status = start_main();
     if (status != 0)
         return status;
@@ -827,17 +831,6 @@ function start_impl() {
         return status;
     }
 
-    status = module_status(WATCHDOG_UC, [ "start-runtime" ]);
-    if (status != 0) {
-        log_message("Failed to start Watchdog runtime", "fatal");
-        return status;
-    }
-
-    status = module_status(TELEGRAM_UC, [ "start-runtime" ]);
-    if (status != 0) {
-        log_message("Failed to start Telegram Bot runtime", "warn");
-    }
-
     module_background(DIAGNOSTICS_UC, [ "get-system-info" ]);
     return 0;
 }
@@ -847,8 +840,6 @@ function stop_main() {
 
     log_message("Stopping Tachyon", "info");
     module_success(DNS_FAILOVER_UC, [ "stop-runtime" ]);
-    module_success(WATCHDOG_UC, [ "stop-runtime" ]);
-    module_success(TELEGRAM_UC, [ "stop-runtime" ]);
     module_success(PRIORITY_UC, [ "stop-runtime" ]);
     module_success(SUBSCRIPTION_CACHE_UC, [ "stop-deferred-bootstrap-worker" ]);
     module_success(UPDATES_UC, [ "stop-list-update" ]);

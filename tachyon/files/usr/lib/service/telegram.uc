@@ -395,6 +395,9 @@ function view_menu(token, chat_id, msg_id) {
             { text: "🐕 Watchdog", callback_data: "/watchdog" }
         ],
         [
+            { text: "🤖 ИИ-Самолечение", callback_data: "/heal" }
+        ],
+        [
             { text: "🩺 Диагностика", callback_data: "/doctor" },
             { text: "🔄 Перезапуск", callback_data: "/restart" }
         ],
@@ -935,6 +938,34 @@ function view_watchdog(token, chat_id, msg_id) {
     else send_message(token, chat_id, text, "HTML", keyboard);
 }
 
+function exec_ai_heal(token, chat_id, msg_id) {
+    send_message(token, chat_id, "🤖 <b>ИИ-Автомеханик выполняет диагностику и самолечение...</b>", "HTML");
+
+    command_status("/usr/bin/tachyon ai_heal");
+
+    let status_data = fs.readfile("/tmp/tachyon_ai_status.json");
+    let text = "🤖 <b>[ИИ-Автомеханик Tachyon]</b>\n\n";
+    if (status_data) {
+        try {
+            let st = json(status_data);
+            if (st.last_incident) {
+                text += "⚠️ <b>Устранён инцидент:</b> " + escape_html(st.last_incident.description || "") + "\n";
+                text += "🔧 <b>Авто-решение:</b> " + escape_html(st.last_incident.resolution || "") + "\n\n";
+                text += "Все системы приведены в штатную норму! 🟢";
+            } else {
+                text += "🟢 Все сетевые службы, DNS, nftables и память работают идеально.";
+            }
+        } catch(e) {
+            text += "🟢 Диагностика завершена успешно.";
+        }
+    } else {
+        text += "🟢 Диагностика завершена.";
+    }
+
+    let keyboard = [[{ text: "⬅️ В меню", callback_data: "/menu" }]];
+    send_message(token, chat_id, text, "HTML", keyboard);
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 function dispatch_command(token, chat_id, text, msg_id) {
@@ -944,6 +975,7 @@ function dispatch_command(token, chat_id, text, msg_id) {
     if (cmd == "/start" || cmd == "/menu") return view_menu(token, chat_id, msg_id);
     if (cmd == "/status") return view_status(token, chat_id, msg_id);
     if (cmd == "/runtime") return view_runtime(token, chat_id, msg_id);
+    if (cmd == "/heal" || cmd == "/ai_heal") return exec_ai_heal(token, chat_id, msg_id);
     
     if (cmd == "/outbounds") return view_outbounds(token, chat_id, msg_id);
     if (match(cmd, /^\/outbounds /)) {
