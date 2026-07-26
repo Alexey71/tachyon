@@ -13,10 +13,31 @@ function shell_quote(value) {
     return "'" + replace(as_string(value), /'/g, "'\\''") + "'";
 }
 
+let fs = require("fs");
+
+function detect_installed_version() {
+    let env_ver = getenv("TACHYON_VERSION");
+    if (env_ver != null && env_ver != "")
+        return env_ver;
+
+    for (let path in [
+        "/usr/lib/opkg/info/luci-app-tachyon.control",
+        "/usr/lib/opkg/info/tachyon.control"
+    ]) {
+        let content = fs.readfile(path);
+        if (content != null) {
+            let m = match(content, /Version:\s*([0-9]+\.[0-9]+\.[0-9]+)/);
+            if (m && m[1]) return m[1];
+        }
+    }
+
+    return "1.2.29";
+}
+
 function constants_map() {
     let c = {};
 
-    c.TACHYON_VERSION = env("TACHYON_VERSION", "1.2.29");
+    c.TACHYON_VERSION = detect_installed_version();
     c.TACHYON_CONFIG_NAME = env("TACHYON_CONFIG_NAME", "tachyon");
     c.TACHYON_CONFIG = env("TACHYON_CONFIG", "/etc/config/" + c.TACHYON_CONFIG_NAME);
     c.TACHYON_BIN = env("TACHYON_BIN", "/usr/bin/tachyon");
