@@ -397,7 +397,7 @@ function base_config(settings, service_address, runtime_context) {
     let dns_hosts = common.list_option(settings, "dns_hosts");
     for (let host_entry in dns_hosts) {
         let entry_str = trim(host_entry);
-        if (entry_str == "" || startsWith(entry_str, "#")) continue;
+        if (entry_str == "" || substr(entry_str, 0, 1) == "#") continue;
         let parts = split(entry_str, /[ \t]+/);
         if (length(parts) >= 2) {
             let p1 = parts[0];
@@ -407,7 +407,7 @@ function base_config(settings, service_address, runtime_context) {
                 let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
                 for (let i = 1; i < length(parts); i++) {
                     let d = parts[i];
-                    if (d != "" && !startsWith(d, "#")) {
+                    if (d != "" && substr(d, 0, 1) != "#") {
                         push(dns_rules, {
                             action: "predefined",
                             domain: [d],

@@ -951,10 +951,11 @@ function add_dns_server_for_section(config, section) {
     let detour = dns_action_detour_tag(section);
     let server_tags = [];
 
-    for (let idx, s_val in servers) {
+    for (let i = 0; i < length(servers); i++) {
+        let s_val = servers[i];
         let tag_name = length(servers) <= 1
             ? dns_action_server_tag(section_name)
-            : dns_action_server_tag(section_name, idx + 1);
+            : dns_action_server_tag(section_name, i + 1);
         let server = runtime_dns.server_from_options(
             tag_name,
             dns_type,
@@ -1002,8 +1003,8 @@ function add_dns_action_rules_for_section(config, section) {
     if (length(section_servers) <= 1) {
         push(server_tags, dns_action_server_tag(section_name));
     } else {
-        for (let idx, s_val in section_servers)
-            push(server_tags, dns_action_server_tag(section_name, idx + 1));
+        for (let i = 0; i < length(section_servers); i++)
+            push(server_tags, dns_action_server_tag(section_name, i + 1));
     }
     let server_tag = single_or_array(server_tags);
     let has_inline_domains = length(domain) > 0 || length(domain_suffix) > 0 ||
