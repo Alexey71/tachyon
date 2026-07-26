@@ -1,6 +1,6 @@
-﻿{
+{
   "name": "fe-app-tachyon",
-  "version": "1.2.32",
+  "version": "1.2.33",
   "license": "MIT",
   "type": "module",
   "scripts": {
