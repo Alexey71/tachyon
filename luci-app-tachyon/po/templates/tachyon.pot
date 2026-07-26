@@ -4201,3 +4201,31 @@ msgstr ""
 #: src/tachyon/tabs/diagnostic/checks/runZapret2Check.ts:107
 msgid "Zapret2 sing-box outbound is not configured"
 msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "GeoIP Country Routing"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "Select target country or region for this section (e.g. Non-RU for all foreign traffic)."
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "🌐 All Traffic (Default)"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "🇪🇺/🇺🇸 Non-RU (All Foreign Traffic)"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "🇷🇺 RU Only (Russia)"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "🇺🇸 US Only (United States)"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
+msgid "🇨🇳 CN Only (China)"
+msgstr ""
