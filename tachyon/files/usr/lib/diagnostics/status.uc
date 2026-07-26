@@ -1174,11 +1174,14 @@ function write_service_status_json(running, enabled, status_or_dns_configured, d
     if (dns_configured == null)
         dns_configured = status_or_dns_configured;
 
+    let ai_status = read_json_file("/tmp/tachyon_ai_status.json");
+
     write_json({
         running: arg_number(running),
         enabled: arg_number(enabled),
         status: service_status_label(running, enabled),
-        dns_configured: arg_number(dns_configured)
+        dns_configured: arg_number(dns_configured),
+        ai_watchdog: ai_status
     });
 }
 
