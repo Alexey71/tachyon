@@ -4,6 +4,10 @@ const SRS_MAIN_URL = "https://github.com/itdoginfo/allow-domains/releases/latest
 const SRS_ADS_HAGEZI_PRO_URL = "https://github.com/zxc-rv/ad-filter/releases/latest/download/adlist.srs";
 const SRS_SUPERCELL_URL = "https://raw.githubusercontent.com/ushan0v/sing-box-supercell-ruleset/main/supercell.srs";
 const SRS_GITHUB_URL = "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/github.srs";
+const SRS_GEOIP_RU_URL = "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/ru.srs";
+const SRS_GEOSITE_RU_URL = "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/category-ru.srs";
+const SRS_GEOIP_US_URL = "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/us.srs";
+const SRS_GEOIP_CN_URL = "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/cn.srs";
 
 const COMMUNITY_SERVICES = {
     russia_inside: true,
@@ -32,7 +36,11 @@ const COMMUNITY_SERVICES = {
     roblox: true,
     ads_hagezi_pro: true,
     supercell: true,
-    github: true
+    github: true,
+    geoip_ru: true,
+    geosite_ru: true,
+    geoip_us: true,
+    geoip_cn: true
 };
 
 function as_string(value) {
@@ -51,6 +59,14 @@ function community_url(name) {
         return SRS_SUPERCELL_URL;
     if (name == "github")
         return SRS_GITHUB_URL;
+    if (name == "geoip_ru")
+        return SRS_GEOIP_RU_URL;
+    if (name == "geosite_ru")
+        return SRS_GEOSITE_RU_URL;
+    if (name == "geoip_us")
+        return SRS_GEOIP_US_URL;
+    if (name == "geoip_cn")
+        return SRS_GEOIP_CN_URL;
     return SRS_MAIN_URL + "/" + name + ".srs";
 }
 

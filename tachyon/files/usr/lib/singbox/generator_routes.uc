@@ -1182,6 +1182,52 @@ function add_combined_route_for_section(config, section) {
     if (length(rule_set_tags) > 0)
         route_rule.rule_set = single_or_array(rule_set_tags);
 
+    let geoip_country = option(section, "geoip_country", "all");
+    if (geoip_country == "non-ru") {
+        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_ru");
+        let ensured_site = ensure_community_ruleset(config, section_name, "geosite_ru");
+        let geoip_route_rule = {
+            action: target.action,
+            inbound: tproxy_inbound_matcher(),
+            rule_set: [ ensured_ip.tag, ensured_site.tag ],
+            invert: true
+        };
+        if (target.outbound)
+            geoip_route_rule.outbound = target.outbound;
+        push(config.route.rules, geoip_route_rule);
+    } else if (geoip_country == "ru") {
+        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_ru");
+        let ensured_site = ensure_community_ruleset(config, section_name, "geosite_ru");
+        let geoip_route_rule = {
+            action: target.action,
+            inbound: tproxy_inbound_matcher(),
+            rule_set: [ ensured_ip.tag, ensured_site.tag ]
+        };
+        if (target.outbound)
+            geoip_route_rule.outbound = target.outbound;
+        push(config.route.rules, geoip_route_rule);
+    } else if (geoip_country == "us") {
+        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_us");
+        let geoip_route_rule = {
+            action: target.action,
+            inbound: tproxy_inbound_matcher(),
+            rule_set: [ ensured_ip.tag ]
+        };
+        if (target.outbound)
+            geoip_route_rule.outbound = target.outbound;
+        push(config.route.rules, geoip_route_rule);
+    } else if (geoip_country == "cn") {
+        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_cn");
+        let geoip_route_rule = {
+            action: target.action,
+            inbound: tproxy_inbound_matcher(),
+            rule_set: [ ensured_ip.tag ]
+        };
+        if (target.outbound)
+            geoip_route_rule.outbound = target.outbound;
+        push(config.route.rules, geoip_route_rule);
+    }
+
     let has_route_matchers = route_rule.domain != null || route_rule.domain_suffix != null ||
         route_rule.domain_keyword != null || route_rule.domain_regex != null ||
         route_rule.ip_cidr != null || route_rule.port != null || route_rule.port_range != null ||

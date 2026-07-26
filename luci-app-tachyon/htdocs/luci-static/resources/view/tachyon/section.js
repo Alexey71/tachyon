@@ -8712,6 +8712,24 @@ function createSectionContent(section) {
     return getRuleResolvedAction(section_id) === "byedpi" ? "1" : "0";
   };
 
+  o = section.taboption(
+    "settings",
+    form.ListValue,
+    "geoip_country",
+    _("GeoIP Country Routing"),
+    _(
+      "Select target country or region for this section (e.g. Non-RU for all foreign traffic).",
+    ),
+  );
+  o.value("all", _("🌐 All Traffic (Default)"));
+  o.value("non-ru", _("🇪🇺/🇺🇸 Non-RU (All Foreign Traffic)"));
+  o.value("ru", _("🇷🇺 RU Only (Russia)"));
+  o.value("us", _("🇺🇸 US Only (United States)"));
+  o.value("cn", _("🇨🇳 CN Only (China)"));
+  o.default = "all";
+  o.rmempty = false;
+  o.modalonly = true;
+
   addTextConditionField(section, {
     key: "domain_suffix",
     optionName: "domain",
