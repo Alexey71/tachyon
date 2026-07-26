@@ -1121,9 +1121,13 @@ function add_excluded_ips_rule(config, section) {
 }
 
 function load_community_subnet_cidrs(community) {
-    let folder = ctx.runtime_ruleset_folder || runtime_ruleset_folder;
-    let path = folder + "/community-subnets-" + as_string(community) + ".lst";
+    let path = "/tmp/sing-box/rulesets/community-subnets-" + as_string(community) + ".lst";
     let content = fs.readfile(path);
+    if (content == null || content == "") {
+        let folder = ctx.runtime_ruleset_folder || runtime_ruleset_folder || "/tmp/sing-box/rulesets";
+        path = folder + "/community-subnets-" + as_string(community) + ".lst";
+        content = fs.readfile(path);
+    }
     if (content == null || content == "")
         return [];
 

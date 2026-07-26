@@ -31,7 +31,7 @@ function detect_installed_version() {
         }
     }
 
-    return "1.2.33";
+    return "1.2.34";
 }
 
 function constants_map() {
