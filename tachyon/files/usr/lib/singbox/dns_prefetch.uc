@@ -1,17 +1,25 @@
 #!/usr/bin/env ucode
 
 // DNS Turbo Cache prefetch worker.
-// Resolves popular blocked domains through the local DNS (127.0.0.1) to
-// pre-populate the sing-box FakeIP cache so first-visit latency is 0 ms.
+// Resolves domains through the local DNS (127.0.0.1) to pre-populate the
+// sing-box FakeIP cache so first-visit latency is 0 ms.
+//
+// Domain sources (in priority order):
+//   1. user_domains / user_domains_text from every active tachyon section
+//   2. domain / domain_suffix rule conditions from active sections
+//   3. Built-in baseline list of commonly blocked services
 
 let common = require("core.common");
 let uci_core = require("core.uci");
 
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 
-// Popular blocked domains – resolved once at startup to warm FakeIP cache.
-const PREFETCH_DOMAINS = [
-    // ── Telegram ─────────────────────────────────────────────────────────────
+// ─── Fallback baseline list ───────────────────────────────────────────────────
+// Used when a user has no custom domains configured yet. Covers the most
+// popular Russian-blocked services and their CDN / API subdomains.
+
+const BASELINE_DOMAINS = [
+    // ── Telegram ──────────────────────────────────────────────────────────────
     "t.me", "telegram.org", "web.telegram.org", "desktop.telegram.org",
     "api.telegram.org", "core.telegram.org", "cdn.telegram.org",
     "updates.telegram.org", "media.telegram.org",
@@ -20,16 +28,13 @@ const PREFETCH_DOMAINS = [
     "youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com",
     "music.youtube.com", "studio.youtube.com", "ytimg.com", "s.ytimg.com",
     "i.ytimg.com", "yt3.ggpht.com", "googlevideo.com", "yt.be",
-    "youtubei.googleapis.com", "youtube-nocookie.com", "jnn-pa.googleapis.com",
-    "suggestqueries-clients6.youtube.com",
+    "youtubei.googleapis.com", "youtube-nocookie.com",
 
     // ── Instagram / Meta ──────────────────────────────────────────────────────
     "instagram.com", "www.instagram.com", "cdninstagram.com",
-    "i.instagram.com", "graph.instagram.com", "business.instagram.com",
-    "facebook.com", "www.facebook.com", "m.facebook.com", "static.xx.fbcdn.net",
-    "video.xx.fbcdn.net", "z-m-scontent.xx.fbcdn.net", "fbcdn.net",
+    "i.instagram.com", "graph.instagram.com",
+    "facebook.com", "www.facebook.com", "m.facebook.com", "fbcdn.net",
     "messenger.com", "www.messenger.com", "connect.facebook.net",
-    "graph.facebook.com", "edge-chat.messenger.com",
     "whatsapp.com", "www.whatsapp.com", "web.whatsapp.com",
     "media.whatsapp.net", "mmg.whatsapp.net",
 
@@ -37,115 +42,139 @@ const PREFETCH_DOMAINS = [
     "twitter.com", "www.twitter.com", "x.com", "www.x.com",
     "t.co", "twimg.com", "abs.twimg.com", "pbs.twimg.com",
     "video.twimg.com", "api.twitter.com", "api.x.com",
-    "upload.twitter.com", "cards.twitter.com",
 
     // ── Discord ───────────────────────────────────────────────────────────────
     "discord.com", "www.discord.com", "discordapp.com", "discord.gg",
     "cdn.discordapp.com", "media.discordapp.net", "gateway.discord.gg",
-    "status.discord.com", "discord.media", "discordstatus.com",
 
     // ── Reddit ────────────────────────────────────────────────────────────────
     "reddit.com", "www.reddit.com", "old.reddit.com", "redd.it",
-    "redditmedia.com", "redditstatic.com", "reddituploads.com",
-    "v.redd.it", "preview.redd.it", "i.redd.it",
+    "redditmedia.com", "redditstatic.com", "v.redd.it", "i.redd.it",
 
     // ── GitHub ────────────────────────────────────────────────────────────────
-    "github.com", "www.github.com", "api.github.com", "gist.github.com",
+    "github.com", "api.github.com", "gist.github.com",
     "raw.githubusercontent.com", "objects.githubusercontent.com",
     "codeload.github.com", "avatars.githubusercontent.com",
-    "user-images.githubusercontent.com", "github.githubassets.com",
-    "copilot.github.com",
+    "github.githubassets.com",
 
-    // ── Google (поверх стандартных блокировок) ────────────────────────────────
+    // ── Google ────────────────────────────────────────────────────────────────
     "google.com", "www.google.com", "google.ru", "mail.google.com",
-    "drive.google.com", "docs.google.com", "sheets.google.com",
-    "slides.google.com", "meet.google.com", "calendar.google.com",
-    "photos.google.com", "play.google.com", "accounts.google.com",
-    "translate.google.com", "news.google.com", "maps.google.com",
-    "classroom.google.com", "chat.google.com",
-    "lh3.googleusercontent.com", "lh4.googleusercontent.com",
+    "drive.google.com", "docs.google.com", "meet.google.com",
+    "calendar.google.com", "photos.google.com", "accounts.google.com",
+    "translate.google.com", "maps.google.com", "lh3.googleusercontent.com",
 
     // ── Netflix ───────────────────────────────────────────────────────────────
-    "netflix.com", "www.netflix.com", "api-global.netflix.com",
-    "nflxvideo.net", "nflximg.net", "nflxext.com", "nflxso.net",
-    "cdnjs.cloudflare.com",
+    "netflix.com", "www.netflix.com", "nflxvideo.net", "nflximg.net", "nflxso.net",
 
     // ── Spotify ───────────────────────────────────────────────────────────────
-    "spotify.com", "open.spotify.com", "api.spotify.com",
-    "accounts.spotify.com", "scdn.co", "audio-ak-spotify-com.akamaized.net",
-    "dealer.spotify.com",
+    "spotify.com", "open.spotify.com", "api.spotify.com", "scdn.co",
 
     // ── TikTok ────────────────────────────────────────────────────────────────
-    "tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com",
-    "tiktokcdn.com", "tiktokcdn-us.com", "musical.ly",
-    "api16-normal-c-useast1a.tiktokv.com", "p16-sign-va.tiktokcdn.com",
+    "tiktok.com", "www.tiktok.com", "m.tiktok.com", "tiktokcdn.com",
 
     // ── Twitch ────────────────────────────────────────────────────────────────
-    "twitch.tv", "www.twitch.tv", "m.twitch.tv", "clips.twitch.tv",
-    "static-cdn.jtvnw.net", "vod-secure.twitch.tv", "gql.twitch.tv",
-    "api.twitch.tv", "usher.twitchapps.com", "irc.chat.twitch.tv",
+    "twitch.tv", "www.twitch.tv", "static-cdn.jtvnw.net", "api.twitch.tv",
 
     // ── Wikipedia ────────────────────────────────────────────────────────────
     "wikipedia.org", "ru.wikipedia.org", "en.wikipedia.org",
-    "de.wikipedia.org", "fr.wikipedia.org", "upload.wikimedia.org",
-    "wikimedia.org", "wikidata.org", "mediawiki.org",
+    "upload.wikimedia.org", "wikimedia.org",
 
-    // ── LinkedIn ──────────────────────────────────────────────────────────────
-    "linkedin.com", "www.linkedin.com", "media.licdn.com",
-    "static.licdn.com", "platform.linkedin.com",
-
-    // ── Pinterest ─────────────────────────────────────────────────────────────
-    "pinterest.com", "www.pinterest.com", "ru.pinterest.com",
-    "i.pinimg.com", "v.pinimg.com", "s.pinimg.com",
-
-    // ── Snapchat ──────────────────────────────────────────────────────────────
-    "snapchat.com", "www.snapchat.com", "sc-cdn.net",
-    "feelinsonice-hrd.appspot.com",
+    // ── LinkedIn / Pinterest / Snapchat ───────────────────────────────────────
+    "linkedin.com", "www.linkedin.com",
+    "pinterest.com", "www.pinterest.com", "i.pinimg.com",
+    "snapchat.com", "www.snapchat.com",
 
     // ── Signal ────────────────────────────────────────────────────────────────
-    "signal.org", "www.signal.org", "api.signal.org",
-    "cdn.signal.org", "storage.signal.org",
+    "signal.org", "www.signal.org", "cdn.signal.org",
 
     // ── Steam / Gaming ────────────────────────────────────────────────────────
     "steampowered.com", "store.steampowered.com", "steamcommunity.com",
     "steamcdn-a.akamaihd.net", "cdn.cloudflare.steamstatic.com",
-    "api.steampowered.com", "help.steampowered.com",
-    "epicgames.com", "www.epicgames.com", "launcher.epicgames.com",
-    "account.epicgames.com", "cdn1.epicgames.com",
-    "roblox.com", "www.roblox.com", "rbxcdn.com",
-    "gaming.youtube.com",
-
-    // ── Medium / Substack ────────────────────────────────────────────────────
-    "medium.com", "www.medium.com", "cdn-images-1.medium.com",
-    "substack.com", "cdn.substack.com",
+    "epicgames.com", "www.epicgames.com",
+    "roblox.com", "www.roblox.com",
 
     // ── ProtonMail / Privacy ──────────────────────────────────────────────────
-    "proton.me", "mail.proton.me", "protonmail.com", "protonvpn.com",
-    "account.proton.me",
+    "proton.me", "mail.proton.me", "protonmail.com",
+
+    // ── Medium / Substack ─────────────────────────────────────────────────────
+    "medium.com", "substack.com",
 
     // ── News ──────────────────────────────────────────────────────────────────
-    "bbc.com", "www.bbc.com", "bbc.co.uk", "www.bbc.co.uk",
-    "reuters.com", "www.reuters.com",
-    "theguardian.com", "www.theguardian.com",
-    "nytimes.com", "www.nytimes.com",
+    "bbc.com", "bbc.co.uk", "reuters.com", "theguardian.com", "nytimes.com",
 
-    // ── Cloudflare CDN ───────────────────────────────────────────────────────
-    "cloudflare.com", "www.cloudflare.com", "one.one.one.one",
-    "cdnjs.cloudflare.com", "dash.cloudflare.com",
-
-    // ── Misc популярные ───────────────────────────────────────────────────────
-    "patreon.com", "www.patreon.com",
-    "onlyfans.com", "www.onlyfans.com",
-    "canva.com", "www.canva.com",
-    "notion.so", "www.notion.so",
-    "figma.com", "www.figma.com",
-    "trello.com", "www.trello.com",
-    "slack.com", "www.slack.com", "files.slack.com",
-    "zoom.us", "www.zoom.us",
-    "dropbox.com", "www.dropbox.com",
-    "1password.com", "bitwarden.com",
+    // ── Misc ──────────────────────────────────────────────────────────────────
+    "patreon.com", "canva.com", "notion.so", "figma.com",
+    "slack.com", "zoom.us", "dropbox.com",
 ];
 
+// ─── Domain extraction from UCI sections ─────────────────────────────────────
+
+function list_to_array(value) {
+    if (type(value) == "array")
+        return value;
+    let s = trim(common.as_string(value));
+    return s != "" ? [ s ] : [];
+}
+
+function parse_text_domains(text) {
+    let result = [];
+    for (let line in split(common.as_string(text), /[\n\r,\s]+/)) {
+        line = trim(line);
+        // Strip leading dots (domain_suffix style) and wildcards
+        line = replace(line, /^\*?\./, "");
+        if (line != "" && !starts_with(line, "#"))
+            push(result, line);
+    }
+    return result;
+}
+
+function collect_section_domains(section) {
+    let result = [];
+    let list_type = common.as_string(section.user_domain_list_type || "disabled");
+
+    // user_domains (UCI list, type=dynamic)
+    if (list_type == "dynamic") {
+        for (let d in list_to_array(section.user_domains))
+            push(result, ...parse_text_domains(d));
+    }
+
+    // user_domains_text (textarea, type=text)
+    if (list_type == "text") {
+        push(result, ...parse_text_domains(common.as_string(section.user_domains_text || "")));
+    }
+
+    // domain / domain_suffix rule conditions
+    for (let key in [ "domain", "domain_suffix" ]) {
+        for (let d in list_to_array(section[key]))
+            push(result, ...parse_text_domains(d));
+        let text = common.as_string(section[key + "s"] || "");  // plural textarea
+        if (text != "")
+            push(result, ...parse_text_domains(text));
+    }
+
+    return result;
+}
+
+function collect_user_domains() {
+    let seen = {};
+    let result = [];
+
+    uci_core.foreach(CONFIG_NAME, "section", function(section) {
+        if (section.enabled == "0")
+            return;
+        for (let domain in collect_section_domains(section)) {
+            domain = lc(trim(domain));
+            if (domain != "" && !seen[domain]) {
+                seen[domain] = true;
+                push(result, domain);
+            }
+        }
+    });
+
+    return result;
+}
+
+// ─── Prefetch ─────────────────────────────────────────────────────────────────
 
 function prefetch() {
     let settings = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "settings"));
@@ -155,7 +184,28 @@ function prefetch() {
     // Give sing-box time to fully initialize before issuing queries.
     common.command_success_from_args([ "sleep", "10" ]);
 
-    for (let domain in PREFETCH_DOMAINS)
+    // 1. Collect domains from user's actual sections (highest priority)
+    let seen = {};
+    let domains = [];
+
+    for (let d in collect_user_domains()) {
+        if (!seen[d]) {
+            seen[d] = true;
+            push(domains, d);
+        }
+    }
+
+    // 2. Merge baseline list (skip already queued)
+    for (let d in BASELINE_DOMAINS) {
+        d = lc(d);
+        if (!seen[d]) {
+            seen[d] = true;
+            push(domains, d);
+        }
+    }
+
+    // 3. Resolve all via local DNS to warm FakeIP cache
+    for (let domain in domains)
         common.command_success_from_args([ "nslookup", domain, "127.0.0.1" ]);
 }
 
