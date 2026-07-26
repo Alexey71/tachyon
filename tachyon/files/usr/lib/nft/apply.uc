@@ -606,7 +606,7 @@ function section_action(section) {
 
 function action_captures_traffic(action) {
     return action == "connection" || action == "proxy" || action == "outbound" || action == "vpn" ||
-        action == "block" || action == "zapret" || action == "zapret2" || action == "byedpi";
+        action == "awg" || action == "warp" || action == "block" || action == "zapret" || action == "zapret2" || action == "byedpi";
 }
 
 function section_priority_action(section) {
@@ -1488,6 +1488,7 @@ function ensure_tproxy_route_rule(table, mark, rt_tables_path) {
         log_debug("IPv6 TPROXY marking rule already exists");
     }
 
+    run_args([ "nft", "insert", "rule", "inet", "fw4", "forward", "meta", "mark", as_string(mark), "return" ]);
     return true;
 }
 
