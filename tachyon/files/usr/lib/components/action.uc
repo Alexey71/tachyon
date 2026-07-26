@@ -8,7 +8,7 @@ const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const BIN_PATH = getenv("TACHYON_BIN") || constants.TACHYON_BIN || "/usr/bin/tachyon";
 const SERVICE_INIT = getenv("TACHYON_SERVICE_INIT") || constants.TACHYON_SERVICE_INIT || "/etc/init.d/tachyon";
 const TACHYON_VERSION = getenv("TACHYON_VERSION") || constants.TACHYON_VERSION || "";
-const TACHYON_RELEASE_REPO = getenv("TACHYON_RELEASE_REPO") || constants.TACHYON_RELEASE_REPO || "ushan0v/tachyon";
+const TACHYON_RELEASE_REPO = getenv("TACHYON_RELEASE_REPO") || constants.TACHYON_RELEASE_REPO || "Dushnilin/tachyon";
 const RUNTIME_STATE_DIR = getenv("TACHYON_RUNTIME_STATE_DIR") || "/var/run/tachyon";
 const SYSTEM_INFO_CACHE_FILE = getenv("TACHYON_SYSTEM_INFO_CACHE_FILE") || RUNTIME_STATE_DIR + "/system-info.json";
 const COMPONENT_LOCK_DIR = getenv("UPDATES_LOCK_DIR") || RUNTIME_STATE_DIR + "/component-action.lock";
@@ -610,9 +610,17 @@ function latest_tachyon_release_json() {
 
 function latest_tachyon_version() {
     let response = latest_tachyon_release_json();
-    if (response == "")
-        return "";
-    return trim(helper_output_input(response, "object-get-default", [ "tag_name", "" ]));
+    let version = "";
+    if (response != "") {
+        version = trim(helper_output_input(response, "object-get-default", [ "tag_name", "" ]));
+    }
+    if (version == "") {
+        let parts = split(TACHYON_RELEASE_REPO, "/");
+        if (length(parts) == 2 && parts[0] != "" && parts[1] != "") {
+            version = fetch_github_release_tag_fallback(parts[0], parts[1]);
+        }
+    }
+    return version;
 }
 
 function core_url_module_or_null() {
