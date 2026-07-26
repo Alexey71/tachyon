@@ -944,9 +944,18 @@ function dns_action_detour_tag(section) {
     return target_section == "" ? "" : outbound_tag(target_section);
 }
 
+function section_dns_servers(section) {
+    let servers = list_option(section, "dns_server");
+    if (length(servers) == 0) {
+        let single = option(section, "dns_server", "");
+        servers = [single];
+    }
+    return servers;
+}
+
 function add_dns_server_for_section(config, section) {
     let section_name = section[".name"];
-    let servers = list_option(section, "dns_server");
+    let servers = section_dns_servers(section);
     let dns_type = option(section, "dns_type", "udp");
     let detour = dns_action_detour_tag(section);
     let server_tags = [];
@@ -998,7 +1007,7 @@ function add_dns_action_rules_for_section(config, section) {
     );
 
     let rewrite_ttl = int_option(ctx.runtime_settings(), "dns_rewrite_ttl", "60");
-    let section_servers = list_option(section, "dns_server");
+    let section_servers = section_dns_servers(section);
     let server_tags = [];
     if (length(section_servers) <= 1) {
         push(server_tags, dns_action_server_tag(section_name));
