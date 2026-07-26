@@ -888,6 +888,21 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
     if (arg_bool(exclude_ntp) && !nft_insert_rule(table, "mangle", [ "udp", "dport", "123", "return" ]))
         return false;
 
+    // QoS Low-Latency Gaming & Voice Acceleration Engine
+    let qos_enabled = uci_settings().qos_priority_engine != "0";
+    if (qos_enabled) {
+        // Voice & Discord RTC (DSCP EF 0x2e)
+        nft_add_rule(table, "mangle_forward", [ "udp", "dport", "{ 5000-5020, 3478, 19302, 50000-65535 }", "ip", "dscp", "set", "0x2e" ]);
+        nft_add_rule(table, "mangle_output", [ "udp", "dport", "{ 5000-5020, 3478, 19302, 50000-65535 }", "ip", "dscp", "set", "0x2e" ]);
+
+        // Gaming Traffic (Steam, CS, Dota, Valorant, Apex, PUBG, Roblox) (DSCP AF41 0x22)
+        nft_add_rule(table, "mangle_forward", [ "udp", "dport", "{ 3074, 7000-9000, 27000-27050, 28960 }", "ip", "dscp", "set", "0x22" ]);
+        nft_add_rule(table, "mangle_output", [ "udp", "dport", "{ 3074, 7000-9000, 27000-27050, 28960 }", "ip", "dscp", "set", "0x22" ]);
+
+        // TCP ACK Acceleration (DSCP CS2)
+        nft_add_rule(table, "mangle_forward", [ "tcp", "flags", "&", "(fin|syn|rst|ack)", "==", "ack", "ip", "dscp", "set", "cs2" ]);
+    }
+
     return true;
 }
 

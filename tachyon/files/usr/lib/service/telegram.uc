@@ -395,7 +395,8 @@ function view_menu(token, chat_id, msg_id) {
             { text: "🐕 Watchdog", callback_data: "/watchdog" }
         ],
         [
-            { text: "🤖 ИИ-Самолечение", callback_data: "/heal" }
+            { text: "🤖 ИИ-Самолечение", callback_data: "/heal" },
+            { text: "🎮 Игровой QoS", callback_data: "/qos" }
         ],
         [
             { text: "🩺 Диагностика", callback_data: "/doctor" },
@@ -966,6 +967,36 @@ function exec_ai_heal(token, chat_id, msg_id) {
     send_message(token, chat_id, text, "HTML", keyboard);
 }
 
+function view_qos(token, chat_id, msg_id) {
+    let c = uci_core.cursor(); c.load(CONFIG_NAME);
+    let cfg = c.get_all(CONFIG_NAME, "settings") || {};
+    let enabled = cfg.qos_priority_engine != "0";
+    
+    let text = "🎮 <b>Игровой & Голосовой QoS Ускоритель</b>\n\n" +
+               "Статус: <code>" + (enabled ? "🟢 Включен (DSCP EF + AF41 Priority)" : "⚪ Выключен") + "</code>\n\n" +
+               "<b>Приоритетные правила:</b>\n" +
+               "├ 🎙️ <b>Golos/Discord/RTC:</b> UDP 5000-5020, 3478, 50000-65535 ➔ <code>DSCP EF (0x2e)</code>\n" +
+               "├ 🎮 <b>Games (Steam/CS/Dota/Apex/PUBG/Roblox):</b> UDP 27000-27050, 3074 ➔ <code>DSCP AF41 (0x22)</code>\n" +
+               "└ ⚡ <b>TCP ACK Acceleration:</b> малые ACK пакеты ➔ <code>High Priority</code>";
+
+    let keyboard = [
+        [{ text: (enabled ? "⏹️ Отключить QoS" : "⚡ Включить QoS"), callback_data: "/qos_toggle" }],
+        [{ text: "⬅️ Назад", callback_data: "/menu" }]
+    ];
+    if (msg_id) edit_message(token, chat_id, msg_id, text, "HTML", keyboard);
+    else send_message(token, chat_id, text, "HTML", keyboard);
+}
+
+function handle_qos_toggle(token, chat_id, msg_id) {
+    let c = uci_core.cursor(); c.load(CONFIG_NAME);
+    let cfg = c.get_all(CONFIG_NAME, "settings") || {};
+    let new_val = (cfg.qos_priority_engine == "0") ? "1" : "0";
+    c.set(CONFIG_NAME, "settings", "qos_priority_engine", new_val);
+    c.commit(CONFIG_NAME);
+    system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+    view_qos(token, chat_id, msg_id);
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 function dispatch_command(token, chat_id, text, msg_id) {
@@ -976,6 +1007,8 @@ function dispatch_command(token, chat_id, text, msg_id) {
     if (cmd == "/status") return view_status(token, chat_id, msg_id);
     if (cmd == "/runtime") return view_runtime(token, chat_id, msg_id);
     if (cmd == "/heal" || cmd == "/ai_heal") return exec_ai_heal(token, chat_id, msg_id);
+    if (cmd == "/qos") return view_qos(token, chat_id, msg_id);
+    if (cmd == "/qos_toggle") return handle_qos_toggle(token, chat_id, msg_id);
     
     if (cmd == "/outbounds") return view_outbounds(token, chat_id, msg_id);
     if (match(cmd, /^\/outbounds /)) {

@@ -425,6 +425,25 @@ function ai_heal_nftables() {
     return true;
 }
 
+function ai_heal_qos() {
+    let cfg = settings();
+    if (cfg.qos_priority_engine == "0") return true;
+
+    let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
+    let out_nft = command_output_from_args(["nft", "list", "table", "inet", nft_table]);
+    if (index(out_nft, "dscp set 0x2e") < 0 || index(out_nft, "dscp set 0x22") < 0) {
+        ai_heal_report(
+            "qos_priority",
+            "Правила Игрового & Голосового QoS Ускорителя не найдены в nftables",
+            "Применены высокоприоритетные метки DSCP EF (0x2e) для Voice/RTC и DSCP AF41 (0x22) для Gaming",
+            "fixed"
+        );
+        system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+        return false;
+    }
+    return true;
+}
+
 function ai_heal_dns() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return true;
@@ -508,6 +527,7 @@ function ai_heal_proxy_connectivity() {
 function ai_full_health_audit() {
     check_memory();
     ai_heal_nftables();
+    ai_heal_qos();
     ai_heal_dns();
     ai_heal_proxy_connectivity();
     ai_export_status();
