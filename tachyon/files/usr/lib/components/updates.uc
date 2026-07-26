@@ -2158,6 +2158,8 @@ function import_builtin_subnets_from_rule(section, settings) {
         if (type(urls) != "array")
             continue;
 
+        let cached_file = TMP_RULESET_FOLDER + "/community-subnets-" + as_string(service) + ".lst";
+        let combined_lines = [];
         for (let url in urls) {
             let tmpfile = temp_path();
             if (tmpfile == "") {
@@ -2169,6 +2171,13 @@ function import_builtin_subnets_from_rule(section, settings) {
                 log_message("Failed to download built-in " + as_string(service) + " subnet list; skipping it until the next successful update", "warn");
                 remove_file(tmpfile);
                 continue;
+            }
+
+            let lines = split(as_string(fs.readfile(tmpfile)), "\n");
+            for (let l in lines) {
+                l = trim(replace(as_string(l), /\r/g, ""));
+                if (l != "" && substr(l, 0, 1) != "#")
+                    push(combined_lines, l);
             }
 
             if (!nft_module_success([
@@ -2190,6 +2199,11 @@ function import_builtin_subnets_from_rule(section, settings) {
                 ok = false;
 
             remove_file(tmpfile);
+        }
+
+        if (length(combined_lines) > 0) {
+            ensure_dir(TMP_RULESET_FOLDER);
+            write_file(cached_file, join("\n", combined_lines) + "\n");
         }
     }
 
