@@ -1777,7 +1777,10 @@ function nft_add_json_ruleset_subnets_for_section(section, json_path, label, tab
 }
 
 function nft_add_community_subnet_file_for_section(section, service, filepath, table, common_set, ip_port_set, interface_set, discord_set, mark, chunk_size_text, common6_set, ip_port6_set, discord6_set) {
-    return nft_add_subnet_file_for_section(section, filepath, table, common_set, ip_port_set, chunk_size_text, common6_set, ip_port6_set);
+    if (section_needs_priority_sets(section))
+        return nft_add_subnet_file_for_section(section, filepath, table, common_set, ip_port_set, chunk_size_text, common6_set, ip_port6_set);
+
+    return nft_add_file_chunks_to_family_sets(filepath, table, common_set, default_arg(common6_set, "tachyon_subnets6"), "ips", "", chunk_size_text);
 }
 
 function nft_add_subnet_file_for_uci_section(section_name, filepath, table, common_set, ip_port_set, chunk_size_text, common6_set, ip_port6_set) {

@@ -68,7 +68,7 @@ const BUILTIN_SUBNET_URLS = {
     meta: [ getenv("SUBNETS_META") || GITHUB_RAW_URL + "/Subnets/IPv4/meta.lst", getenv("SUBNETS_META6") || GITHUB_RAW_URL + "/Subnets/IPv6/meta.lst" ],
     discord: [ getenv("SUBNETS_DISCORD") || GITHUB_RAW_URL + "/Subnets/IPv4/discord.lst", getenv("SUBNETS_DISCORD6") || GITHUB_RAW_URL + "/Subnets/IPv6/discord.lst" ],
     roblox: [ getenv("SUBNETS_ROBLOX") || GITHUB_RAW_URL + "/Subnets/IPv4/roblox.lst" ],
-    telegram: [ getenv("SUBNETS_TELERAM") || GITHUB_RAW_URL + "/Subnets/IPv4/telegram.lst", getenv("SUBNETS_TELERAM6") || GITHUB_RAW_URL + "/Subnets/IPv6/telegram.lst" ],
+    telegram: [ getenv("SUBNETS_TELEGRAM") || GITHUB_RAW_URL + "/Subnets/IPv4/telegram.lst", getenv("SUBNETS_TELEGRAM6") || GITHUB_RAW_URL + "/Subnets/IPv6/telegram.lst" ],
     cloudflare: [ getenv("SUBNETS_CLOUDFLARE") || GITHUB_RAW_URL + "/Subnets/IPv4/cloudflare.lst", getenv("SUBNETS_CLOUDFLARE6") || GITHUB_RAW_URL + "/Subnets/IPv6/cloudflare.lst" ],
     hetzner: [ getenv("SUBNETS_HETZNER") || GITHUB_RAW_URL + "/Subnets/IPv4/hetzner.lst", getenv("SUBNETS_HETZNER6") || GITHUB_RAW_URL + "/Subnets/IPv6/hetzner.lst" ],
     ovh: [ getenv("SUBNETS_OVH") || GITHUB_RAW_URL + "/Subnets/IPv4/ovh.lst", getenv("SUBNETS_OVH6") || GITHUB_RAW_URL + "/Subnets/IPv6/ovh.lst" ],
