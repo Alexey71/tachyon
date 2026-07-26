@@ -403,10 +403,7 @@ function updates_normalize_zapret_version(value) {
 }
 
 function tachyon_normalized_release_version(value) {
-    value = as_string(value);
-    if (str_startswith(value, "v"))
-        value = substr(value, 1);
-    return value;
+    return as_string(value);
 }
 
 function tachyon_release_version_valid(value) {
