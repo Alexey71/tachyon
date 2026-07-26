@@ -11,8 +11,8 @@ body:
         Спасибо за создание отчета об ошибке!
         
         Перед отправкой, пожалуйста:
-        - Проверьте [существующие issues](https://github.com/ushan0v/tachyon/issues)
-        - Просмотрите [README проекта](https://github.com/ushan0v/tachyon#readme)
+        - Проверьте [существующие issues](https://github.com/Dushnilin/tachyon/issues)
+        - Просмотрите [README проекта](https://github.com/Dushnilin/tachyon#readme)
 
   - type: textarea
     id: description
