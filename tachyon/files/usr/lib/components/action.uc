@@ -608,21 +608,6 @@ function latest_tachyon_release_json() {
     return fetch_github_release_json(parts[0], parts[1]);
 }
 
-function latest_tachyon_version() {
-    let response = latest_tachyon_release_json();
-    let version = "";
-    if (response != "") {
-        version = trim(helper_output_input(response, "object-get-default", [ "tag_name", "" ]));
-    }
-    if (version == "") {
-        let parts = split(TACHYON_RELEASE_REPO, "/");
-        if (length(parts) == 2 && parts[0] != "" && parts[1] != "") {
-            version = fetch_github_release_tag_fallback(parts[0], parts[1]);
-        }
-    }
-    return version;
-}
-
 function core_url_module_or_null() {
     try {
         return require("core.url");
@@ -661,8 +646,22 @@ function fetch_github_release_tag_fallback(owner, repo) {
             }
         }
     }
-
     return "";
+}
+
+function latest_tachyon_version() {
+    let response = latest_tachyon_release_json();
+    let version = "";
+    if (response != "") {
+        version = trim(helper_output_input(response, "object-get-default", [ "tag_name", "" ]));
+    }
+    if (version == "") {
+        let parts = split(TACHYON_RELEASE_REPO, "/");
+        if (length(parts) == 2 && parts[0] != "" && parts[1] != "") {
+            version = fetch_github_release_tag_fallback(parts[0], parts[1]);
+        }
+    }
+    return version;
 }
 
 function fetch_tachyon_latest_release_metadata() {
@@ -2021,23 +2020,39 @@ function check_tachyon() {
 }
 
 function resolve_tachyon_release(latest_version) {
-    let release_json = latest_tachyon_release_json();
-    if (release_json == "")
-        return null;
     let asset_ext = is_apk() ? "apk" : "ipk";
     let i18n_required = pkg_is_installed("luci-i18n-tachyon-ru") ? "1" : "0";
-    let plan = trim(helper_output_input(release_json, "tachyon-release-plan", [ latest_version, asset_ext, i18n_required ]));
-    let fields = split(plan, "\t");
-    if (length(fields) < 7 || as_string(fields[1]) == "" || as_string(fields[2]) == "" || as_string(fields[3]) == "" || as_string(fields[4]) == "")
-        return null;
+    let release_json = latest_tachyon_release_json();
+    if (release_json != "") {
+        let plan = trim(helper_output_input(release_json, "tachyon-release-plan", [ latest_version, asset_ext, i18n_required ]));
+        let fields = split(plan, "\t");
+        if (length(fields) >= 7 && as_string(fields[1]) != "" && as_string(fields[2]) != "" && as_string(fields[3]) != "" && as_string(fields[4]) != "") {
+            return {
+                release_url: fields[0],
+                backend_name: fields[1],
+                backend_url: fields[2],
+                app_name: fields[3],
+                app_url: fields[4],
+                i18n_name: fields[5],
+                i18n_url: fields[6]
+            };
+        }
+    }
+
+    let ver_clean = replace(as_string(latest_version), /^v/, "");
+    let backend_name = "tachyon_" + ver_clean + "_all." + asset_ext;
+    let app_name = "luci-app-tachyon_" + ver_clean + "_all." + asset_ext;
+    let i18n_name = "luci-i18n-tachyon-ru_" + ver_clean + "_all." + asset_ext;
+    let base_dl = "https://github.com/" + TACHYON_RELEASE_REPO + "/releases/download/" + latest_version + "/";
+
     return {
-        release_url: fields[0],
-        backend_name: fields[1],
-        backend_url: fields[2],
-        app_name: fields[3],
-        app_url: fields[4],
-        i18n_name: fields[5],
-        i18n_url: fields[6]
+        release_url: "https://github.com/" + TACHYON_RELEASE_REPO + "/releases/tag/" + latest_version,
+        backend_name: backend_name,
+        backend_url: base_dl + backend_name,
+        app_name: app_name,
+        app_url: base_dl + app_name,
+        i18n_name: i18n_required == "1" ? i18n_name : "",
+        i18n_url: i18n_required == "1" ? (base_dl + i18n_name) : ""
     };
 }
 
