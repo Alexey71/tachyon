@@ -122,7 +122,7 @@ function parse_text_domains(text) {
         line = trim(line);
         // Strip leading dots (domain_suffix style) and wildcards
         line = replace(line, /^\*?\./, "");
-        if (line != "" && !starts_with(line, "#"))
+        if (line != "" && substr(line, 0, 1) != "#")
             push(result, line);
     }
     return result;
@@ -135,21 +135,25 @@ function collect_section_domains(section) {
     // user_domains (UCI list, type=dynamic)
     if (list_type == "dynamic") {
         for (let d in list_to_array(section.user_domains))
-            push(result, ...parse_text_domains(d));
+            for (let x in parse_text_domains(d))
+                push(result, x);
     }
 
     // user_domains_text (textarea, type=text)
     if (list_type == "text") {
-        push(result, ...parse_text_domains(common.as_string(section.user_domains_text || "")));
+        for (let x in parse_text_domains(common.as_string(section.user_domains_text || "")))
+            push(result, x);
     }
 
     // domain / domain_suffix rule conditions
     for (let key in [ "domain", "domain_suffix" ]) {
         for (let d in list_to_array(section[key]))
-            push(result, ...parse_text_domains(d));
+            for (let x in parse_text_domains(d))
+                push(result, x);
         let text = common.as_string(section[key + "s"] || "");  // plural textarea
         if (text != "")
-            push(result, ...parse_text_domains(text));
+            for (let x in parse_text_domains(text))
+                push(result, x);
     }
 
     return result;
