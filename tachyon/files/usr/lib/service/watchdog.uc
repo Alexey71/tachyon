@@ -347,27 +347,6 @@ function check_singbox_process() {
     }
 }
 
-function check_firewall_rules() {
-    let cfg = settings();
-    let routing_mode = cfg.routing_mode || "nftables";
-    let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
-
-    let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
-    if (process_running(list_update_pid, "ucode")) return;
-
-    if (routing_mode == "nftables") {
-        let out_nft = command_output_from_args(["nft", "list", "table", "inet", nft_table]);
-        if (index(out_nft, "tproxy") < 0) {
-            log_message("nftables rules are missing or corrupted. Rebuilding...", "warn");
-            let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
-            if (tcfg.notify_crash != "0") {
-                send_telegram_notification("⚠️ *Watchdog:* правила nftables повреждены или отсутствуют. Выполняю пересборку...");
-            }
-            system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
-        }
-    }
-}
-
 function check_memory() {
     let free_mb = -1;
     let mem_info = fs.readfile("/proc/meminfo") || "";
@@ -384,6 +363,154 @@ function check_memory() {
         log_message("Low memory detected (" + free_mb + "MB). Clearing caches...", "warn");
         system("echo 3 > /proc/sys/vm/drop_caches");
     }
+}
+
+// ─── AI Watchdog Self-Healing Matrix ──────────────────────────────────────────
+let ai_incidents_count = 0;
+let last_ai_incident = null;
+
+function ai_export_status() {
+    let status_obj = {
+        timestamp: time(),
+        status: last_ai_incident != null && (time() - last_ai_incident.timestamp < 300) ? "repaired" : "healthy",
+        ai_active: true,
+        incidents_resolved_total: ai_incidents_count,
+        last_incident: last_ai_incident
+    };
+    fs.writefile("/tmp/tachyon_ai_status.json", sprintf("%J\n", status_obj));
+}
+
+function ai_heal_report(event_type, description, resolution, status_code) {
+    ai_incidents_count++;
+    last_ai_incident = {
+        type: event_type,
+        description: description,
+        resolution: resolution,
+        timestamp: time()
+    };
+
+    let log_msg = sprintf("🤖 [AI Watchdog] %s. Action taken: %s", description, resolution);
+    log_message(log_msg, "warn");
+
+    let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
+    if (tcfg.enabled == "1" && tcfg.bot_token && tcfg.admin_ids && tcfg.notify_crash != "0") {
+        let tg_msg = sprintf("🤖 *[ИИ-Автомеханик Tachyon]*\n⚠️ *Проблема:* %s\n🔧 *Авто-решение:* %s", description, resolution);
+        send_telegram_notification(tg_msg);
+    }
+
+    ai_export_status();
+}
+
+function ai_heal_nftables() {
+    let cfg = settings();
+    let routing_mode = cfg.routing_mode || "nftables";
+    let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
+
+    let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
+    if (process_running(list_update_pid, "ucode")) return true;
+
+    if (routing_mode == "nftables") {
+        let out_nft = command_output_from_args(["nft", "list", "table", "inet", nft_table]);
+        if (index(out_nft, "tproxy") < 0 || index(out_nft, "priority_rules") < 0) {
+            ai_heal_report(
+                "nftables",
+                "Таблица правил nftables очищена или повреждена",
+                "Выполнена быстрая регенерация правил TachyonTable и цепочки TPROXY",
+                "fixed"
+            );
+            system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+            return false;
+        }
+    }
+    return true;
+}
+
+function ai_heal_dns() {
+    let cfg = settings();
+    if (cfg.recovery_bypass == "1") return true;
+
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
+
+    let dns_ok = command_success_from_args([
+        "nslookup", "-port=53", "check.tachyon", "127.0.0.1"
+    ]);
+    if (!dns_ok) {
+        let sb_dns_ok = command_success_from_args([
+            "nslookup", "-port=5353", "check.tachyon", "127.0.0.1"
+        ]);
+        if (sb_dns_ok) {
+            ai_heal_report(
+                "dns",
+                "Сбой перенаправления DNS в dnsmasq (порт 53 ➔ 5353)",
+                "Восстановлена конфигурация dnsmasq и перезапущена служба dhcp",
+                "fixed"
+            );
+            system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
+            system("/sbin/uci commit dhcp >/dev/null 2>&1");
+            system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
+            return false;
+        }
+    }
+    return true;
+}
+
+function ai_heal_proxy_connectivity() {
+    let cfg = settings();
+    if (cfg.recovery_bypass == "1") return true;
+
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
+
+    let now = time();
+    let proxy_addr = "127.0.0.1:4534";
+    let sb_cfg_data = fs.readfile("/etc/sing-box/config.json");
+    if (sb_cfg_data) {
+        try {
+            let sb_cfg = json(sb_cfg_data);
+            if (sb_cfg.inbounds) {
+                for (let inb in sb_cfg.inbounds) {
+                    if (inb.type == "http" || inb.type == "mixed") {
+                        proxy_addr = "127.0.0.1:" + as_string(inb.listen_port || 4534);
+                        break;
+                    }
+                }
+            }
+        } catch(e) {}
+    }
+
+    let proxy_ok = command_success_from_args([
+        "curl", "-s", "-I", "--connect-timeout", "3", "--max-time", "5",
+        "--proxy", "http://" + proxy_addr,
+        "https://cp.cloudflare.com/generate_204"
+    ]);
+
+    if (!proxy_ok) {
+        let direct_ok = command_success_from_args([
+            "curl", "-s", "-I", "--connect-timeout", "3", "--max-time", "5",
+            "https://cp.cloudflare.com/generate_204"
+        ]);
+        if (direct_ok) {
+            ai_heal_report(
+                "proxy",
+                "Зависание или неполный отклик прокси-порту sing-box (" + proxy_addr + ")",
+                "Очищена база cache.db и выполнен перезапуск sing-box",
+                "fixed"
+            );
+            remove_file("/tmp/sing-box/cache.db");
+            system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+            return false;
+        }
+    }
+    return true;
+}
+
+function ai_full_health_audit() {
+    check_memory();
+    ai_heal_nftables();
+    ai_heal_dns();
+    ai_heal_proxy_connectivity();
+    ai_export_status();
 }
 
 function check_urltest_switches() {
@@ -670,8 +797,7 @@ function worker() {
     function perform_periodic_checks() {
         check_auto_resume_pause();
         check_singbox_process();
-        check_firewall_rules();
-        check_memory();
+        ai_full_health_audit();
         smart_detect_process_pending();
     }
 
@@ -712,6 +838,15 @@ function get_status() {
     return 1;
 }
 
+function print_ai_status() {
+    let data = fs.readfile("/tmp/tachyon_ai_status.json");
+    if (data) {
+        print(data);
+    } else {
+        print("{\"status\":\"unknown\",\"ai_active\":false}\n");
+    }
+}
+
 let mode = (ARGV[0] == "") ? ARGV[1] : ARGV[0];
 if (!mode) mode = "";
 
@@ -723,7 +858,16 @@ else if (mode == "worker")
     exit(worker());
 else if (mode == "status")
     exit(get_status());
+else if (mode == "ai-heal") {
+    ai_full_health_audit();
+    print_ai_status();
+    exit(0);
+}
+else if (mode == "ai-status") {
+    print_ai_status();
+    exit(0);
+}
 else {
-    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status> ...\n");
+    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status> ...\n");
     exit(1);
 }

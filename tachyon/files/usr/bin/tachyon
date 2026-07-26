@@ -206,6 +206,8 @@ function command_spec(command) {
         watchdog: [ "service/watchdog.uc", "", 1 ],
         watchdog_start: [ "service/watchdog.uc", "start-runtime", 0 ],
         watchdog_stop: [ "service/watchdog.uc", "stop-runtime", 0 ],
+        ai_heal: [ "service/watchdog.uc", "ai-heal", 0 ],
+        ai_status: [ "service/watchdog.uc", "ai-status", 0 ],
         telegram: [ "service/telegram.uc", "", 2 ],
         telegram_status: [ "service/telegram.uc", "status", 0 ],
         telegram_start: [ "service/telegram.uc", "start-runtime", 0 ],
