@@ -95,8 +95,8 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          name: ${{ needs.preparation.outputs.version }}
-          tag_name: ${{ needs.preparation.outputs.version }}
+          name: v${{ needs.preparation.outputs.version }}
+          tag_name: v${{ needs.preparation.outputs.version }}
           target_commitish: ${{ needs.preparation.outputs.commitish }}
 
       - name: Release with notes
@@ -107,7 +107,7 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          name: ${{ needs.preparation.outputs.version }}
-          tag_name: ${{ needs.preparation.outputs.version }}
+          name: v${{ needs.preparation.outputs.version }}
+          tag_name: v${{ needs.preparation.outputs.version }}
           target_commitish: ${{ needs.preparation.outputs.commitish }}
           body: ${{ inputs.release_notes }}
