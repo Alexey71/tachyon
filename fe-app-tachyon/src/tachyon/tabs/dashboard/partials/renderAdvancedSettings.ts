@@ -13,6 +13,7 @@ interface AdvancedSettingsState {
   smartDetectSections: string[];
   allSectionNames: string[];
   deviceIpsPerSection: Record<string, string[]>;
+  dnsTurboCache: boolean;
   saving: boolean;
   loaded: boolean;
 }
@@ -24,6 +25,7 @@ let _state: AdvancedSettingsState = {
   smartDetectSections: [],
   allSectionNames: [],
   deviceIpsPerSection: {},
+  dnsTurboCache: false,
   saving: false,
   loaded: false,
 };
@@ -84,6 +86,7 @@ export async function loadAdvancedSettingsState() {
       smartDetectSections.length > 0 ? smartDetectSections : allSectionNames.slice(0, 1),
     allSectionNames,
     deviceIpsPerSection,
+    dnsTurboCache: settingsSec?.dns_turbo_cache === '1',
     loaded: true,
   };
   rerender();
@@ -163,6 +166,24 @@ async function saveDeviceIps(sectionName: string, ipsText: string) {
   rerender();
 }
 
+async function saveDnsTurboCache(enabled: boolean) {
+  _state = { ..._state, saving: true };
+  rerender();
+  try {
+    await TachyonShellMethods.uciRunCommand([
+      'set',
+      `${TACHYON_UCI_PACKAGE}.settings.dns_turbo_cache=${enabled ? '1' : '0'}`,
+    ]);
+    await TachyonShellMethods.uciRunCommand(['commit', TACHYON_UCI_PACKAGE]);
+    _state = { ..._state, dnsTurboCache: enabled };
+    showToast(_('DNS Turbo Cache saved'), 'success');
+  } catch {
+    showToast(_('Failed to save DNS Turbo Cache'), 'error');
+  }
+  _state = { ..._state, saving: false };
+  rerender();
+}
+
 function moveSectionUp(idx: number) {
   if (idx <= 0) return;
   const arr = [..._state.smartDetectSections];
@@ -222,6 +243,34 @@ function renderWatchdogSection(state: AdvancedSettingsState) {
         watchdogLoading ? '…' : watchdogRunning ? _('⏹ Stop') : _('▶ Start'),
       ),
     ]),
+  ]);
+}
+
+function renderDnsTurboCacheSection(state: AdvancedSettingsState) {
+  const { dnsTurboCache, saving } = state;
+
+  return E('div', { class: 'tachyon_adv__section' }, [
+    E('div', { class: 'tachyon_adv__section-header' }, [
+      E('span', { class: 'tachyon_adv__section-icon' }, '⚡'),
+      E('h3', { class: 'tachyon_adv__section-title' }, _('DNS Turbo Cache')),
+    ]),
+    E('p', { class: 'tachyon_adv__hint' }, _(
+      'Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0\u00a0ms.',
+    )),
+    E('div', { class: 'tachyon_adv__row' }, [
+      E('label', { class: 'tachyon_adv__toggle' }, [
+        E('input', {
+          type: 'checkbox',
+          checked: dnsTurboCache,
+          onchange: (e: Event) => {
+            const enabled = (e.target as HTMLInputElement).checked;
+            void saveDnsTurboCache(enabled);
+          },
+        }),
+        E('span', {}, _('Enable DNS Turbo Cache')),
+      ]),
+    ]),
+    saving ? E('span', { class: 'tachyon_adv__hint' }, _('Saving…')) : E('span', {}),
   ]);
 }
 
@@ -374,6 +423,8 @@ function renderAdvancedSettingsBody(state: AdvancedSettingsState) {
 
   return E('div', { class: 'tachyon_adv__body' }, [
     renderWatchdogSection(state),
+    E('hr', { class: 'tachyon_adv__divider' }),
+    renderDnsTurboCacheSection(state),
     E('hr', { class: 'tachyon_adv__divider' }),
     renderSmartDetectSection(state),
     E('hr', { class: 'tachyon_adv__divider' }),

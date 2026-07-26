@@ -4229,3 +4229,11 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js
 msgid "🇨🇳 CN Only (China)"
 msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js
+msgid "DNS Turbo Cache"
+msgstr ""
+
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js
+msgid "Keeps the FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup, reducing first-visit latency to 0u00a0ms."
+msgstr ""

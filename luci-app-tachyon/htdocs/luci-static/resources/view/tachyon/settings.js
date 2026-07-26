@@ -966,6 +966,17 @@ function createSettingsContent(section, capabilities) {
     return true;
   };
 
+  o = section.option(
+    form.Flag,
+    "dns_turbo_cache",
+    _("DNS Turbo Cache"),
+    _(
+      "Keeps the FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup, reducing first-visit latency to 0\u00a0ms.",
+    ),
+  );
+  o.default = "0";
+  o.rmempty = false;
+
   const dnsHostsOpt = section.option(
     form.TextValue,
     "dns_hosts",
