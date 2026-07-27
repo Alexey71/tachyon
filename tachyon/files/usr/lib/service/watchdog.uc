@@ -255,6 +255,7 @@ let last_restart_time = 0;
 let last_urltest_check = 0;
 let pending_smart_domains = {};
 let smart_detect_last_run = 0;
+let last_subnet_heal_time = 0;
 
 function check_tachyon_cli_running() {
     let running = false;
@@ -525,12 +526,163 @@ function ai_heal_proxy_connectivity() {
     return true;
 }
 
+// ─── Subnet cache restore: /etc/tachyon/rulesets/ → /tmp/sing-box/rulesets/ ──
+function ai_heal_subnet_cache() {
+    let etc_dir = "/etc/tachyon/rulesets";
+    let tmp_dir = "/tmp/sing-box/rulesets";
+
+    let dir = fs.opendir(etc_dir);
+    if (!dir) return;
+
+    let restored = [];
+    let entry;
+    while ((entry = dir.read()) != null) {
+        if (!match(entry, /^community-subnets-.+\.lst$/)) continue;
+        let tmp_path = tmp_dir + "/" + entry;
+        let etc_path = etc_dir + "/" + entry;
+        let tmp_st = fs.stat(tmp_path);
+        let etc_st = fs.stat(etc_path);
+        if (etc_st == null || int(etc_st.size) == 0) continue;
+        if (tmp_st != null && int(tmp_st.size) > 0) continue;
+        // /tmp file missing or empty, restore from persistent storage
+        let content = fs.readfile(etc_path);
+        if (content == null || content == "") continue;
+        // Ensure /tmp dir exists
+        command_success_from_args(["mkdir", "-p", tmp_dir]);
+        if (fs.writefile(tmp_path, content) != null) {
+            push(restored, entry);
+        }
+    }
+    dir.close();
+
+    if (length(restored) > 0) {
+        let names = join(", ", restored);
+        log_message("Subnet cache restored from /etc to /tmp: " + names, "info");
+    }
+}
+
+// ─── Check nft sets are populated (community subnets) ─────────────────────────
+function ai_heal_community_subnet_sets() {
+    let cfg = settings();
+    if (cfg.recovery_bypass == "1") return true;
+
+    // Don't run more than once every 5 minutes
+    let now = time();
+    if (now - last_subnet_heal_time < 300) return true;
+
+    // Skip if list-update is running (it will populate sets itself)
+    let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
+    if (process_running(list_update_pid, "ucode")) return true;
+
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
+
+    let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
+    let all_sections = uci_core.get_all(CONFIG_NAME);
+    if (!all_sections) return true;
+
+    let empty_sets_found = false;
+
+    for (let sec_name in keys(all_sections)) {
+        let s = all_sections[sec_name];
+        if (s[".type"] != "section" || s.enabled != "1") continue;
+        if (!s.community_lists) continue;
+
+        // Check if the _subnets set exists for this section.
+        // If nft returns a valid set definition but no 'elements =' block → it's empty.
+        // If nft exits non-zero (set doesn't exist) → section has no subnet community → skip.
+        let set_name = "tachyon_rule_" + sec_name + "_subnets";
+        let result = command_capture(command_from_args(["nft", "list", "set", "inet", nft_table, set_name]) + " 2>/dev/null");
+        if (result.status != 0 || result.output == "") continue; // set doesn't exist for this section
+        if (index(result.output, "elements") < 0) {
+            log_message("Community subnet set " + set_name + " is empty — will repopulate", "warn");
+            empty_sets_found = true;
+        }
+    }
+
+    if (empty_sets_found) {
+        last_subnet_heal_time = now;
+        ai_heal_subnet_cache();
+        ai_heal_report(
+            "nft_community_sets",
+            "Пустые nftables sets подсетей (community) — данные не были загружены при reload",
+            "Восстановлены nftables sets из persistent кеша (/etc/tachyon/rulesets/)",
+            "fixed"
+        );
+        system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
+        return false;
+    }
+    return true;
+}
+
+
+// ─── TPROXY port liveness check ───────────────────────────────────────────────
+function ai_heal_tproxy_port() {
+    let cfg = settings();
+    if (cfg.recovery_bypass == "1") return true;
+
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
+
+    // Read TPROXY port from sing-box config
+    let tproxy_port = 4530;
+    let sb_cfg_data = fs.readfile("/etc/sing-box/config.json");
+    if (sb_cfg_data) {
+        try {
+            let sb_cfg = json(sb_cfg_data);
+            if (sb_cfg.inbounds) {
+                for (let inb in sb_cfg.inbounds) {
+                    if (inb.type == "tproxy") {
+                        tproxy_port = int(inb.listen_port || tproxy_port);
+                        break;
+                    }
+                }
+            }
+        } catch(e) {}
+    }
+
+    // Check /proc/net/tcp6 and /proc/net/tcp for the TPROXY port (hex format)
+    let hex_port = sprintf("%04X", tproxy_port);
+    let listening = false;
+    for (let proc_file in ["/proc/net/tcp6", "/proc/net/tcp"]) {
+        let tcp_data = fs.readfile(proc_file) || "";
+        // Format: local_address (0.0.0.0:PORT in hex), state 0A = LISTEN
+        for (let line in split(tcp_data, "\n")) {
+            if (index(line, ":" + hex_port + " ") >= 0 && index(line, " 0A ") >= 0) {
+                listening = true;
+                break;
+            }
+        }
+        if (listening) break;
+    }
+
+    if (!listening) {
+        ai_heal_report(
+            "tproxy_port",
+            sprintf("TPROXY порт %d не слушает — правила перехвата трафика не работают", tproxy_port),
+            "Выполнен reload_firewall для восстановления TPROXY правил",
+            "fixed"
+        );
+        system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
+        return false;
+    }
+    return true;
+}
+
+// ─── Fixes undefined function referenced from ubus firewall.reload handler ────
+function check_firewall_rules() {
+    ai_heal_nftables();
+    ai_heal_community_subnet_sets();
+}
+
 function ai_full_health_audit() {
     check_memory();
     ai_heal_nftables();
     ai_heal_qos();
     ai_heal_dns();
     ai_heal_proxy_connectivity();
+    ai_heal_community_subnet_sets();
+    ai_heal_tproxy_port();
     ai_export_status();
 }
 
@@ -802,6 +954,8 @@ function worker() {
     log_message("Watchdog daemon started.", "info");
 
     setup_honeypot_listener();
+    // Restore subnet cache from persistent storage at startup (in case /tmp was cleared)
+    ai_heal_subnet_cache();
     run_zero_rtt_prefetching();
 
     if (uloop) {
