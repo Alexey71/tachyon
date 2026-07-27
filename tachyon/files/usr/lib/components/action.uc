@@ -2040,9 +2040,9 @@ function resolve_tachyon_release(latest_version) {
     }
 
     let ver_clean = replace(as_string(latest_version), /^v/, "");
-    let backend_name = "tachyon_" + ver_clean + "_all." + asset_ext;
-    let app_name = "luci-app-tachyon_" + ver_clean + "_all." + asset_ext;
-    let i18n_name = "luci-i18n-tachyon-ru_" + ver_clean + "_all." + asset_ext;
+    let backend_name = "tachyon_" + ver_clean + "." + asset_ext;
+    let app_name = "luci-app-tachyon_" + ver_clean + "." + asset_ext;
+    let i18n_name = "luci-i18n-tachyon-ru_" + ver_clean + "." + asset_ext;
     let base_dl = "https://github.com/" + TACHYON_RELEASE_REPO + "/releases/download/" + latest_version + "/";
 
     return {
