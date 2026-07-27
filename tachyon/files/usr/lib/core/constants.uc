@@ -20,9 +20,19 @@ function detect_installed_version() {
     if (env_ver != null && env_ver != "")
         return env_ver;
 
+    try {
+        let pkgs = require("core.packages");
+        if (pkgs && pkgs.version) {
+            let ver = pkgs.version("tachyon");
+            if (ver != null && ver != "") return ver;
+            ver = pkgs.version("luci-app-tachyon");
+            if (ver != null && ver != "") return ver;
+        }
+    } catch (e) {}
+
     for (let path in [
-        "/usr/lib/opkg/info/luci-app-tachyon.control",
-        "/usr/lib/opkg/info/tachyon.control"
+        "/usr/lib/opkg/info/tachyon.control",
+        "/usr/lib/opkg/info/luci-app-tachyon.control"
     ]) {
         let content = fs.readfile(path);
         if (content != null) {
@@ -31,7 +41,21 @@ function detect_installed_version() {
         }
     }
 
-    return "1.2.35";
+    let apk_db = fs.readfile("/lib/apk/db/installed");
+    if (apk_db != null) {
+        let lines = split(as_string(apk_db), "\n");
+        let current_pkg = "";
+        for (let line in lines) {
+            if (substr(line, 0, 2) == "P:")
+                current_pkg = trim(substr(line, 2));
+            else if ((current_pkg == "tachyon" || current_pkg == "luci-app-tachyon") && substr(line, 0, 2) == "V:") {
+                let v = match(trim(substr(line, 2)), /^([0-9]+\.[0-9]+\.[0-9]+)/);
+                if (v && v[1]) return v[1];
+            }
+        }
+    }
+
+    return "";
 }
 
 function constants_map() {

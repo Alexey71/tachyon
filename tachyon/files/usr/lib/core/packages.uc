@@ -179,6 +179,22 @@ function version(package_name) {
     return value != "" ? value : opkg_version(package_name);
 }
 
+function module_exports() {
+    return {
+        installed: installed,
+        apk_installed: apk_installed,
+        opkg_installed: opkg_installed,
+        version: version,
+        installed_package_version: version,
+        apk_version: apk_version,
+        apk_available_version: apk_available_version,
+        opkg_version: opkg_version
+    };
+}
+
+if (sourcepath(1) != null && sourcepath(1) != "")
+    return module_exports();
+
 let mode = ARGV[0] || "";
 
 if (mode == "installed")
