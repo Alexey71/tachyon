@@ -8713,7 +8713,7 @@ function createSectionContent(section) {
   };
 
   o = section.taboption(
-    "settings",
+    "conditions",
     form.ListValue,
     "geoip_country",
     _("GeoIP Country Routing"),
