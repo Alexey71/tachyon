@@ -2159,6 +2159,7 @@ function import_builtin_subnets_from_rule(section, settings) {
             continue;
 
         let cached_file = TMP_RULESET_FOLDER + "/community-subnets-" + as_string(service) + ".lst";
+        let persistent_file = "/etc/tachyon/rulesets/community-subnets-" + as_string(service) + ".lst";
         let combined_lines = [];
         for (let url in urls) {
             let tmpfile = temp_path();
@@ -2167,10 +2168,15 @@ function import_builtin_subnets_from_rule(section, settings) {
                 continue;
             }
 
-            if (!download_to_file(url, tmpfile, service_proxy_address(settings, "lists")) || !file_nonempty(tmpfile)) {
-                log_message("Failed to download built-in " + as_string(service) + " subnet list; skipping it until the next successful update", "warn");
+            let downloaded = download_to_file(url, tmpfile, service_proxy_address(settings, "lists")) && file_nonempty(tmpfile);
+            if (!downloaded) {
                 remove_file(tmpfile);
-                continue;
+                if (file_exists_value(persistent_file)) {
+                    tmpfile = persistent_file;
+                } else {
+                    log_message("Failed to download built-in " + as_string(service) + " subnet list; skipping it until next update", "warn");
+                    continue;
+                }
             }
 
             let lines = split(as_string(fs.readfile(tmpfile)), "\n");
@@ -2180,7 +2186,7 @@ function import_builtin_subnets_from_rule(section, settings) {
                     push(combined_lines, l);
             }
 
-            if (!nft_module_success([
+            nft_module_success([
                 "nft-add-community-subnet-file-for-uci-section",
                 section_name(section),
                 service,
@@ -2195,15 +2201,17 @@ function import_builtin_subnets_from_rule(section, settings) {
                 NFT_COMMON6_SET_NAME,
                 NFT_IP_PORT6_SET_NAME,
                 NFT_DISCORD6_SET_NAME
-            ]))
-                ok = false;
+            ]);
 
-            remove_file(tmpfile);
+            if (downloaded)
+                remove_file(tmpfile);
         }
 
         if (length(combined_lines) > 0) {
             ensure_dir(TMP_RULESET_FOLDER);
             write_file(cached_file, join("\n", combined_lines) + "\n");
+            ensure_dir("/etc/tachyon/rulesets");
+            write_file(persistent_file, join("\n", combined_lines) + "\n");
         }
     }
 

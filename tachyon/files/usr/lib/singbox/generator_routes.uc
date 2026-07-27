@@ -1121,23 +1121,23 @@ function add_excluded_ips_rule(config, section) {
 }
 
 function load_community_subnet_cidrs(community) {
-    let path = "/tmp/sing-box/rulesets/community-subnets-" + as_string(community) + ".lst";
-    let content = fs.readfile(path);
-    if (content == null || content == "") {
-        let folder = ctx.runtime_ruleset_folder || runtime_ruleset_folder || "/tmp/sing-box/rulesets";
-        path = folder + "/community-subnets-" + as_string(community) + ".lst";
-        content = fs.readfile(path);
+    let paths = [
+        "/tmp/sing-box/rulesets/community-subnets-" + as_string(community) + ".lst",
+        "/etc/tachyon/rulesets/community-subnets-" + as_string(community) + ".lst",
+        (ctx.runtime_ruleset_folder || runtime_ruleset_folder || "/tmp/sing-box/rulesets") + "/community-subnets-" + as_string(community) + ".lst"
+    ];
+    for (let path in paths) {
+        let content = fs.readfile(path);
+        if (content != null && content != "") {
+            let cidrs = [];
+            for (let line in split(as_string(content), "\n")) {
+                line = trim(replace(as_string(line), /\r/g, ""));
+                if (line != "" && substr(line, 0, 1) != "#")
+                    push(cidrs, line);
+            }
+        }
     }
-    if (content == null || content == "")
-        return [];
-
-    let cidrs = [];
-    for (let line in split(as_string(content), "\n")) {
-        line = trim(replace(as_string(line), /\r/g, ""));
-        if (line != "" && substr(line, 0, 1) != "#")
-            push(cidrs, line);
-    }
-    return cidrs;
+    return [];
 }
 
 function add_combined_route_for_section(config, section) {
