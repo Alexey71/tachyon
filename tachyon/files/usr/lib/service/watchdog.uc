@@ -403,6 +403,12 @@ function ai_heal_report(event_type, description, resolution, status_code) {
     ai_export_status();
 }
 
+// Guard: skip if a tachyon reload is already in progress (prevents concurrent reload_firewall races)
+function is_reload_in_progress() {
+    return fs.stat("/var/run/tachyon.reload.lock") != null
+        || check_tachyon_cli_running();
+}
+
 function ai_heal_nftables() {
     let cfg = settings();
     let routing_mode = cfg.routing_mode || "nftables";
@@ -410,6 +416,7 @@ function ai_heal_nftables() {
 
     let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
     if (process_running(list_update_pid, "ucode")) return true;
+    if (is_reload_in_progress()) return true;
 
     if (routing_mode == "nftables") {
         let out_nft = command_output_from_args(["nft", "list", "table", "inet", nft_table]);
@@ -430,6 +437,7 @@ function ai_heal_nftables() {
 function ai_heal_qos() {
     let cfg = settings();
     if (cfg.qos_priority_engine == "0") return true;
+    if (is_reload_in_progress()) return true;
 
     let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
     let out_nft = command_output_from_args(["nft", "list", "table", "inet", nft_table]);
@@ -569,6 +577,7 @@ function ai_heal_community_subnet_sets() {
     // Don't run more than once every 5 minutes
     let now = time();
     if (now - last_subnet_heal_time < 300) return true;
+    if (is_reload_in_progress()) return true;
 
     // Skip if list-update is running (it will populate sets itself)
     let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
@@ -623,6 +632,7 @@ function ai_heal_tproxy_port() {
 
     let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
+    if (is_reload_in_progress()) return true;
 
     // Read TPROXY port from sing-box config
     let tproxy_port = 4530;
