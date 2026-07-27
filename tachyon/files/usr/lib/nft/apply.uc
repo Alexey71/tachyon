@@ -667,9 +667,13 @@ function section_priority_needs_ip_port_rules(section) {
         (section_rule_ports_csv(section) != "" || length(connections.rule_sets_with_subnets(section)) > 0);
 }
 
+function section_has_dscp_matchers(section) {
+    return length(connections.dscp_list(section)) > 0;
+}
+
 function section_needs_priority_sets(section) {
     return section_priority_action(section) != "" &&
-        (section_has_nft_ip_matchers(section) || section_has_nft_port_only_matchers(section));
+        (section_has_nft_ip_matchers(section) || section_has_nft_port_only_matchers(section) || section_has_dscp_matchers(section));
 }
 
 function nft_create_priority_chains(table) {
@@ -796,6 +800,16 @@ function nft_add_section_priority_rules(table, section, interface_set, localv4_s
             !nft_add_priority_rule_pair(table, "priority_output_rules", section, interface_set, localv4_set, localv6_set, match_port4_tcp, match_port6_tcp, mark) ||
             !nft_add_priority_rule_pair(table, "priority_output_rules", section, interface_set, localv4_set, localv6_set, match_port4_udp, match_port6_udp, mark)))
         return false;
+
+    if (section_has_dscp_matchers(section)) {
+        let dscp_vals = connections.dscp_list(section);
+        let dscp_str = length(dscp_vals) == 1 ? as_string(dscp_vals[0]) : "{ " + join(", ", dscp_vals) + " }";
+        let match_dscp4 = [ "ip", "dscp", dscp_str ];
+        let match_dscp6 = [ "ip6", "dscp", dscp_str ];
+        if (!nft_add_priority_rule_pair(table, "priority_rules", section, interface_set, localv4_set, localv6_set, match_dscp4, match_dscp6, mark) ||
+            !nft_add_priority_rule_pair(table, "priority_output_rules", section, interface_set, localv4_set, localv6_set, match_dscp4, match_dscp6, mark))
+            return false;
+    }
 
     return true;
 }
@@ -1552,6 +1566,7 @@ function nft_rule_signature_body(body, section) {
     body = signature_add_value(body, "rule." + section_name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
     body = signature_add_value(body, "rule." + section_name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));
     body = signature_add_value(body, "rule." + section_name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
+    body = signature_add_value(body, "rule." + section_name + ".dscp", connections.dscp_value(section));
 
     return body;
 }

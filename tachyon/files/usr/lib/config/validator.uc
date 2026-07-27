@@ -1260,6 +1260,14 @@ function validate_plain_domain_ip_list_reference_value(reference) {
     fail_validation("Unknown plain list reference '" + reference + "'. Aborted.");
 }
 
+function validate_dscp_values(section) {
+    let raw = option_list_values(section, "dscp");
+    for (let item in raw) {
+        if (connections.parse_dscp_value(item) == null)
+            fail_validation("Rule '" + section_name(section) + "' has invalid DSCP value '" + item + "'. Expected 0-63, hex 0x00-0x3f, or alias like ef/cs5/af41. Aborted.");
+    }
+}
+
 function validate_common_rule_references(section, context) {
     for (let value in connections.community_lists(section))
         validate_service_value(value, context);
@@ -1269,6 +1277,7 @@ function validate_common_rule_references(section, context) {
         validate_ruleset_reference_value(value, context);
     for (let value in list_option(section, "domain_ip_lists"))
         validate_plain_domain_ip_list_reference_value(value);
+    validate_dscp_values(section);
 }
 
 function outbound_json_object(value) {

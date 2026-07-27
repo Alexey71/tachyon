@@ -502,6 +502,47 @@ function rule_sets_value(section) {
     return list_option_value_from_array(rule_sets(section));
 }
 
+const DSCP_ALIASES = {
+    "cs0": 0, "cs1": 8, "cs2": 16, "cs3": 24, "cs4": 32, "cs5": 40, "cs6": 48, "cs7": 56,
+    "ef": 46,
+    "af11": 10, "af12": 12, "af13": 14,
+    "af21": 18, "af22": 20, "af23": 22,
+    "af31": 26, "af32": 28, "af33": 30,
+    "af41": 34, "af42": 36, "af43": 38
+};
+
+function parse_dscp_value(item) {
+    item = lc(trim(as_string(item)));
+    if (item == "") return null;
+    if (DSCP_ALIASES[item] != null)
+        return DSCP_ALIASES[item];
+
+    let num = null;
+    if (substr(item, 0, 2) == "0x")
+        num = int(item, 16);
+    else
+        num = int(item, 10);
+
+    if (num != null && num >= 0 && num <= 63)
+        return num;
+    return null;
+}
+
+function dscp_list(section) {
+    let raw = whitespace_list_value(section, "dscp");
+    let result = [];
+    for (let item in raw) {
+        let parsed = parse_dscp_value(item);
+        if (parsed != null)
+            push(result, parsed);
+    }
+    return result;
+}
+
+function dscp_value(section) {
+    return list_option_value_from_array(dscp_list(section));
+}
+
 function rule_sets_with_subnets_value(section) {
     return list_option_value_from_array(rule_sets_with_subnets(section));
 }
@@ -1150,6 +1191,8 @@ return {
     community_lists,
     rule_sets,
     rule_sets_with_subnets,
+    dscp_list,
+    dscp_value,
     community_lists_value,
     rule_sets_value,
     rule_sets_with_subnets_value,

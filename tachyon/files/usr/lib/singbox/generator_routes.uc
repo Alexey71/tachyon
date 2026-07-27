@@ -1047,6 +1047,12 @@ function normalize_port_number_value(value) {
     return rule_config.normalize_port_number_value(value);
 }
 
+function add_dscp_matchers(rule, section) {
+    let dscp_vals = connections.dscp_list(section);
+    if (length(dscp_vals) > 0)
+        rule.dscp = dscp_vals;
+}
+
 function add_port_matchers(rule, section) {
     let values = [];
     for (let value in list_option(section, "ports"))
@@ -1203,6 +1209,7 @@ function add_combined_route_for_section(config, section) {
     if (length(source_ip_cidr) > 0)
         route_rule.source_ip_cidr = source_ip_cidr;
     add_port_matchers(route_rule, section);
+    add_dscp_matchers(route_rule, section);
     if (length(rule_set_tags) > 0)
         route_rule.rule_set = single_or_array(rule_set_tags);
 

@@ -8987,6 +8987,13 @@ function createSectionContent(section) {
   });
   dependsOnRoutingAction(portsOption);
 
+  const dscpOption = addDynamicConditionField(section, {
+    key: "dscp",
+    label: _("DSCP marks (QoS)"),
+    description: _("Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)"),
+  });
+  dependsOnRoutingAction(dscpOption);
+
   addDashboardServerFilterOptions(section);
 }
 
@@ -9563,6 +9570,7 @@ function showSectionRulesModal(section_id) {
   const geoip = getConfigListValues(section_id, "geoip");
   const sourceIp = getConfigListValues(section_id, "source_ip_cidr");
   const ports = getConfigListValues(section_id, "ports");
+  const dscp = getConfigListValues(section_id, "dscp");
 
   const createCard = (title, icon, items, color, bg) => {
     let contentNode;
@@ -9604,6 +9612,7 @@ function showSectionRulesModal(section_id) {
     (geosite.length || geoip.length) ? createCard(_("GeoSite / GeoIP"), "🗺️", [...geosite, ...geoip], "#f39c12", "rgba(243, 156, 18, 0.12)") : null,
     sourceIp.length ? createCard(_("Устройства-источники"), "📱", sourceIp, "#34495e", "rgba(52, 73, 94, 0.12)") : null,
     ports.length ? createCard(_("Порты"), "🔌", ports, "#7f8c8d", "rgba(127, 140, 141, 0.12)") : null,
+    dscp.length ? createCard(_("DSCP marks (QoS)"), "🎯", dscp, "#e67e22", "rgba(230, 126, 34, 0.12)") : null,
   ].filter(Boolean));
 
   ui.showModal(

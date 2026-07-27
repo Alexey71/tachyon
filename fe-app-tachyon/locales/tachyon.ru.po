@@ -3073,3 +3073,9 @@ msgstr "Сохраняет FakeIP-кэш между перезагрузками
 
 msgid "Saving…"
 msgstr "Сохранение…"
+
+msgid "DSCP marks (QoS)"
+msgstr "DSCP-метки (QoS)"
+
+msgid "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)"
+msgstr "Сопоставление трафика по DSCP-метке пакета (назначается в Windows через Policy-Based QoS). Примеры: 46 (EF), 0x2e, 34 (AF41)"
