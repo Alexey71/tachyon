@@ -8712,37 +8712,54 @@ function createSectionContent(section) {
     return getRuleResolvedAction(section_id) === "byedpi" ? "1" : "0";
   };
 
-  o = section.taboption(
+  let geoipModeOption = section.taboption(
     "conditions",
     form.ListValue,
-    "geoip_country",
-    _("GeoIP Country Routing"),
+    "geoip_mode",
+    _("GeoIP Matching Mode"),
     _(
-      "Select target country or region for this section (e.g. Non-RU for all foreign traffic).",
+      "Choose whether to route traffic to all destinations EXCEPT selected countries (Exclude / Invert) or ONLY to selected countries (Include).",
     ),
   );
-  o.value("all", _("🌐 All Traffic (Default)"));
-  o.value("non-ru", _("🇪🇺/🇺🇸 Non-RU (All Foreign Traffic)"));
-  o.value("ru", _("🇷🇺 RU Only (Russia)"));
-  o.value("us", _("🇺🇸 US Only (United States)"));
-  o.value("cn", _("🇨🇳 CN Only (China)"));
-  o.default = "all";
-  o.rmempty = false;
+  geoipModeOption.value("exclude", _("🌍 Exclude Selected Countries (All Except Selected)"));
+  geoipModeOption.value("include", _("🎯 Include Selected Countries (Only Selected)"));
+  geoipModeOption.default = "exclude";
+  geoipModeOption.modalonly = true;
+  [
+    "connection", "awg", "warp", "anytls", "snell", "mieru",
+    "sudoku", "masque", "openvpn", "zapret", "zapret2", "byedpi"
+  ].forEach((act) => geoipModeOption.depends("action", act));
+
+  o = section.taboption(
+    "conditions",
+    form.DynamicList,
+    "geoip_country",
+    _("GeoIP Target Countries"),
+    _(
+      "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua).",
+    ),
+  );
+  o.value("ru", _("🇷🇺 Russia (ru)"));
+  o.value("us", _("🇺🇸 United States (us)"));
+  o.value("de", _("🇩🇪 Germany (de)"));
+  o.value("nl", _("🇳🇱 Netherlands (nl)"));
+  o.value("gb", _("🇬🇧 United Kingdom (gb)"));
+  o.value("fr", _("🇫🇷 France (fr)"));
+  o.value("fi", _("🇫🇮 Finland (fi)"));
+  o.value("se", _("🇸🇪 Sweden (se)"));
+  o.value("tr", _("🇹🇷 Turkey (tr)"));
+  o.value("cn", _("🇨🇳 China (cn)"));
+  o.value("jp", _("🇯🇵 Japan (jp)"));
+  o.value("sg", _("🇸🇬 Singapore (sg)"));
+  o.value("by", _("🇧🇾 Belarus (by)"));
+  o.value("kz", _("🇰🇿 Kazakhstan (kz)"));
+  o.value("ua", _("🇺🇦 Ukraine (ua)"));
+  o.placeholder = _("Country code (e.g. ru, us, de)");
   o.modalonly = true;
-  // Only show for proxy sections - block/bypass/dns ignore geoip_country in the backend
-  // and a block+non-ru+invert:true rule would reject ALL foreign traffic
-  o.depends("action", "connection");
-  o.depends("action", "awg");
-  o.depends("action", "warp");
-  o.depends("action", "anytls");
-  o.depends("action", "snell");
-  o.depends("action", "mieru");
-  o.depends("action", "sudoku");
-  o.depends("action", "masque");
-  o.depends("action", "openvpn");
-  o.depends("action", "zapret");
-  o.depends("action", "zapret2");
-  o.depends("action", "byedpi");
+  [
+    "connection", "awg", "warp", "anytls", "snell", "mieru",
+    "sudoku", "masque", "openvpn", "zapret", "zapret2", "byedpi"
+  ].forEach((act) => o.depends("action", act));
 
   addTextConditionField(section, {
     key: "domain_suffix",

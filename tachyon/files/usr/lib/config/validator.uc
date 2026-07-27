@@ -1268,6 +1268,18 @@ function validate_dscp_values(section) {
     }
 }
 
+function validate_geoip_country_values(section) {
+    let mode = option(section, "geoip_mode", "");
+    if (mode != "" && mode != "exclude" && mode != "include")
+        fail_validation("Rule '" + section_name(section) + "' has invalid GeoIP filter mode '" + mode + "'. Expected 'exclude' or 'include'. Aborted.");
+
+    let list = connections.geoip_country_list(section);
+    for (let item in list) {
+        if (match(item, /^[a-z]{2}$/) == null)
+            fail_validation("Rule '" + section_name(section) + "' has invalid country code '" + item + "'. Expected 2-letter ISO country code. Aborted.");
+    }
+}
+
 function validate_common_rule_references(section, context) {
     for (let value in connections.community_lists(section))
         validate_service_value(value, context);
@@ -1278,6 +1290,7 @@ function validate_common_rule_references(section, context) {
     for (let value in list_option(section, "domain_ip_lists"))
         validate_plain_domain_ip_list_reference_value(value);
     validate_dscp_values(section);
+    validate_geoip_country_values(section);
 }
 
 function outbound_json_object(value) {

@@ -543,6 +543,38 @@ function dscp_value(section) {
     return list_option_value_from_array(dscp_list(section));
 }
 
+function geoip_country_list(section) {
+    let raw = whitespace_list_value(section, "geoip_country");
+    let result = [];
+    for (let item in raw) {
+        item = lc(trim(as_string(item)));
+        if (item == "" || item == "all") continue;
+        if (item == "non-ru") {
+            if (!contains(result, "ru")) push(result, "ru");
+            continue;
+        }
+        if (match(item, /^[a-z]{2}$/) != null && !contains(result, item))
+            push(result, item);
+    }
+    return result;
+}
+
+function geoip_country_mode(section) {
+    let raw = option(section, "geoip_country", "all");
+    let mode = lc(trim(option(section, "geoip_mode", "")));
+    if (mode == "exclude" || mode == "include")
+        return mode;
+
+    if (raw == "non-ru")
+        return "exclude";
+
+    return "include";
+}
+
+function geoip_country_value(section) {
+    return list_option_value_from_array(geoip_country_list(section));
+}
+
 function rule_sets_with_subnets_value(section) {
     return list_option_value_from_array(rule_sets_with_subnets(section));
 }
@@ -1284,6 +1316,12 @@ return {
     priority_level_outbounds,
     priority_level_regex,
     priority_level_detect_server_country,
+    parse_dscp_value,
+    dscp_list,
+    dscp_value,
+    geoip_country_list,
+    geoip_country_mode,
+    geoip_country_value,
     subscription_download_targets,
     subscription_download_target_port,
     item_index_from_cursor

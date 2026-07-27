@@ -1213,49 +1213,35 @@ function add_combined_route_for_section(config, section) {
     if (length(rule_set_tags) > 0)
         route_rule.rule_set = single_or_array(rule_set_tags);
 
-    let geoip_country = option(section, "geoip_country", "all");
-    // Only apply GeoIP routing for proxy sections (those with an outbound).
-    // For block/bypass/dns sections geoip_country is meaningless and dangerous
-    // (e.g. block + non-ru + invert:true would reject all foreign traffic).
-    if (target.outbound && geoip_country == "non-ru") {
-        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_ru");
-        let ensured_site = ensure_community_ruleset(config, section_name, "geosite_ru");
-        let geoip_route_rule = {
-            action: target.action,
-            inbound: tproxy_inbound_matcher(),
-            rule_set: [ ensured_ip.tag, ensured_site.tag ],
-            invert: true,
-            outbound: target.outbound
-        };
-        push(config.route.rules, geoip_route_rule);
-    } else if (target.outbound && geoip_country == "ru") {
-        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_ru");
-        let ensured_site = ensure_community_ruleset(config, section_name, "geosite_ru");
-        let geoip_route_rule = {
-            action: target.action,
-            inbound: tproxy_inbound_matcher(),
-            rule_set: [ ensured_ip.tag, ensured_site.tag ],
-            outbound: target.outbound
-        };
-        push(config.route.rules, geoip_route_rule);
-    } else if (target.outbound && geoip_country == "us") {
-        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_us");
-        let geoip_route_rule = {
-            action: target.action,
-            inbound: tproxy_inbound_matcher(),
-            rule_set: [ ensured_ip.tag ],
-            outbound: target.outbound
-        };
-        push(config.route.rules, geoip_route_rule);
-    } else if (target.outbound && geoip_country == "cn") {
-        let ensured_ip = ensure_community_ruleset(config, section_name, "geoip_cn");
-        let geoip_route_rule = {
-            action: target.action,
-            inbound: tproxy_inbound_matcher(),
-            rule_set: [ ensured_ip.tag ],
-            outbound: target.outbound
-        };
-        push(config.route.rules, geoip_route_rule);
+    let country_list = connections.geoip_country_list(section);
+    let country_mode = connections.geoip_country_mode(section);
+
+    if (target.outbound && length(country_list) > 0) {
+        let rule_set_tags = [];
+        for (let cc in country_list) {
+            let ip_ruleset = ensure_community_ruleset(config, section_name, "geoip_" + cc);
+            if (ip_ruleset && ip_ruleset.tag)
+                push(rule_set_tags, ip_ruleset.tag);
+
+            if (cc == "ru") {
+                let site_ruleset = ensure_community_ruleset(config, section_name, "geosite_ru");
+                if (site_ruleset && site_ruleset.tag)
+                    push(rule_set_tags, site_ruleset.tag);
+            }
+        }
+
+        if (length(rule_set_tags) > 0) {
+            let geoip_route_rule = {
+                action: target.action,
+                inbound: tproxy_inbound_matcher(),
+                rule_set: rule_set_tags,
+                outbound: target.outbound
+            };
+            if (country_mode == "exclude")
+                geoip_route_rule.invert = true;
+
+            push(config.route.rules, geoip_route_rule);
+        }
     }
 
     let has_route_matchers = route_rule.domain != null || route_rule.domain_suffix != null ||

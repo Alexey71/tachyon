@@ -48,7 +48,12 @@ function as_string(value) {
 }
 
 function is_community(name) {
-    return COMMUNITY_SERVICES[as_string(name)] === true;
+    name = as_string(name);
+    if (COMMUNITY_SERVICES[name] === true)
+        return true;
+    if (match(name, /^geoip_[a-z]{2}$/) != null || match(name, /^geosite_[a-z]{2}$/) != null)
+        return true;
+    return false;
 }
 
 function community_url(name) {
@@ -59,14 +64,17 @@ function community_url(name) {
         return SRS_SUPERCELL_URL;
     if (name == "github")
         return SRS_GITHUB_URL;
-    if (name == "geoip_ru")
-        return SRS_GEOIP_RU_URL;
     if (name == "geosite_ru")
         return SRS_GEOSITE_RU_URL;
-    if (name == "geoip_us")
-        return SRS_GEOIP_US_URL;
-    if (name == "geoip_cn")
-        return SRS_GEOIP_CN_URL;
+
+    let geoip_match = match(name, /^geoip_([a-z]{2})$/);
+    if (geoip_match)
+        return "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/" + geoip_match[1] + ".srs";
+
+    let geosite_match = match(name, /^geosite_([a-z]{2})$/);
+    if (geosite_match)
+        return "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/" + geosite_match[1] + ".srs";
+
     return SRS_MAIN_URL + "/" + name + ".srs";
 }
 
