@@ -54,10 +54,11 @@ const CONFIG_NAME = "tachyon";
 // serialized back to JSON appear as '<b 0x...>' — invalid for sing-box.
 function uci_bin_to_hex(val) {
     if (val == null || val == "") return "";
-    // Coerce to string — binary buffer becomes "<b 0x...>"
-    let s = replace("" + val, "<b 0x", "");
-    s = replace(s, ">", "");
-    s = replace(s, " ", "");
+    let s = as_string(val);
+    s = replace(s, /^<b\s*/i, "");
+    s = replace(s, /^0x/i, "");
+    s = replace(s, />$/, "");
+    s = replace(s, /\s+/g, "");
     return s;
 }
 

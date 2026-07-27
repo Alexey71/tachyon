@@ -53,9 +53,11 @@ function unique_string_array(values) {
 
 function uci_bin_to_hex(val) {
     if (val == null || val == "") return "";
-    let s = replace("" + val, "<b 0x", "");
-    s = replace(s, ">", "");
-    s = replace(s, " ", "");
+    let s = as_string(val);
+    s = replace(s, /^<b\s*/i, "");
+    s = replace(s, /^0x/i, "");
+    s = replace(s, />$/, "");
+    s = replace(s, /\s+/g, "");
     return s;
 }
 
