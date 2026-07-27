@@ -1264,13 +1264,47 @@ function resolve_sing_box_extended_release(compressed) {
         return resolved;
 
     let releases_json = fetch_github_releases_json("shtorm-7", "sing-box-extended", "30");
-    if (releases_json == "")
-        return null;
-    let tag = trim(helper_output_input(releases_json, "sing-box-extended-release-tag", []));
+    if (releases_json != "") {
+        let tag = trim(helper_output_input(releases_json, "sing-box-extended-release-tag", []));
+        if (tag != "") {
+            release_json = helper_output_input(releases_json, "release-by-tag", [ tag ]);
+            resolved = set_sing_box_extended_release_from_json(release_json, compressed);
+            if (resolved != null)
+                return resolved;
+        }
+    }
+
+    let tag = fetch_github_release_tag_fallback("shtorm-7", "sing-box-extended");
     if (tag == "")
         return null;
-    release_json = helper_output_input(releases_json, "release-by-tag", [ tag ]);
-    return set_sing_box_extended_release_from_json(release_json, compressed);
+
+    let tag_clean = replace(tag, /^v/, "");
+    let asset_name = "";
+    let asset_url = "";
+    let base_dl = "https://github.com/shtorm-7/sing-box-extended/releases/download/" + tag + "/";
+
+    if (compressed) {
+        let arch_suffix = resolve_sing_box_extended_arch_suffix();
+        if (arch_suffix == "")
+            return null;
+        asset_name = "sing-box-extended_" + tag_clean + "_linux-" + arch_suffix + "-compressed.tar.gz";
+        asset_url = base_dl + asset_name;
+    }
+    else {
+        let distrib_arch = read_openwrt_release_value("DISTRIB_ARCH");
+        if (distrib_arch == "")
+            return null;
+        let asset_ext = is_apk() ? "apk" : "ipk";
+        asset_name = "sing-box-extended_" + tag_clean + "_openwrt_" + distrib_arch + "." + asset_ext;
+        asset_url = base_dl + asset_name;
+    }
+
+    return {
+        tag: tag,
+        release_url: "https://github.com/shtorm-7/sing-box-extended/releases/tag/" + tag,
+        asset_url: asset_url,
+        asset_name: asset_name
+    };
 }
 
 function set_sing_box_lx_release_from_json(release_json) {
