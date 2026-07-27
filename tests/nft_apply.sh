@@ -662,6 +662,8 @@ https://example.com/subnets.lst
 /tmp/local.json
 [rule.text_rule.domain_ip_lists]
 https://example.com/mixed.lst
+[rule.text_rule.dscp]
+
 [rule.default_enabled.action]
 proxy
 [rule.default_enabled.ip_cidr]
