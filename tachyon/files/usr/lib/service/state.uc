@@ -910,6 +910,7 @@ function nft_runtime_signature_body(settings, sections) {
         body = signature_add_value(body, "rule." + name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
         body = signature_add_value(body, "rule." + name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));
         body = signature_add_value(body, "rule." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
+        body = signature_add_value(body, "rule." + name + ".dscp", connections.dscp_value(section));
     }
 
     return body;

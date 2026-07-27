@@ -682,6 +682,8 @@ cloudflare roblox
 
 [rule.default_enabled.domain_ip_lists]
 
+[rule.default_enabled.dscp]
+
 EOF_EXPECTED
 expected_signature="$(md5sum "$WORK_DIR/signature-expected.txt" | awk '{print $1}')"
 assert_eq "$expected_signature" \
@@ -732,6 +734,8 @@ https://example.com/subnets.lst
 /tmp/local.json
 [rule.enabled.domain_ip_lists]
 https://example.com/mixed.lst
+[rule.enabled.dscp]
+
 EOF_EXPECTED
 expected_signature="$(md5sum "$WORK_DIR/signature-uci-expected.txt" | awk '{print $1}')"
 assert_eq "$expected_signature" \
