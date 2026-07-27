@@ -8756,6 +8756,14 @@ function createSectionContent(section) {
   o.value("ua", _("🇺🇦 Ukraine (ua)"));
   o.placeholder = _("Country code (e.g. ru, us, de)");
   o.modalonly = true;
+  o.load = function (section_id) {
+    let val = uci.get(UCI_PACKAGE, section_id, "geoip_country");
+    if (!val || val === "all") return [];
+    if (val === "non-ru") return ["ru"];
+    if (Array.isArray(val)) return val.filter((v) => v && v !== "all" && v !== "non-ru");
+    let parts = String(val).trim().split(/\s+/).filter((v) => v && v !== "all" && v !== "non-ru");
+    return parts;
+  };
   [
     "connection", "awg", "warp", "anytls", "snell", "mieru",
     "sudoku", "masque", "openvpn", "zapret", "zapret2", "byedpi"
