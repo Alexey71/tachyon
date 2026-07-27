@@ -8716,13 +8716,13 @@ function createSectionContent(section) {
     "conditions",
     form.ListValue,
     "geoip_mode",
-    _("GeoIP Matching Mode"),
+    _("GeoIP Mode"),
     _(
-      "Choose whether to route traffic to all destinations EXCEPT selected countries (Exclude / Invert) or ONLY to selected countries (Include).",
+      "Choose whether to route traffic to all destinations except selected countries (Exclude) or only to selected countries (Include).",
     ),
   );
-  geoipModeOption.value("exclude", _("🌍 Exclude Selected Countries (All Except Selected)"));
-  geoipModeOption.value("include", _("🎯 Include Selected Countries (Only Selected)"));
+  geoipModeOption.value("exclude", _("Exclude selected countries"));
+  geoipModeOption.value("include", _("Include selected countries"));
   geoipModeOption.default = "exclude";
   geoipModeOption.modalonly = true;
   [
@@ -8734,26 +8734,26 @@ function createSectionContent(section) {
     "conditions",
     form.DynamicList,
     "geoip_country",
-    _("GeoIP Target Countries"),
+    _("GeoIP Countries"),
     _(
       "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua).",
     ),
   );
-  o.value("ru", _("🇷🇺 Russia (ru)"));
-  o.value("us", _("🇺🇸 United States (us)"));
-  o.value("de", _("🇩🇪 Germany (de)"));
-  o.value("nl", _("🇳🇱 Netherlands (nl)"));
-  o.value("gb", _("🇬🇧 United Kingdom (gb)"));
-  o.value("fr", _("🇫🇷 France (fr)"));
-  o.value("fi", _("🇫🇮 Finland (fi)"));
-  o.value("se", _("🇸🇪 Sweden (se)"));
-  o.value("tr", _("🇹🇷 Turkey (tr)"));
-  o.value("cn", _("🇨🇳 China (cn)"));
-  o.value("jp", _("🇯🇵 Japan (jp)"));
-  o.value("sg", _("🇸🇬 Singapore (sg)"));
-  o.value("by", _("🇧🇾 Belarus (by)"));
-  o.value("kz", _("🇰🇿 Kazakhstan (kz)"));
-  o.value("ua", _("🇺🇦 Ukraine (ua)"));
+  o.value("ru", _("Russia (ru)"));
+  o.value("us", _("United States (us)"));
+  o.value("de", _("Germany (de)"));
+  o.value("nl", _("Netherlands (nl)"));
+  o.value("gb", _("United Kingdom (gb)"));
+  o.value("fr", _("France (fr)"));
+  o.value("fi", _("Finland (fi)"));
+  o.value("se", _("Sweden (se)"));
+  o.value("tr", _("Turkey (tr)"));
+  o.value("cn", _("China (cn)"));
+  o.value("jp", _("Japan (jp)"));
+  o.value("sg", _("Singapore (sg)"));
+  o.value("by", _("Belarus (by)"));
+  o.value("kz", _("Kazakhstan (kz)"));
+  o.value("ua", _("Ukraine (ua)"));
   o.placeholder = _("Country code (e.g. ru, us, de)");
   o.modalonly = true;
   o.load = function (section_id) {

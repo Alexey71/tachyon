@@ -3080,19 +3080,19 @@ msgstr "DSCP-метки (QoS)"
 msgid "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)"
 msgstr "Сопоставление трафика по DSCP-метке пакета (назначается в Windows через Policy-Based QoS). Примеры: 46 (EF), 0x2e, 34 (AF41)"
 
-msgid "GeoIP Matching Mode"
+msgid "GeoIP Mode"
 msgstr "Режим фильтрации GeoIP"
 
-msgid "Choose whether to route traffic to all destinations EXCEPT selected countries (Exclude / Invert) or ONLY to selected countries (Include)."
-msgstr "Выберите, направлять ли трафик во ВСЕ назначения КРОМЕ выбранных стран (Исключить) или ТОЛЬКО в выбранные страны (Включить)."
+msgid "Choose whether to route traffic to all destinations except selected countries (Exclude) or only to selected countries (Include)."
+msgstr "Выберите, направлять ли трафик во все назначения кроме выбранных стран (Исключить) или только в выбранные страны (Включить)."
 
-msgid "🌍 Exclude Selected Countries (All Except Selected)"
-msgstr "🌍 Исключить выбранные страны (Всё кроме выбранных)"
+msgid "Exclude selected countries"
+msgstr "Исключить выбранные страны"
 
-msgid "🎯 Include Selected Countries (Only Selected)"
-msgstr "🎯 Включить выбранные страны (Только выбранные)"
+msgid "Include selected countries"
+msgstr "Включить выбранные страны"
 
-msgid "GeoIP Target Countries"
+msgid "GeoIP Countries"
 msgstr "Страны для фильтрации GeoIP"
 
 msgid "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
