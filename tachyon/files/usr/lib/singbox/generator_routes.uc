@@ -1135,6 +1135,8 @@ function load_community_subnet_cidrs(community) {
                 if (line != "" && substr(line, 0, 1) != "#")
                     push(cidrs, line);
             }
+            if (length(cidrs) > 0)
+                return cidrs;
         }
     }
     return [];

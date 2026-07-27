@@ -2212,6 +2212,7 @@ function import_builtin_subnets_from_rule(section, settings) {
             write_file(cached_file, join("\n", combined_lines) + "\n");
             ensure_dir("/etc/tachyon/rulesets");
             write_file(persistent_file, join("\n", combined_lines) + "\n");
+            system("/etc/init.d/tachyon reload");
         }
     }
 
