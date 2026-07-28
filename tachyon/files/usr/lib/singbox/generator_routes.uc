@@ -1126,6 +1126,27 @@ function add_excluded_ips_rule(config, section) {
     push(config.route.rules, route_rule);
 }
 
+function add_excluded_protocol_rule(config, section) {
+    let excluded = list_option(section, "excluded_protocol");
+    if (length(excluded) == 0)
+        return;
+
+    let route_rule = {
+        action: "route",
+        inbound: tproxy_inbound_matcher(),
+        outbound: runtime_constants.DIRECT_OUTBOUND_TAG,
+        protocol: single_or_array(excluded)
+    };
+    push(config.route.rules, route_rule);
+}
+
+function add_protocol_matchers(rule, section) {
+    let protocols = list_option(section, "protocol");
+    if (length(protocols) > 0)
+        rule.protocol = single_or_array(protocols);
+}
+
+
 function load_community_subnet_cidrs(community) {
     let paths = [
         "/tmp/sing-box/rulesets/community-subnets-" + as_string(community) + ".lst",
@@ -1161,7 +1182,9 @@ function add_combined_route_for_section(config, section) {
     let section_name = section[".name"];
 
     add_excluded_ips_rule(config, section);
+    add_excluded_protocol_rule(config, section);
     add_fully_routed_ips_rule(config, section);
+
 
     for (let community in connections.community_lists(section)) {
         let ensured = ensure_community_ruleset(config, section_name, as_string(community));
@@ -1210,6 +1233,8 @@ function add_combined_route_for_section(config, section) {
         route_rule.source_ip_cidr = source_ip_cidr;
     add_port_matchers(route_rule, section);
     add_dscp_matchers(route_rule, section);
+    add_protocol_matchers(route_rule, section);
+
     if (length(rule_set_tags) > 0)
         route_rule.rule_set = single_or_array(rule_set_tags);
 

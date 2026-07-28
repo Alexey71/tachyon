@@ -906,7 +906,10 @@ function nft_runtime_signature_body(settings, sections) {
         body = signature_add_value(body, "rule." + name + ".ports", section_rule_ports_csv(section));
         body = signature_add_value(body, "rule." + name + ".fully_routed_ips", option(section, "fully_routed_ips", ""));
         body = signature_add_value(body, "rule." + name + ".excluded_ips", option(section, "excluded_ips", ""));
+        body = signature_add_value(body, "rule." + name + ".excluded_protocol", option(section, "excluded_protocol", ""));
+        body = signature_add_value(body, "rule." + name + ".protocol", option(section, "protocol", ""));
         body = signature_add_value(body, "rule." + name + ".community_subnet_lists", rule_config.filter_community_subnet_lists_value(connections.community_lists_value(section)));
+
         body = signature_add_value(body, "rule." + name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
         body = signature_add_value(body, "rule." + name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));
         body = signature_add_value(body, "rule." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
@@ -1295,7 +1298,10 @@ function append_sing_box_rule_signature_body(body, section, sections) {
         body = signature_add_value(body, prefix + ".ports", section_rule_ports_csv(section));
         body = signature_add_value(body, prefix + ".fully_routed_ips", option(section, "fully_routed_ips", ""));
         body = signature_add_value(body, prefix + ".excluded_ips", option(section, "excluded_ips", ""));
+        body = signature_add_value(body, prefix + ".excluded_protocol", option(section, "excluded_protocol", ""));
+        body = signature_add_value(body, prefix + ".protocol", option(section, "protocol", ""));
     }
+
     body = signature_add_value(body, prefix + ".community_lists", connections.community_lists_value(section));
     body = signature_add_value(body, prefix + ".rule_set", connections.rule_sets_value(section));
     if (action != "dns")

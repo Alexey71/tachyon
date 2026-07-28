@@ -3115,3 +3115,26 @@ msgstr "Хеши"
 
 msgid "Init headers"
 msgstr "Заголовки Init"
+
+msgid "Exclude traffic types"
+msgstr "Исключить типы трафика"
+
+msgid "Traffic of specified protocols (e.g. BitTorrent, QUIC, STUN) will bypass this section."
+msgstr "Трафик указанных протоколов (например, BitTorrent, QUIC, STUN) будет идти в обход этой секции."
+
+msgid "Traffic type filter"
+msgstr "Фильтр по типам трафика"
+
+msgid "Apply rules of this section only to selected protocols."
+msgstr "Применять правила этой секции только к выбранным протоколам."
+
+msgid "BitTorrent / P2P"
+msgstr "BitTorrent / P2P Торренты"
+
+msgid "QUIC (HTTP/3)"
+msgstr "QUIC (HTTP/3)"
+
+msgid "STUN (P2P Calls)"
+msgstr "STUN (P2P Звонки)"
+
+

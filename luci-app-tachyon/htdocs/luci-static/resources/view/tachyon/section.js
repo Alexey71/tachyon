@@ -9074,7 +9074,47 @@ function createSectionContent(section) {
   });
   dependsOnRoutingAction(dscpOption);
 
+  const excludedProtocolOption = section.taboption(
+    "conditions",
+    form.MultiValue,
+    "excluded_protocol",
+    _("Exclude traffic types"),
+    _("Traffic of specified protocols (e.g. BitTorrent, QUIC, STUN) will bypass this section."),
+  );
+  excludedProtocolOption.value("bittorrent", _("BitTorrent / P2P"));
+  excludedProtocolOption.value("quic", _("QUIC (HTTP/3)"));
+  excludedProtocolOption.value("stun", _("STUN (P2P Calls)"));
+  excludedProtocolOption.value("dns", _("DNS"));
+  excludedProtocolOption.value("http", _("HTTP"));
+  excludedProtocolOption.value("tls", _("TLS / HTTPS"));
+  excludedProtocolOption.value("ssh", _("SSH"));
+  excludedProtocolOption.value("rdp", _("RDP"));
+  excludedProtocolOption.modalonly = true;
+  excludedProtocolOption.rmempty = true;
+  dependsOnRoutingAction(excludedProtocolOption);
+
+  const protocolOption = section.taboption(
+    "conditions",
+    form.MultiValue,
+    "protocol",
+    _("Traffic type filter"),
+    _("Apply rules of this section only to selected protocols."),
+  );
+  protocolOption.value("bittorrent", _("BitTorrent / P2P"));
+  protocolOption.value("quic", _("QUIC (HTTP/3)"));
+  protocolOption.value("stun", _("STUN (P2P Calls)"));
+  protocolOption.value("dns", _("DNS"));
+  protocolOption.value("http", _("HTTP"));
+  protocolOption.value("tls", _("TLS / HTTPS"));
+  protocolOption.value("ssh", _("SSH"));
+  protocolOption.value("rdp", _("RDP"));
+  protocolOption.modalonly = true;
+  protocolOption.rmempty = true;
+  dependsOnRoutingAction(protocolOption);
+
+
   addDashboardServerFilterOptions(section);
+
 }
 
 function loadSectionTableOptions(sectionRef) {

@@ -254,7 +254,10 @@ export namespace Tachyon {
     rule_set_with_subnets?: string[];
     domain_ip_lists?: string[];
     ports?: string[];
+    protocol?: string[];
+    excluded_protocol?: string[];
     update_interval?: string;
+
     proxy_string?: string;
     nfqws_opt?: string;
     nfqws2_opt?: string;
