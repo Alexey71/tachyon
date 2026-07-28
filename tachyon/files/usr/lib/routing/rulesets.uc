@@ -64,29 +64,23 @@ function trim_string(value) {
 }
 
 function sort_values(values) {
-    sort(values, function(first, second) {
-        first = sprintf("%J", first);
-        second = sprintf("%J", second);
-        return first == second ? 0 : (first < second ? -1 : 1);
-    });
+    sort(values);
     return values;
 }
 
 function unique_values(values) {
-    values = sort_values(values);
-    let result = [];
-    let previous = null;
-    let has_previous = false;
+    if (type(values) != "array" || length(values) == 0)
+        return [];
 
+    let seen = {};
+    let result = [];
     for (let value in values) {
-        let encoded = sprintf("%J", value);
-        if (!has_previous || encoded != previous) {
+        let key = "" + value;
+        if (!seen[key]) {
+            seen[key] = true;
             push(result, value);
-            previous = encoded;
-            has_previous = true;
         }
     }
-
     return result;
 }
 
@@ -159,18 +153,13 @@ function import_plain_list(plain_path, ruleset_path, key, kind, chunk_size_text,
     if (data == null)
         exit(1);
 
-    let chunk_size = int(chunk_size_text || 5000);
-    if (chunk_size < 1)
-        chunk_size = 5000;
-
-    let chunk = [];
+    let items = [];
     let invalid = [];
-    let counts = [];
 
     for (let line in split(as_string(data), "\n")) {
         line = trim_string(line);
 
-        if (line == "")
+        if (line == "" || substr(line, 0, 1) == "#")
             continue;
 
         let normalized = normalize_plain_ruleset_value(line, kind);
@@ -179,22 +168,15 @@ function import_plain_list(plain_path, ruleset_path, key, kind, chunk_size_text,
             continue;
         }
 
-        push(chunk, normalized);
-
-        if (length(chunk) == chunk_size) {
-            push(counts, "" + length(chunk));
-            patch_source_values(ruleset_path, key, chunk);
-            chunk = [];
-        }
+        push(items, normalized);
     }
 
-    if (length(chunk) > 0) {
-        push(counts, "" + length(chunk));
-        patch_source_values(ruleset_path, key, chunk);
-    }
+    if (length(items) > 0)
+        patch_source_values(ruleset_path, key, items);
 
     write_optional_lines(invalid_path, invalid);
-    write_optional_lines(counts_path, counts);
+    if (counts_path != null && counts_path != "")
+        write_optional_lines(counts_path, [ "" + length(items) ]);
 }
 
 function extract_ip_cidr(json_path, output_path) {

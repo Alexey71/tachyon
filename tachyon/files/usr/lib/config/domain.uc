@@ -250,6 +250,10 @@ function domain_to_ascii(value, allow_leading_dot) {
     if (value == "" || substr(value, length(value) - 1, 1) == ".")
         return null;
 
+    if (match(value, /^[a-z0-9_.-]+$/) != null)
+        return length(value) <= 253 ? (leading_dot ? "." + value : value) : null;
+
+
     let labels = split(value, ".");
     let result = [];
     for (let label in labels) {
