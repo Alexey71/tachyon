@@ -7861,6 +7861,12 @@ function createSectionContent(section) {
   o.modalonly = true;
   o.depends("action", "awg");
   o.render = function(section_id) {
+    const realSid = (typeof section.cfgvalue === "function" && section.cfgvalue(section_id, ".name"))
+      || (uci.sections(UCI_PACKAGE, "section") || [])[section_id]?.[".name"]
+      || section_id;
+    console.log('[AWG-DBG] section_id=' + section_id + ' realSid=' + realSid + ' jc=' + uci.get('tachyon', realSid, 'awg_jc'));
+
+
     if (!document.getElementById("tachyon-awg-group-css")) {
       const s = document.createElement("style");
       s.id = "tachyon-awg-group-css";
@@ -7908,10 +7914,16 @@ function createSectionContent(section) {
       document.head.appendChild(s);
     }
 
-    // Read values via cfgvalue() of the registered hidden CBI options —
-    // this is guaranteed to be loaded at render time, unlike raw uci.get().
+    // Resolve real section name from section_id (which may be a numeric index like 36)
+    const realSid = (typeof section.cfgvalue === "function" && section.cfgvalue(section_id, ".name"))
+      || (uci.sections(UCI_PACKAGE, "section") || [])[section_id]?.[".name"]
+      || section_id;
+
     const v = (k, def) => {
-      const val = awgOpts[k] ? awgOpts[k].cfgvalue(section_id) : null;
+      let val = (typeof section.cfgvalue === "function") ? section.cfgvalue(section_id, k) : null;
+      if (val == null || val === "") {
+        val = uci.get(UCI_PACKAGE, realSid, k);
+      }
       return (val != null && val !== "") ? val : def;
     };
 
@@ -7920,14 +7932,18 @@ function createSectionContent(section) {
         type: "text", inputmode: "numeric",
         "data-awg-key": key, value: v(key, def)
       });
-      inp.addEventListener("change", () =>
-        uci.set(UCI_PACKAGE, section_id, key, inp.value.trim())
-      );
+      inp.addEventListener("change", () => {
+        const newVal = inp.value.trim();
+        uci.set(UCI_PACKAGE, realSid, key, newVal);
+        const hiddenInp = document.querySelector(`input[data-awg-hidden="${key}"]`);
+        if (hiddenInp) hiddenInp.value = newVal;
+      });
       return E("span", { class: "awg-param-cell" }, [
         E("span", { class: "awg-param-cell-label" }, label),
         inp
       ]);
     };
+
 
     const row = (label, ...cells) => E("div", { class: "awg-param-row" }, [
       E("span", { class: "awg-param-row-label" }, label),
