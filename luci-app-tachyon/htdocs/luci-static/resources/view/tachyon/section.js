@@ -7853,7 +7853,7 @@ function createSectionContent(section) {
     awg_hidden("awg_i5",   "0");
   })();
 
-  /* Visual group widget — renders the <details> spoiler with inline fields */
+  /* Visual group widget — renders the <details> spoiler in OpenWRT CBI style */
   o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", "");
   o.modalonly = true;
   o.depends("action", "awg");
@@ -7862,80 +7862,109 @@ function createSectionContent(section) {
       const s = document.createElement("style");
       s.id = "tachyon-awg-group-css";
       s.textContent = `
-        .awg-amnezia-group { border: 1px solid var(--cbi-border-color, #444); border-radius: 4px; margin: 2px 0; }
-        .awg-amnezia-group > summary {
-          cursor: pointer; padding: 5px 10px; font-size: 0.85em;
-          user-select: none; list-style: none; display: flex; align-items: center; gap: 6px;
+        .awg-spoiler { border: none; margin: 0; padding: 0; }
+        .awg-spoiler > summary {
+          cursor: pointer; user-select: none; list-style: none;
+          display: flex; align-items: center; gap: 0.35em;
+          font-size: 0.88em; color: var(--cbi-link-color, #3c96d4);
+          padding: 0;
         }
-        .awg-amnezia-group > summary::before { content: "▶"; font-size: 0.7em; transition: transform 0.15s; }
-        .awg-amnezia-group[open] > summary::before { transform: rotate(90deg); }
-        .awg-group-body { padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
-        .awg-field-row { display: flex; flex-wrap: wrap; gap: 6px; }
-        .awg-inline-field { display: flex; flex-direction: column; gap: 2px; min-width: 60px; flex: 1; }
-        .awg-field-label { font-size: 0.78em; opacity: 0.7; font-weight: 600; letter-spacing: 0.02em; }
-        .awg-field-input { width: 100%; min-width: 50px; box-sizing: border-box; padding: 3px 6px; font-size: 0.88em; }
+        .awg-spoiler > summary::marker,
+        .awg-spoiler > summary::-webkit-details-marker { display: none; }
+        .awg-spoiler > summary::before {
+          content: "▶"; font-size: 0.65em; display: inline-block;
+          transition: transform 0.15s ease;
+        }
+        .awg-spoiler[open] > summary::before { transform: rotate(90deg); }
+        .awg-spoiler[open] > summary { margin-bottom: 0.4em; }
+        .awg-param-rows { display: flex; flex-direction: column; gap: 0; }
+        .awg-param-row {
+          display: flex; align-items: center; gap: 0;
+          border-top: 1px dotted var(--cbi-border-color, #404040);
+          padding: 4px 0;
+        }
+        .awg-param-row-label {
+          flex: 0 0 6.5em; text-align: right; padding-right: 0.8em;
+          font-size: 0.85em; color: var(--cbi-secondary-text-color, #999);
+          white-space: nowrap;
+        }
+        .awg-param-row-fields { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+        .awg-param-cell { display: flex; align-items: center; gap: 3px; }
+        .awg-param-cell-label {
+          font-size: 0.78em; color: var(--cbi-secondary-text-color, #888);
+          min-width: 2.5em; text-align: right;
+        }
+        .awg-param-cell > input {
+          width: 64px; padding: 2px 5px; font-size: 0.9em;
+          border: 1px solid var(--cbi-input-border-color, #555);
+          background: var(--cbi-input-bg-color, #1a1a1a);
+          color: var(--cbi-input-text-color, #ddd);
+          border-radius: 2px;
+        }
       `;
       document.head.appendChild(s);
     }
 
-    const uciGet = (k, def) => {
-      const v = uci.get(UCI_PACKAGE, section_id, k);
-      return (v != null && v !== "") ? v : def;
+    const v = (k, def) => {
+      const val = uci.get(UCI_PACKAGE, section_id, k);
+      return (val != null && val !== "") ? val : def;
     };
 
-    const field = (label, key, def, title) => E("label", {
-      "class": "awg-inline-field", "title": title || ""
-    }, [
-      E("span",  { "class": "awg-field-label" }, label),
-      E("input", {
-        "type": "text", "class": "awg-field-input cbi-input-text",
-        "data-awg-key": key, "value": uciGet(key, def), "inputmode": "numeric"
-      })
+    const cell = (label, key, def) => {
+      const inp = E("input", {
+        type: "text", inputmode: "numeric",
+        "data-awg-key": key, value: v(key, def)
+      });
+      inp.addEventListener("change", () =>
+        uci.set(UCI_PACKAGE, section_id, key, inp.value.trim())
+      );
+      return E("span", { class: "awg-param-cell" }, [
+        E("span", { class: "awg-param-cell-label" }, label),
+        inp
+      ]);
+    };
+
+    const row = (label, ...cells) => E("div", { class: "awg-param-row" }, [
+      E("span", { class: "awg-param-row-label" }, label),
+      E("div",  { class: "awg-param-row-fields" }, cells)
     ]);
 
-    const row = (...fields) => E("div", { "class": "awg-field-row" }, fields);
-
-    const details = E("details", { "class": "awg-amnezia-group" }, [
-      E("summary", {}, _("AmneziaWG obfuscation parameters")),
-      E("div",    { "class": "awg-group-body" }, [
-        row(
-          field("Jc",   "awg_jc",   "120", _("Junk packet count")),
-          field("Jmin", "awg_jmin", "23",  _("Junk packet min size")),
-          field("Jmax", "awg_jmax", "911", _("Junk packet max size")),
+    const details = E("details", { class: "awg-spoiler" }, [
+      E("summary", {}, _("Obfuscation parameters")),
+      E("div", { class: "awg-param-rows" }, [
+        row(_("Junk"),
+          cell("Jc",   "awg_jc",   "120"),
+          cell("Jmin", "awg_jmin", "23"),
+          cell("Jmax", "awg_jmax", "911"),
         ),
-        row(
-          field("S1", "awg_s1", "0", _("Init junk size")),
-          field("S2", "awg_s2", "0", _("Response junk size")),
-          field("S3", "awg_s3", "0", _("Subsequent init junk size")),
-          field("S4", "awg_s4", "0", _("Subsequent response junk size")),
+        row(_("Shake"),
+          cell("S1", "awg_s1", "0"),
+          cell("S2", "awg_s2", "0"),
+          cell("S3", "awg_s3", "0"),
+          cell("S4", "awg_s4", "0"),
         ),
-        row(
-          field("H1", "awg_h1", "1", _("Init magic header")),
-          field("H2", "awg_h2", "2", _("Response magic header")),
-          field("H3", "awg_h3", "3", _("Subsequent init magic header")),
-          field("H4", "awg_h4", "4", _("Cookie magic header")),
+        row(_("Hash"),
+          cell("H1", "awg_h1", "1"),
+          cell("H2", "awg_h2", "2"),
+          cell("H3", "awg_h3", "3"),
+          cell("H4", "awg_h4", "4"),
         ),
-        row(
-          field("I1", "awg_i1", "0", _("Init header 1")),
-          field("I2", "awg_i2", "0", _("Init header 2")),
-          field("I3", "awg_i3", "0", _("Init header 3")),
-          field("I4", "awg_i4", "0", _("Init header 4")),
-          field("I5", "awg_i5", "0", _("Init header 5")),
+        row(_("Init headers"),
+          cell("I1", "awg_i1", "0"),
+          cell("I2", "awg_i2", "0"),
+          cell("I3", "awg_i3", "0"),
+          cell("I4", "awg_i4", "0"),
+          cell("I5", "awg_i5", "0"),
         ),
       ])
     ]);
 
-    details.querySelectorAll("input[data-awg-key]").forEach(inp => {
-      inp.addEventListener("change", () =>
-        uci.set(UCI_PACKAGE, section_id, inp.dataset.awgKey, inp.value.trim())
-      );
-    });
-
-    return E("div", { "class": "cbi-value" }, [
-      E("label", { "class": "cbi-value-title" }, ""),
-      E("div",   { "class": "cbi-value-field"  }, details)
+    return E("div", { class: "cbi-value" }, [
+      E("label", { class: "cbi-value-title" }, _("Obfuscation")),
+      E("div",   { class: "cbi-value-field"  }, details)
     ]);
   };
+
   // ── WARP (Cloudflare WARP via sing-box-extended) ──────────────────────────
 
   o = section.taboption(

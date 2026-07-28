@@ -3097,3 +3097,21 @@ msgstr "Страны для фильтрации GeoIP"
 
 msgid "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
 msgstr "Выберите одну или несколько стран по двухбуквенному коду ISO (например: ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
+
+msgid "Obfuscation"
+msgstr "Обфускация"
+
+msgid "Obfuscation parameters"
+msgstr "Параметры обфускации"
+
+msgid "Junk"
+msgstr "Рандомизация"
+
+msgid "Shake"
+msgstr "Перетасовка"
+
+msgid "Hash"
+msgstr "Хеши"
+
+msgid "Init headers"
+msgstr "Заголовки Init"

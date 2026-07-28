@@ -359,6 +359,7 @@ export namespace Tachyon {
     smart_detect?: '0' | '1';
     smart_detect_section?: string;
     smart_detect_sections?: string | string[];
+    dns_turbo_cache?: '0' | '1';
   }
 
 
