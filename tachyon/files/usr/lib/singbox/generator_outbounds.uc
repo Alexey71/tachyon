@@ -1261,10 +1261,12 @@ function add_warp_endpoint(config, section) {
     }
 
     let detour = option(section, "warp_detour", "");
+    let mtu = int_option(section, "warp_mtu", "1280");
     let endpoint = {
         type: "warp",
         tag,
         name: tag,
+        mtu: mtu > 0 ? mtu : 1280,
         profile
     };
 
@@ -1277,18 +1279,22 @@ function add_warp_endpoint(config, section) {
 
 function add_anytls_outbound(config, section) {
     let tag = outbound_tag(section[".name"]);
+    let server = option(section, "anytls_server", "");
+    if (server == "")
+        ctx.runtime_generate_unsupported("AnyTLS section '" + section[".name"] + "' missing anytls_server");
     let outbound = {
         type: "anytls",
         tag,
-        server: option(section, "anytls_server", ""),
+        server,
         server_port: int_option(section, "anytls_server_port", "0"),
         password: option(section, "anytls_password", "")
     };
     let sni = option(section, "anytls_sni", "");
     let insecure = internal_flag(option(section, "anytls_insecure", "0"));
     outbound.tls = { enabled: true };
-    if (sni != "") outbound.tls.server_name = sni;
-    if (insecure)   outbound.tls.insecure = true;
+    // Fall back to server hostname when no explicit SNI is configured
+    outbound.tls.server_name = sni != "" ? sni : server;
+    if (insecure) outbound.tls.insecure = true;
     push(config.outbounds, outbound);
 }
 
@@ -1349,13 +1355,16 @@ function add_masque_endpoint(config, section) {
 
 function add_openvpn_endpoint(config, section) {
     let tag = outbound_tag(section[".name"]);
+    let server = option(section, "openvpn_server", "");
+    if (server == "")
+        ctx.runtime_generate_unsupported("OpenVPN section '" + section[".name"] + "' missing openvpn_server");
     let endpoint = {
         type: "openvpn",
         tag,
         name: tag,
         system: true,
         servers: [{
-            server: option(section, "openvpn_server", ""),
+            server,
             server_port: int_option(section, "openvpn_server_port", "1194")
         }],
         proto: option(section, "openvpn_proto", "udp")
