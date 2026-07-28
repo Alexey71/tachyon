@@ -7861,13 +7861,8 @@ function createSectionContent(section) {
   o.modalonly = true;
   o.depends("action", "awg");
   o.render = function(section_id) {
-    const realSid = (typeof section.cfgvalue === "function" && section.cfgvalue(section_id, ".name"))
-      || (uci.sections(UCI_PACKAGE, "section") || [])[section_id]?.[".name"]
-      || section_id;
-    console.log('[AWG-DBG] section_id=' + section_id + ' realSid=' + realSid + ' jc=' + uci.get('tachyon', realSid, 'awg_jc'));
-
-
     if (!document.getElementById("tachyon-awg-group-css")) {
+
       const s = document.createElement("style");
       s.id = "tachyon-awg-group-css";
       s.textContent = `
