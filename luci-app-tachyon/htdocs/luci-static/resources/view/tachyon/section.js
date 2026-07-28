@@ -7855,14 +7855,12 @@ function createSectionContent(section) {
     awg_hidden("awg_i5",   "0");
   })();
 
-
   /* Visual group widget — renders the <details> spoiler in OpenWRT CBI style */
   o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", "");
   o.modalonly = true;
   o.depends("action", "awg");
-  o.render = function(section_id) {
+  o.render = function(option_index, section_id, in_table) {
     if (!document.getElementById("tachyon-awg-group-css")) {
-
       const s = document.createElement("style");
       s.id = "tachyon-awg-group-css";
       s.textContent = `
@@ -7909,16 +7907,8 @@ function createSectionContent(section) {
       document.head.appendChild(s);
     }
 
-    // Resolve real section name from section_id (which may be a numeric index like 36)
-    const realSid = (typeof section.cfgvalue === "function" && section.cfgvalue(section_id, ".name"))
-      || (uci.sections(UCI_PACKAGE, "section") || [])[section_id]?.[".name"]
-      || section_id;
-
     const v = (k, def) => {
-      let val = (typeof section.cfgvalue === "function") ? section.cfgvalue(section_id, k) : null;
-      if (val == null || val === "") {
-        val = uci.get(UCI_PACKAGE, realSid, k);
-      }
+      const val = uci.get(UCI_PACKAGE, section_id, k);
       return (val != null && val !== "") ? val : def;
     };
 
@@ -7929,7 +7919,7 @@ function createSectionContent(section) {
       });
       inp.addEventListener("change", () => {
         const newVal = inp.value.trim();
-        uci.set(UCI_PACKAGE, realSid, key, newVal);
+        uci.set(UCI_PACKAGE, section_id, key, newVal);
         const hiddenInp = document.querySelector(`input[data-awg-hidden="${key}"]`);
         if (hiddenInp) hiddenInp.value = newVal;
       });
@@ -7938,6 +7928,7 @@ function createSectionContent(section) {
         inp
       ]);
     };
+
 
 
     const row = (label, ...cells) => E("div", { class: "awg-param-row" }, [
