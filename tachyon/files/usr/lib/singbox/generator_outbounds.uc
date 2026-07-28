@@ -58,7 +58,18 @@ function uci_bin_to_hex(val) {
     s = replace(s, /^0x/i, "");
     s = replace(s, />$/, "");
     s = replace(s, /\s+/g, "");
-    return s;
+
+    if (match(s, /^[0-9a-fA-F]+$/)) {
+        if (length(s) % 2 != 0) s = "0" + s;
+        return lc(s);
+    }
+
+    let hex = "";
+    for (let i = 0; i < length(val); i++) {
+        let code = ord(val, i);
+        hex += sprintf("%02x", code);
+    }
+    return hex;
 }
 
 function internal_flag(value) {
@@ -1164,19 +1175,25 @@ function add_awg_endpoint(config, section) {
     if (preshared_key != "")
         endpoint.peers[0].pre_shared_key = preshared_key;
 
-    let mtu = int_option(section, "awg_mtu", "0");
-    if (mtu > 0)
-        endpoint.mtu = mtu;
+    let mtu = int_option(section, "awg_mtu", "1280");
+    endpoint.mtu = mtu > 0 ? mtu : 1280;
 
-    let keepalive = int_option(section, "awg_keepalive", "0");
-    if (keepalive > 0)
-        endpoint.peers[0].persistent_keepalive_interval = keepalive;
+    let keepalive = int_option(section, "awg_keepalive", "25");
+    endpoint.peers[0].persistent_keepalive_interval = keepalive > 0 ? keepalive : 25;
+
+    let jc = int_option(section, "awg_jc", "4");
+    if (jc > 10) jc = 10;
+
+    let jmin = int_option(section, "awg_jmin", "40");
+
+    let jmax = int_option(section, "awg_jmax", "70");
+    if (jmax > 1200) jmax = 1200;
 
     // AmneziaWG obfuscation parameters
     let amnezia = {
-        jc: int_option(section, "awg_jc", "120"),
-        jmin: int_option(section, "awg_jmin", "23"),
-        jmax: int_option(section, "awg_jmax", "911"),
+        jc: jc,
+        jmin: jmin,
+        jmax: jmax,
         s1: int_option(section, "awg_s1", "0"),
         s2: int_option(section, "awg_s2", "0"),
         h1: int_option(section, "awg_h1", "1"),

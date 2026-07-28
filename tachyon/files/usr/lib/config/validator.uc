@@ -1993,6 +1993,16 @@ function validate_extended_server_features(ctx, sing_box_version, sing_box_versi
         if (transport == "xhttp" && !sing_box_supports_xhttp(ctx, sing_box_version, sing_box_version_output))
             fail_requirement("Server '" + name + "' uses XHTTP transport, but the installed sing-box binary does not support it. Install sing-box-extended or a binary with XHTTP support, or change the transport. Aborted.", "fatal");
     }
+
+    for (let section in sections_by_type("section")) {
+        if (!section_enabled(section))
+            continue;
+
+        let name = section_name(section);
+        let action = rule_action(section);
+        if (action == "awg" && !sing_box_is_extended(ctx, sing_box_version) && !sing_box_is_lx(ctx, sing_box_version))
+            fail_requirement("Section '" + name + "' uses AmneziaWG, but the installed sing-box binary does not support it. Install sing-box-extended or sing-box-lx, or change the action. Aborted.", "fatal");
+    }
 }
 
 function has_outbound_section(ctx) {

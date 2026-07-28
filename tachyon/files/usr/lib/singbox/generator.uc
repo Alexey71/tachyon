@@ -59,7 +59,18 @@ function uci_bin_to_hex(val) {
     s = replace(s, /^0x/i, "");
     s = replace(s, />$/, "");
     s = replace(s, /\s+/g, "");
-    return s;
+
+    if (match(s, /^[0-9a-fA-F]+$/)) {
+        if (length(s) % 2 != 0) s = "0" + s;
+        return lc(s);
+    }
+
+    let hex = "";
+    for (let i = 0; i < length(val); i++) {
+        let code = ord(val, i);
+        hex += sprintf("%02x", code);
+    }
+    return hex;
 }
 
 let generator_outbounds = require("singbox.generator_outbounds");
