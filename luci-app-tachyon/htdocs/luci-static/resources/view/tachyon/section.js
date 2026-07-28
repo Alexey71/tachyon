@@ -7822,9 +7822,10 @@ function createSectionContent(section) {
   o.depends("action", "awg");
   // ── AmneziaWG obfuscation parameters — compact collapsible group ──────────
 
+  const awgOpts = {};
   (function() {
     /** Hidden CBI option — stores value in UCI but renders nothing visible.
-     *  The visual group widget below owns the entire UI. */
+     *  References are captured in awgOpts so the group widget reads via cfgvalue(). */
     function awg_hidden(name, def) {
       let opt = section.taboption("settings", form.Value, name, name);
       opt.default   = def;
@@ -7832,6 +7833,7 @@ function createSectionContent(section) {
       opt.rmempty   = false;
       opt.depends("action", "awg");
       opt.render = function() { return E("span", { "data-awg-hidden": name }); };
+      awgOpts[name] = opt;
       return opt;
     }
 
@@ -7852,6 +7854,7 @@ function createSectionContent(section) {
     awg_hidden("awg_i4",   "0");
     awg_hidden("awg_i5",   "0");
   })();
+
 
   /* Visual group widget — renders the <details> spoiler in OpenWRT CBI style */
   o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", "");
@@ -7905,8 +7908,10 @@ function createSectionContent(section) {
       document.head.appendChild(s);
     }
 
+    // Read values via cfgvalue() of the registered hidden CBI options —
+    // this is guaranteed to be loaded at render time, unlike raw uci.get().
     const v = (k, def) => {
-      const val = uci.get(UCI_PACKAGE, section_id, k);
+      const val = awgOpts[k] ? awgOpts[k].cfgvalue(section_id) : null;
       return (val != null && val !== "") ? val : def;
     };
 
