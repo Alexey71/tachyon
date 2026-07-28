@@ -7820,103 +7820,122 @@ function createSectionContent(section) {
   o.modalonly = true;
   o.rmempty = true;
   o.depends("action", "awg");
+  // ── AmneziaWG obfuscation parameters — compact collapsible group ──────────
 
-  o = section.taboption("settings", form.Value, "awg_jc", "Jc");
-  o.default = "120";
+  (function() {
+    /** Hidden CBI option — stores value in UCI but renders nothing visible.
+     *  The visual group widget below owns the entire UI. */
+    function awg_hidden(name, def) {
+      let opt = section.taboption("settings", form.Value, name, name);
+      opt.default   = def;
+      opt.modalonly = true;
+      opt.rmempty   = false;
+      opt.depends("action", "awg");
+      opt.render = function() { return E("span", { "data-awg-hidden": name }); };
+      return opt;
+    }
+
+    awg_hidden("awg_jc",   "120");
+    awg_hidden("awg_jmin", "23");
+    awg_hidden("awg_jmax", "911");
+    awg_hidden("awg_s1",   "0");
+    awg_hidden("awg_s2",   "0");
+    awg_hidden("awg_s3",   "0");
+    awg_hidden("awg_s4",   "0");
+    awg_hidden("awg_h1",   "1");
+    awg_hidden("awg_h2",   "2");
+    awg_hidden("awg_h3",   "3");
+    awg_hidden("awg_h4",   "4");
+    awg_hidden("awg_i1",   "0");
+    awg_hidden("awg_i2",   "0");
+    awg_hidden("awg_i3",   "0");
+    awg_hidden("awg_i4",   "0");
+    awg_hidden("awg_i5",   "0");
+  })();
+
+  /* Visual group widget — renders the <details> spoiler with inline fields */
+  o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", "");
   o.modalonly = true;
-  o.rmempty = false;
   o.depends("action", "awg");
+  o.render = function(section_id) {
+    if (!document.getElementById("tachyon-awg-group-css")) {
+      const s = document.createElement("style");
+      s.id = "tachyon-awg-group-css";
+      s.textContent = `
+        .awg-amnezia-group { border: 1px solid var(--cbi-border-color, #444); border-radius: 4px; margin: 2px 0; }
+        .awg-amnezia-group > summary {
+          cursor: pointer; padding: 5px 10px; font-size: 0.85em;
+          user-select: none; list-style: none; display: flex; align-items: center; gap: 6px;
+        }
+        .awg-amnezia-group > summary::before { content: "▶"; font-size: 0.7em; transition: transform 0.15s; }
+        .awg-amnezia-group[open] > summary::before { transform: rotate(90deg); }
+        .awg-group-body { padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+        .awg-field-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .awg-inline-field { display: flex; flex-direction: column; gap: 2px; min-width: 60px; flex: 1; }
+        .awg-field-label { font-size: 0.78em; opacity: 0.7; font-weight: 600; letter-spacing: 0.02em; }
+        .awg-field-input { width: 100%; min-width: 50px; box-sizing: border-box; padding: 3px 6px; font-size: 0.88em; }
+      `;
+      document.head.appendChild(s);
+    }
 
-  o = section.taboption("settings", form.Value, "awg_jmin", "Jmin");
-  o.default = "23";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
+    const uciGet = (k, def) => {
+      const v = uci.get(UCI_PACKAGE, section_id, k);
+      return (v != null && v !== "") ? v : def;
+    };
 
-  o = section.taboption("settings", form.Value, "awg_jmax", "Jmax");
-  o.default = "911";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
+    const field = (label, key, def, title) => E("label", {
+      "class": "awg-inline-field", "title": title || ""
+    }, [
+      E("span",  { "class": "awg-field-label" }, label),
+      E("input", {
+        "type": "text", "class": "awg-field-input cbi-input-text",
+        "data-awg-key": key, "value": uciGet(key, def), "inputmode": "numeric"
+      })
+    ]);
 
-  o = section.taboption("settings", form.Value, "awg_s1", "S1");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
+    const row = (...fields) => E("div", { "class": "awg-field-row" }, fields);
 
-  o = section.taboption("settings", form.Value, "awg_s2", "S2");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
+    const details = E("details", { "class": "awg-amnezia-group" }, [
+      E("summary", {}, _("AmneziaWG obfuscation parameters")),
+      E("div",    { "class": "awg-group-body" }, [
+        row(
+          field("Jc",   "awg_jc",   "120", _("Junk packet count")),
+          field("Jmin", "awg_jmin", "23",  _("Junk packet min size")),
+          field("Jmax", "awg_jmax", "911", _("Junk packet max size")),
+        ),
+        row(
+          field("S1", "awg_s1", "0", _("Init junk size")),
+          field("S2", "awg_s2", "0", _("Response junk size")),
+          field("S3", "awg_s3", "0", _("Subsequent init junk size")),
+          field("S4", "awg_s4", "0", _("Subsequent response junk size")),
+        ),
+        row(
+          field("H1", "awg_h1", "1", _("Init magic header")),
+          field("H2", "awg_h2", "2", _("Response magic header")),
+          field("H3", "awg_h3", "3", _("Subsequent init magic header")),
+          field("H4", "awg_h4", "4", _("Cookie magic header")),
+        ),
+        row(
+          field("I1", "awg_i1", "0", _("Init header 1")),
+          field("I2", "awg_i2", "0", _("Init header 2")),
+          field("I3", "awg_i3", "0", _("Init header 3")),
+          field("I4", "awg_i4", "0", _("Init header 4")),
+          field("I5", "awg_i5", "0", _("Init header 5")),
+        ),
+      ])
+    ]);
 
-  o = section.taboption("settings", form.Value, "awg_h1", "H1");
-  o.default = "1";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
+    details.querySelectorAll("input[data-awg-key]").forEach(inp => {
+      inp.addEventListener("change", () =>
+        uci.set(UCI_PACKAGE, section_id, inp.dataset.awgKey, inp.value.trim())
+      );
+    });
 
-  o = section.taboption("settings", form.Value, "awg_h2", "H2");
-  o.default = "2";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_h3", "H3");
-  o.default = "3";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_h4", "H4");
-  o.default = "4";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_s3", "S3");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_s4", "S4");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_i1", "I1");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_i2", "I2");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_i3", "I3");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_i4", "I4");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
-  o = section.taboption("settings", form.Value, "awg_i5", "I5");
-  o.default = "0";
-  o.modalonly = true;
-  o.rmempty = false;
-  o.depends("action", "awg");
-
+    return E("div", { "class": "cbi-value" }, [
+      E("label", { "class": "cbi-value-title" }, ""),
+      E("div",   { "class": "cbi-value-field"  }, details)
+    ]);
+  };
   // ── WARP (Cloudflare WARP via sing-box-extended) ──────────────────────────
 
   o = section.taboption(
