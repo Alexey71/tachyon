@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-26 09:37+0300\n"
-"PO-Revision-Date: 2026-07-26 09:37+0300\n"
+"POT-Creation-Date: 2026-07-28 21:47+0300\n"
+"PO-Revision-Date: 2026-07-28 21:47+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -242,6 +242,9 @@ msgstr "Alter ID"
 msgid "AmneziaWG Generator"
 msgstr "Генератор AmneziaWG"
 
+msgid "Apply rules of this section only to selected protocols."
+msgstr "Применять правила этой секции только к выбранным протоколам."
+
 msgid "Apply section rules only to the specified local IP addresses"
 msgstr "Применять правила секции только к указанным локальным IP-адресам"
 
@@ -298,6 +301,12 @@ msgstr "Доступные действия"
 
 msgid "Backend validation failed: %s"
 msgstr "Ошибка валидации на бэкенде: %s"
+
+msgid "Belarus (by)"
+msgstr ""
+
+msgid "BitTorrent / P2P"
+msgstr "BitTorrent / P2P Торренты"
 
 msgid "Bootstrap DNS"
 msgstr "Bootstrap DNS"
@@ -428,8 +437,14 @@ msgstr "Проверки пройдены"
 msgid "Checks passed with manual DHCP"
 msgstr "Проверки пройдены с ручным DHCP"
 
+msgid "China (cn)"
+msgstr ""
+
 msgid "Choose Hosts File..."
 msgstr "Выбрать hosts-файл..."
+
+msgid "Choose whether to route traffic to all destinations except selected countries (Exclude) or only to selected countries (Include)."
+msgstr "Выберите, направлять ли трафик во все назначения кроме выбранных стран (Исключить) или только в выбранные страны (Включить)."
 
 msgid "CIDR must be between 0 and 32 for IPv4 or 0 and 128 for IPv6"
 msgstr "CIDR должен быть от 0 до 32 для IPv4 или от 0 до 128 для IPv6"
@@ -542,6 +557,9 @@ msgstr "Скопировать ссылку прокси"
 msgid "Could not compare FakeIP and control public IPs"
 msgstr "Не удалось сравнить публичные IP FakeIP и контрольной проверки"
 
+msgid "Country code (e.g. ru, us, de)"
+msgstr ""
+
 msgid "Current section cannot be used as its own transit section"
 msgstr "Текущая секция не может быть транзитной для самой себя"
 
@@ -632,6 +650,9 @@ msgstr "Отключение перехвата несовместимо с acti
 msgid "Display name"
 msgstr "Отображаемое имя"
 
+msgid "DNS"
+msgstr ""
+
 msgid "DNS Check Interval"
 msgstr "Период проверки DNS"
 
@@ -688,6 +709,12 @@ msgstr "DNS через прокси"
 
 msgid "DNS through section"
 msgstr "DNS через секцию"
+
+msgid "DNS Turbo Cache"
+msgstr "Быстрый DNS-кэш"
+
+msgid "DNS Turbo Cache saved"
+msgstr ""
 
 msgid "DNS Unavailability Timeout"
 msgstr "Таймаут недоступности DNS"
@@ -776,6 +803,9 @@ msgstr "Загружено"
 msgid "Drag rows to change priority. The rule at the top is checked first."
 msgstr "Перетаскивайте строки, чтобы изменить приоритет. Правило сверху проверяется первым."
 
+msgid "DSCP marks (QoS)"
+msgstr "DSCP-метки (QoS)"
+
 msgid "Duplicate JSON outbound tag"
 msgstr "Такой тег JSON outbound уже используется"
 
@@ -808,6 +838,9 @@ msgstr "Включить автостарт"
 
 msgid "Enable built-in DNS resolver for domains handled by this section"
 msgstr "Включить встроенный DNS резолвер для доменов, обрабатываемых этой секцией"
+
+msgid "Enable DNS Turbo Cache"
+msgstr "Включить быстрый DNS-кэш"
 
 msgid "Enable list updates"
 msgstr "Включить обновление списков"
@@ -896,6 +929,9 @@ msgstr "Исключить NTP"
 msgid "Exclude NTP protocol traffic from the tunnel to prevent it from being routed through the proxy or VPN"
 msgstr "Исключите трафик протокола NTP из туннеля, чтобы предотвратить его маршрутизацию через прокси-сервер или VPN."
 
+msgid "Exclude selected countries"
+msgstr "Исключить выбранные страны"
+
 msgid "Exclude servers"
 msgstr "Исключить серверы"
 
@@ -907,6 +943,9 @@ msgstr "Исключить с этого уровня серверы с одни
 
 msgid "Exclude servers with one of the selected transports from this level."
 msgstr "Исключить с этого уровня серверы с одним из выбранных транспортов."
+
+msgid "Exclude traffic types"
+msgstr "Исключать типы трафика"
 
 msgid "Exclude URLTest / Priority group"
 msgstr "Исключить URLTest / группу приоритетов"
@@ -953,6 +992,9 @@ msgstr ""
 msgid "Failed to save device IPs"
 msgstr "Ошибка сохранения IP устройств"
 
+msgid "Failed to save DNS Turbo Cache"
+msgstr ""
+
 msgid "Failed to save Smart Detect settings"
 msgstr "Ошибка сохранения настроек Smart Detect"
 
@@ -995,6 +1037,9 @@ msgstr "Самый быстрый"
 msgid "Filter the servers that will be displayed on the dashboard."
 msgstr "Фильтровать серверы, отображаемые на дашборде."
 
+msgid "Finland (fi)"
+msgstr ""
+
 msgid "Firewall WAN port"
 msgstr "Порт в firewall для WAN"
 
@@ -1003,6 +1048,9 @@ msgstr "Исправьте подсвеченные поля и сохранит
 
 msgid "Forced device routing"
 msgstr "Принудительная маршрутизация устройств"
+
+msgid "France (fr)"
+msgstr ""
 
 msgid "Fronting IP"
 msgstr "IP фронтинга"
@@ -1040,7 +1088,16 @@ msgstr ""
 msgid "Generating…"
 msgstr ""
 
+msgid "GeoIP Countries"
+msgstr "Страны для фильтрации GeoIP"
+
+msgid "GeoIP Mode"
+msgstr "Режим фильтрации GeoIP"
+
 msgid "GeoSite / GeoIP"
+msgstr ""
+
+msgid "Germany (de)"
 msgstr ""
 
 msgid "Get global check"
@@ -1054,6 +1111,9 @@ msgstr "gRPC-сервис"
 
 msgid "Handshake timeout"
 msgstr "Таймаут рукопожатия"
+
+msgid "Hash"
+msgstr "Хеши"
 
 msgid "Hide cascade connection nodes"
 msgstr "Скрыть узлы каскадных подключений"
@@ -1115,6 +1175,9 @@ msgstr "Как часто проверять активные DNS-серверы
 msgid "How often to check whether a higher-priority DNS server has recovered."
 msgstr "Как часто проверять, восстановился ли DNS-сервер с более высоким приоритетом."
 
+msgid "HTTP"
+msgstr ""
+
 msgid "HTTP error"
 msgstr "Ошибка HTTP"
 
@@ -1163,11 +1226,17 @@ msgstr "Включить страны"
 msgid "Include IP addresses and subnets"
 msgstr "Включить IP-адреса и подсети"
 
+msgid "Include selected countries"
+msgstr "Включить выбранные страны"
+
 msgid "Include servers"
 msgstr "Включить серверы"
 
 msgid "Information"
 msgstr "Информация"
+
+msgid "Init headers"
+msgstr "Заголовки Init"
 
 msgid "Install"
 msgstr "Установить"
@@ -1376,6 +1445,9 @@ msgstr "Изолировать BitTorrent-трафик и направлять �
 msgid "Issues detected"
 msgstr "Обнаружены проблемы"
 
+msgid "Japan (jp)"
+msgstr ""
+
 msgid "JSON outbound"
 msgstr "JSON outbound"
 
@@ -1394,11 +1466,20 @@ msgstr "JSON outbound должен содержать непустое поле 
 msgid "JSON outbound settings"
 msgstr "Настройки JSON outbound"
 
+msgid "Junk"
+msgstr "Рандомизация"
+
+msgid "Kazakhstan (kz)"
+msgstr ""
+
 msgid "Keep Priority before latency-sorted servers"
 msgstr "Держать Priority перед серверами, отсортированными по задержке"
 
 msgid "Keep URLTest before latency-sorted servers"
 msgstr "Держать URLTest перед серверами, отсортированными по задержке"
+
+msgid "Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0 ms."
+msgstr "Сохраняет FakeIP-кэш между перезагрузками и заранее резолвит популярные заблокированные домены при старте — задержка при первом визите 0 мс."
 
 msgid "Key"
 msgstr "Ключ"
@@ -1499,6 +1580,9 @@ msgstr "Совпадение по портам назначения. Испол�
 msgid "Match Found"
 msgstr "Совпадение найдено"
 
+msgid "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)"
+msgstr "Сопоставление трафика по DSCP-метке пакета (назначается в Windows через Policy-Based QoS). Примеры: 46 (EF), 0x2e, 34 (AF41)"
+
 msgid "Maximum time to wait for example.com to resolve during a DNS health check."
 msgstr "Максимальное время ожидания разрешения example.com при проверке доступности DNS."
 
@@ -1546,6 +1630,9 @@ msgstr "Имя, отображаемое на дашборде"
 
 msgid "Name shown in the priority level list"
 msgstr "Имя, отображаемое в списке уровней приоритета"
+
+msgid "Netherlands (nl)"
+msgstr ""
 
 msgid "Network Interface"
 msgstr "Сетевой интерфейс"
@@ -1684,6 +1771,9 @@ msgstr "Количество последовательных успешных �
 
 msgid "Obfuscation"
 msgstr "Обфускация"
+
+msgid "Obfuscation parameters"
+msgstr "Параметры обфускации"
 
 msgid "Obfuscation password"
 msgstr "Пароль обфускации"
@@ -1898,6 +1988,12 @@ msgstr "Публичный хост"
 msgid "QR code is too large"
 msgstr "QR-код слишком большой"
 
+msgid "QUIC (HTTP/3)"
+msgstr "QUIC (HTTP/3)"
+
+msgid "RDP"
+msgstr ""
+
 msgid "Reality fake site"
 msgstr "Fake-сайт Reality"
 
@@ -2033,6 +2129,9 @@ msgstr "Запустить восстановление"
 msgid "Running"
 msgstr "Запущен"
 
+msgid "Russia (ru)"
+msgstr ""
+
 msgid "Save"
 msgstr "Сохранить"
 
@@ -2101,6 +2200,9 @@ msgstr "Выберите протокол DNS"
 
 msgid "Select network interface for VPN connection"
 msgstr "Выберите сетевой интерфейс для VPN соединения"
+
+msgid "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
+msgstr "Выберите одну или несколько стран по двухбуквенному коду ISO (например: ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
 
 msgid "Select or enter a User-Agent"
 msgstr "Выберите или введите User-Agent"
@@ -2210,6 +2312,9 @@ msgstr "Информация о сервисах"
 msgid "Settings"
 msgstr "Настройки"
 
+msgid "Shake"
+msgstr "Перетасовка"
+
 msgid "Show metadata on dashboard"
 msgstr "Показывать метаданные на дашборде"
 
@@ -2264,6 +2369,9 @@ msgstr "Сервис sing-box существует"
 msgid "Sing-box version is compatible (newer than 1.12.4)"
 msgstr "Версия Sing-box совместима (новее 1.12.4)"
 
+msgid "Singapore (sg)"
+msgstr ""
+
 msgid "Skip loopback & local entries (127.0.0.1, ::1, 0.0.0.0, localhost)"
 msgstr "Пропускать локальные и loopback-записи (127.0.0.1, ::1, 0.0.0.0, localhost)"
 
@@ -2305,6 +2413,9 @@ msgstr "Укажите путь к файлу"
 
 msgid "Specify different files"
 msgstr "Укажите разные файлы"
+
+msgid "SSH"
+msgstr ""
 
 msgid "Standalone ByeDPI autostart is enabled"
 msgstr "Автозапуск отдельной службы ByeDPI включен"
@@ -2372,6 +2483,9 @@ msgstr "Остановлен"
 msgid "Stopping…"
 msgstr "Остановка…"
 
+msgid "STUN (P2P Calls)"
+msgstr "STUN (P2P Звонки)"
+
 msgid "Subnets from the list will be extracted and added to nftables"
 msgstr "Подсети из списка будут извлечены и добавлены в nftables"
 
@@ -2401,6 +2515,9 @@ msgstr ""
 
 msgid "Successfully imported %d DNS record(s)"
 msgstr "Успешно импортировано %d DNS-записей"
+
+msgid "Sweden (se)"
+msgstr ""
 
 msgid "System info"
 msgstr "Системная информация"
@@ -2564,6 +2681,9 @@ msgstr "Допуск расхождения времени"
 msgid "tiny"
 msgstr "tiny"
 
+msgid "TLS / HTTPS"
+msgstr ""
+
 msgid "TLS Auth/Crypt Key"
 msgstr "Ключ TLS Auth/Crypt"
 
@@ -2597,8 +2717,14 @@ msgstr "Трафик для этого уровня проходит напря�
 msgid "Traffic from these IP addresses will never be routed through this section, even if other conditions match."
 msgstr "Трафик с этих IP-адресов никогда не будет направляться через эту секцию, даже если другие условия совпадают."
 
+msgid "Traffic of specified protocols (e.g. BitTorrent, QUIC, STUN) will bypass this section."
+msgstr "Трафик указанных протоколов (например, BitTorrent, QUIC, STUN) будет идти в обход этой секции."
+
 msgid "Traffic Total"
 msgstr "Всего трафика"
+
+msgid "Traffic type filter"
+msgstr "Фильтр по типам трафика"
 
 msgid "Traffic will go through the default route (Direct/Default)."
 msgstr ""
@@ -2630,11 +2756,17 @@ msgstr "TTL должно быть положительным числом"
 msgid "TTL value cannot be empty"
 msgstr "Значение TTL не может быть пустым"
 
+msgid "Turkey (tr)"
+msgstr ""
+
 msgid "Type"
 msgstr "Тип"
 
 msgid "UDP (Unprotected DNS)"
 msgstr "UDP (Незащищённый DNS)"
+
+msgid "Ukraine (ua)"
+msgstr ""
 
 msgid "Unable to validate the ByeDPI strategy through the backend parser."
 msgstr "Не удалось валидировать стратегию ByeDPI через парсер бэкенда."
@@ -2665,6 +2797,12 @@ msgstr "Обнаружен лишний NFQWS2 Tachyon"
 
 msgid "unique UCI identifier"
 msgstr "уникальный идентификатор UCI"
+
+msgid "United Kingdom (gb)"
+msgstr ""
+
+msgid "United States (us)"
+msgstr ""
 
 msgid "unknown"
 msgstr "неизвестно"
@@ -3061,57 +3199,3 @@ msgstr "🇺🇸 Только США (United States)"
 
 msgid "🇨🇳 CN Only (China)"
 msgstr "🇨🇳 Только Китай (China)"
-
-msgid "DNS Turbo Cache"
-msgstr "Быстрый DNS-кэш"
-
-msgid "Enable DNS Turbo Cache"
-msgstr "Включить быстрый DNS-кэш"
-
-msgid "Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0 ms."
-msgstr "Сохраняет FakeIP-кэш между перезагрузками и заранее резолвит популярные заблокированные домены при старте — задержка при первом визите 0 мс."
-
-msgid "Saving…"
-msgstr "Сохранение…"
-
-msgid "DSCP marks (QoS)"
-msgstr "DSCP-метки (QoS)"
-
-msgid "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)"
-msgstr "Сопоставление трафика по DSCP-метке пакета (назначается в Windows через Policy-Based QoS). Примеры: 46 (EF), 0x2e, 34 (AF41)"
-
-msgid "GeoIP Mode"
-msgstr "Режим фильтрации GeoIP"
-
-msgid "Choose whether to route traffic to all destinations except selected countries (Exclude) or only to selected countries (Include)."
-msgstr "Выберите, направлять ли трафик во все назначения кроме выбранных стран (Исключить) или только в выбранные страны (Включить)."
-
-msgid "Exclude selected countries"
-msgstr "Исключить выбранные страны"
-
-msgid "Include selected countries"
-msgstr "Включить выбранные страны"
-
-msgid "GeoIP Countries"
-msgstr "Страны для фильтрации GeoIP"
-
-msgid "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
-msgstr "Выберите одну или несколько стран по двухбуквенному коду ISO (например: ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua)."
-
-msgid "Obfuscation"
-msgstr "Обфускация"
-
-msgid "Obfuscation parameters"
-msgstr "Параметры обфускации"
-
-msgid "Junk"
-msgstr "Рандомизация"
-
-msgid "Shake"
-msgstr "Перетасовка"
-
-msgid "Hash"
-msgstr "Хеши"
-
-msgid "Init headers"
-msgstr "Заголовки Init"
