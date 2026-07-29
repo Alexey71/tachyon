@@ -228,13 +228,8 @@ function get_candidate_strategies(mode) {
 
     let presets = [];
     
-    // Add baseline (No Bypass)
-    push(presets, {
-        id: "baseline_none",
-        name: "Direct Connection (No Bypass)",
-        family: "baseline",
-        opt: ""
-    });
+    // Removed baseline_none because if a user is tuning Zapret, they actually need Zapret to run.
+    // Testing direct connection often creates false positives if some IPs are unblocked while others (like gateway.discord.gg) are blocked.
 
     let provider_lua_dir = getenv("ZAPRET2_PROVIDER_LUA_DIR") || "/opt/zapret2/lua";
     if (fs.stat("/usr/lib/tachyon/providers/zapret2/lua") != null) provider_lua_dir = "/usr/lib/tachyon/providers/zapret2/lua";
@@ -244,12 +239,14 @@ function get_candidate_strategies(mode) {
     let q = "--new --filter-udp=443 --filter-l7=quic --payload=quic_initial" + lua_init;
     let t = "--new --filter-tcp=443 --filter-l7=tls --payload=tls_client_hello" + lua_init;
     let h = "--filter-tcp=80 --filter-l7=http --payload=http_req" + lua_init;
+    let u = "--new --filter-udp=50000-65535" + lua_init;
 
     let add_strat = function(id, name, fam, desync_parts) {
         let t_opt = join(" ", desync_parts);
         let h_opt = replace(t_opt, "fake_default_tls", "fake_default_http");
         let q_opt = "--lua-desync=fake:blob=fake_default_quic:repeats=6";
-        let full_opt = h + h_opt + " " + t + t_opt + " " + q + q_opt;
+        let u_opt = "--lua-desync=fake:repeats=6";
+        let full_opt = h + h_opt + " " + t + t_opt + " " + q + q_opt + " " + u + u_opt;
         push(presets, { id: id, name: name, family: fam, opt: trim(full_opt) });
     };
 
