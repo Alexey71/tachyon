@@ -3205,3 +3205,54 @@ msgstr "🇺🇸 Только США (United States)"
 
 msgid "🇨🇳 CN Only (China)"
 msgstr "🇨🇳 Только Китай (China)"
+
+msgid "Auto-Tune Strategy"
+msgstr "Подобрать стратегию"
+
+msgid "zapret2 Strategy Auto-Tuner"
+msgstr "Автоподбор стратегий zapret2"
+
+msgid "Express scan (~5-10s)"
+msgstr "Быстрый скрининг (~5-10с)"
+
+msgid "Deep scan (~20s)"
+msgstr "Глубокая подгонка (~20с)"
+
+msgid "Test domain:"
+msgstr "Домен для проверки:"
+
+msgid "Scan mode:"
+msgstr "Режим подбора:"
+
+msgid "Start Auto-Tune"
+msgstr "Запустить автоподбор"
+
+msgid "Running strategy probes..."
+msgstr "Выполняется проверка комбинаций..."
+
+msgid "Failed to parse tuner response."
+msgstr "Ошибка разбора ответа бэкенда."
+
+msgid "Auto-Tune failed: "
+msgstr "Ошибка автоподбора: "
+
+msgid "Auto-Tune complete! Winning strategy found."
+msgstr "Подбор завершен! Выбрана лучшая стратегия."
+
+msgid "Strategy applied to section!"
+msgstr "Стратегия применена в секцию!"
+
+msgid "zapret2 Strategy Constructor"
+msgstr "Конструктор формулы zapret2"
+
+msgid "Build formula"
+msgstr "Собрать формулу"
+
+msgid "Method:"
+msgstr "Метод:"
+
+msgid "Position:"
+msgstr "Позиция:"
+
+msgid "Fooling:"
+msgstr "Fooling:"
