@@ -441,7 +441,7 @@ function ai_heal_qos() {
 
     let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
     let out_nft = command_output_from_args(["nft", "list", "table", "inet", nft_table]);
-    if (index(out_nft, "dscp set 0x2e") < 0 || index(out_nft, "dscp set 0x22") < 0) {
+    if ((index(out_nft, "dscp set 0x2e") < 0 && index(out_nft, "dscp set ef") < 0) || (index(out_nft, "dscp set 0x22") < 0 && index(out_nft, "dscp set af41") < 0)) {
         ai_heal_report(
             "qos_priority",
             "Правила Игрового & Голосового QoS Ускорителя не найдены в nftables",
