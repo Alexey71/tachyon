@@ -7360,11 +7360,6 @@ function createSectionContent(section) {
       uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", val);
     };
 
-    const modeSelect = E("select", { class: "cbi-input-select" }, [
-      E("option", { value: "express" }, _("Express scan (~5-10s)")),
-      E("option", { value: "deep" }, _("Deep scan (~20s)"))
-    ]);
-
     const startBtn = E("button", {
       class: "btn cbi-button cbi-button-action",
       type: "button"
@@ -7376,7 +7371,6 @@ function createSectionContent(section) {
     const card = E("div", { class: "cbi-value" }, [
       E("label", { class: "cbi-value-title" }, _("Auto-Tune Strategy")),
       E("div", { class: "cbi-value-field" }, [
-        modeSelect, " ",
         startBtn,
         statusText,
         resultsContainer
@@ -7385,7 +7379,7 @@ function createSectionContent(section) {
 
     startBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const selectedMode = modeSelect.value;
+      const selectedMode = "deep";
       startBtn.disabled = true;
       statusText.textContent = _("Initializing Auto-Tune...");
       resultsContainer.innerHTML = "";
