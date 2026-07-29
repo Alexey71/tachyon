@@ -717,12 +717,16 @@ function refresh_pid_job_state(path, stale_message) {
         return;
 
     let now = now_seconds();
-    let within_grace = job_started_at_within_grace(value.started_at, now, ACTION_STALE_GRACE_SECONDS);
+    let updated_at = arg_number(value.updated_at || value.started_at);
     let pid = as_string(value.pid || "");
 
     if (job_pid_valid(pid) && pid_running(pid))
         return;
 
+    if (updated_at > 0 && (now - updated_at) < 45)
+        return;
+
+    let within_grace = job_started_at_within_grace(value.started_at, now, ACTION_STALE_GRACE_SECONDS);
     if (!within_grace)
         write_stale_action_state(path, stale_message);
 }
@@ -1227,6 +1231,7 @@ function launch_worker(args) {
         TACHYON_UI_LATENCY_ACTION_DIR: LATENCY_ACTION_DIR,
         TACHYON_UI_COMPONENT_ACTION_DIR: COMPONENT_ACTION_DIR,
         TACHYON_UI_SUBSCRIPTION_ACTION_DIR: SUBSCRIPTION_ACTION_DIR,
+        TACHYON_UI_ZAPRET2_TUNE_ACTION_DIR: ZAPRET2_TUNE_ACTION_DIR,
         TACHYON_UI_SING_BOX_VERSION_CACHE_FILE: SING_BOX_VERSION_CACHE_FILE,
         TACHYON_UI_SING_BOX_VERSION_CACHE_LOCK_DIR: SING_BOX_VERSION_CACHE_LOCK_DIR,
         TACHYON_UI_SING_BOX_VARIANT_STATE_FILE: SING_BOX_VARIANT_STATE_FILE,
