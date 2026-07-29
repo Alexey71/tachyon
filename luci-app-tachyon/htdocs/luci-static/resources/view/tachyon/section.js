@@ -7451,62 +7451,85 @@ function createSectionContent(section) {
       const selectedMode = modeSelect.value;
       startBtn.disabled = true;
       statusText.style.color = "var(--cbi-link-color, #3c96d4)";
-      statusText.textContent = _("Running strategy probes...");
+      statusText.textContent = _("Initializing Auto-Tune...");
       resultsContainer.innerHTML = "";
 
-      fs.exec("/usr/bin/tachyon", ["zapret2_tune", section_id, targetDomain, selectedMode])
+      fs.exec("/usr/bin/tachyon", ["zapret2_tune_async", section_id, targetDomain, selectedMode])
         .then((res) => {
-          startBtn.disabled = false;
           let data = null;
-          try {
-            data = JSON.parse(res.stdout || "{}");
-          } catch (err) {
+          try { data = JSON.parse(res.stdout || "{}"); } catch (err) {}
+          if (!data || !data.success || !data.job_id) {
+            startBtn.disabled = false;
             statusText.style.color = "var(--cbi-color-warning, #d9534f)";
-            statusText.textContent = _("Failed to parse tuner response.");
+            statusText.textContent = _("Failed to start Auto-Tune job.");
             return;
           }
 
-          if (!data || !data.success || !data.winning_strategy) {
-            statusText.style.color = "var(--cbi-color-warning, #d9534f)";
-            statusText.textContent = (data && data.message) ? data.message : _("No working desync strategy found for this domain.");
-          } else {
-            statusText.style.color = "var(--cbi-color-success, #5cb85c)";
-            statusText.textContent = _("Auto-Tune complete! Winning strategy: ") + (data.winning_preset_name || "");
-          }
+          const jobId = data.job_id;
+          const pollTimer = setInterval(() => {
+            fs.exec("/usr/bin/tachyon", ["zapret2_tune_status", jobId])
+              .then((stRes) => {
+                let stData = null;
+                try { stData = JSON.parse(stRes.stdout || "{}"); } catch (err) {}
+                if (!stData) return;
 
-          const rows = (data.results || []).map((r) => {
-            const applyBtn = E("button", { class: "btn cbi-button cbi-button-save", type: "button", style: "padding: 1px 6px; font-size: 0.8em;" }, _("Apply"));
-            applyBtn.addEventListener("click", (evt) => {
-              evt.preventDefault();
-              setNfqws2OptTextarea(r.opt);
-              if (typeof ui !== "undefined" && ui.addNotification) {
-                ui.addNotification(null, E("p", {}, _("Strategy applied to section!")), "info");
-              }
-            });
+                if (stData.running) {
+                  const prog = stData.progress || {};
+                  const currentItem = prog.current_item ? ` (${prog.current_item})` : "";
+                  const countStr = (prog.total > 0) ? ` [${prog.completed || 0}/${prog.total}]` : "";
+                  statusText.textContent = _("Testing desync strategies...") + countStr + currentItem;
+                  return;
+                }
 
-            return E("tr", { style: r.success ? "background: rgba(0,255,0,0.05);" : "opacity: 0.6;" }, [
-              E("td", { style: "padding: 4px; font-size: 0.85em; font-weight: bold;" }, r.name),
-              E("td", { style: "padding: 4px; font-size: 0.85em;" }, r.success ? `${r.rtt_ms} ms (${r.message})` : _("Failed")),
-              E("td", { style: "padding: 4px;" }, applyBtn)
-            ]);
-          });
+                // Tuning finished!
+                clearInterval(pollTimer);
+                startBtn.disabled = false;
 
-          const table = E("table", { class: "table", style: "width: 100%; border-collapse: collapse; margin-top: 6px;" }, [
-            E("thead", {}, [
-              E("tr", {}, [
-                E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Preset")),
-                E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Status / RTT")),
-                E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Action"))
-              ])
-            ]),
-            E("tbody", {}, rows)
-          ]);
+                if (!stData.success || !stData.winning_strategy) {
+                  statusText.style.color = "var(--cbi-color-warning, #d9534f)";
+                  statusText.textContent = (stData && stData.message) ? stData.message : _("No working desync strategy found for this domain.");
+                } else {
+                  statusText.style.color = "var(--cbi-color-success, #5cb85c)";
+                  statusText.textContent = _("Auto-Tune complete! Winning strategy: ") + (stData.winning_preset_name || "");
+                }
 
-          resultsContainer.appendChild(table);
+                const rows = (stData.results || []).map((r) => {
+                  const applyBtn = E("button", { class: "btn cbi-button cbi-button-save", type: "button", style: "padding: 1px 6px; font-size: 0.8em;" }, _("Apply"));
+                  applyBtn.addEventListener("click", (evt) => {
+                    evt.preventDefault();
+                    setNfqws2OptTextarea(r.opt);
+                    if (typeof ui !== "undefined" && ui.addNotification) {
+                      ui.addNotification(null, E("p", {}, _("Strategy applied to section!")), "info");
+                    }
+                  });
 
-          if (data.winning_strategy) {
-            setNfqws2OptTextarea(data.winning_strategy);
-          }
+                  return E("tr", { style: r.success ? "background: rgba(0,255,0,0.05);" : "opacity: 0.6;" }, [
+                    E("td", { style: "padding: 4px; font-size: 0.85em; font-weight: bold;" }, r.name),
+                    E("td", { style: "padding: 4px; font-size: 0.85em;" }, r.success ? `${r.rtt_ms} ms (${r.message})` : _("Failed")),
+                    E("td", { style: "padding: 4px;" }, applyBtn)
+                  ]);
+                });
+
+                const table = E("table", { class: "table", style: "width: 100%; border-collapse: collapse; margin-top: 6px;" }, [
+                  E("thead", {}, [
+                    E("tr", {}, [
+                      E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Preset")),
+                      E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Status / RTT")),
+                      E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Action"))
+                    ])
+                  ]),
+                  E("tbody", {}, rows)
+                ]);
+
+                resultsContainer.innerHTML = "";
+                resultsContainer.appendChild(table);
+
+                if (stData.winning_strategy) {
+                  setNfqws2OptTextarea(stData.winning_strategy);
+                }
+              })
+              .catch(() => {});
+          }, 1000);
         })
         .catch((err) => {
           startBtn.disabled = false;

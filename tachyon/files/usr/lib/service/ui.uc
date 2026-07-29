@@ -1480,11 +1480,36 @@ function latency_test_status(job_id_value) {
 function zapret2_tune_worker(path, section_id, target_domain, tune_mode) {
     let tune_module = LIB_DIR + "/providers/zapret2/tune.uc";
     let cmd = command_from_args([ "ucode", "-L", LIB_DIR, tune_module, "tune", section_id, target_domain, tune_mode, path ]);
-    let status = command_status(cmd + " >/dev/null 2>&1");
-    if (status == 0)
-        write_finished_action_state(path, true, "zapret2 strategy tuning completed", status);
-    else
-        write_finished_action_state(path, false, "zapret2 strategy tuning failed", status);
+    let res_output = command_output(cmd);
+    let tune_res = null;
+    try {
+        tune_res = json_parse(res_output);
+    } catch (e) {}
+
+    let state = read_json_file(path) || {};
+    if (type(state) != "object")
+        state = {};
+
+    state.running = false;
+    state.completed_at = now_seconds();
+    state.updated_at = now_seconds();
+
+    if (type(tune_res) == "object" && tune_res.success) {
+        state.success = true;
+        state.message = tune_res.message || "zapret2 strategy tuning completed";
+        state.winning_strategy = tune_res.winning_strategy;
+        state.winning_preset_id = tune_res.winning_preset_id;
+        state.winning_preset_name = tune_res.winning_preset_name;
+        state.best_rtt_ms = tune_res.best_rtt_ms;
+        state.results = tune_res.results;
+    } else {
+        state.success = false;
+        state.message = (type(tune_res) == "object" && tune_res.message) ? tune_res.message : "zapret2 strategy tuning failed";
+        state.winning_strategy = "";
+        state.results = (type(tune_res) == "object" && tune_res.results) ? tune_res.results : [];
+    }
+
+    write_json_file(path, state);
 }
 
 function running_zapret2_tune_action_value(section_id, target_domain, tune_mode, started_at) {
