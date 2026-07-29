@@ -7398,7 +7398,7 @@ function createSectionContent(section) {
     attachNfqws2RemoteValidation,
   );
 
-  /* zapret2 Strategy Auto-Tuner Widget (AUTOMATED) */
+  /* zapret2 Strategy Auto-Tuner Widget (AUTOMATED & STUNNING UI) */
   o = section.taboption("settings", form.DummyValue, "_zapret2_tune_widget", "");
   o.modalonly = true;
   o.depends("action", "zapret2");
@@ -7409,62 +7409,87 @@ function createSectionContent(section) {
                  document.querySelector(`.cbi-option-nfqws2_opt textarea`);
       if (el) {
         el.value = val;
-        el.style.transition = "border-color 0.3s ease, box-shadow 0.3s ease";
+        el.style.transition = "all 0.4s ease";
         el.style.borderColor = "#5cb85c";
-        el.style.boxShadow = "0 0 8px rgba(92, 184, 92, 0.5)";
+        el.style.boxShadow = "0 0 12px rgba(92, 184, 92, 0.6)";
         setTimeout(() => {
           el.style.borderColor = "";
           el.style.boxShadow = "";
-        }, 2000);
+        }, 2500);
         el.dispatchEvent(new Event("change", { bubbles: true }));
       }
       uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", val);
     };
 
-    const sectionDomains = uci.get(UCI_PACKAGE, section_id, "domain") || [];
-    const primaryDomain = sectionDomains[0] || "googlevideo.com";
-
-    const modeSelect = E("select", { class: "cbi-input-select", style: "width: 150px; font-size: 0.85em;" }, [
+    const modeSelect = E("select", { class: "cbi-input-select", style: "width: 140px; font-size: 0.85em; border-radius: 4px; padding: 2px 6px;" }, [
       E("option", { value: "express" }, _("Express scan (~5-10s)")),
       E("option", { value: "deep" }, _("Deep scan (~20s)"))
     ]);
-    const resultsContainer = E("div", { style: "margin-top: 8px; max-height: 200px; overflow-y: auto;" });
-    const statusText = E("div", { style: "margin-top: 6px; font-size: 0.88em; font-weight: bold; color: var(--cbi-link-color, #3c96d4);" }, "");
 
     const startBtn = E("button", {
       class: "btn cbi-button cbi-button-action",
       type: "button",
-      style: "font-weight: bold; padding: 4px 12px; font-size: 0.9em; background-color: var(--cbi-link-color, #2b78e4); color: #fff;"
+      style: "font-weight: bold; padding: 5px 14px; font-size: 0.88em; background: linear-gradient(135deg, #2b78e4 0%, #1a5cb8 100%); color: #fff; border: none; border-radius: 4px; box-shadow: 0 2px 6px rgba(43,120,228,0.3); cursor: pointer;"
     }, _("Auto-Tune Section Strategy"));
+
+    const progressFill = E("div", {
+      style: "width: 0%; height: 100%; background: linear-gradient(90deg, #3c96d4 0%, #5cb85c 100%); transition: width 0.3s ease; border-radius: 3px;"
+    });
+    const progressTrack = E("div", {
+      style: "display: none; width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-top: 8px;"
+    }, progressFill);
+
+    const statusText = E("div", { style: "margin-top: 8px; font-size: 0.88em; font-weight: 500; color: var(--cbi-link-color, #3c96d4);" }, "");
+    const resultsContainer = E("div", { style: "margin-top: 10px; max-height: 220px; overflow-y: auto;" });
+
+    const domainTagsContainer = E("div", { style: "display: flex; flex-wrap: wrap; gap: 4px; align-items: center;" }, [
+      E("span", { style: "font-size: 0.82em; color: #999; font-weight: 500;" }, _("Section domains:"))
+    ]);
 
     const inlineTuneCard = E("div", {
       class: "zapret2-inline-tuner-card",
-      style: "margin-top: 8px; padding: 10px; border: 1px solid var(--cbi-border-color, #404040); background: rgba(0,0,0,0.2); border-radius: 4px;"
+      style: "margin-top: 10px; padding: 12px 14px; border: 1px solid rgba(60, 150, 212, 0.25); background: linear-gradient(135deg, rgba(20,25,35,0.6) 0%, rgba(15,20,30,0.7) 100%); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"
     }, [
-      E("div", { style: "display: flex; flex-wrap: wrap; gap: 10px; align-items: center;" }, [
-        E("span", { style: "font-size: 0.85em; color: #aaa;" }, _("Section target domain: ") + ` ${primaryDomain}`),
-        E("span", { style: "font-size: 0.85em; color: #888; margin-left: auto;" }, _("Scan mode:")), modeSelect,
-        startBtn
+      E("div", { style: "display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;" }, [
+        domainTagsContainer,
+        E("div", { style: "display: flex; gap: 8px; align-items: center; margin-left: auto;" }, [
+          modeSelect,
+          startBtn
+        ])
       ]),
+      progressTrack,
       statusText,
       resultsContainer
     ]);
 
+    // Populate domain tags dynamically from section
+    const rawDomains = uci.get(UCI_PACKAGE, section_id, "domain") || [];
+    const domainsList = (type(rawDomains) == "array" && rawDomains.length > 0) ? rawDomains : ["googlevideo.com"];
+    domainsList.slice(0, 3).forEach((d) => {
+      domainTagsContainer.appendChild(E("span", {
+        style: "background: rgba(60,150,212,0.15); color: #5bc0de; border: 1px solid rgba(60,150,212,0.3); padding: 1px 7px; border-radius: 12px; font-size: 0.8em; font-family: monospace;"
+      }, d));
+    });
+
     startBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const targetDomain = primaryDomain;
       const selectedMode = modeSelect.value;
       startBtn.disabled = true;
+      startBtn.style.opacity = "0.6";
       statusText.style.color = "var(--cbi-link-color, #3c96d4)";
       statusText.textContent = _("Initializing Auto-Tune...");
+      progressTrack.style.display = "block";
+      progressFill.style.width = "5%";
       resultsContainer.innerHTML = "";
 
-      fs.exec("/usr/bin/tachyon", ["zapret2_tune_async", section_id, targetDomain, selectedMode])
+      fs.exec("/usr/bin/tachyon", ["zapret2_tune_async", section_id, "", selectedMode])
         .then((res) => {
           let data = null;
           try { data = JSON.parse(res.stdout || "{}"); } catch (err) {}
           if (!data || !data.success || !data.job_id) {
             startBtn.disabled = false;
+            startBtn.style.opacity = "1";
+            progressTrack.style.display = "none";
             statusText.style.color = "var(--cbi-color-warning, #d9534f)";
             statusText.textContent = _("Failed to start Auto-Tune job.");
             return;
@@ -7481,25 +7506,43 @@ function createSectionContent(section) {
                 if (stData.running) {
                   const prog = stData.progress || {};
                   const currentItem = prog.current_item ? ` (${prog.current_item})` : "";
-                  const countStr = (prog.total > 0) ? ` [${prog.completed || 0}/${prog.total}]` : "";
-                  statusText.textContent = _("Testing desync strategies...") + countStr + currentItem;
+                  const completed = prog.completed || 0;
+                  const total = prog.total || 7;
+                  const pct = Math.min(100, Math.max(5, Math.round((completed / total) * 100)));
+                  progressFill.style.width = `${pct}%`;
+                  statusText.textContent = _("Testing desync strategy:") + ` ${prog.current_item || ""}... [${completed}/${total}]`;
                   return;
                 }
 
                 // Tuning finished!
                 clearInterval(pollTimer);
                 startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+                progressFill.style.width = "100%";
+                setTimeout(() => { progressTrack.style.display = "none"; }, 800);
 
                 if (!stData.success || !stData.winning_strategy) {
                   statusText.style.color = "var(--cbi-color-warning, #d9534f)";
-                  statusText.textContent = (stData && stData.message) ? stData.message : _("No working desync strategy found for this domain.");
+                  statusText.textContent = (stData && stData.message) ? stData.message : _("No working desync strategy found for section domains.");
                 } else {
                   statusText.style.color = "var(--cbi-color-success, #5cb85c)";
-                  statusText.textContent = _("Auto-Tune complete! Winning strategy: ") + (stData.winning_preset_name || "");
+                  statusText.textContent = _("Optimal strategy found and applied: ") + `${stData.winning_preset_name || ""} (${stData.best_rtt_ms || 0} ms)`;
                 }
 
                 const rows = (stData.results || []).map((r) => {
-                  const applyBtn = E("button", { class: "btn cbi-button cbi-button-save", type: "button", style: "padding: 1px 6px; font-size: 0.8em;" }, _("Apply"));
+                  const isWinner = (r.opt === stData.winning_strategy);
+                  const applyBtn = E("button", {
+                    class: "btn cbi-button cbi-button-save",
+                    type: "button",
+                    style: "padding: 1px 7px; font-size: 0.8em;"
+                  }, isWinner ? _("Applied") : _("Apply"));
+
+                  if (isWinner) {
+                    applyBtn.style.background = "#5cb85c";
+                    applyBtn.style.borderColor = "#4cae4c";
+                    applyBtn.style.color = "#fff";
+                  }
+
                   applyBtn.addEventListener("click", (evt) => {
                     evt.preventDefault();
                     setNfqws2OptTextarea(r.opt);
@@ -7508,19 +7551,23 @@ function createSectionContent(section) {
                     }
                   });
 
-                  return E("tr", { style: r.success ? "background: rgba(0,255,0,0.05);" : "opacity: 0.6;" }, [
-                    E("td", { style: "padding: 4px; font-size: 0.85em; font-weight: bold;" }, r.name),
-                    E("td", { style: "padding: 4px; font-size: 0.85em;" }, r.success ? `${r.rtt_ms} ms (${r.message})` : _("Failed")),
-                    E("td", { style: "padding: 4px;" }, applyBtn)
+                  const statusBadge = r.success
+                    ? E("span", { style: "color: #5cb85c; font-weight: bold; font-size: 0.85em;" }, `${r.rtt_ms} ms (${r.message})`)
+                    : E("span", { style: "color: #d9534f; opacity: 0.8; font-size: 0.85em;" }, _("DPI Blocked"));
+
+                  return E("tr", { style: r.success ? (isWinner ? "background: rgba(92,184,92,0.12); font-weight: bold;" : "background: rgba(255,255,255,0.03);") : "opacity: 0.5;" }, [
+                    E("td", { style: "padding: 6px; font-size: 0.85em;" }, r.name),
+                    E("td", { style: "padding: 6px; font-size: 0.85em;" }, statusBadge),
+                    E("td", { style: "padding: 6px; text-align: right;" }, applyBtn)
                   ]);
                 });
 
                 const table = E("table", { class: "table", style: "width: 100%; border-collapse: collapse; margin-top: 6px;" }, [
                   E("thead", {}, [
-                    E("tr", {}, [
-                      E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Preset")),
-                      E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Status / RTT")),
-                      E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Action"))
+                    E("tr", { style: "border-bottom: 1px solid rgba(255,255,255,0.1);" }, [
+                      E("th", { style: "text-align: left; font-size: 0.82em; color: #888;" }, _("Preset")),
+                      E("th", { style: "text-align: left; font-size: 0.82em; color: #888;" }, _("Status / RTT")),
+                      E("th", { style: "text-align: right; font-size: 0.82em; color: #888;" }, _("Action"))
                     ])
                   ]),
                   E("tbody", {}, rows)
@@ -7538,6 +7585,8 @@ function createSectionContent(section) {
         })
         .catch((err) => {
           startBtn.disabled = false;
+          startBtn.style.opacity = "1";
+          progressTrack.style.display = "none";
           statusText.style.color = "var(--cbi-color-warning, #d9534f)";
           statusText.textContent = _("Error running tuner: ") + err;
         });

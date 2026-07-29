@@ -3274,3 +3274,21 @@ msgstr "Подбор завершен! Оптимальная стратегия
 
 msgid "Error running tuner: "
 msgstr "Ошибка выполнения автоподбора: "
+
+msgid "Section domains:"
+msgstr "Домены секции:"
+
+msgid "Testing desync strategy:"
+msgstr "Тестирование стратегии:"
+
+msgid "No working desync strategy found for section domains."
+msgstr "Рабочая стратегия обхода для доменов секции не найдена."
+
+msgid "Optimal strategy found and applied: "
+msgstr "Оптимальная стратегия найдена и применена: "
+
+msgid "DPI Blocked"
+msgstr "Заблокировано ТСПУ"
+
+msgid "Applied"
+msgstr "Применено"

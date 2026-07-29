@@ -79,20 +79,62 @@ function command_output(cmd) {
     return as_string(data);
 }
 
-function get_section_domain(section_id) {
+function get_section_domains(section_id) {
     section_id = as_string(section_id);
-    if (section_id == "")
-        return "";
+    let list = [];
 
-    let domain = uci_core.get(CONFIG_NAME, section_id, "domain");
-    if (type(domain) == "array" && length(domain) > 0)
-        return as_string(domain[0]);
-    if (type(domain) == "string" && trim(domain) != "") {
-        let parts = split(trim(domain), /[ \t\r\n]+/);
-        if (length(parts) > 0)
-            return parts[0];
+    if (section_id != "") {
+        let domain_setting = uci_core.get(CONFIG_NAME, section_id, "domain");
+        if (type(domain_setting) == "array") {
+            for (let d in domain_setting) {
+                d = trim(as_string(d));
+                if (d != "") push(list, d);
+            }
+        } else if (type(domain_setting) == "string" && trim(domain_setting) != "") {
+            for (let d in split(trim(domain_setting), /[ \t\r\n,]+/)) {
+                d = trim(as_string(d));
+                if (d != "") push(list, d);
+            }
+        }
+
+        if (length(list) == 0) {
+            let hostlists = uci_core.get(CONFIG_NAME, section_id, "hostlist");
+            if (type(hostlists) == "string") hostlists = [ hostlists ];
+            if (type(hostlists) == "array") {
+                for (let hl in hostlists) {
+                    hl = trim(as_string(hl));
+                    if (hl == "") continue;
+                    let hl_path = "/etc/tachyon/hostlists/" + hl;
+                    if (fs.stat(hl_path) != null) {
+                        let content = fs.readfile(hl_path);
+                        if (content != null) {
+                            for (let line in split(content, "\n")) {
+                                line = trim(as_string(line));
+                                if (line != "" && substr(line, 0, 1) != "#" && match(line, /\.[a-z]{2,}$/i)) {
+                                    push(list, line);
+                                    if (length(list) >= 3) break;
+                                }
+                            }
+                        }
+                    }
+                    if (length(list) > 0) break;
+                }
+            }
+        }
     }
-    return "";
+
+    if (length(list) == 0) {
+        let sec_lower = lc(section_id);
+        if (index(sec_lower, "youtube") >= 0 || index(sec_lower, "video") >= 0)
+            return [ "googlevideo.com", "youtube.com" ];
+        if (index(sec_lower, "discord") >= 0)
+            return [ "discord.com", "gateway.discord.gg" ];
+        if (index(sec_lower, "telegram") >= 0)
+            return [ "t.me", "telegram.org" ];
+        return [ "googlevideo.com" ];
+    }
+
+    return list;
 }
 
 function get_candidate_strategies(mode) {
@@ -282,10 +324,13 @@ function run_tune(section_id, target_domain, mode, job_path) {
     mode = as_string(mode || "express");
     job_path = as_string(job_path);
 
-    if (target_domain == "")
-        target_domain = get_section_domain(section_id);
-    if (target_domain == "")
-        target_domain = "googlevideo.com";
+    let section_domains = get_section_domains(section_id);
+    if (target_domain != "" && index(target_domain, ".") >= 0) {
+        if (index(join(",", section_domains), target_domain) < 0) {
+            unshift(section_domains, target_domain);
+        }
+    }
+    target_domain = section_domains[0] || "googlevideo.com";
 
     let candidates = get_candidate_strategies(mode);
     let total = length(candidates);
@@ -374,6 +419,7 @@ function run_tune(section_id, target_domain, mode, job_path) {
         success: has_winner,
         section_id,
         target_domain,
+        section_domains,
         mode,
         winning_strategy: has_winner ? best_candidate.opt : "",
         winning_preset_id: has_winner ? best_candidate.id : "",
