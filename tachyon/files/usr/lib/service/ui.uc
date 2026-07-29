@@ -17,6 +17,7 @@ const SERVICE_ACTION_LOCK_DIR = getenv("TACHYON_UI_SERVICE_ACTION_LOCK_DIR") || 
 const LATENCY_ACTION_DIR = getenv("TACHYON_UI_LATENCY_ACTION_DIR") || STATE_DIR + "/latency-actions";
 const COMPONENT_ACTION_DIR = getenv("TACHYON_UI_COMPONENT_ACTION_DIR") || getenv("UPDATES_JOB_DIR") || "/var/run/tachyon/component-actions";
 const SUBSCRIPTION_ACTION_DIR = getenv("TACHYON_UI_SUBSCRIPTION_ACTION_DIR") || getenv("TACHYON_SUBSCRIPTION_UPDATE_JOB_DIR") || "/var/run/tachyon/subscription-update-jobs";
+const ZAPRET2_TUNE_ACTION_DIR = getenv("TACHYON_UI_ZAPRET2_TUNE_ACTION_DIR") || STATE_DIR + "/zapret2-tune-actions";
 const SING_BOX_VERSION_CACHE_FILE = getenv("TACHYON_UI_SING_BOX_VERSION_CACHE_FILE") || STATE_DIR + "/sing-box-version";
 const SING_BOX_VERSION_CACHE_LOCK_DIR = getenv("TACHYON_UI_SING_BOX_VERSION_CACHE_LOCK_DIR") || SING_BOX_VERSION_CACHE_FILE + ".lock";
 const SING_BOX_VARIANT_STATE_FILE = getenv("TACHYON_UI_SING_BOX_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
@@ -1476,6 +1477,77 @@ function latency_test_status(job_id_value) {
     print(as_string(fs.readfile(path)));
 }
 
+function zapret2_tune_worker(path, section_id, target_domain, tune_mode) {
+    let tune_module = LIB_DIR + "/providers/zapret2/tune.uc";
+    let cmd = command_from_args([ "ucode", "-L", LIB_DIR, tune_module, "tune", section_id, target_domain, tune_mode, path ]);
+    let status = command_status(cmd + " >/dev/null 2>&1");
+    if (status == 0)
+        write_finished_action_state(path, true, "zapret2 strategy tuning completed", status);
+    else
+        write_finished_action_state(path, false, "zapret2 strategy tuning failed", status);
+}
+
+function running_zapret2_tune_action_value(section_id, target_domain, tune_mode, started_at) {
+    return {
+        success: true,
+        running: true,
+        kind: "zapret2_tune",
+        section: as_string(section_id),
+        target_domain: as_string(target_domain),
+        tune_mode: as_string(tune_mode),
+        message: "zapret2 strategy tuning is running",
+        pid: null,
+        started_at: arg_number(started_at),
+        updated_at: null,
+        exit_code: null,
+        progress: {
+            completed: 0,
+            total: 7,
+            failed: 0,
+            current_item: "Initializing..."
+        }
+    };
+}
+
+function zapret2_tune_async(section_id, target_domain, tune_mode) {
+    section_id = as_string(section_id);
+    target_domain = as_string(target_domain);
+    tune_mode = as_string(tune_mode || "express");
+
+    ensure_dirs();
+    let id = job_id();
+    let path = job_state_path_value(ZAPRET2_TUNE_ACTION_DIR, id);
+    if (path == "" || !write_state_file(path, running_zapret2_tune_action_value(section_id, target_domain, tune_mode, now_seconds()))) {
+        action_start_response(false, "", "Failed to write zapret2 tune action state");
+        exit(1);
+    }
+
+    let pid = launch_worker([ "zapret2-tune-worker", path, section_id, target_domain, tune_mode ]);
+    if (pid == "" || !set_running_job_pid_file(path, pid)) {
+        if (pid != "")
+            command_success_from_args([ "kill", pid ]);
+        action_start_response(false, "", "Failed to write zapret2 tune worker pid");
+        exit(1);
+    }
+
+    action_start_response(true, id, "zapret2 strategy tuning started");
+}
+
+function zapret2_tune_status(job_id_value) {
+    let path = job_state_path_value(ZAPRET2_TUNE_ACTION_DIR, job_id_value);
+    if (path == "") {
+        action_start_response(false, "", "Invalid zapret2 tune job id");
+        exit(1);
+    }
+    if (fs.stat(path) == null) {
+        action_start_response(false, "", "zapret2 tune job was not found");
+        exit(1);
+    }
+
+    refresh_pid_job_state(path, "zapret2 tune worker exited unexpectedly");
+    print(as_string(fs.readfile(path)));
+}
+
 function action_dir(kind) {
     kind = as_string(kind);
     if (kind == "service")
@@ -1486,6 +1558,8 @@ function action_dir(kind) {
         return COMPONENT_ACTION_DIR;
     if (kind == "subscription")
         return SUBSCRIPTION_ACTION_DIR;
+    if (kind == "zapret2_tune")
+        return ZAPRET2_TUNE_ACTION_DIR;
     return "";
 }
 
@@ -1587,6 +1661,12 @@ else if (mode == "latency-test-async")
     latency_test_async(ARGV[1], ARGV[2], ARGV[3], ARGV[4]);
 else if (mode == "latency-test-status")
     latency_test_status(ARGV[1]);
+else if (mode == "zapret2-tune-worker")
+    zapret2_tune_worker(ARGV[1], ARGV[2], ARGV[3], ARGV[4]);
+else if (mode == "zapret2-tune-async")
+    zapret2_tune_async(ARGV[1], ARGV[2], ARGV[3]);
+else if (mode == "zapret2-tune-status")
+    zapret2_tune_status(ARGV[1]);
 else if (mode == "action-ack")
     action_ack(ARGV[1], ARGV[2]);
 else if (mode == "cleanup-action-dir-fixture")
