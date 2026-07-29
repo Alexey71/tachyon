@@ -1337,7 +1337,7 @@ msgid "Invalid JSON format"
 msgstr "Неверный формат JSON"
 
 msgid "Invalid line: \"%s\". Use: domain ip or ip domain"
-msgstr ""
+msgstr "Неверная строка: \"%s\". Формат: домен ip или ip домен"
 
 msgid "Invalid NFQWS2 strategy"
 msgstr "Некорректная стратегия NFQWS2"
@@ -3283,6 +3283,11 @@ msgstr "Заблокировано ТСПУ"
 msgid "Applied"
 msgstr "Применено"
 
+msgid "Apply"
+msgstr "Применить"
+
+msgid "Checking\u2026"
+msgstr ""
 
 msgid "Init Packet Magic Header (S1)"
 msgstr "Magic Header: Инициализация (S1)"
@@ -3305,6 +3310,15 @@ msgstr "Payload: Инициализация (I4)"
 msgid "Init Packet Payload (I5)"
 msgstr "Payload: Инициализация (I5)"
 
+msgid "Invalid Shadowsocks URL: missing method and password separator ":""
+msgstr "Недопустимый Shadowsocks URL: отсутствует разделитель метода и пароля \":\""
+
+msgid "Invalid line: "%s". Use: domain ip or ip domain"
+msgstr "Неверная строка: \"%s\". Формат: домен ip или ip домен"
+
+msgid "Invalid path format. Path must start with "/" and contain valid characters"
+msgstr "Неверный формат пути. Должен начинаться с \"/\" и содержать допустимые символы"
+
 msgid "Junk Max Size (Jmax)"
 msgstr "Макс. размер Junk (Jmax)"
 
@@ -3314,11 +3328,26 @@ msgstr "Мин. размер Junk (Jmin)"
 msgid "Junk Packet Count (Jc)"
 msgstr "Количество Junk-пакетов (Jc)"
 
+msgid "Option "%s" contains an invalid input value."
+msgstr "Опция \"%s\" содержит недопустимое значение."
+
+msgid "Preset"
+msgstr "Пресет"
+
 msgid "Response Packet Magic Header (S2)"
 msgstr "Magic Header: Ответ (S2)"
 
 msgid "Response Packet Magic Header (S4)"
 msgstr "Magic Header: Ответ (S4)"
+
+msgid "Starting\u2026"
+msgstr "Запуск\u2026"
+
+msgid "Status / RTT"
+msgstr "Статус / Пинг"
+
+msgid "Stopping\u2026"
+msgstr "Остановка\u2026"
 
 msgid "Underload Packet Magic Header (H1)"
 msgstr "Magic Header: Underload (H1)"
@@ -3332,6 +3361,11 @@ msgstr "Magic Header: Underload (H3)"
 msgid "Underload Packet Magic Header (H4)"
 msgstr "Magic Header: Underload (H4)"
 
+msgid "\u2714 Running"
+msgstr "\u2714 Работает"
+
+msgid "\u2718 Stopped"
+msgstr "\u2718 Остановлено"
 
 
 msgid "Close"
