@@ -7398,6 +7398,201 @@ function createSectionContent(section) {
     attachNfqws2RemoteValidation,
   );
 
+  /* zapret2 Strategy Tuner & Visual Builder Widget */
+  o = section.taboption("settings", form.DummyValue, "_zapret2_tune_widget", "");
+  o.modalonly = true;
+  o.depends("action", "zapret2");
+  o.render = function (option_index, section_id, in_table) {
+    if (uci.get(UCI_PACKAGE, section_id, "action") !== "zapret2") {
+      return E([]);
+    }
+
+    const setNfqws2OptTextarea = (val) => {
+      const el = document.querySelector(`textarea[name="cbid.${UCI_PACKAGE}.${section_id}.nfqws2_opt"]`) ||
+                 document.querySelector(`[data-name="nfqws2_opt"] textarea`) ||
+                 document.querySelector(`.cbi-option-nfqws2_opt textarea`);
+      if (el) {
+        el.value = val;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", val);
+    };
+
+    const tuneStatusDiv = E("div", { class: "zapret2-tune-status", style: "margin-top: 8px; display: none;" });
+
+    const runTuneModal = () => {
+      const sectionDomain = (uci.get(UCI_PACKAGE, section_id, "domain") || [])[0] || "googlevideo.com";
+      const domainInput = E("input", { type: "text", class: "cbi-input-text", style: "width: 100%; font-size: 0.9em;", value: sectionDomain });
+      const modeSelect = E("select", { class: "cbi-input-select", style: "width: 100%; font-size: 0.9em;" }, [
+        E("option", { value: "express" }, _("Express scan (~5-10s)")),
+        E("option", { value: "deep" }, _("Deep scan (~20s)"))
+      ]);
+      const resultsContainer = E("div", { style: "margin-top: 12px; max-height: 220px; overflow-y: auto;" });
+      const statusText = E("div", { style: "margin-top: 8px; font-weight: bold; color: var(--cbi-link-color, #3c96d4);" }, "");
+
+      const modalContent = E("div", { style: "padding: 8px 4px;" }, [
+        E("div", { class: "cbi-value", style: "margin-bottom: 8px;" }, [
+          E("label", { class: "cbi-value-title", style: "font-size: 0.9em;" }, _("Test domain:")),
+          E("div", { class: "cbi-value-field" }, domainInput)
+        ]),
+        E("div", { class: "cbi-value", style: "margin-bottom: 8px;" }, [
+          E("label", { class: "cbi-value-title", style: "font-size: 0.9em;" }, _("Scan mode:")),
+          E("div", { class: "cbi-value-field" }, modeSelect)
+        ]),
+        statusText,
+        resultsContainer
+      ]);
+
+      const startBtn = E("button", { class: "btn cbi-button cbi-button-action", type: "button" }, _("Start Auto-Tune"));
+      const closeBtn = E("button", { class: "btn cbi-button cbi-button-neutral", type: "button" }, _("Close"));
+
+      startBtn.addEventListener("click", () => {
+        const targetDomain = domainInput.value.trim() || "googlevideo.com";
+        const selectedMode = modeSelect.value;
+        startBtn.disabled = true;
+        statusText.textContent = _("Running strategy probes...");
+        resultsContainer.innerHTML = "";
+
+        fs.exec("/usr/bin/tachyon", ["zapret2_tune", section_id, targetDomain, selectedMode])
+          .then((res) => {
+            startBtn.disabled = false;
+            let data = null;
+            try {
+              data = JSON.parse(res.stdout || "{}");
+            } catch (e) {
+              statusText.textContent = _("Failed to parse tuner response.");
+              return;
+            }
+
+            if (!data || !data.success) {
+              statusText.textContent = _("Auto-Tune failed: ") + (data ? data.message : _("Unknown error"));
+              return;
+            }
+
+            statusText.textContent = _("Auto-Tune complete! Winning strategy found.");
+
+            const rows = (data.results || []).map((r) => {
+              const applyBtn = E("button", { class: "btn cbi-button cbi-button-save", type: "button", style: "padding: 1px 6px; font-size: 0.8em;" }, _("Apply"));
+              applyBtn.addEventListener("click", () => {
+                setNfqws2OptTextarea(r.opt);
+                if (typeof ui !== "undefined" && ui.addNotification) {
+                  ui.addNotification(null, E("p", {}, _("Strategy applied to section!")), "info");
+                }
+              });
+
+              return E("tr", { style: r.success ? "background: rgba(0,255,0,0.05);" : "opacity: 0.6;" }, [
+                E("td", { style: "padding: 4px; font-size: 0.85em; font-weight: bold;" }, r.name),
+                E("td", { style: "padding: 4px; font-size: 0.85em;" }, r.success ? `${r.rtt_ms} ms (${r.message})` : _("Failed")),
+                E("td", { style: "padding: 4px;" }, applyBtn)
+              ]);
+            });
+
+            const table = E("table", { class: "table", style: "width: 100%; border-collapse: collapse;" }, [
+              E("thead", {}, [
+                E("tr", {}, [
+                  E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Preset")),
+                  E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Status / RTT")),
+                  E("th", { style: "text-align: left; font-size: 0.85em;" }, _("Action"))
+                ])
+              ]),
+              E("tbody", {}, rows)
+            ]);
+
+            resultsContainer.appendChild(table);
+
+            if (data.winning_strategy) {
+              setNfqws2OptTextarea(data.winning_strategy);
+            }
+          })
+          .catch((err) => {
+            startBtn.disabled = false;
+            statusText.textContent = _("Error running tuner: ") + err;
+          });
+      });
+
+      closeBtn.addEventListener("click", () => {
+        if (typeof ui !== "undefined" && ui.hideModal) {
+          ui.hideModal();
+        }
+      });
+
+      if (typeof ui !== "undefined" && ui.showModal) {
+        ui.showModal(_("zapret2 Strategy Auto-Tuner"), [modalContent, E("div", { class: "right" }, [startBtn, " ", closeBtn])]);
+      }
+    };
+
+    const tuneBtn = E("button", {
+      class: "btn cbi-button cbi-button-action",
+      type: "button",
+      style: "margin-top: 6px; margin-bottom: 10px; font-weight: bold; background-color: var(--cbi-link-color, #2b78e4); color: #fff;"
+    }, _("Auto-Tune Strategy"));
+
+    tuneBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      runTuneModal();
+    });
+
+    const methodSelect = E("select", { class: "cbi-input-select", style: "width: 140px; font-size: 0.85em;" }, [
+      E("option", { value: "multisplit" }, "multisplit"),
+      E("option", { value: "split2" }, "split2"),
+      E("option", { value: "disorder2" }, "disorder2"),
+      E("option", { value: "fake,split2" }, "fake + split2"),
+      E("option", { value: "fake,disorder2" }, "fake + disorder2"),
+      E("option", { value: "syndata,split2" }, "syndata + split2"),
+      E("option", { value: "fakedsplit" }, "fakedsplit")
+    ]);
+
+    const posSelect = E("select", { class: "cbi-input-select", style: "width: 120px; font-size: 0.85em;" }, [
+      E("option", { value: "1,midsld" }, "1, midsld"),
+      E("option", { value: "method+2" }, "method+2"),
+      E("option", { value: "1,sni,midsld" }, "1, sni, midsld"),
+      E("option", { value: "1,sni" }, "1, sni")
+    ]);
+
+    const foolingSelect = E("select", { class: "cbi-input-select", style: "width: 110px; font-size: 0.85em;" }, [
+      E("option", { value: "tcp_md5" }, "tcp_md5"),
+      E("option", { value: "badsum" }, "badsum"),
+      E("option", { value: "badseq" }, "badseq"),
+      E("option", { value: "none" }, "none")
+    ]);
+
+    const buildFormulaBtn = E("button", {
+      class: "btn cbi-button cbi-button-apply",
+      type: "button",
+      style: "padding: 2px 8px; font-size: 0.85em;"
+    }, _("Build formula"));
+
+    buildFormulaBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const m = methodSelect.value;
+      const p = posSelect.value;
+      const f = foolingSelect.value;
+      const foolingParam = f !== "none" ? `:${f}` : "";
+
+      const formula = `--filter-tcp=80 --filter-l7=http --payload=http_req --lua-desync=fake:blob=fake_default_http${foolingParam} --lua-desync=${m}:pos=method+2 --new --filter-tcp=443 --filter-l7=tls --payload=tls_client_hello --lua-desync=fake:blob=fake_default_tls${foolingParam}:tcp_seq=-10000 --lua-desync=${m}:pos=${p} --new --filter-udp=443 --filter-l7=quic --payload=quic_initial --lua-desync=fake:blob=fake_default_quic:repeats=6`;
+      setNfqws2OptTextarea(formula);
+    });
+
+    const builderDetails = E("details", { class: "awg-spoiler", style: "margin-top: 6px;" }, [
+      E("summary", { style: "font-size: 0.88em; cursor: pointer; color: var(--cbi-link-color, #3c96d4);" }, _("zapret2 Strategy Constructor")),
+      E("div", { style: "display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; padding: 6px; background: rgba(255,255,255,0.03); border-radius: 4px;" }, [
+        E("span", { style: "font-size: 0.8em; color: #888;" }, _("Method:")), methodSelect,
+        E("span", { style: "font-size: 0.8em; color: #888;" }, _("Position:")), posSelect,
+        E("span", { style: "font-size: 0.8em; color: #888;" }, _("Fooling:")), foolingSelect,
+        buildFormulaBtn
+      ])
+    ]);
+
+    return E("div", { class: "cbi-value", style: "margin-top: -6px;" }, [
+      E("label", { class: "cbi-value-title" }, ""),
+      E("div", { class: "cbi-value-field" }, [
+        tuneBtn,
+        builderDetails,
+        tuneStatusDiv
+      ])
+    ]);
+  };
+
   o = section.taboption(
     "settings",
     form.TextValue,
@@ -7860,6 +8055,9 @@ function createSectionContent(section) {
   o.modalonly = true;
   o.depends("action", "awg");
   o.render = function(option_index, section_id, in_table) {
+    if (uci.get(UCI_PACKAGE, section_id, "action") !== "awg") {
+      return E([]);
+    }
     if (!document.getElementById("tachyon-awg-group-css")) {
       const s = document.createElement("style");
       s.id = "tachyon-awg-group-css";
