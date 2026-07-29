@@ -308,7 +308,14 @@ function test_domain_probe(domain, opt) {
     if (current_test_port > 60000) current_test_port = 50000;
     
     // Resolve real IP bypassing DNS hijack
-    let real_ip = trim(system("nslookup " + domain + " 1.1.1.1 | grep -E -o '([0-9]{1,3}[\\.]){3}[0-9]{1,3}' | tail -n 1"));
+    let real_ip = "";
+    let nslookup_cmd = sprintf("nslookup %s 1.1.1.1 | grep -E -o '([0-9]{1,3}[\\\\.]){3}[0-9]{1,3}' | tail -n 1", domain);
+    let ns_pipe = fs.popen(nslookup_cmd, "r");
+    if (ns_pipe) {
+        real_ip = trim(ns_pipe.read("all"));
+        ns_pipe.close();
+    }
+    
     let resolve_arg = "";
     if (real_ip != "") {
         resolve_arg = sprintf("--resolve %s:443:%s", domain, real_ip);
