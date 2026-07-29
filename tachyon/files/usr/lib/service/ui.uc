@@ -154,7 +154,8 @@ function ensure_dirs() {
         SERVICE_ACTION_DIR,
         LATENCY_ACTION_DIR,
         COMPONENT_ACTION_DIR,
-        SUBSCRIPTION_ACTION_DIR
+        SUBSCRIPTION_ACTION_DIR,
+        ZAPRET2_TUNE_ACTION_DIR
     ])
         ensure_dir(dir);
 }

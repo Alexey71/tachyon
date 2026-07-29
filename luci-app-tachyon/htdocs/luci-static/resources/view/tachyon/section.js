@@ -7398,7 +7398,7 @@ function createSectionContent(section) {
     attachNfqws2RemoteValidation,
   );
 
-  /* zapret2 Strategy Tuner & Visual Builder Widget (INLINE) */
+  /* zapret2 Strategy Auto-Tuner Widget (AUTOMATED) */
   o = section.taboption("settings", form.DummyValue, "_zapret2_tune_widget", "");
   o.modalonly = true;
   o.depends("action", "zapret2");
@@ -7421,8 +7421,9 @@ function createSectionContent(section) {
       uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", val);
     };
 
-    const sectionDomain = (uci.get(UCI_PACKAGE, section_id, "domain") || [])[0] || "googlevideo.com";
-    const domainInput = E("input", { type: "text", class: "cbi-input-text", style: "width: 180px; font-size: 0.85em;", value: sectionDomain });
+    const sectionDomains = uci.get(UCI_PACKAGE, section_id, "domain") || [];
+    const primaryDomain = sectionDomains[0] || "googlevideo.com";
+
     const modeSelect = E("select", { class: "cbi-input-select", style: "width: 150px; font-size: 0.85em;" }, [
       E("option", { value: "express" }, _("Express scan (~5-10s)")),
       E("option", { value: "deep" }, _("Deep scan (~20s)"))
@@ -7430,15 +7431,19 @@ function createSectionContent(section) {
     const resultsContainer = E("div", { style: "margin-top: 8px; max-height: 200px; overflow-y: auto;" });
     const statusText = E("div", { style: "margin-top: 6px; font-size: 0.88em; font-weight: bold; color: var(--cbi-link-color, #3c96d4);" }, "");
 
-    const startBtn = E("button", { class: "btn cbi-button cbi-button-action", type: "button", style: "padding: 2px 10px; font-size: 0.85em;" }, _("Start Auto-Tune"));
+    const startBtn = E("button", {
+      class: "btn cbi-button cbi-button-action",
+      type: "button",
+      style: "font-weight: bold; padding: 4px 12px; font-size: 0.9em; background-color: var(--cbi-link-color, #2b78e4); color: #fff;"
+    }, _("Auto-Tune Section Strategy"));
 
     const inlineTuneCard = E("div", {
       class: "zapret2-inline-tuner-card",
-      style: "display: none; margin-top: 8px; padding: 10px; border: 1px solid var(--cbi-border-color, #404040); background: rgba(0,0,0,0.2); border-radius: 4px;"
+      style: "margin-top: 8px; padding: 10px; border: 1px solid var(--cbi-border-color, #404040); background: rgba(0,0,0,0.2); border-radius: 4px;"
     }, [
       E("div", { style: "display: flex; flex-wrap: wrap; gap: 10px; align-items: center;" }, [
-        E("span", { style: "font-size: 0.85em; color: #888;" }, _("Test domain:")), domainInput,
-        E("span", { style: "font-size: 0.85em; color: #888;" }, _("Scan mode:")), modeSelect,
+        E("span", { style: "font-size: 0.85em; color: #aaa;" }, _("Section target domain: ") + ` ${primaryDomain}`),
+        E("span", { style: "font-size: 0.85em; color: #888; margin-left: auto;" }, _("Scan mode:")), modeSelect,
         startBtn
       ]),
       statusText,
@@ -7447,7 +7452,7 @@ function createSectionContent(section) {
 
     startBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const targetDomain = domainInput.value.trim() || "googlevideo.com";
+      const targetDomain = primaryDomain;
       const selectedMode = modeSelect.value;
       startBtn.disabled = true;
       statusText.style.color = "var(--cbi-link-color, #3c96d4)";
@@ -7538,77 +7543,7 @@ function createSectionContent(section) {
         });
     });
 
-    const tuneBtn = E("button", {
-      class: "btn cbi-button cbi-button-action",
-      type: "button",
-      style: "margin-top: 6px; margin-bottom: 6px; font-weight: bold; background-color: var(--cbi-link-color, #2b78e4); color: #fff;"
-    }, _("Auto-Tune Strategy"));
-
-    tuneBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (inlineTuneCard.style.display === "none") {
-        inlineTuneCard.style.display = "block";
-      } else {
-        inlineTuneCard.style.display = "none";
-      }
-    });
-
-    const methodSelect = E("select", { class: "cbi-input-select", style: "width: 140px; font-size: 0.85em;" }, [
-      E("option", { value: "multisplit" }, "multisplit"),
-      E("option", { value: "split2" }, "split2"),
-      E("option", { value: "disorder2" }, "disorder2"),
-      E("option", { value: "fake,split2" }, "fake + split2"),
-      E("option", { value: "fake,disorder2" }, "fake + disorder2"),
-      E("option", { value: "syndata,split2" }, "syndata + split2"),
-      E("option", { value: "fakedsplit" }, "fakedsplit")
-    ]);
-
-    const posSelect = E("select", { class: "cbi-input-select", style: "width: 120px; font-size: 0.85em;" }, [
-      E("option", { value: "1,midsld" }, "1, midsld"),
-      E("option", { value: "method+2" }, "method+2"),
-      E("option", { value: "1,sni,midsld" }, "1, sni, midsld"),
-      E("option", { value: "1,sni" }, "1, sni")
-    ]);
-
-    const foolingSelect = E("select", { class: "cbi-input-select", style: "width: 110px; font-size: 0.85em;" }, [
-      E("option", { value: "tcp_md5" }, "tcp_md5"),
-      E("option", { value: "badsum" }, "badsum"),
-      E("option", { value: "badseq" }, "badseq"),
-      E("option", { value: "none" }, "none")
-    ]);
-
-    const buildFormulaBtn = E("button", {
-      class: "btn cbi-button cbi-button-apply",
-      type: "button",
-      style: "padding: 2px 8px; font-size: 0.85em;"
-    }, _("Build formula"));
-
-    buildFormulaBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const m = methodSelect.value;
-      const p = posSelect.value;
-      const f = foolingSelect.value;
-      const foolingParam = f !== "none" ? `:${f}` : "";
-
-      const formula = `--filter-tcp=80 --filter-l7=http --payload=http_req --lua-desync=fake:blob=fake_default_http${foolingParam} --lua-desync=${m}:pos=method+2 --new --filter-tcp=443 --filter-l7=tls --payload=tls_client_hello --lua-desync=fake:blob=fake_default_tls${foolingParam}:tcp_seq=-10000 --lua-desync=${m}:pos=${p} --new --filter-udp=443 --filter-l7=quic --payload=quic_initial --lua-desync=fake:blob=fake_default_quic:repeats=6`;
-      setNfqws2OptTextarea(formula);
-    });
-
-    const builderDetails = E("details", { class: "awg-spoiler", style: "margin-top: 6px;" }, [
-      E("summary", { style: "font-size: 0.88em; cursor: pointer; color: var(--cbi-link-color, #3c96d4);" }, _("zapret2 Strategy Constructor")),
-      E("div", { style: "display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; padding: 6px; background: rgba(255,255,255,0.03); border-radius: 4px;" }, [
-        E("span", { style: "font-size: 0.8em; color: #888;" }, _("Method:")), methodSelect,
-        E("span", { style: "font-size: 0.8em; color: #888;" }, _("Position:")), posSelect,
-        E("span", { style: "font-size: 0.8em; color: #888;" }, _("Fooling:")), foolingSelect,
-        buildFormulaBtn
-      ])
-    ]);
-
-    return E("div", { class: "zapret2-tune-field" }, [
-      tuneBtn,
-      inlineTuneCard,
-      builderDetails
-    ]);
+    return inlineTuneCard;
   };
 
   o = section.taboption(

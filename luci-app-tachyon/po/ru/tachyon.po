@@ -3256,3 +3256,21 @@ msgstr "Позиция:"
 
 msgid "Fooling:"
 msgstr "Fooling:"
+
+msgid "Initializing Auto-Tune..."
+msgstr "Инициализация автоподбора..."
+
+msgid "Failed to start Auto-Tune job."
+msgstr "Не удалось запустить автоподбор."
+
+msgid "Testing desync strategies..."
+msgstr "Тестирование стратегий обхода..."
+
+msgid "No working desync strategy found for this domain."
+msgstr "Рабочая стратегия обхода для этого домена не найдена."
+
+msgid "Auto-Tune complete! Winning strategy: "
+msgstr "Подбор завершен! Оптимальная стратегия: "
+
+msgid "Error running tuner: "
+msgstr "Ошибка выполнения автоподбора: "
