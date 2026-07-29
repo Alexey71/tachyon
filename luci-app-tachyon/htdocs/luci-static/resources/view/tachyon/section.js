@@ -7402,11 +7402,7 @@ function createSectionContent(section) {
   o = section.taboption("settings", form.DummyValue, "_zapret2_tune_widget", "");
   o.modalonly = true;
   o.depends("action", "zapret2");
-  o.render = function (option_index, section_id, in_table) {
-    if (uci.get(UCI_PACKAGE, section_id, "action") !== "zapret2") {
-      return E([]);
-    }
-
+  o.renderWidget = function (section_id, option_index, cfgvalue) {
     const setNfqws2OptTextarea = (val) => {
       const el = document.querySelector(`textarea[name="cbid.${UCI_PACKAGE}.${section_id}.nfqws2_opt"]`) ||
                  document.querySelector(`[data-name="nfqws2_opt"] textarea`) ||
@@ -7583,13 +7579,10 @@ function createSectionContent(section) {
       ])
     ]);
 
-    return E("div", { class: "cbi-value", style: "margin-top: -6px;" }, [
-      E("label", { class: "cbi-value-title" }, ""),
-      E("div", { class: "cbi-value-field" }, [
-        tuneBtn,
-        builderDetails,
-        tuneStatusDiv
-      ])
+    return E("div", { class: "zapret2-tune-field" }, [
+      tuneBtn,
+      builderDetails,
+      tuneStatusDiv
     ]);
   };
 
@@ -8051,13 +8044,10 @@ function createSectionContent(section) {
   })();
 
   /* Visual group widget — renders the <details> spoiler in OpenWRT CBI style */
-  o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", "");
+  o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", _("Obfuscation"));
   o.modalonly = true;
   o.depends("action", "awg");
-  o.render = function(option_index, section_id, in_table) {
-    if (uci.get(UCI_PACKAGE, section_id, "action") !== "awg") {
-      return E([]);
-    }
+  o.renderWidget = function(section_id, option_index, cfgvalue) {
     if (!document.getElementById("tachyon-awg-group-css")) {
       const s = document.createElement("style");
       s.id = "tachyon-awg-group-css";
@@ -8127,8 +8117,6 @@ function createSectionContent(section) {
       ]);
     };
 
-
-
     const row = (label, ...cells) => E("div", { class: "awg-param-row" }, [
       E("span", { class: "awg-param-row-label" }, label),
       E("div",  { class: "awg-param-row-fields" }, cells)
@@ -8164,10 +8152,7 @@ function createSectionContent(section) {
       ])
     ]);
 
-    return E("div", { class: "cbi-value" }, [
-      E("label", { class: "cbi-value-title" }, _("Obfuscation")),
-      E("div",   { class: "cbi-value-field"  }, details)
-    ]);
+    return details;
   };
 
   // ── WARP (Cloudflare WARP via sing-box-extended) ──────────────────────────
