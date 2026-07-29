@@ -79,6 +79,14 @@ function command_output(cmd) {
     return as_string(data);
 }
 
+function command_output_ex(cmd) {
+    let pipe = fs.popen(cmd, "r");
+    if (!pipe) return { status: -1, output: "" };
+    let data = pipe.read("all");
+    let status = pipe.close();
+    return { status: status > 255 ? int(status / 256) : status, output: trim(as_string(data)) };
+}
+
 function load_community_list_domains(community_name) {
     community_name = trim(as_string(community_name));
     if (community_name == "")
@@ -218,92 +226,58 @@ function get_section_domains(section_id) {
 function get_candidate_strategies(mode) {
     mode = as_string(mode || "express");
 
-    let base_http = "--filter-tcp=80 --filter-l7=http --payload=http_req ";
-    let base_tls = "--new --filter-tcp=443 --filter-l7=tls --payload=tls_client_hello ";
-    let base_quic = "--new --filter-udp=443 --filter-l7=quic --payload=quic_initial ";
+    let presets = [];
+    
+    // Add baseline (No Bypass)
+    push(presets, {
+        id: "baseline_none",
+        name: "Direct Connection (No Bypass)",
+        family: "baseline",
+        opt: ""
+    });
 
-    let presets = [
-        {
-            id: "split2_basic",
-            name: "Basic Split2",
-            family: "split2",
-            opt: base_http + "--lua-desync=split2:pos=method+2 " +
-                 base_tls + "--lua-desync=split2:pos=1,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        },
-        {
-            id: "disorder2_basic",
-            name: "Basic Disorder2",
-            family: "disorder2",
-            opt: base_http + "--lua-desync=disorder2:pos=method+2 " +
-                 base_tls + "--lua-desync=disorder2:pos=1,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        },
-        {
-            id: "fake_split2_md5",
-            name: "Fake + Split2 (MD5Sig)",
-            family: "fake_split2",
-            opt: base_http + "--lua-desync=fake:blob=fake_default_http:tcp_md5 --lua-desync=split2:pos=method+2 " +
-                 base_tls + "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=split2:pos=1,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        },
-        {
-            id: "fake_disorder2_md5",
-            name: "Fake + Disorder2 (MD5Sig)",
-            family: "fake_disorder2",
-            opt: base_http + "--lua-desync=fake:blob=fake_default_http:tcp_md5 --lua-desync=disorder2:pos=method+2 " +
-                 base_tls + "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=multidisorder:pos=1,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        },
-        {
-            id: "multisplit_default",
-            name: "Multisplit (Default Preset)",
-            family: "multisplit",
-            opt: base_http + "--lua-desync=fake:blob=fake_default_http:tcp_md5 --lua-desync=multisplit:pos=method+2 " +
-                 base_tls + "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=multidisorder:pos=1,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        },
-        {
-            id: "syndata_split",
-            name: "Syndata + Split",
-            family: "syndata",
-            opt: base_http + "--lua-desync=syndata,split2:pos=method+2 " +
-                 base_tls + "--lua-desync=syndata,split2:pos=1,sni,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        },
-        {
-            id: "fakedsplit_tls",
-            name: "Fakedsplit + Multidisorder",
-            family: "fakedsplit",
-            opt: base_http + "--lua-desync=fake:blob=fake_default_http:tcp_md5 --lua-desync=split2:pos=method+2 " +
-                 base_tls + "--lua-desync=fakedsplit:blob=fake_default_tls:pos=1,sni,midsld --lua-desync=multidisorder:pos=1,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        }
-    ];
+    let provider_lua_dir = getenv("ZAPRET2_PROVIDER_LUA_DIR") || "/opt/zapret2/lua";
+    if (fs.stat("/usr/lib/tachyon/providers/zapret2/lua") != null) provider_lua_dir = "/usr/lib/tachyon/providers/zapret2/lua";
+    if (fs.stat("/opt/zapret2/lua") != null) provider_lua_dir = "/opt/zapret2/lua";
+    let lua_init = sprintf(" --lua-init=@%s/zapret-lib.lua --lua-init=@%s/zapret-antidpi.lua --lua-init=@%s/zapret-auto.lua ", provider_lua_dir, provider_lua_dir, provider_lua_dir);
 
+    let q = "--new --filter-udp=443 --filter-l7=quic --payload=quic_initial" + lua_init;
+    let t = "--new --filter-tcp=443 --filter-l7=tls --payload=tls_client_hello" + lua_init;
+    let h = "--filter-tcp=80 --filter-l7=http --payload=http_req" + lua_init;
+
+    let add_strat = function(id, name, fam, t_opt, q_opt) {
+        let h_opt = replace(t_opt, "fake_default_tls", "fake_default_http");
+        let full_opt = h + h_opt + " " + t + t_opt + " " + q + (q_opt || "--lua-desync=fake:blob=fake_default_quic:repeats=6");
+        push(presets, { id: id, name: name, family: fam, opt: trim(full_opt) });
+    };
+
+    // Simple Split / Disorder
+    add_strat("multisplit_1", "Multisplit (pos=1)", "multisplit", "--lua-desync=multisplit:pos=1");
+    add_strat("multidisorder_1", "Multidisorder (pos=1)", "multidisorder", "--lua-desync=multidisorder:pos=1");
+
+    // Fake + Split/Disorder (MD5) - Very high success rate
+    add_strat("fake_multisplit_md5", "Fake + Multisplit (MD5)", "fake_split", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld");
+    add_strat("fake_multidisorder_md5", "Fake + Multidisorder (MD5)", "fake_disorder", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=multidisorder:pos=1,midsld");
+    
+    // Fake + Multisplit/Multidisorder (No MD5)
+    add_strat("fake_multisplit", "Fake + Multisplit", "fake_multisplit", "--lua-desync=fake:blob=fake_default_tls:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld");
+    add_strat("fake_multidisorder", "Fake + Multidisorder", "fake_multidisorder", "--lua-desync=fake:blob=fake_default_tls:tcp_seq=-10000 --lua-desync=multidisorder:pos=1,midsld");
+
+    // Syndata
+    add_strat("syndata_multisplit", "Syndata + Multisplit", "syndata", "--lua-desync=syndata --lua-desync=multisplit:pos=1,midsld");
+    
     if (mode == "deep") {
-        for (let t = 2; t <= 7; t++) {
-            push(presets, {
-                id: "fake_split2_ttl_" + t,
-                name: "Fake + Split2 (TTL " + t + ")",
-                family: "fake_split2_ttl",
-                opt: base_http + "--lua-desync=fake:blob=fake_default_http:ttl=" + t + " --lua-desync=split2:pos=method+2 " +
-                     base_tls + "--lua-desync=fake:blob=fake_default_tls:ttl=" + t + ":tcp_seq=-10000 --lua-desync=split2:pos=1,sni " +
-                     base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-            });
+        for (let t = 2; t <= 6; t++) {
+            add_strat("fake_multisplit_ttl_" + t, "Fake (TTL " + t + ") + Multisplit", "fake_split_ttl", sprintf("--lua-desync=fake:blob=fake_default_tls:ip_ttl=%d:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld", t));
         }
-        push(presets, {
-            id: "multisplit_sni_pos",
-            name: "Multisplit (SNI Position)",
-            family: "multisplit",
-            opt: base_http + "--lua-desync=multisplit:pos=method+2 " +
-                 base_tls + "--lua-desync=multisplit:pos=1,sni,midsld " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        });
+        add_strat("fakedsplit_tls", "Fakedsplit + Multidisorder", "fakedsplit", "--lua-desync=fakedsplit:blob=fake_default_tls:pos=1,sni,midsld --lua-desync=multidisorder:pos=1,midsld");
+        add_strat("fake_autottl", "Fake (AutoTTL) + Multisplit", "fake_autottl", "--lua-desync=fake:blob=fake_default_tls:ip_autottl=-1,3-20:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld");
     }
 
     return presets;
 }
+
+let current_test_port = 50000;
 
 function test_domain_probe(domain, opt) {
     domain = as_string(domain);
@@ -311,74 +285,116 @@ function test_domain_probe(domain, opt) {
         return { success: false, rtt_ms: 0, message: "Empty domain" };
 
     let start_time = now_seconds();
+    
+    let nfqws2_paths = [
+        "/usr/bin/nfqws2",
+        "/usr/bin/nfqws",
+        "/opt/zapret2/nfq2/nfqws2",
+        "/opt/zapret2/nfqws2"
+    ];
+    let nfqws2_bin = "";
+    for (let p in nfqws2_paths) {
+        if (fs.stat(p) != null) {
+            nfqws2_bin = p;
+            break;
+        }
+    }
+    
+    let can_test_properly = (nfqws2_bin != "");
+    
+    let sport_start = current_test_port;
+    let sport_end = current_test_port + 100;
+    current_test_port += 101;
+    if (current_test_port > 60000) current_test_port = 50000;
+    
+    // Resolve real IP bypassing DNS hijack
+    let real_ip = trim(system("nslookup " + domain + " 1.1.1.1 | grep -E -o '([0-9]{1,3}[\\.]){3}[0-9]{1,3}' | tail -n 1"));
+    let resolve_arg = "";
+    if (real_ip != "") {
+        resolve_arg = sprintf("--resolve %s:443:%s", domain, real_ip);
+    }
+    
+    // Bypass tachyon transparent proxy without marking (nfqws2 ignores 0x40000000)
+    let iptables_mark1 = sprintf("nft insert rule inet TachyonTable mangle_output tcp sport %d-%d return", sport_start, sport_end);
+    let iptables_rule1 = sprintf("iptables -t mangle -I OUTPUT 1 -p tcp --sport %d:%d -j NFQUEUE --queue-num 299", sport_start, sport_end);
+    let iptables_rule2 = sprintf("iptables -t mangle -I INPUT 1 -p tcp --dport %d:%d -j NFQUEUE --queue-num 299", sport_start, sport_end);
+    
+    let iptables_del_mark1 = sprintf("nft delete rule inet TachyonTable mangle_output handle $(nft -a list chain inet TachyonTable mangle_output | grep 'tcp sport %d-%d return' | grep -o 'handle [0-9]*' | cut -d ' ' -f 2) >/dev/null 2>&1", sport_start, sport_end);
+    let iptables_del1 = sprintf("iptables -t mangle -D OUTPUT -p tcp --sport %d:%d -j NFQUEUE --queue-num 299 >/dev/null 2>&1", sport_start, sport_end);
+    let iptables_del2 = sprintf("iptables -t mangle -D INPUT -p tcp --dport %d:%d -j NFQUEUE --queue-num 299 >/dev/null 2>&1", sport_start, sport_end);
+    
+    let nfqws2_pid = 0;
+    
+    if (can_test_properly && opt != "") {
+        system(iptables_mark1);
+        system(iptables_rule1);
+        system(iptables_rule2);
+        let daemon_cmd = sprintf("%s --user=daemon --qnum=299 %s >/dev/null 2>&1 & echo $!", nfqws2_bin, opt);
+        let p_pipe = fs.popen(daemon_cmd, "r");
+        if (p_pipe) {
+            nfqws2_pid = int(trim(p_pipe.read("all")));
+            p_pipe.close();
+            system(sprintf("logger -t zapret_tuner \"Started nfqws2 (PID: %d) for domain %s with opt: %s\"", nfqws2_pid, domain, opt));
+        }
+        system("sleep 0.1");
+    }
 
-    // 1. Try HTTPS probe with IPv4 forcing (-4) and insecure (-k) to avoid IPv6/SSL hangs
+    // Pro probing: HTTPS GET (to trigger 16KB cap if present), strict SSL (no -k) to avoid DPI MiTM blockpages.
     let https_url = "https://" + domain + "/";
+    let curl_port_arg = can_test_properly ? sprintf("--local-port %d-%d", sport_start, sport_end) : "";
+    
+    // We fetch up to 32KB to test data transfer (16KB cap evasion).
     let cmd = sprintf(
-        "curl -4 -k -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 2 --max-time 3 -I %s",
-        shell_quote(https_url)
+        "curl %s -4 -s -r 0-32000 -o /dev/null -w '%%{http_code}:%%{time_total}:%%{size_download}' --connect-timeout 2 --max-time 4 %s %s",
+        curl_port_arg, resolve_arg, shell_quote(https_url)
     );
 
-    let output = trim(command_output(cmd));
+    let res = command_output_ex(cmd);
     let elapsed = int((now_seconds() - start_time) * 1000);
+    let probe_success = false;
+    let ret_obj = null;
+    let http_code = 0;
 
-    if (output != "") {
-        let parts = split(output, ":");
-        if (length(parts) >= 2) {
-            let code = int(parts[0]);
+    if (res.output != "") {
+        let parts = split(res.output, ":");
+        if (length(parts) >= 3) {
+            http_code = int(parts[0]);
             let time_total = (1.0 * parts[1]) * 1000.0;
-            if (code >= 200 && code < 500) {
-                return {
+            let size_dl = int(parts[2]);
+            
+            // curl exit code 0 = perfect. 28 = timeout (but received data). 18 = partial (expected for -r). 33 = HTTP range err
+            if ((res.status == 0 || res.status == 18 || res.status == 33 || (res.status == 28 && size_dl > 0)) && http_code >= 200 && http_code < 500) {
+                probe_success = true;
+                ret_obj = {
                     success: true,
-                    http_code: code,
+                    http_code: http_code,
                     rtt_ms: int(time_total > 0 ? time_total : elapsed),
-                    message: "HTTPS " + code
+                    message: "HTTPS " + http_code + " (Size: " + size_dl + ")"
                 };
             }
         }
     }
 
-    // 2. Try HTTP fallback
-    let http_url = "http://" + domain + "/";
-    let http_cmd = sprintf(
-        "curl -4 -k -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 3 --max-time 5 -I %s",
-        shell_quote(http_url)
-    );
-
-    let http_output = trim(command_output(http_cmd));
-    if (http_output != "") {
-        let parts = split(http_output, ":");
-        if (length(parts) >= 2) {
-            let code = int(parts[0]);
-            let time_total = (1.0 * parts[1]) * 1000.0;
-            if (code >= 200 && code < 500) {
-                return {
-                    success: true,
-                    http_code: code,
-                    rtt_ms: int(time_total > 0 ? time_total : elapsed),
-                    message: "HTTP " + code
-                };
-            }
-        }
-    }
-
-    let port = 443;
-    let nc_cmd = sprintf("nc -w 2 -z %s %d", shell_quote(domain), port);
-    if (command_status(nc_cmd) == 0) {
-        return {
-            success: true,
-            http_code: 200,
+    if (!probe_success) {
+        ret_obj = {
+            success: false,
+            http_code: http_code,
             rtt_ms: elapsed,
-            message: "TCP Port 443 Open"
+            message: "Failed (Exit: " + res.status + ", HTTP: " + http_code + ")"
         };
     }
 
-    return {
-        success: false,
-        http_code: 0,
-        rtt_ms: elapsed,
-        message: "Connection failed or timed out"
-    };
+    // cleanup
+    if (can_test_properly && opt != "") {
+        if (nfqws2_pid > 0) {
+            system(sprintf("kill -9 %d >/dev/null 2>&1", nfqws2_pid));
+        }
+        system(iptables_del_mark1);
+        system(iptables_del1);
+        system(iptables_del2);
+    }
+
+    return ret_obj;
 }
 
 function update_job_progress(job_path, completed, total, failed, current_item, current_domain) {
@@ -511,6 +527,12 @@ function run_tune(section_id, target_domain, mode, job_path) {
         });
 
         if (is_success) {
+            if (cand.id == "baseline_none" && passed_count == total_sec_doms) {
+                best_passed_count = passed_count;
+                best_rtt = avg_rtt;
+                best_candidate = cand;
+                break;
+            }
             if (passed_count > best_passed_count || (passed_count == best_passed_count && avg_rtt < best_rtt)) {
                 best_passed_count = passed_count;
                 best_rtt = avg_rtt;
