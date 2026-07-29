@@ -7460,12 +7460,13 @@ function createSectionContent(section) {
               return;
             }
 
-            if (!data || !data.success) {
-              statusText.textContent = _("Auto-Tune failed: ") + (data ? data.message : _("Unknown error"));
-              return;
+            if (!data || !data.success || !data.winning_strategy) {
+              statusText.style.color = "var(--cbi-color-warning, #d9534f)";
+              statusText.textContent = (data && data.message) ? data.message : _("No working desync strategy found for this domain.");
+            } else {
+              statusText.style.color = "var(--cbi-color-success, #5cb85c)";
+              statusText.textContent = _("Auto-Tune complete! Winning strategy: ") + (data.winning_preset_name || "");
             }
-
-            statusText.textContent = _("Auto-Tune complete! Winning strategy found.");
 
             const rows = (data.results || []).map((r) => {
               const applyBtn = E("button", { class: "btn cbi-button cbi-button-save", type: "button", style: "padding: 1px 6px; font-size: 0.8em;" }, _("Apply"));

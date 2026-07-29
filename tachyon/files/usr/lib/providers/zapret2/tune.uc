@@ -188,14 +188,13 @@ function test_domain_probe(domain, opt) {
     if (domain == "")
         return { success: false, rtt_ms: 0, message: "Empty domain" };
 
-    let port = 443;
-    let url = "https://" + domain + "/";
-
     let start_time = now_seconds();
 
+    // 1. Try HTTPS probe with IPv4 forcing (-4) and insecure (-k) to avoid IPv6/SSL hangs
+    let https_url = "https://" + domain + "/";
     let cmd = sprintf(
-        "curl -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 2 --max-time 3 -I %s",
-        shell_quote(url)
+        "curl -4 -k -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 4 --max-time 6 -I %s",
+        shell_quote(https_url)
     );
 
     let output = trim(command_output(cmd));
@@ -206,7 +205,31 @@ function test_domain_probe(domain, opt) {
         if (length(parts) >= 2) {
             let code = int(parts[0]);
             let time_total = (1.0 * parts[1]) * 1000.0;
-            if (code > 0 && code < 550) {
+            if (code >= 200 && code < 500) {
+                return {
+                    success: true,
+                    http_code: code,
+                    rtt_ms: int(time_total > 0 ? time_total : elapsed),
+                    message: "HTTPS " + code
+                };
+            }
+        }
+    }
+
+    // 2. Try HTTP fallback
+    let http_url = "http://" + domain + "/";
+    let http_cmd = sprintf(
+        "curl -4 -k -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 3 --max-time 5 -I %s",
+        shell_quote(http_url)
+    );
+
+    let http_output = trim(command_output(http_cmd));
+    if (http_output != "") {
+        let parts = split(http_output, ":");
+        if (length(parts) >= 2) {
+            let code = int(parts[0]);
+            let time_total = (1.0 * parts[1]) * 1000.0;
+            if (code >= 200 && code < 500) {
                 return {
                     success: true,
                     http_code: code,
@@ -217,6 +240,7 @@ function test_domain_probe(domain, opt) {
         }
     }
 
+    let port = 443;
     let nc_cmd = sprintf("nc -w 2 -z %s %d", shell_quote(domain), port);
     if (command_status(nc_cmd) == 0) {
         return {
@@ -344,20 +368,19 @@ function run_tune(section_id, target_domain, mode, job_path) {
         update_job_progress(job_path, i + 1, total, failed_count, cand.name);
     }
 
-    if (best_candidate == null && length(results) > 0) {
-        best_candidate = candidates[0];
-    }
+    let has_winner = (best_candidate != null && best_rtt < 999999);
 
     let output = {
-        success: true,
+        success: has_winner,
         section_id,
         target_domain,
         mode,
-        winning_strategy: best_candidate ? best_candidate.opt : "",
-        winning_preset_id: best_candidate ? best_candidate.id : "",
-        winning_preset_name: best_candidate ? best_candidate.name : "",
-        best_rtt_ms: best_rtt == 999999 ? 0 : best_rtt,
+        winning_strategy: has_winner ? best_candidate.opt : "",
+        winning_preset_id: has_winner ? best_candidate.id : "",
+        winning_preset_name: has_winner ? best_candidate.name : "",
+        best_rtt_ms: has_winner ? best_rtt : 0,
         tested_count: total,
+        message: has_winner ? sprintf("Optimal strategy found: %s (%d ms)", best_candidate.name, best_rtt) : "No working strategy found for target domain",
         results
     };
 
