@@ -245,33 +245,50 @@ function get_candidate_strategies(mode) {
     let t = "--new --filter-tcp=443 --filter-l7=tls --payload=tls_client_hello" + lua_init;
     let h = "--filter-tcp=80 --filter-l7=http --payload=http_req" + lua_init;
 
-    let add_strat = function(id, name, fam, t_opt, q_opt) {
+    let add_strat = function(id, name, fam, desync_parts) {
+        let t_opt = join(" ", desync_parts);
         let h_opt = replace(t_opt, "fake_default_tls", "fake_default_http");
-        let full_opt = h + h_opt + " " + t + t_opt + " " + q + (q_opt || "--lua-desync=fake:blob=fake_default_quic:repeats=6");
+        let q_opt = "--lua-desync=fake:blob=fake_default_quic:repeats=6";
+        let full_opt = h + h_opt + " " + t + t_opt + " " + q + q_opt;
         push(presets, { id: id, name: name, family: fam, opt: trim(full_opt) });
     };
 
-    // Simple Split / Disorder
-    add_strat("multisplit_1", "Multisplit (pos=1)", "multisplit", "--lua-desync=multisplit:pos=1");
-    add_strat("multidisorder_1", "Multidisorder (pos=1)", "multidisorder", "--lua-desync=multidisorder:pos=1");
+    // Stage 2: Basic Fragmentation (No Fakes)
+    add_strat("multisplit_1", "Multisplit (pos=1)", "multisplit", ["--lua-desync=multisplit:pos=1"]);
+    add_strat("multidisorder_1", "Multidisorder (pos=1)", "multidisorder", ["--lua-desync=multidisorder:pos=1"]);
+    add_strat("multidisorder_midsld", "Multidisorder (pos=1,midsld)", "multidisorder", ["--lua-desync=multidisorder:pos=1,midsld"]);
 
-    // Fake + Split/Disorder (MD5) - Very high success rate
-    add_strat("fake_multisplit_md5", "Fake + Multisplit (MD5)", "fake_split", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld");
-    add_strat("fake_multidisorder_md5", "Fake + Multidisorder (MD5)", "fake_disorder", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000 --lua-desync=multidisorder:pos=1,midsld");
-    
-    // Fake + Multisplit/Multidisorder (No MD5)
-    add_strat("fake_multisplit", "Fake + Multisplit", "fake_multisplit", "--lua-desync=fake:blob=fake_default_tls:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld");
-    add_strat("fake_multidisorder", "Fake + Multidisorder", "fake_multidisorder", "--lua-desync=fake:blob=fake_default_tls:tcp_seq=-10000 --lua-desync=multidisorder:pos=1,midsld");
+    // Stage 3: Fake Packets
+    let fakes = [
+        { id: "fake", name: "Fake", opt: "--lua-desync=fake:blob=fake_default_tls:tcp_seq=-10000" },
+        { id: "syndata", name: "Syndata", opt: "--lua-desync=syndata" }
+    ];
+    let splits = [
+        { id: "split", name: "Multisplit", opt: "--lua-desync=multisplit:pos=1,midsld" },
+        { id: "disorder", name: "Multidisorder", opt: "--lua-desync=multidisorder:pos=1,midsld" }
+    ];
 
-    // Syndata
-    add_strat("syndata_multisplit", "Syndata + Multisplit", "syndata", "--lua-desync=syndata --lua-desync=multisplit:pos=1,midsld");
-    
-    if (mode == "deep") {
-        for (let t = 2; t <= 6; t++) {
-            add_strat("fake_multisplit_ttl_" + t, "Fake (TTL " + t + ") + Multisplit", "fake_split_ttl", sprintf("--lua-desync=fake:blob=fake_default_tls:ip_ttl=%d:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld", t));
+    for (let f in fakes) {
+        for (let s in splits) {
+            add_strat(f.id + "_" + s.id, f.name + " + " + s.name, f.id + "_" + s.id, [f.opt, s.opt]);
         }
-        add_strat("fakedsplit_tls", "Fakedsplit + Multidisorder", "fakedsplit", "--lua-desync=fakedsplit:blob=fake_default_tls:pos=1,sni,midsld --lua-desync=multidisorder:pos=1,midsld");
-        add_strat("fake_autottl", "Fake (AutoTTL) + Multisplit", "fake_autottl", "--lua-desync=fake:blob=fake_default_tls:ip_autottl=-1,3-20:tcp_seq=-10000 --lua-desync=multisplit:pos=1,midsld");
+    }
+
+    // Stage 4: Fake Evasion (MD5)
+    for (let s in splits) {
+        add_strat("fake_md5_" + s.id, "Fake (MD5) + " + s.name, "fake_md5", ["--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000", s.opt]);
+    }
+
+    // Stage 5: Deep Scan (TTL Tricks, Fakedsplit, AutoTTL)
+    if (mode == "deep") {
+        for (let s in splits) {
+            add_strat("fake_autottl_" + s.id, "Fake (AutoTTL) + " + s.name, "fake_autottl", ["--lua-desync=fake:blob=fake_default_tls:ip_autottl=1,3-20:tcp_seq=-10000", s.opt]);
+        }
+        for (let ttl = 2; ttl <= 6; ttl++) {
+            add_strat("fake_ttl" + ttl + "_split", "Fake (TTL " + ttl + ") + Multisplit", "fake_ttl", ["--lua-desync=fake:blob=fake_default_tls:ip_ttl=" + ttl + ":tcp_seq=-10000", "--lua-desync=multisplit:pos=1,midsld"]);
+            add_strat("fake_ttl" + ttl + "_disorder", "Fake (TTL " + ttl + ") + Multidisorder", "fake_ttl", ["--lua-desync=fake:blob=fake_default_tls:ip_ttl=" + ttl + ":tcp_seq=-10000", "--lua-desync=multidisorder:pos=1,midsld"]);
+        }
+        add_strat("fakedsplit", "Fakedsplit + Multidisorder", "fakedsplit", ["--lua-desync=fakedsplit:blob=fake_default_tls:pos=1,sni,midsld", "--lua-desync=multidisorder:pos=1,midsld"]);
     }
 
     return presets;
