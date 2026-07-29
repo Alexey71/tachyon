@@ -845,6 +845,12 @@ msgstr "Включить быстрый DNS-кэш"
 msgid "Enable list updates"
 msgstr "Включить обновление списков"
 
+msgid "Pre-download all preset lists"
+msgstr "Скачивать все предустановленные списки"
+
+msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
+msgstr "Кешировать все встроенные списки и базы (даже если они не выбраны ни в одной секции). Рекомендуется при наличии свободного места или USB-накопителя."
+
 msgid "Enable Mixed Proxy"
 msgstr "Включить смешанный прокси"
 

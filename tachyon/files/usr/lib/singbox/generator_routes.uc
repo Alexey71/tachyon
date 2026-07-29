@@ -754,17 +754,37 @@ function ensure_community_ruleset(config, section_name, community) {
 
     let tag_name = ruleset_tag(section_name, community, "community");
     if (!ruleset_registered(config, tag_name)) {
-        let rule_set = {
-            type: "remote",
-            tag: tag_name,
-            format: "binary",
-            url: runtime_rulesets.community_url(community),
-            update_interval: remote_ruleset_update_interval()
-        };
-        let detour = ctx.download_detour_tag(ctx.runtime_settings(), "lists");
-        if (detour != "")
-            rule_set.download_detour = detour;
-        push(config.route.rule_set, rule_set);
+        let folder = ctx.runtime_ruleset_folder || runtime_ruleset_folder;
+        let tmp_srs = folder + "/community-" + community + ".srs";
+        let etc_srs = "/etc/tachyon/rulesets/community-" + community + ".srs";
+        let local_path = null;
+
+        if (fs.stat(tmp_srs) != null && int(fs.stat(tmp_srs).size || 0) > 0)
+            local_path = tmp_srs;
+        else if (fs.stat(etc_srs) != null && int(fs.stat(etc_srs).size || 0) > 0)
+            local_path = etc_srs;
+
+        if (local_path != null) {
+            push(config.route.rule_set, {
+                type: "local",
+                tag: tag_name,
+                format: "binary",
+                path: local_path
+            });
+        }
+        else {
+            let rule_set = {
+                type: "remote",
+                tag: tag_name,
+                format: "binary",
+                url: runtime_rulesets.community_url(community),
+                update_interval: remote_ruleset_update_interval()
+            };
+            let detour = ctx.download_detour_tag(ctx.runtime_settings(), "lists");
+            if (detour != "")
+                rule_set.download_detour = detour;
+            push(config.route.rule_set, rule_set);
+        }
     }
     return {
         tag: tag_name,

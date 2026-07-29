@@ -663,6 +663,10 @@ ads
 198.51.100.2
 [rule.proxy1.excluded_ips]
 
+[rule.proxy1.excluded_protocol]
+
+[rule.proxy1.protocol]
+
 [rule.proxy1.community_lists]
 telegram
 [rule.proxy1.rule_set]
@@ -741,6 +745,10 @@ disabled
 
 [rule.out1.excluded_ips]
 
+[rule.out1.excluded_protocol]
+
+[rule.out1.protocol]
+
 [rule.out1.community_lists]
 
 [rule.out1.rule_set]
@@ -774,6 +782,10 @@ byedpi
 [rule.bye1.fully_routed_ips]
 
 [rule.bye1.excluded_ips]
+
+[rule.bye1.excluded_protocol]
+
+[rule.bye1.protocol]
 
 [rule.bye1.community_lists]
 
@@ -852,6 +864,10 @@ disabled
 [rule.vpn1.fully_routed_ips]
 
 [rule.vpn1.excluded_ips]
+
+[rule.vpn1.excluded_protocol]
+
+[rule.vpn1.protocol]
 
 [rule.vpn1.community_lists]
 

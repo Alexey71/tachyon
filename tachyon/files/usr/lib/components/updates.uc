@@ -595,7 +595,11 @@ function rule_has_list_update_source(section) {
     );
 }
 
-function has_list_update_sources(sections) {
+function has_list_update_sources(sections, settings) {
+    if (settings == null)
+        settings = uci_settings();
+    if (bool_option(settings, "download_all_presets", false))
+        return true;
     for (let section in sections)
         if (rule_has_list_update_source(section))
             return true;
@@ -689,7 +693,7 @@ function cron_refresh_plan_rows(settings, sections, bin, list_marker, subscripti
     let status = 0;
     let rows = [];
 
-    if (has_list_update_sources(sections)) {
+    if (has_list_update_sources(sections, settings)) {
         let interval = settings_update_interval(settings);
         if (interval == "") {
             push(rows, "list-disabled");
@@ -2143,6 +2147,97 @@ function rebuild_domain_ip_lists_from_rule(section, settings) {
     return ok;
 }
 
+function import_community_srs_file(service, settings) {
+    service = as_string(service);
+    if (!singbox_rulesets_module().is_community(service))
+        return true;
+
+    let url = singbox_rulesets_module().community_url(service);
+    let cached_file = TMP_RULESET_FOLDER + "/community-" + service + ".srs";
+    let persistent_file = "/etc/tachyon/rulesets/community-" + service + ".srs";
+    let tmpfile = temp_path();
+    if (tmpfile == "")
+        return false;
+
+    let ok = true;
+    if (download_to_file(url, tmpfile, service_proxy_address(settings, "lists")) && file_nonempty(tmpfile)) {
+        ensure_dir(TMP_RULESET_FOLDER);
+        copy_file(tmpfile, cached_file);
+        ensure_dir("/etc/tachyon/rulesets");
+        copy_file(tmpfile, persistent_file);
+        log_message("Successfully cached preset ruleset " + service, "info");
+    }
+    else if (file_exists_value(persistent_file)) {
+        ensure_dir(TMP_RULESET_FOLDER);
+        copy_file(persistent_file, cached_file);
+    }
+    else {
+        log_message("Failed to download preset ruleset " + service + "; skipping it until next update", "warn");
+        ok = false;
+    }
+
+    remove_file(tmpfile);
+    return ok;
+}
+
+function import_all_preset_lists(settings) {
+    log_message("Pre-downloading all preset lists and databases", "info");
+    let ok = true;
+
+    for (let service, urls in BUILTIN_SUBNET_URLS) {
+        if (type(urls) != "array")
+            continue;
+
+        let cached_file = TMP_RULESET_FOLDER + "/community-subnets-" + as_string(service) + ".lst";
+        let persistent_file = "/etc/tachyon/rulesets/community-subnets-" + as_string(service) + ".lst";
+        let combined_lines = [];
+
+        for (let url in urls) {
+            let tmpfile = temp_path();
+            if (tmpfile == "") {
+                ok = false;
+                continue;
+            }
+
+            let downloaded = download_to_file(url, tmpfile, service_proxy_address(settings, "lists")) && file_nonempty(tmpfile);
+            if (!downloaded) {
+                remove_file(tmpfile);
+                if (file_exists_value(persistent_file)) {
+                    tmpfile = persistent_file;
+                } else {
+                    log_message("Failed to download built-in preset subnet list " + as_string(service) + "; skipping it until next update", "warn");
+                    continue;
+                }
+            }
+
+            let lines = split(as_string(fs.readfile(tmpfile)), "\n");
+            for (let l in lines) {
+                l = trim(replace(as_string(l), /\r/g, ""));
+                if (l != "" && substr(l, 0, 1) != "#")
+                    push(combined_lines, l);
+            }
+
+            if (downloaded)
+                remove_file(tmpfile);
+        }
+
+        if (length(combined_lines) > 0) {
+            ensure_dir(TMP_RULESET_FOLDER);
+            write_file(cached_file, join("\n", combined_lines) + "\n");
+            ensure_dir("/etc/tachyon/rulesets");
+            write_file(persistent_file, join("\n", combined_lines) + "\n");
+        }
+    }
+
+    let community_services = keys(singbox_rulesets_module().COMMUNITY_SERVICES);
+    for (let service in community_services) {
+        if (!import_community_srs_file(service, settings))
+            ok = false;
+    }
+
+    return ok;
+}
+
 function import_builtin_subnets_from_rule(section, settings) {
     if (!bool_option(section, "enabled", true))
         return true;
@@ -2153,6 +2248,8 @@ function import_builtin_subnets_from_rule(section, settings) {
     for (let service in connections.community_lists(section)) {
         if (!singbox_rulesets_module().is_community(service))
             continue;
+
+        import_community_srs_file(service, settings);
 
         let urls = BUILTIN_SUBNET_URLS[as_string(service)];
         if (type(urls) != "array")
@@ -2555,6 +2652,10 @@ function list_update() {
     let ok = true;
 
     // Фаза 1: скачивание файлов (без блокировки, не трогает nft)
+    if (bool_option(settings, "download_all_presets", false)) {
+        if (!import_all_preset_lists(settings))
+            ok = false;
+    }
     for (let section in sections)
         if (!rebuild_domain_ip_lists_from_rule(section, settings))
             ok = false;

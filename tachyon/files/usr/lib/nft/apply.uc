@@ -1562,6 +1562,8 @@ function nft_rule_signature_body(body, section) {
     body = signature_add_value(body, "rule." + section_name + ".ports", section_rule_ports_csv(section));
     body = signature_add_value(body, "rule." + section_name + ".fully_routed_ips", option(section, "fully_routed_ips", ""));
     body = signature_add_value(body, "rule." + section_name + ".excluded_ips", option(section, "excluded_ips", ""));
+    body = signature_add_value(body, "rule." + section_name + ".excluded_protocol", option(section, "excluded_protocol", ""));
+    body = signature_add_value(body, "rule." + section_name + ".protocol", option(section, "protocol", ""));
     body = signature_add_value(body, "rule." + section_name + ".community_subnet_lists", filter_community_subnet_lists_value(connections.community_lists_value(section)));
     body = signature_add_value(body, "rule." + section_name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
     body = signature_add_value(body, "rule." + section_name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));

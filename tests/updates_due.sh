@@ -163,6 +163,21 @@ assert_eq $'list\t*/30 * * * * /usr/bin/tachyon list_update_if_due # list\nsubsc
 grep -Fq 'fs.writefile(tmp, as_string(text)) == null' "$UPDATES_UC" ||
   fail "empty crontab writes must not be treated as fs.writefile failure"
 
+cat >"$WORK_DIR/cron-plan-all-presets.json" <<'JSON'
+{
+  "settings": {
+    "list_update_enabled": "1",
+    "update_interval": "1h",
+    "download_all_presets": "1"
+  },
+  "section": []
+}
+JSON
+
+assert_eq $'list\t0 * * * * /usr/bin/tachyon list_update_if_due # list' \
+  "$(updates_ucode cron-refresh-plan-fixture "$WORK_DIR/cron-plan-all-presets.json" /usr/bin/tachyon '# list' '# sub' '# comp')" \
+  "cron refresh plan with download_all_presets"
+
 cat >"$WORK_DIR/cron-plan-list-disabled.json" <<'JSON'
 {
   "settings": {

@@ -1364,6 +1364,18 @@ function createSettingsContent(section, capabilities) {
 
   o = section.option(
     form.Flag,
+    "download_all_presets",
+    _("Pre-download all preset lists"),
+    _(
+      "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive.",
+    ),
+  );
+  o.depends("list_update_enabled", "1");
+  o.default = "0";
+  o.rmempty = false;
+
+  o = section.option(
+    form.Flag,
     "component_update_check_enabled",
     _("Automatic component update checks"),
     _("Automatically check installed components for new versions"),
