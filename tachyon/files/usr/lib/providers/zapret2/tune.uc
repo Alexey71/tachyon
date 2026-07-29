@@ -79,59 +79,137 @@ function command_output(cmd) {
     return as_string(data);
 }
 
-function get_section_domains(section_id) {
-    section_id = as_string(section_id);
-    let list = [];
+function load_community_list_domains(community_name) {
+    community_name = trim(as_string(community_name));
+    if (community_name == "")
+        return [];
 
-    if (section_id != "") {
-        let domain_setting = uci_core.get(CONFIG_NAME, section_id, "domain");
-        if (type(domain_setting) == "array") {
-            for (let d in domain_setting) {
-                d = trim(as_string(d));
-                if (d != "") push(list, d);
-            }
-        } else if (type(domain_setting) == "string" && trim(domain_setting) != "") {
-            for (let d in split(trim(domain_setting), /[ \t\r\n,]+/)) {
-                d = trim(as_string(d));
-                if (d != "") push(list, d);
-            }
+    let raw_domains = [];
+    let srs_paths = [
+        "/etc/tachyon/rulesets/community-" + community_name + ".srs",
+        "/var/sing-box/rulesets/community-" + community_name + ".srs",
+        "/etc/tachyon/rulesets/" + community_name + ".srs",
+        "/tmp/community-" + community_name + ".srs"
+    ];
+
+    let srs_file = null;
+    for (let path in srs_paths) {
+        if (fs.stat(path) != null && int(fs.stat(path).size || 0) > 0) {
+            srs_file = path;
+            break;
         }
+    }
 
-        if (length(list) == 0) {
-            let hostlists = uci_core.get(CONFIG_NAME, section_id, "hostlist");
-            if (type(hostlists) == "string") hostlists = [ hostlists ];
-            if (type(hostlists) == "array") {
-                for (let hl in hostlists) {
-                    hl = trim(as_string(hl));
-                    if (hl == "") continue;
-                    let hl_path = "/etc/tachyon/hostlists/" + hl;
-                    if (fs.stat(hl_path) != null) {
-                        let content = fs.readfile(hl_path);
-                        if (content != null) {
-                            for (let line in split(content, "\n")) {
-                                line = trim(as_string(line));
-                                if (line != "" && substr(line, 0, 1) != "#" && match(line, /\.[a-z]{2,}$/i)) {
-                                    push(list, line);
-                                    if (length(list) >= 3) break;
+    if (srs_file != null) {
+        let tmp_json = "/tmp/tune_rs_" + community_name + "_" + now_seconds() + ".json";
+        let dec_cmd = sprintf("/usr/bin/sing-box rule-set decompile %s -o %s >/dev/null 2>&1", shell_quote(srs_file), shell_quote(tmp_json));
+        command_output(dec_cmd);
+
+        if (fs.stat(tmp_json) != null) {
+            let raw = fs.readfile(tmp_json);
+            fs.unlink(tmp_json);
+            try {
+                let rs_data = json(raw);
+                if (type(rs_data) == "object" && type(rs_data.rules) == "array") {
+                    for (let rule in rs_data.rules) {
+                        for (let k in [ "domain", "domain_suffix", "domain_keyword" ]) {
+                            let dom_list = rule[k];
+                            if (type(dom_list) == "array") {
+                                for (let d in dom_list) {
+                                    d = trim(as_string(d));
+                                    if (d != "" && substr(d, 0, 2) != "//" && match(d, /\.[a-z]{2,}$/i)) {
+                                        push(raw_domains, d);
+                                    }
                                 }
                             }
                         }
                     }
-                    if (length(list) > 0) break;
+                }
+            } catch (e) {}
+        }
+    }
+
+    if (length(raw_domains) == 0) {
+        let txt_paths = [
+            "/etc/tachyon/hostlists/" + community_name + ".txt",
+            "/etc/tachyon/rulesets/community-" + community_name + ".lst"
+        ];
+        for (let path in txt_paths) {
+            let content = as_string(fs.readfile(path));
+            if (content != "") {
+                for (let line in split(content, /[ \t\r\n]+/)) {
+                    line = trim(as_string(line));
+                    if (line != "" && substr(line, 0, 1) != "#" && match(line, /\.[a-z]{2,}$/i)) {
+                        push(raw_domains, line);
+                    }
                 }
             }
         }
     }
 
-    if (length(list) == 0) {
-        let sec_lower = lc(section_id);
-        if (index(sec_lower, "youtube") >= 0 || index(sec_lower, "video") >= 0)
-            return [ "googlevideo.com", "youtube.com" ];
-        if (index(sec_lower, "discord") >= 0)
-            return [ "discord.com", "gateway.discord.gg" ];
-        if (index(sec_lower, "telegram") >= 0)
-            return [ "t.me", "telegram.org" ];
-        return [ "googlevideo.com" ];
+    let selected = [];
+    let c_lower = lc(community_name);
+
+    for (let d in raw_domains) {
+        let d_lower = lc(d);
+        if (d_lower == c_lower + ".com" || d_lower == c_lower + ".gg" || d_lower == c_lower + ".org" || d_lower == c_lower + ".me" || d_lower == "googlevideo.com" || d_lower == "youtube.com") {
+            if (index(join(",", selected), d) < 0) {
+                push(selected, d);
+            }
+        }
+    }
+
+    for (let d in raw_domains) {
+        let d_lower = lc(d);
+        if (d_lower != "ggpht.com" && (index(d_lower, c_lower) >= 0 || index(d_lower, "googlevideo") >= 0 || match(d_lower, /\.(com|org|net|gg|me|tv|app|ag)$/))) {
+            if (index(join(",", selected), d) < 0) {
+                push(selected, d);
+            }
+        }
+        if (length(selected) >= 2) break;
+    }
+
+    if (length(selected) == 0 && length(raw_domains) > 0) {
+        push(selected, raw_domains[0]);
+    }
+
+    return selected;
+}
+
+function get_section_domains(section_id) {
+    section_id = as_string(section_id);
+    let list = [];
+
+    if (section_id != "") {
+        for (let opt in [ "domain", "user_domains" ]) {
+            let domain_setting = uci_core.get(CONFIG_NAME + "." + section_id + "." + opt);
+            if (type(domain_setting) == "array") {
+                for (let d in domain_setting) {
+                    d = trim(as_string(d));
+                    if (d != "" && substr(d, 0, 2) != "//" && match(d, /\.[a-z]{2,}$/i)) push(list, d);
+                }
+            } else if (type(domain_setting) == "string" && trim(domain_setting) != "") {
+                for (let d in split(trim(domain_setting), /[ \t\r\n,]+/)) {
+                    d = trim(as_string(d));
+                    if (d != "" && substr(d, 0, 2) != "//" && match(d, /\.[a-z]{2,}$/i)) push(list, d);
+                }
+            }
+        }
+
+        let comm_lists = uci_core.get(CONFIG_NAME + "." + section_id + ".community_lists");
+        if (type(comm_lists) == "string") comm_lists = split(trim(comm_lists), /[ \t\r\n,]+/);
+        if (type(comm_lists) == "array") {
+            for (let c in comm_lists) {
+                c = trim(as_string(c));
+                if (c == "") continue;
+                let comm_doms = load_community_list_domains(c);
+                for (let cd in comm_doms) {
+                    if (index(join(",", list), cd) < 0) {
+                        push(list, cd);
+                    }
+                }
+            }
+        }
     }
 
     return list;
@@ -204,14 +282,16 @@ function get_candidate_strategies(mode) {
     ];
 
     if (mode == "deep") {
-        push(presets, {
-            id: "fake_split2_ttl",
-            name: "Fake + Split2 (TTL Auto)",
-            family: "fake_split2",
-            opt: base_http + "--lua-desync=fake:blob=fake_default_http:ttl=3 --lua-desync=split2:pos=method+2 " +
-                 base_tls + "--lua-desync=fake:blob=fake_default_tls:ttl=3:tcp_seq=-10000 --lua-desync=split2:pos=1,sni " +
-                 base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
-        });
+        for (let t = 2; t <= 7; t++) {
+            push(presets, {
+                id: "fake_split2_ttl_" + t,
+                name: "Fake + Split2 (TTL " + t + ")",
+                family: "fake_split2_ttl",
+                opt: base_http + "--lua-desync=fake:blob=fake_default_http:ttl=" + t + " --lua-desync=split2:pos=method+2 " +
+                     base_tls + "--lua-desync=fake:blob=fake_default_tls:ttl=" + t + ":tcp_seq=-10000 --lua-desync=split2:pos=1,sni " +
+                     base_quic + "--lua-desync=fake:blob=fake_default_quic:repeats=6"
+            });
+        }
         push(presets, {
             id: "multisplit_sni_pos",
             name: "Multisplit (SNI Position)",
@@ -235,7 +315,7 @@ function test_domain_probe(domain, opt) {
     // 1. Try HTTPS probe with IPv4 forcing (-4) and insecure (-k) to avoid IPv6/SSL hangs
     let https_url = "https://" + domain + "/";
     let cmd = sprintf(
-        "curl -4 -k -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 4 --max-time 6 -I %s",
+        "curl -4 -k -s -o /dev/null -w '%%{http_code}:%%{time_total}' --connect-timeout 2 --max-time 3 -I %s",
         shell_quote(https_url)
     );
 
@@ -301,7 +381,7 @@ function test_domain_probe(domain, opt) {
     };
 }
 
-function update_job_progress(job_path, completed, total, failed, current_item) {
+function update_job_progress(job_path, completed, total, failed, current_item, current_domain) {
     if (job_path == "" || fs.stat(job_path) == null)
         return;
     let data = read_json_file(job_path);
@@ -312,7 +392,8 @@ function update_job_progress(job_path, completed, total, failed, current_item) {
         completed: int(completed),
         total: int(total),
         failed: int(failed),
-        current_item: as_string(current_item)
+        current_item: as_string(current_item),
+        current_domain: as_string(current_domain)
     };
     data.updated_at = now_seconds();
     write_json_file(job_path, data);
@@ -330,12 +411,16 @@ function run_tune(section_id, target_domain, mode, job_path) {
             unshift(section_domains, target_domain);
         }
     }
+    if (length(section_domains) > 4) {
+        section_domains = slice(section_domains, 0, 4);
+    }
     target_domain = section_domains[0] || "googlevideo.com";
 
     let candidates = get_candidate_strategies(mode);
     let total = length(candidates);
     let results = [];
     let best_candidate = null;
+    let best_passed_count = 0;
     let best_rtt = 999999;
     let failed_count = 0;
 
@@ -353,15 +438,15 @@ function run_tune(section_id, target_domain, mode, job_path) {
                 opt: cand.opt,
                 success: false,
                 skipped: true,
+                passed_count: 0,
+                total_domains: length(section_domains),
                 rtt_ms: 0,
                 message: "Skipped (Family pruned)"
             });
             failed_count++;
-            update_job_progress(job_path, i + 1, total, failed_count, cand.name);
+            update_job_progress(job_path, i + 1, total, failed_count, cand.name, section_domains[0] || "");
             continue;
         }
-
-        update_job_progress(job_path, i, total, failed_count, cand.name);
 
         let validation = zapret2_validator.validate_strategy("nfqws2", cand.opt, "");
         if (!validation.valid) {
@@ -371,6 +456,8 @@ function run_tune(section_id, target_domain, mode, job_path) {
                 family: cand.family,
                 opt: cand.opt,
                 success: false,
+                passed_count: 0,
+                total_domains: length(section_domains),
                 rtt_ms: 0,
                 message: "Validation error: " + as_string(validation.message)
             });
@@ -379,41 +466,65 @@ function run_tune(section_id, target_domain, mode, job_path) {
             continue;
         }
 
-        let probe = test_domain_probe(target_domain, cand.opt);
-        if (probe.success) {
-            push(results, {
-                id: cand.id,
-                name: cand.name,
-                family: cand.family,
-                opt: cand.opt,
-                success: true,
-                http_code: probe.http_code,
-                rtt_ms: probe.rtt_ms,
-                message: probe.message
-            });
+        let passed_doms = [];
+        let failed_doms = [];
+        let cand_rtt = 0;
 
-            if (probe.rtt_ms < best_rtt) {
-                best_rtt = probe.rtt_ms;
+        for (let dom_idx = 0; dom_idx < length(section_domains); dom_idx++) {
+            let dom = section_domains[dom_idx];
+            update_job_progress(job_path, i, total, failed_count, cand.name, dom);
+
+            let probe = test_domain_probe(dom, cand.opt);
+            if (probe.success) {
+                cand_rtt += probe.rtt_ms;
+                push(passed_doms, dom);
+            } else {
+                push(failed_doms, dom);
+                if (mode == "express") {
+                    break;
+                }
+            }
+        }
+
+        let passed_count = length(passed_doms);
+        let total_sec_doms = length(section_domains);
+        let is_success = (passed_count > 0);
+        let avg_rtt = passed_count > 0 ? int(cand_rtt / passed_count) : 0;
+
+        let msg = sprintf("%d/%d passed", passed_count, total_sec_doms);
+        if (passed_count > 0) {
+            msg = msg + " (" + join(", ", passed_doms) + ")";
+        } else if (length(failed_doms) > 0) {
+            msg = msg + " (Failed on " + join(", ", failed_doms) + ")";
+        }
+
+        push(results, {
+            id: cand.id,
+            name: cand.name,
+            family: cand.family,
+            opt: cand.opt,
+            success: is_success,
+            passed_count: passed_count,
+            total_domains: total_sec_doms,
+            rtt_ms: avg_rtt,
+            message: msg
+        });
+
+        if (is_success) {
+            if (passed_count > best_passed_count || (passed_count == best_passed_count && avg_rtt < best_rtt)) {
+                best_passed_count = passed_count;
+                best_rtt = avg_rtt;
                 best_candidate = cand;
             }
         } else {
-            push(results, {
-                id: cand.id,
-                name: cand.name,
-                family: cand.family,
-                opt: cand.opt,
-                success: false,
-                rtt_ms: probe.rtt_ms,
-                message: probe.message
-            });
             failed_count++;
             failed_families[family] = true;
         }
 
-        update_job_progress(job_path, i + 1, total, failed_count, cand.name);
+        update_job_progress(job_path, i + 1, total, failed_count, cand.name, section_domains[0] || "");
     }
 
-    let has_winner = (best_candidate != null && best_rtt < 999999);
+    let has_winner = (best_candidate != null && best_passed_count > 0);
 
     let output = {
         success: has_winner,
@@ -478,7 +589,9 @@ if (sourcepath(1) != null && sourcepath(1) != "") {
     return {
         get_candidate_strategies,
         run_tune,
-        test_domain_probe
+        test_domain_probe,
+        get_section_domains,
+        load_community_list_domains
     };
 }
 

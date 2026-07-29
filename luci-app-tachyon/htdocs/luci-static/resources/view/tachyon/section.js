@@ -7190,29 +7190,6 @@ function createSectionContent(section) {
   };
   o.width = "7rem";
 
-  o = section.taboption(
-    "settings",
-    form.DummyValue,
-    "_rules_summary",
-    _("Rules"),
-  );
-  o.modalonly = false;
-  o.rawhtml = true;
-  o.textvalue = function (section_id) {
-    return E("button", {
-      type: "button",
-      class: "btn cbi-button cbi-button-neutral",
-      style: "padding: 2px 10px; font-size: 85%; display: inline-flex; align-items: center; gap: 5px;",
-      click: (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        showSectionRulesModal(section_id);
-      }
-    }, [
-      E("span", {}, "🔍"),
-      E("span", {}, _("Правила"))
-    ]);
-  };
 
   o = section.taboption(
     "settings",
@@ -7334,26 +7311,12 @@ function createSectionContent(section) {
         ? ZAPRET_DEFAULT_NFQWS_OPT
         : normalized;
 
-    return validateNfqwsStrategyRemotely(nextValue).then((result) => {
-      if (!result || result.valid !== true) {
-        throw new TypeError(
-          result && result.message
-            ? result.message
-            : _(
-                "Unable to validate the NFQWS strategy through the backend parser.",
-              ),
-        );
-      }
-
-      uci.set(UCI_PACKAGE, section_id, "nfqws_opt", nextValue);
-    });
+    uci.set(UCI_PACKAGE, section_id, "nfqws_opt", nextValue);
   };
   o.validate = function (_section_id, value) {
     const analysis = analyzeNfqwsStrategy(value);
     return analysis.valid ? true : analysis.message;
   };
-  o.parse = parseNfqwsStrategyOnSave;
-  configureTextareaOption(o, analyzeNfqwsStrategy, attachNfqwsRemoteValidation);
 
   o = section.taboption(
     "settings",
@@ -7374,31 +7337,14 @@ function createSectionContent(section) {
   };
   o.write = function (section_id, value) {
     const normalized = normalizeNfqws2StrategyValue(value);
-
-    return validateNfqws2StrategyRemotely(normalized).then((result) => {
-      if (!result || result.valid !== true) {
-        throw new TypeError(
-          result && result.message
-            ? result.message
-            : _("Invalid NFQWS2 strategy"),
-        );
-      }
-
-      uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", normalized);
-    });
+    uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", normalized);
   };
   o.validate = function (_section_id, value) {
     const analysis = analyzeNfqws2Strategy(value);
     return analysis.valid ? true : analysis.message;
   };
-  o.parse = parseNfqws2StrategyOnSave;
-  configureTextareaOption(
-    o,
-    analyzeNfqws2Strategy,
-    attachNfqws2RemoteValidation,
-  );
 
-  /* zapret2 Strategy Auto-Tuner Widget (AUTOMATED & STUNNING UI) */
+  /* zapret2 Strategy Auto-Tuner Widget (NATIVE LUCI CBI STYLE) */
   o = section.taboption("settings", form.DummyValue, "_zapret2_tune_widget", "");
   o.modalonly = true;
   o.depends("action", "zapret2");
@@ -7409,77 +7355,39 @@ function createSectionContent(section) {
                  document.querySelector(`.cbi-option-nfqws2_opt textarea`);
       if (el) {
         el.value = val;
-        el.style.transition = "all 0.4s ease";
-        el.style.borderColor = "#5cb85c";
-        el.style.boxShadow = "0 0 12px rgba(92, 184, 92, 0.6)";
-        setTimeout(() => {
-          el.style.borderColor = "";
-          el.style.boxShadow = "";
-        }, 2500);
         el.dispatchEvent(new Event("change", { bubbles: true }));
       }
       uci.set(UCI_PACKAGE, section_id, "nfqws2_opt", val);
     };
 
-    const modeSelect = E("select", { class: "cbi-input-select", style: "width: 140px; font-size: 0.85em; border-radius: 4px; padding: 2px 6px;" }, [
+    const modeSelect = E("select", { class: "cbi-input-select" }, [
       E("option", { value: "express" }, _("Express scan (~5-10s)")),
       E("option", { value: "deep" }, _("Deep scan (~20s)"))
     ]);
 
     const startBtn = E("button", {
       class: "btn cbi-button cbi-button-action",
-      type: "button",
-      style: "font-weight: bold; padding: 5px 14px; font-size: 0.88em; background: linear-gradient(135deg, #2b78e4 0%, #1a5cb8 100%); color: #fff; border: none; border-radius: 4px; box-shadow: 0 2px 6px rgba(43,120,228,0.3); cursor: pointer;"
-    }, _("Auto-Tune Section Strategy"));
+      type: "button"
+    }, _("Auto-Tune Strategy"));
 
-    const progressFill = E("div", {
-      style: "width: 0%; height: 100%; background: linear-gradient(90deg, #3c96d4 0%, #5cb85c 100%); transition: width 0.3s ease; border-radius: 3px;"
-    });
-    const progressTrack = E("div", {
-      style: "display: none; width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-top: 8px;"
-    }, progressFill);
+    const statusText = E("div", { class: "cbi-value-description", style: "margin-top: 8px; font-weight: bold;" }, "");
+    const resultsContainer = E("div", { style: "margin-top: 8px;" });
 
-    const statusText = E("div", { style: "margin-top: 8px; font-size: 0.88em; font-weight: 500; color: var(--cbi-link-color, #3c96d4);" }, "");
-    const resultsContainer = E("div", { style: "margin-top: 10px; max-height: 220px; overflow-y: auto;" });
-
-    const domainTagsContainer = E("div", { style: "display: flex; flex-wrap: wrap; gap: 4px; align-items: center;" }, [
-      E("span", { style: "font-size: 0.82em; color: #999; font-weight: 500;" }, _("Section domains:"))
+    const card = E("div", { class: "cbi-value" }, [
+      E("label", { class: "cbi-value-title" }, _("Auto-Tune Strategy")),
+      E("div", { class: "cbi-value-field" }, [
+        modeSelect, " ",
+        startBtn,
+        statusText,
+        resultsContainer
+      ])
     ]);
-
-    const inlineTuneCard = E("div", {
-      class: "zapret2-inline-tuner-card",
-      style: "margin-top: 10px; padding: 12px 14px; border: 1px solid rgba(60, 150, 212, 0.25); background: linear-gradient(135deg, rgba(20,25,35,0.6) 0%, rgba(15,20,30,0.7) 100%); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"
-    }, [
-      E("div", { style: "display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;" }, [
-        domainTagsContainer,
-        E("div", { style: "display: flex; gap: 8px; align-items: center; margin-left: auto;" }, [
-          modeSelect,
-          startBtn
-        ])
-      ]),
-      progressTrack,
-      statusText,
-      resultsContainer
-    ]);
-
-    // Populate domain tags dynamically from section
-    const rawDomains = uci.get(UCI_PACKAGE, section_id, "domain") || [];
-    const domainsList = (type(rawDomains) == "array" && rawDomains.length > 0) ? rawDomains : ["googlevideo.com"];
-    domainsList.slice(0, 3).forEach((d) => {
-      domainTagsContainer.appendChild(E("span", {
-        style: "background: rgba(60,150,212,0.15); color: #5bc0de; border: 1px solid rgba(60,150,212,0.3); padding: 1px 7px; border-radius: 12px; font-size: 0.8em; font-family: monospace;"
-      }, d));
-    });
 
     startBtn.addEventListener("click", (e) => {
       e.preventDefault();
       const selectedMode = modeSelect.value;
       startBtn.disabled = true;
-      startBtn.style.opacity = "0.6";
-      statusText.style.color = "var(--cbi-link-color, #3c96d4)";
       statusText.textContent = _("Initializing Auto-Tune...");
-      progressTrack.style.display = "block";
-      progressFill.style.width = "5%";
       resultsContainer.innerHTML = "";
 
       fs.exec("/usr/bin/tachyon", ["zapret2_tune_async", section_id, "", selectedMode])
@@ -7488,9 +7396,6 @@ function createSectionContent(section) {
           try { data = JSON.parse(res.stdout || "{}"); } catch (err) {}
           if (!data || !data.success || !data.job_id) {
             startBtn.disabled = false;
-            startBtn.style.opacity = "1";
-            progressTrack.style.display = "none";
-            statusText.style.color = "var(--cbi-color-warning, #d9534f)";
             statusText.textContent = _("Failed to start Auto-Tune job.");
             return;
           }
@@ -7505,69 +7410,62 @@ function createSectionContent(section) {
 
                 if (stData.running) {
                   const prog = stData.progress || {};
-                  const currentItem = prog.current_item ? ` (${prog.current_item})` : "";
                   const completed = prog.completed || 0;
                   const total = prog.total || 7;
-                  const pct = Math.min(100, Math.max(5, Math.round((completed / total) * 100)));
-                  progressFill.style.width = `${pct}%`;
-                  statusText.textContent = _("Testing desync strategy:") + ` ${prog.current_item || ""}... [${completed}/${total}]`;
+                  const domainText = prog.current_domain ? ` [${prog.current_domain}]` : "";
+                  statusText.textContent = _("Testing desync strategy:") + ` ${prog.current_item || ""}${domainText}... [${completed}/${total}]`;
                   return;
                 }
 
                 // Tuning finished!
                 clearInterval(pollTimer);
                 startBtn.disabled = false;
-                startBtn.style.opacity = "1";
-                progressFill.style.width = "100%";
-                setTimeout(() => { progressTrack.style.display = "none"; }, 800);
 
                 if (!stData.success || !stData.winning_strategy) {
-                  statusText.style.color = "var(--cbi-color-warning, #d9534f)";
                   statusText.textContent = (stData && stData.message) ? stData.message : _("No working desync strategy found for section domains.");
                 } else {
-                  statusText.style.color = "var(--cbi-color-success, #5cb85c)";
                   statusText.textContent = _("Optimal strategy found and applied: ") + `${stData.winning_preset_name || ""} (${stData.best_rtt_ms || 0} ms)`;
                 }
+
+                const applyButtons = [];
 
                 const rows = (stData.results || []).map((r) => {
                   const isWinner = (r.opt === stData.winning_strategy);
                   const applyBtn = E("button", {
-                    class: "btn cbi-button cbi-button-save",
-                    type: "button",
-                    style: "padding: 1px 7px; font-size: 0.8em;"
+                    class: isWinner ? "btn cbi-button cbi-button-action" : "btn cbi-button cbi-button-neutral",
+                    type: "button"
                   }, isWinner ? _("Applied") : _("Apply"));
-
-                  if (isWinner) {
-                    applyBtn.style.background = "#5cb85c";
-                    applyBtn.style.borderColor = "#4cae4c";
-                    applyBtn.style.color = "#fff";
-                  }
+                  
+                  applyButtons.push(applyBtn);
 
                   applyBtn.addEventListener("click", (evt) => {
                     evt.preventDefault();
                     setNfqws2OptTextarea(r.opt);
-                    if (typeof ui !== "undefined" && ui.addNotification) {
-                      ui.addNotification(null, E("p", {}, _("Strategy applied to section!")), "info");
-                    }
+                    
+                    // Reset all buttons
+                    applyButtons.forEach(btn => {
+                      btn.className = "btn cbi-button cbi-button-neutral";
+                      btn.textContent = _("Apply");
+                    });
+                    
+                    // Set current button to applied
+                    applyBtn.className = "btn cbi-button cbi-button-action";
+                    applyBtn.textContent = _("Applied");
                   });
 
-                  const statusBadge = r.success
-                    ? E("span", { style: "color: #5cb85c; font-weight: bold; font-size: 0.85em;" }, `${r.rtt_ms} ms (${r.message})`)
-                    : E("span", { style: "color: #d9534f; opacity: 0.8; font-size: 0.85em;" }, _("DPI Blocked"));
-
-                  return E("tr", { style: r.success ? (isWinner ? "background: rgba(92,184,92,0.12); font-weight: bold;" : "background: rgba(255,255,255,0.03);") : "opacity: 0.5;" }, [
-                    E("td", { style: "padding: 6px; font-size: 0.85em;" }, r.name),
-                    E("td", { style: "padding: 6px; font-size: 0.85em;" }, statusBadge),
-                    E("td", { style: "padding: 6px; text-align: right;" }, applyBtn)
+                  return E("tr", { class: "tr" }, [
+                    E("td", { class: "td" }, r.name),
+                    E("td", { class: "td" }, r.success ? `${r.rtt_ms} ms (${r.message})` : _("DPI Blocked")),
+                    E("td", { class: "td right" }, applyBtn)
                   ]);
                 });
 
-                const table = E("table", { class: "table", style: "width: 100%; border-collapse: collapse; margin-top: 6px;" }, [
+                const table = E("table", { class: "table cbi-section-table" }, [
                   E("thead", {}, [
-                    E("tr", { style: "border-bottom: 1px solid rgba(255,255,255,0.1);" }, [
-                      E("th", { style: "text-align: left; font-size: 0.82em; color: #888;" }, _("Preset")),
-                      E("th", { style: "text-align: left; font-size: 0.82em; color: #888;" }, _("Status / RTT")),
-                      E("th", { style: "text-align: right; font-size: 0.82em; color: #888;" }, _("Action"))
+                    E("tr", { class: "tr" }, [
+                      E("th", { class: "th" }, _("Preset")),
+                      E("th", { class: "th" }, _("Status / RTT")),
+                      E("th", { class: "th right" }, _("Action"))
                     ])
                   ]),
                   E("tbody", {}, rows)
@@ -7585,14 +7483,11 @@ function createSectionContent(section) {
         })
         .catch((err) => {
           startBtn.disabled = false;
-          startBtn.style.opacity = "1";
-          progressTrack.style.display = "none";
-          statusText.style.color = "var(--cbi-color-warning, #d9534f)";
           statusText.textContent = _("Error running tuner: ") + err;
         });
     });
 
-    return inlineTuneCard;
+    return card;
   };
 
   o = section.taboption(
@@ -8017,152 +7912,32 @@ function createSectionContent(section) {
   o.modalonly = true;
   o.rmempty = true;
   o.depends("action", "awg");
-  // ── AmneziaWG obfuscation parameters — compact collapsible group ──────────
-
-  const awgOpts = {};
-  (function() {
-    /** Hidden CBI option — stores value in UCI but renders nothing visible.
-     *  References are captured in awgOpts so the group widget reads via cfgvalue(). */
-    function awg_hidden(name, def) {
-      let opt = section.taboption("settings", form.Value, name, name);
-      opt.default   = def;
-      opt.modalonly = true;
-      opt.rmempty   = false;
-      opt.depends("action", "awg");
-      opt.render = function() { return E("span", { "data-awg-hidden": name }); };
-      awgOpts[name] = opt;
-      return opt;
-    }
-
-    awg_hidden("awg_jc",   "120");
-    awg_hidden("awg_jmin", "23");
-    awg_hidden("awg_jmax", "911");
-    awg_hidden("awg_s1",   "0");
-    awg_hidden("awg_s2",   "0");
-    awg_hidden("awg_s3",   "0");
-    awg_hidden("awg_s4",   "0");
-    awg_hidden("awg_h1",   "1");
-    awg_hidden("awg_h2",   "2");
-    awg_hidden("awg_h3",   "3");
-    awg_hidden("awg_h4",   "4");
-    awg_hidden("awg_i1",   "0");
-    awg_hidden("awg_i2",   "0");
-    awg_hidden("awg_i3",   "0");
-    awg_hidden("awg_i4",   "0");
-    awg_hidden("awg_i5",   "0");
-  })();
-
-  /* Visual group widget — renders the <details> spoiler in OpenWRT CBI style */
-  o = section.taboption("settings", form.DummyValue, "_awg_amnezia_group", _("Obfuscation"));
-  o.modalonly = true;
-  o.depends("action", "awg");
-  o.renderWidget = function(section_id, option_index, cfgvalue) {
-    if (!document.getElementById("tachyon-awg-group-css")) {
-      const s = document.createElement("style");
-      s.id = "tachyon-awg-group-css";
-      s.textContent = `
-        .awg-spoiler { border: none; margin: 0; padding: 0; }
-        .awg-spoiler > summary {
-          cursor: pointer; user-select: none; list-style: none;
-          display: flex; align-items: center; gap: 0.35em;
-          font-size: 0.88em; color: var(--cbi-link-color, #3c96d4);
-          padding: 0;
-        }
-        .awg-spoiler > summary::marker,
-        .awg-spoiler > summary::-webkit-details-marker { display: none; }
-        .awg-spoiler > summary::before {
-          content: "▶"; font-size: 0.65em; display: inline-block;
-          transition: transform 0.15s ease;
-        }
-        .awg-spoiler[open] > summary::before { transform: rotate(90deg); }
-        .awg-spoiler[open] > summary { margin-bottom: 0.4em; }
-        .awg-param-rows { display: flex; flex-direction: column; gap: 0; }
-        .awg-param-row {
-          display: flex; align-items: center; gap: 0;
-          border-top: 1px dotted var(--cbi-border-color, #404040);
-          padding: 4px 0;
-        }
-        .awg-param-row-label {
-          flex: 0 0 6.5em; text-align: right; padding-right: 0.8em;
-          font-size: 0.85em; color: var(--cbi-secondary-text-color, #999);
-          white-space: nowrap;
-        }
-        .awg-param-row-fields { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
-        .awg-param-cell { display: flex; align-items: center; gap: 3px; }
-        .awg-param-cell-label {
-          font-size: 0.78em; color: var(--cbi-secondary-text-color, #888);
-          min-width: 2.5em; text-align: right;
-        }
-        .awg-param-cell > input {
-          width: 64px; padding: 2px 5px; font-size: 0.9em;
-          border: 1px solid var(--cbi-input-border-color, #555);
-          background: var(--cbi-input-bg-color, #1a1a1a);
-          color: var(--cbi-input-text-color, #ddd);
-          border-radius: 2px;
-        }
-      `;
-      document.head.appendChild(s);
-    }
-
-    const v = (k, def) => {
-      const val = uci.get(UCI_PACKAGE, section_id, k);
-      return (val != null && val !== "") ? val : def;
-    };
-
-    const cell = (label, key, def) => {
-      const inp = E("input", {
-        type: "text", inputmode: "numeric",
-        "data-awg-key": key, value: v(key, def)
-      });
-      inp.addEventListener("change", () => {
-        const newVal = inp.value.trim();
-        uci.set(UCI_PACKAGE, section_id, key, newVal);
-        const hiddenInp = document.querySelector(`input[data-awg-hidden="${key}"]`);
-        if (hiddenInp) hiddenInp.value = newVal;
-      });
-      return E("span", { class: "awg-param-cell" }, [
-        E("span", { class: "awg-param-cell-label" }, label),
-        inp
-      ]);
-    };
-
-    const row = (label, ...cells) => E("div", { class: "awg-param-row" }, [
-      E("span", { class: "awg-param-row-label" }, label),
-      E("div",  { class: "awg-param-row-fields" }, cells)
-    ]);
-
-    const details = E("details", { class: "awg-spoiler" }, [
-      E("summary", {}, _("Obfuscation parameters")),
-      E("div", { class: "awg-param-rows" }, [
-        row(_("Junk"),
-          cell("Jc",   "awg_jc",   "120"),
-          cell("Jmin", "awg_jmin", "23"),
-          cell("Jmax", "awg_jmax", "911"),
-        ),
-        row(_("Shake"),
-          cell("S1", "awg_s1", "0"),
-          cell("S2", "awg_s2", "0"),
-          cell("S3", "awg_s3", "0"),
-          cell("S4", "awg_s4", "0"),
-        ),
-        row(_("Hash"),
-          cell("H1", "awg_h1", "1"),
-          cell("H2", "awg_h2", "2"),
-          cell("H3", "awg_h3", "3"),
-          cell("H4", "awg_h4", "4"),
-        ),
-        row(_("Init headers"),
-          cell("I1", "awg_i1", "0"),
-          cell("I2", "awg_i2", "0"),
-          cell("I3", "awg_i3", "0"),
-          cell("I4", "awg_i4", "0"),
-          cell("I5", "awg_i5", "0"),
-        ),
-      ])
-    ]);
-
-    return details;
+  // ── AmneziaWG obfuscation parameters (NATIVE LUCI CBI STYLE) ──────────────
+  const addAwgParam = (name, title, desc, def) => {
+    let opt = section.taboption("settings", form.Value, name, title, desc);
+    opt.modalonly = true;
+    opt.rmempty = false;
+    opt.default = def;
+    opt.depends("action", "awg");
+    return opt;
   };
+
+  addAwgParam("awg_jc",   _("Junk Packet Count (Jc)"),   "", "120");
+  addAwgParam("awg_jmin", _("Junk Min Size (Jmin)"),     "", "23");
+  addAwgParam("awg_jmax", _("Junk Max Size (Jmax)"),     "", "911");
+  addAwgParam("awg_s1",   _("Init Packet Magic Header (S1)"), "", "0");
+  addAwgParam("awg_s2",   _("Response Packet Magic Header (S2)"), "", "0");
+  addAwgParam("awg_s3",   _("Init Packet Magic Header (S3)"), "", "0");
+  addAwgParam("awg_s4",   _("Response Packet Magic Header (S4)"), "", "0");
+  addAwgParam("awg_h1",   _("Underload Packet Magic Header (H1)"), "", "1");
+  addAwgParam("awg_h2",   _("Underload Packet Magic Header (H2)"), "", "2");
+  addAwgParam("awg_h3",   _("Underload Packet Magic Header (H3)"), "", "3");
+  addAwgParam("awg_h4",   _("Underload Packet Magic Header (H4)"), "", "4");
+  addAwgParam("awg_i1",   _("Init Packet Payload (I1)"), "", "0");
+  addAwgParam("awg_i2",   _("Init Packet Payload (I2)"), "", "0");
+  addAwgParam("awg_i3",   _("Init Packet Payload (I3)"), "", "0");
+  addAwgParam("awg_i4",   _("Init Packet Payload (I4)"), "", "0");
+  addAwgParam("awg_i5",   _("Init Packet Payload (I5)"), "", "0");
 
   // ── WARP (Cloudflare WARP via sing-box-extended) ──────────────────────────
 
@@ -9509,27 +9284,17 @@ function readRulesetFile(path) {
 }
 
 async function findCachedSrsFile(secName, community) {
-  const tag = `${secName}-${community}-community-ruleset`;
-  const localPath = `/tmp/sing-box/rulesets/community_${tag}.srs`;
-  
-  // Check if we already have extracted it
-  let localStat = await fs.stat(localPath).catch(() => null);
-  let dbStat = await fs.stat("/etc/sing-box/cache.db").catch(() => null);
-  
-  // If extracted file exists and is newer than cache.db, use it directly!
-  if (localStat && localStat.type === "file" && dbStat && localStat.mtime >= dbStat.mtime) {
-    return localPath;
+  const tmpSrs = `/tmp/sing-box/rulesets/community-${community}.srs`;
+  const etcSrs = `/etc/tachyon/rulesets/community-${community}.srs`;
+
+  let tmpStat = await fs.stat(tmpSrs).catch(() => null);
+  if (tmpStat && tmpStat.type === "file") {
+    return tmpSrs;
   }
-  
-  // Otherwise, extract it using the ucode backend command!
-  const res = await fs.exec("/usr/bin/tachyon", ["extract_ruleset", tag]).catch(() => null);
-  if (res && res.code === 0 && res.stdout) {
-    return res.stdout.trim();
-  }
-  
-  // Fallback to check if it exists anyway (if extract failed but old file is there)
-  if (localStat && localStat.type === "file") {
-    return localPath;
+
+  let etcStat = await fs.stat(etcSrs).catch(() => null);
+  if (etcStat && etcStat.type === "file") {
+    return etcSrs;
   }
   
   return null;
@@ -9539,16 +9304,20 @@ async function matchCommunityList(secName, community, query, type) {
   const srsPath = await findCachedSrsFile(secName, community);
   if (!srsPath) return false;
 
+  const checkMatch = (res) => {
+    if (!res || res.code !== 0) return false;
+    const output = (res.stdout || "") + (res.stderr || "");
+    return output.trim() !== "";
+  };
+
   // Try /usr/bin/sing-box first
   let res = await fs.exec("/usr/bin/sing-box", ["rule-set", "match", srsPath, query, "-f", "binary"]).catch(() => null);
-  if (res && res.code === 0) {
-    return true;
-  }
+  if (checkMatch(res)) return true;
+
   // Fallback to /usr/sbin/sing-box
   res = await fs.exec("/usr/sbin/sing-box", ["rule-set", "match", srsPath, query, "-f", "binary"]).catch(() => null);
-  if (res && res.code === 0) {
-    return true;
-  }
+  if (checkMatch(res)) return true;
+
   return false;
 }
 
@@ -9735,27 +9504,21 @@ async function performTrace(query) {
 
 function createTracerSearchWidget(sectionRef) {
   const container = document.createElement("div");
-  container.className = "cbi-section pdk-search-tracer-card";
-  container.style.marginTop = "1rem";
-  container.style.marginBottom = "0.5rem";
-  container.style.padding = "0.5rem 0.8rem";
-  container.style.border = "1px solid var(--border-color, #e0e0e0)";
-  container.style.borderRadius = "6px";
-  container.style.background = "var(--background-color-high, #fff)";
-  container.style.boxShadow = "0 1px 2px rgba(0,0,0,0.03)";
+  container.className = "cbi-section";
 
   container.innerHTML = `
-    <div class="pdk-tracer-content" style="margin: 0; padding: 0;">
-      <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; font-size: 85%;">
-        <span style="font-weight: bold; color: var(--text-color-high, #333); white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
-          <span style="font-size: 1rem;">🔍</span>
-          <span>${_("Routing Rule Tracer")}</span>
-        </span>
-        <input type="text" class="cbi-input-text pdk-tracer-input" placeholder="${_("e.g. google.com, 1.1.1.1, 443")}" style="flex: 1; min-width: 180px; padding: 0.2rem 0.5rem; border: 1px solid var(--border-color, #ccc); border-radius: 4px; font-size: 90%; height: 28px; box-sizing: border-box;" />
-        <button class="cbi-button cbi-button-action pdk-tracer-btn" style="padding: 0 0.8rem; font-weight: bold; cursor: pointer; font-size: 90%; height: 28px; line-height: 28px; box-sizing: border-box;">${_("Trace")}</button>
-        <button class="cbi-button cbi-button-neutral pdk-tracer-clear-btn" style="padding: 0 0.8rem; cursor: pointer; font-size: 90%; height: 28px; line-height: 28px; box-sizing: border-box; display: none;">${_("Clear")}</button>
+    <div class="cbi-section-node">
+      <div class="cbi-value">
+        <label class="cbi-value-title">${_("Routing Rule Tracer")}</label>
+        <div class="cbi-value-field">
+          <div style="display:flex; gap: 5px;">
+            <input type="text" class="cbi-input-text pdk-tracer-input" placeholder="${_("e.g. google.com, 1.1.1.1, 443")}" style="flex: 1;" />
+            <button class="btn cbi-button cbi-button-action pdk-tracer-btn">${_("Trace")}</button>
+            <button class="btn cbi-button cbi-button-neutral pdk-tracer-clear-btn" style="display: none;">${_("Clear")}</button>
+          </div>
+          <div class="pdk-tracer-results" style="margin-top: 10px; display: none;"></div>
+        </div>
       </div>
-      <div class="pdk-tracer-results" style="margin-top: 0.5rem; display: none;"></div>
     </div>
   `;
 
@@ -9873,70 +9636,70 @@ function createTracerSearchWidget(sectionRef) {
 function showSectionRulesModal(section_id) {
   const sectionLabel = uci.get(UCI_PACKAGE, section_id, "label") || section_id;
   
-  const domains = getConfigListValues(section_id, "domain");
-  const ips = getConfigListValues(section_id, "ip_cidr");
-  const community = getConfigListValues(section_id, "community_lists");
-  const ruleSets = getConfigListValues(section_id, "rule_set");
-  const domainIpLists = getConfigListValues(section_id, "domain_ip_lists");
-  const geosite = getConfigListValues(section_id, "geosite");
-  const geoip = getConfigListValues(section_id, "geoip");
-  const sourceIp = getConfigListValues(section_id, "source_ip_cidr");
-  const ports = getConfigListValues(section_id, "ports");
-  const dscp = getConfigListValues(section_id, "dscp");
+  const getCleanList = (key) => {
+    let val = uci.get(UCI_PACKAGE, section_id, key);
+    if (!val) return [];
+    if (Array.isArray(val)) val = val.join("\n");
+    return parseCommentAwareListTokens(val).map((t) => t.value);
+  };
 
-  const createCard = (title, icon, items, color, bg) => {
+  const domains = getCleanList("domain");
+  const ips = getCleanList("ip_cidr");
+  const community = getCleanList("community_lists");
+  const ruleSets = getCleanList("rule_set");
+  const domainIpLists = getCleanList("domain_ip_lists");
+  const geosite = getCleanList("geosite");
+  const geoip = getCleanList("geoip");
+  const sourceIp = getCleanList("source_ip_cidr");
+  const ports = getCleanList("ports");
+  const dscp = getCleanList("dscp");
+
+  const createCard = (title, items) => {
     let contentNode;
     if (!items || items.length === 0) {
-      contentNode = E("em", { style: "color: var(--text-color-medium, #888);" }, _("Не заданы"));
+      contentNode = E("em", {}, _("Not set"));
     } else {
-      contentNode = E("div", { style: "display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; padding-right: 4px;" },
+      contentNode = E("div", { style: "display: flex; flex-wrap: wrap; gap: 4px; max-height: 180px; overflow-y: auto;" },
         items.map((item) => E("span", {
-          style: `font-size: 85%; padding: 3px 8px; border-radius: 6px; background: ${bg}; color: ${color}; font-weight: 500; border: 1px solid ${color}40; word-break: break-all;`
+          style: "padding: 2px 6px; border: 1px solid var(--border-color, #ccc); background: var(--background-color-low, #f9f9f9); border-radius: 3px; word-break: break-all; font-size: 90%;"
         }, item))
       );
     }
 
-    return E("div", {
-      style: "background: var(--background-color-low, rgba(0,0,0,0.03)); border: 1px solid var(--border-color-low, rgba(255,255,255,0.08)); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;"
-    }, [
-      E("div", { style: "font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: var(--text-color-high, #333);" }, [
-        E("span", { style: "display: flex; align-items: center; gap: 6px;" }, [
-          E("span", {}, icon),
-          E("span", {}, title)
-        ]),
-        E("span", { style: "font-size: 80%; opacity: 0.7; font-weight: normal;" }, `${items ? items.length : 0}`)
-      ]),
-      contentNode
+    return E("div", { class: "cbi-value" }, [
+      E("label", { class: "cbi-value-title", style: "padding-top: 0;" }, `${title} (${items ? items.length : 0})`),
+      E("div", { class: "cbi-value-field" }, [
+        contentNode
+      ])
     ]);
   };
 
-  const modalBody = E("div", { style: "min-width: 320px; max-width: 650px; font-size: 90%;" }, [
-    E("div", { style: "margin-bottom: 14px; padding: 10px 14px; border-radius: 8px; background: var(--background-color-medium, rgba(0,0,0,0.05)); font-weight: 500; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #2980b9;" }, [
-      E("span", { style: "font-weight: bold;" }, _("Действие секции")),
-      E("span", { style: "font-weight: bold; color: var(--text-color-high, #2980b9);" }, getRuleActionDisplayValue(section_id))
+  const modalBody = E("div", { class: "cbi-section-node", style: "min-width: 320px; max-width: 650px;" }, [
+    E("div", { class: "cbi-value" }, [
+      E("label", { class: "cbi-value-title", style: "padding-top: 0; font-weight: bold;" }, _("Section action")),
+      E("div", { class: "cbi-value-field", style: "font-weight: bold; color: var(--text-color-high, #2980b9);" }, getRuleActionDisplayValue(section_id))
     ]),
-
-    createCard(_("Списки сообщества (Community Lists)"), "📦", community, "#27ae60", "rgba(39, 174, 96, 0.12)"),
-    createCard(_("Домены (Domains)"), "🌐", domains, "#2980b9", "rgba(41, 128, 185, 0.12)"),
-    createCard(_("IP-адреса и подсети (IP CIDR)"), "💻", ips, "#8e44ad", "rgba(142, 68, 173, 0.12)"),
-    createCard(_("Наборы правил (.srs / .json)"), "📑", ruleSets, "#d35400", "rgba(211, 84, 0, 0.12)"),
-    createCard(_(".lst списки"), "📄", domainIpLists, "#16a085", "rgba(22, 160, 133, 0.12)"),
-    (geosite.length || geoip.length) ? createCard(_("GeoSite / GeoIP"), "🗺️", [...geosite, ...geoip], "#f39c12", "rgba(243, 156, 18, 0.12)") : null,
-    sourceIp.length ? createCard(_("Устройства-источники"), "📱", sourceIp, "#34495e", "rgba(52, 73, 94, 0.12)") : null,
-    ports.length ? createCard(_("Порты"), "🔌", ports, "#7f8c8d", "rgba(127, 140, 141, 0.12)") : null,
-    dscp.length ? createCard(_("DSCP marks (QoS)"), "🎯", dscp, "#e67e22", "rgba(230, 126, 34, 0.12)") : null,
+    createCard(_("Community Lists"), community),
+    createCard(_("Domains"), domains),
+    createCard(_("IP Addresses (IP CIDR)"), ips),
+    createCard(_("Rule Sets (.srs / .json)"), ruleSets),
+    createCard(_(".lst Lists"), domainIpLists),
+    (geosite.length || geoip.length) ? createCard(_("GeoSite / GeoIP"), [...geosite, ...geoip]) : null,
+    sourceIp.length ? createCard(_("Source Devices"), sourceIp) : null,
+    ports.length ? createCard(_("Ports"), ports) : null,
+    dscp.length ? createCard(_("DSCP marks (QoS)"), dscp) : null,
   ].filter(Boolean));
 
   ui.showModal(
-    _("Содержимое правил секции") + `: ${sectionLabel}`,
+    _("Section Rules Content") + `: ${sectionLabel}`,
     [
       modalBody,
       E("div", { class: "button-row", style: "display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;" }, [
         E("button", {
-          class: "btn cbi-button cbi-button-neutral",
+          class: "btn cbi-button cbi-button-action",
           type: "button",
           click: () => ui.hideModal()
-        }, _("Закрыть"))
+        }, _("Close"))
       ])
     ],
     "cbi-modal"
@@ -9972,6 +9735,7 @@ const EntryPoint = {
   configureSectionSection,
   createSectionContent,
   setActionProvidersAvailabilityLoader,
+  showSectionRulesModal,
 };
 
 return baseclass.extend(EntryPoint);

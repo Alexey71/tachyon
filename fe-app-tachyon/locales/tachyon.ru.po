@@ -1118,8 +1118,6 @@ msgstr "gRPC-сервис"
 msgid "Handshake timeout"
 msgstr "Таймаут рукопожатия"
 
-msgid "Hash"
-msgstr "Хеши"
 
 msgid "Hide cascade connection nodes"
 msgstr "Скрыть узлы каскадных подключений"
@@ -1241,8 +1239,6 @@ msgstr "Включить серверы"
 msgid "Information"
 msgstr "Информация"
 
-msgid "Init headers"
-msgstr "Заголовки Init"
 
 msgid "Install"
 msgstr "Установить"
@@ -1472,8 +1468,6 @@ msgstr "JSON outbound должен содержать непустое поле 
 msgid "JSON outbound settings"
 msgstr "Настройки JSON outbound"
 
-msgid "Junk"
-msgstr "Рандомизация"
 
 msgid "Kazakhstan (kz)"
 msgstr ""
@@ -1778,8 +1772,6 @@ msgstr "Количество последовательных успешных �
 msgid "Obfuscation"
 msgstr "Обфускация"
 
-msgid "Obfuscation parameters"
-msgstr "Параметры обфускации"
 
 msgid "Obfuscation password"
 msgstr "Пароль обфускации"
@@ -2318,8 +2310,6 @@ msgstr "Информация о сервисах"
 msgid "Settings"
 msgstr "Настройки"
 
-msgid "Shake"
-msgstr "Перетасовка"
 
 msgid "Show metadata on dashboard"
 msgstr "Показывать метаданные на дашборде"
@@ -3292,3 +3282,88 @@ msgstr "Заблокировано ТСПУ"
 
 msgid "Applied"
 msgstr "Применено"
+
+
+msgid "Init Packet Magic Header (S1)"
+msgstr "Magic Header: Инициализация (S1)"
+
+msgid "Init Packet Magic Header (S3)"
+msgstr "Magic Header: Инициализация (S3)"
+
+msgid "Init Packet Payload (I1)"
+msgstr "Payload: Инициализация (I1)"
+
+msgid "Init Packet Payload (I2)"
+msgstr "Payload: Инициализация (I2)"
+
+msgid "Init Packet Payload (I3)"
+msgstr "Payload: Инициализация (I3)"
+
+msgid "Init Packet Payload (I4)"
+msgstr "Payload: Инициализация (I4)"
+
+msgid "Init Packet Payload (I5)"
+msgstr "Payload: Инициализация (I5)"
+
+msgid "Junk Max Size (Jmax)"
+msgstr "Макс. размер Junk (Jmax)"
+
+msgid "Junk Min Size (Jmin)"
+msgstr "Мин. размер Junk (Jmin)"
+
+msgid "Junk Packet Count (Jc)"
+msgstr "Количество Junk-пакетов (Jc)"
+
+msgid "Response Packet Magic Header (S2)"
+msgstr "Magic Header: Ответ (S2)"
+
+msgid "Response Packet Magic Header (S4)"
+msgstr "Magic Header: Ответ (S4)"
+
+msgid "Underload Packet Magic Header (H1)"
+msgstr "Magic Header: Underload (H1)"
+
+msgid "Underload Packet Magic Header (H2)"
+msgstr "Magic Header: Underload (H2)"
+
+msgid "Underload Packet Magic Header (H3)"
+msgstr "Magic Header: Underload (H3)"
+
+msgid "Underload Packet Magic Header (H4)"
+msgstr "Magic Header: Underload (H4)"
+
+
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Not set"
+msgstr "Не заданы"
+
+msgid "Section action"
+msgstr "Действие секции"
+
+msgid "Community Lists"
+msgstr "Списки сообщества (Community Lists)"
+
+msgid "Domains"
+msgstr "Домены (Domains)"
+
+msgid "IP Addresses (IP CIDR)"
+msgstr "IP-адреса и подсети (IP CIDR)"
+
+msgid "Rule Sets (.srs / .json)"
+msgstr "Наборы правил (.srs / .json)"
+
+msgid ".lst Lists"
+msgstr ".lst списки"
+
+msgid "Source Devices"
+msgstr "Устройства-источники"
+
+msgid "Ports"
+msgstr "Порты"
+
+msgid "Section Rules Content"
+msgstr "Содержимое правил секции"
+

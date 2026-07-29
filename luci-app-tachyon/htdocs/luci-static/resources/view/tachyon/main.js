@@ -7295,6 +7295,7 @@ var styles = `
     justify-content: space-between;
     gap: 8px 10px;
     min-width: 0;
+    flex-wrap: wrap;
 }
 
 .tachyon_dashboard-page__outbound-section__title-section__title {
@@ -7309,7 +7310,8 @@ var styles = `
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
 }
 
 .tachyon_dashboard-page .btn.tachyon_dashboard-page__outbound-section__subscription-update {
@@ -7387,14 +7389,13 @@ var styles = `
 }
 
 .tachyon_dashboard-page__subscription-meta__title {
-    flex: 0 1 auto;
-    width: max-content;
-    max-width: min(28ch, 30%);
-    min-width: min-content;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-all;
     color: var(--text-color-high);
     font-weight: 700;
     line-height: 1.25;
-    overflow-wrap: anywhere;
 }
 
 .tachyon_dashboard-page__subscription-meta__facts {

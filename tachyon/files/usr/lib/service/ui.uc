@@ -109,10 +109,7 @@ function command_output(command) {
         return "";
 
     let data = pipe.read("all");
-    let status = pipe.close();
-    if (status != 0 || data == null)
-        return "";
-
+    pipe.close();
     return as_string(data);
 }
 
@@ -723,10 +720,10 @@ function refresh_pid_job_state(path, stale_message) {
     if (job_pid_valid(pid) && pid_running(pid))
         return;
 
-    if (updated_at > 0 && (now - updated_at) < 45)
+    if (updated_at > 0 && (now - updated_at) < 180)
         return;
 
-    let within_grace = job_started_at_within_grace(value.started_at, now, ACTION_STALE_GRACE_SECONDS);
+    let within_grace = job_started_at_within_grace(value.started_at, now, 600);
     if (!within_grace)
         write_stale_action_state(path, stale_message);
 }
@@ -1489,7 +1486,7 @@ function zapret2_tune_worker(path, section_id, target_domain, tune_mode) {
     let res_output = command_output(cmd);
     let tune_res = null;
     try {
-        tune_res = json_parse(res_output);
+        tune_res = json(res_output);
     } catch (e) {}
 
     let state = read_json_file(path) || {};
@@ -1515,7 +1512,7 @@ function zapret2_tune_worker(path, section_id, target_domain, tune_mode) {
         state.results = (type(tune_res) == "object" && tune_res.results) ? tune_res.results : [];
     }
 
-    write_json_file(path, state);
+    write_state_file(path, state);
 }
 
 function running_zapret2_tune_action_value(section_id, target_domain, tune_mode, started_at) {
