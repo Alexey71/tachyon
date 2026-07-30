@@ -604,8 +604,10 @@ function arch_candidate_bases(arch) {
     arch = as_string(arch);
     push(result, arch);
 
-    if (str_startswith(arch, "aarch64_"))
+    if (str_startswith(arch, "aarch64_")) {
         push(result, "aarch64_generic");
+        push(result, "aarch64_cortex-a53");
+    }
     else if (str_startswith(arch, "riscv64_"))
         push(result, "riscv64_generic");
     else if (arch == "arm_cortex-a7_neon-vfpv4") {

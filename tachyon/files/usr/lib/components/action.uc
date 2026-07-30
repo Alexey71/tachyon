@@ -915,7 +915,7 @@ function normalize_sing_box_version(value) {
 function resolve_zapret_release(arch) {
     let release_json = fetch_github_release_json("remittor", "zapret-openwrt");
     if (release_json == "")
-        return null;
+        return { fetch_failed: true };
     let resolved = trim(helper_output_input(release_json, "release-select-arch-suffix-asset", [ "zip", arch.candidates ]));
     let fields = split(resolved, "\t");
     if (length(fields) < 4)
@@ -935,7 +935,7 @@ function resolve_zapret_release(arch) {
 function resolve_zapret2_release(arch) {
     let releases_json = fetch_github_releases_json("remittor", "zapret-openwrt", "30");
     if (releases_json == "")
-        return null;
+        return { fetch_failed: true };
     let resolved = trim(helper_output_input(releases_json, "named-release-select-asset", [ "zapret2", "zapret2", "zip", arch.candidates ]));
     let fields = split(resolved, "\t");
     if (length(fields) < 4)
@@ -1039,8 +1039,12 @@ function install_zapret_like(component, action, runtime_module, resolve_fn, labe
     let release = null;
     retry_resolve("Resolving " + label + " package", function() {
         release = resolve_fn(arch);
+        if (type(release) == "object" && release.fetch_failed)
+            return false;
         return release != null;
     });
+    if (type(release) == "object" && release.fetch_failed)
+        action_fail(component, action, "Failed to fetch " + label + " releases from GitHub API (Rate limit or network error)");
     if (release == null)
         action_fail(component, action, "Failed to resolve " + label + " package for this router architecture");
 
