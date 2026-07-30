@@ -649,6 +649,29 @@ function fetch_github_release_tag_fallback(owner, repo) {
     return "";
 }
 
+function url_exists(url) {
+    let url_mod = core_url_module_or_null();
+    let candidates = url_mod && type(url_mod.download_candidates) == "function" ? url_mod.download_candidates(url) : [ url ];
+
+    for (let target_url in candidates) {
+        let args = [ "curl", "-sI", "--connect-timeout", "6", "-m", "12" ];
+        let proxy_addr = service_proxy_address();
+        if (proxy_addr != "") {
+            push(args, "-x");
+            push(args, "http://" + proxy_addr);
+        }
+        push(args, as_string(target_url));
+        let output = command_output_from_args(args);
+        if (output != "") {
+            let first_line = split(output, "\n")[0] || "";
+            if (index(first_line, " 200 ") > 0 || index(first_line, " 301 ") > 0 || index(first_line, " 302 ") > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 function latest_tachyon_version() {
     let response = latest_tachyon_release_json();
     let version = "";
@@ -933,23 +956,32 @@ function resolve_zapret_release(arch) {
 }
 
 function resolve_zapret2_release(arch) {
-    let releases_json = fetch_github_releases_json("remittor", "zapret-openwrt", "30");
-    if (releases_json == "")
+    let tag = fetch_github_release_tag_fallback("1andrevich", "zapret2-openwrt");
+    if (tag == "")
         return { fetch_failed: true };
-    let resolved = trim(helper_output_input(releases_json, "named-release-select-asset", [ "zapret2", "zapret2", "zip", arch.candidates ]));
-    let fields = split(resolved, "\t");
-    if (length(fields) < 4)
-        return null;
-    let version = extract_zapret2_bundle_version(fields[1]);
-    if (version == "")
-        version = trim(helper_output("string-remove-suffix", [ fields[1], ".zip" ]));
-    return {
-        arch: fields[0],
-        bundle_name: fields[1],
-        bundle_url: fields[2],
-        release_url: fields[3],
-        version
-    };
+    
+    let asset_ext = is_apk() ? "apk" : "ipk";
+    let base_dl = "https://github.com/1andrevich/zapret2-openwrt/releases/download/" + tag + "/";
+    let release_url = "https://github.com/1andrevich/zapret2-openwrt/releases/tag/" + tag;
+    let version = replace(tag, /^v/, "");
+
+    let candidate_list = split(arch.candidates, " ");
+    for (let candidate in candidate_list) {
+        if (candidate == "") continue;
+        let pkg_name = "zapret2_" + candidate + "." + asset_ext;
+        let url = base_dl + pkg_name;
+        if (url_exists(url)) {
+            warn("EXISTS: " + url + "\n");
+            return {
+                arch: candidate,
+                package_name: pkg_name,
+                package_url: url,
+                release_url: release_url,
+                version: version
+            };
+        }
+    }
+    return null;
 }
 
 function download_and_extract_zip_package(release, component) {
@@ -1001,7 +1033,7 @@ function resolve_byedpi_release(arch) {
     };
 }
 
-function download_byedpi_package(release) {
+function download_direct_package(release) {
     let package_file = tmp_dir + "/" + release.package_name;
     if (!download_with_retry(release.package_url, package_file, release.package_name) || !file_nonempty(package_file))
         return null;
@@ -1079,7 +1111,50 @@ function install_zapret(action) {
 }
 
 function install_zapret2(action) {
-    install_zapret_like("zapret2", action, LIB_DIR + "/providers/zapret2/runtime.uc", resolve_zapret2_release, "zapret2");
+    let component = "zapret2";
+    let label = "zapret2";
+    let runtime_module = LIB_DIR + "/providers/zapret2/runtime.uc";
+    
+    init_tmp_dir() || action_fail(component, action, "Failed to create temporary directory");
+    let arch = resolve_arch_candidates();
+    if (arch == null)
+        action_fail(component, action, "Failed to detect package architecture");
+    
+    let release = null;
+    retry_resolve("Resolving " + label + " package", function() {
+        release = resolve_zapret2_release(arch);
+        if (type(release) == "object" && release.fetch_failed)
+            return false;
+        return release != null;
+    });
+    
+    if (type(release) == "object" && release.fetch_failed)
+        action_fail(component, action, "Failed to fetch " + label + " releases from GitHub API (Rate limit or network error)");
+    if (release == null)
+        action_fail(component, action, "Failed to resolve " + label + " package for this router architecture");
+
+    let installed = provider_installed(runtime_module);
+    let current_version = provider_package_version(runtime_module);
+    if (action == "check_update") {
+        if (!installed)
+            action_fail(component, action, label + " is not installed", current_version, release.version, "", release.release_url || "");
+        check_success_compared(component, current_version, release.version, normalize_zapret_version(current_version), normalize_zapret_version(release.version), release.release_url || "");
+    }
+
+    let pkg = download_direct_package(release);
+    if (pkg == null)
+        action_fail(component, action, "Failed to download " + label + " package", current_version, release.version, "", release.release_url || "");
+
+    if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+        action_fail(component, action, "Failed to install " + label + " package", current_version, pkg.version, "", release.release_url || "");
+
+    disable_standalone_service(component);
+    restart_tachyon_after_successful_change();
+    clear_version_caches();
+    current_version = provider_package_version(runtime_module);
+    if (current_version == "")
+        current_version = "unknown";
+    action_success(component, action, label + " package has been installed", current_version, pkg.version, 1, "latest", release.release_url || "");
 }
 
 function install_byedpi(action) {
@@ -1104,7 +1179,7 @@ function install_byedpi(action) {
         check_success("byedpi", current_version, release.version, release.release_url || "");
     }
 
-    let pkg = download_byedpi_package(release);
+    let pkg = download_direct_package(release);
     if (pkg == null)
         action_fail("byedpi", action, "Failed to download ByeDPI package");
     if (!run_logged("Installing ByeDPI package " + pkg.name, pkg_install_files_command([ pkg.file ])))
