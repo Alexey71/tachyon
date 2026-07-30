@@ -936,7 +936,7 @@ function resolve_zapret2_release(arch) {
     let releases_json = fetch_github_releases_json("remittor", "zapret-openwrt", "30");
     if (releases_json == "")
         return null;
-    let resolved = trim(helper_output_input(releases_json, "named-release-select-asset", [ "zapret2 ", "zapret2", "zip", arch.candidates ]));
+    let resolved = trim(helper_output_input(releases_json, "named-release-select-asset", [ "zapret2", "zapret2", "zip", arch.candidates ]));
     let fields = split(resolved, "\t");
     if (length(fields) < 4)
         return null;

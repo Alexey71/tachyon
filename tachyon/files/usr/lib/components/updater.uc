@@ -819,6 +819,7 @@ function release_asset_matches_arch(name, prefix, arch, ext) {
 
 function named_release_select_asset(release_prefix, asset_prefix, asset_ext, arch_candidates) {
     let releases = array_or_empty(read_stdin_json());
+    let clean_prefix = trim(release_prefix);
 
     for (let release in releases) {
         if (type(release) != "object")
@@ -827,7 +828,22 @@ function named_release_select_asset(release_prefix, asset_prefix, asset_ext, arc
             continue;
 
         let release_name = as_string(release.name || "");
-        if (!str_startswith(release_name, release_prefix))
+        let tag_name = as_string(release.tag_name || "");
+
+        let name_match = release_name != "" && (
+            str_startswith(release_name, release_prefix) ||
+            str_startswith(release_name, clean_prefix + "-") ||
+            str_startswith(release_name, clean_prefix + "_") ||
+            str_startswith(release_name, clean_prefix)
+        );
+        let tag_match = tag_name != "" && (
+            str_startswith(tag_name, release_prefix) ||
+            str_startswith(tag_name, clean_prefix + "-") ||
+            str_startswith(tag_name, clean_prefix + "_") ||
+            str_startswith(tag_name, clean_prefix)
+        );
+
+        if (!name_match && !tag_match)
             continue;
 
         for (let arch in split(as_string(arch_candidates), " ")) {
