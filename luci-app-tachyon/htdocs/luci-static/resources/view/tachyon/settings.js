@@ -1574,6 +1574,25 @@ function createSettingsContent(section, capabilities) {
   o.default = "warn";
   o.rmempty = false;
 
+  // Anonymization and Security
+  o = section.option(
+    form.Flag,
+    "webrtc_leak_protect",
+    _("WebRTC Leak Protection"),
+    _("Detects and drops STUN/TURN packets in nftables to prevent real IP leaks via WebRTC.")
+  );
+  o.default = "0";
+  o.rmempty = false;
+
+  o = section.option(
+    form.Flag,
+    "dns_doq_ech",
+    _("Strict ECH + DoQ DNS Enforcer"),
+    _("Forces sing-box to tunnel DNS requests via DoQ with Encrypted Client Hello (ECH) for SNI hiding.")
+  );
+  o.default = "0";
+  o.rmempty = false;
+
   o = section.option(
     form.Flag,
     "exclude_ntp",

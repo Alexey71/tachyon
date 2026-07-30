@@ -170,12 +170,20 @@ function bootstrap_server(tag_name, value) {
 
 function server_config(settings, override_state) {
     let active = active_values(settings, override_state);
-    return server_from_options(
+    let result = server_from_options(
         runtime_constants.DNS_SERVER_TAG,
         active.state.dns_type,
         active.main,
         active.state.dns_detour
     );
+
+    if (bool_option(settings, "dns_doq_ech", false)) {
+        if (result.tls) {
+            result.tls.ech = { enabled: true };
+        }
+    }
+
+    return result;
 }
 
 function bootstrap_config(settings, override_state) {

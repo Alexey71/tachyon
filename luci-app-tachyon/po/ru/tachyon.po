@@ -1,4 +1,4 @@
-# RU translations for TACHYON package.
+﻿# RU translations for TACHYON package.
 # Copyright (C) 2026 THE TACHYON COPYRIGHT HOLDER
 # This file is distributed under the same license as the TACHYON package.
 # Dushnilin, 2026.
@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-30 17:52+0300\n"
-"PO-Revision-Date: 2026-07-30 17:52+0300\n"
+"POT-Creation-Date: 2026-07-30 21:35+0300\n"
+"PO-Revision-Date: 2026-07-30 21:35+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -578,6 +578,9 @@ msgstr "Удалить"
 msgid "Detect server country"
 msgstr "Определять страну сервера"
 
+msgid "Detects and drops STUN/TURN packets in nftables to prevent real IP leaks via WebRTC."
+msgstr "Детектирует и отбрасывает пакеты STUN/TURN в nftables для предотвращения утечек реального IP-адреса через WebRTC."
+
 msgid "detour must be a non-empty string"
 msgstr "detour должен быть непустой строкой"
 
@@ -1027,6 +1030,9 @@ msgstr "Исправьте подсвеченные поля и сохранит
 
 msgid "Forced device routing"
 msgstr "Принудительная маршрутизация устройств"
+
+msgid "Forces sing-box to tunnel DNS requests via DoQ with Encrypted Client Hello (ECH) for SNI hiding."
+msgstr "Принудительно направляет DNS-запросы через DoQ с Encrypted Client Hello (ECH) для скрытия SNI."
 
 msgid "France (fr)"
 msgstr ""
@@ -2507,6 +2513,9 @@ msgstr "Остановлен"
 msgid "Stopping…"
 msgstr "Остановка…"
 
+msgid "Strict ECH + DoQ DNS Enforcer"
+msgstr "Strict ECH Enforcer"
+
 msgid "STUN (P2P Calls)"
 msgstr "STUN (P2P Звонки)"
 
@@ -3019,6 +3028,9 @@ msgstr "Сторожевой таймер"
 
 msgid "Watchdog Status"
 msgstr "Статус watchdog"
+
+msgid "WebRTC Leak Protection"
+msgstr "Защита от утечек WebRTC"
 
 msgid "What Tachyon should do when this section matches"
 msgstr "Что должен делать Tachyon, когда эта секция совпадает"

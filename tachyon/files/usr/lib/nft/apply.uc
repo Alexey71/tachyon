@@ -894,6 +894,13 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
         }
     }
 
+    if (bool_option(uci_settings(), "webrtc_leak_protect", false)) {
+        if (!nft_add_rule(table, "mangle", [ "iifname", "@" + as_string(interface_set), "udp", "dport", "3478", "counter", "drop" ]) ||
+            !nft_add_rule(table, "mangle", [ "iifname", "@" + as_string(interface_set), "udp", "dport", "5349", "counter", "drop" ]) ||
+            !nft_add_rule(table, "mangle", [ "iifname", "@" + as_string(interface_set), "udp", "dport", "19302", "counter", "drop" ]))
+            return false;
+    }
+
     if (!nft_add_rule(table, "mangle", [ "jump", "priority_rules" ]) ||
         !nft_add_rule(table, "mangle", [ "iifname", "@" + as_string(interface_set), "ip", "daddr", "@" + as_string(common_set), "meta", "l4proto", "tcp", "meta", "mark", "set", fakeip_mark, "counter" ]) ||
         !nft_add_rule(table, "mangle", [ "iifname", "@" + as_string(interface_set), "ip", "daddr", "@" + as_string(common_set), "meta", "l4proto", "udp", "meta", "mark", "set", fakeip_mark, "counter" ]) ||
