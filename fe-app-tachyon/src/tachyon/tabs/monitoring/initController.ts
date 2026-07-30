@@ -480,7 +480,9 @@ function getVisibleConnections(): MonitoredConnection[] {
 
   return getConnectionsForActiveTab().filter((connection) => {
     const sourceIp = getConnectionSourceIp(connection);
-    const isMatchingDevice = selectedDeviceFilter === ALL_FILTER_VALUE || sourceIp === selectedDeviceFilter;
+    const isMatchingDevice =
+      selectedDeviceFilter === ALL_FILTER_VALUE ||
+      sourceIp === selectedDeviceFilter;
 
     let isMatchingRoute = selectedRouteFilter === ALL_FILTER_VALUE;
     if (!isMatchingRoute && getRoute(connection) === selectedRouteFilter) {
@@ -612,7 +614,7 @@ function renderRouteFilterOptions() {
   });
 
   const routes = Array.from(uniqueRoutes).sort();
-  
+
   if (
     selectedRouteFilter !== ALL_FILTER_VALUE &&
     !routes.includes(selectedRouteFilter)
@@ -620,16 +622,13 @@ function renderRouteFilterOptions() {
     selectedRouteFilter = ALL_FILTER_VALUE;
   }
 
-  const signature = [
-    selectedRouteFilter,
-    ...routes,
-  ].join('|');
-  
+  const signature = [selectedRouteFilter, ...routes].join('|');
+
   if (signature === lastRouteFilterSignature) {
     select.value = selectedRouteFilter;
     return;
   }
-  
+
   lastRouteFilterSignature = signature;
 
   const options = [

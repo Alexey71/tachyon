@@ -1,14 +1,14 @@
 ﻿declare const rpc: any;
 
 const callHostHints = rpc.declare({
-  object: "luci-rpc",
-  method: "getHostHints",
-  expect: { "": {} },
+  object: 'luci-rpc',
+  method: 'getHostHints',
+  expect: { '': {} },
 });
 
 export async function fetchHostnames(): Promise<Map<string, string>> {
   const hostnames = new Map<string, string>();
-  
+
   try {
     const hints = await callHostHints();
     if (hints && typeof hints === 'object') {

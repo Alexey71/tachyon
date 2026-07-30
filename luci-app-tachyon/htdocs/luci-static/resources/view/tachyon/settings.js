@@ -6,6 +6,7 @@
 "require ui";
 "require tools.widgets as widgets";
 "require view.tachyon.main as main";
+"require view.tachyon.local_devices as local_devices";
 
 const UCI_PACKAGE = main.TACHYON_UCI_PACKAGE;
 
@@ -1316,6 +1317,31 @@ function createSettingsContent(section, capabilities) {
   );
   o.default = "0";
   o.rmempty = false;
+
+  o = section.option(
+    form.Flag,
+    "game_console_optimizer",
+    _("Game Console Optimizer (NAT Type 1)"),
+    _("Bypasses UDP traffic for selected game consoles (PS5/Xbox) to achieve NAT Type 1 / 2 (Full Cone NAT) for P2P matchmaking, while keeping TCP (PSN/Auth) routed through the proxy."),
+  );
+  o.default = "0";
+  o.rmempty = false;
+
+  const gameConsoleIpsOpt = section.option(
+    form.DynamicList,
+    "game_console_ips",
+    _("Game Console IPs"),
+    _("Select or enter the IP addresses of your game consoles."),
+  );
+  gameConsoleIpsOpt.depends("game_console_optimizer", "1");
+  gameConsoleIpsOpt.datatype = "ipaddr";
+  gameConsoleIpsOpt.renderWidget = function (section_id, option_index, cfgvalue) {
+    return local_devices.createLocalDeviceDynamicListWidget(
+      this,
+      section_id,
+      cfgvalue,
+    );
+  };
 
   o = section.option(
     form.Flag,

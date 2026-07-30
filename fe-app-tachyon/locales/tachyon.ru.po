@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-28 21:47+0300\n"
-"PO-Revision-Date: 2026-07-28 21:47+0300\n"
+"POT-Creation-Date: 2026-07-30 16:42+0300\n"
+"PO-Revision-Date: 2026-07-30 16:42+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -20,8 +20,8 @@ msgstr ""
 msgid "-- Select --"
 msgstr "-- Выбрать --"
 
-msgid ".lst списки"
-msgstr ""
+msgid ".lst Lists"
+msgstr ".lst списки"
 
 msgid "+ Add JSON outbound"
 msgstr "+ Добавить JSON outbound"
@@ -54,19 +54,13 @@ msgid "✔ Running"
 msgstr "✔ Работает"
 
 msgid "✘ Stopped"
-msgstr "✘ Остановлен"
+msgstr "✘ Остановлено"
 
 msgid "Выберите файл с расширением .conf"
 msgstr "Выберите файл с расширением .conf"
 
 msgid "Готово"
 msgstr "Готово"
-
-msgid "Действие секции"
-msgstr ""
-
-msgid "Домены (Domains)"
-msgstr ""
 
 msgid "Загружено!"
 msgstr "Загружено!"
@@ -77,20 +71,11 @@ msgstr "Загрузить .conf"
 msgid "Загрузить конфиг .conf"
 msgstr "Загрузить конфиг .conf"
 
-msgid "Закрыть"
-msgstr ""
-
 msgid "Импортировать настройки AmneziaWG из файла .conf"
 msgstr "Импортировать настройки AmneziaWG из файла .conf"
 
 msgid "Конфиг AmneziaWG успешно загружен!"
 msgstr "Конфиг AmneziaWG успешно загружен!"
-
-msgid "Наборы правил (.srs / .json)"
-msgstr ""
-
-msgid "Не заданы"
-msgstr ""
 
 msgid "Не удалось разобрать файл:"
 msgstr ""
@@ -100,21 +85,6 @@ msgstr ""
 
 msgid "Ошибка чтения"
 msgstr "Ошибка чтения"
-
-msgid "Порты"
-msgstr ""
-
-msgid "Правила"
-msgstr ""
-
-msgid "Содержимое правил секции"
-msgstr ""
-
-msgid "Списки сообщества (Community Lists)"
-msgstr ""
-
-msgid "Устройства-источники"
-msgstr ""
 
 msgid "Accept external proxy connections and route them with sing-box."
 msgstr "Принимает внешние прокси-подключения и маршрутизирует их через sing-box."
@@ -371,8 +341,14 @@ msgstr "Стратегия ByeDPI"
 msgid "ByeDPI strategy cannot be empty"
 msgstr "Стратегия ByeDPI не может быть пустой"
 
+msgid "Bypasses UDP traffic for selected game consoles (PS5/Xbox) to achieve NAT Type 1 / 2 (Full Cone NAT) for P2P matchmaking, while keeping TCP (PSN/Auth) routed through the proxy."
+msgstr "Направляет UDP трафик выбранных консолей (PS5/Xbox) в обход прокси напрямую (Full Cone NAT) для идеального P2P матчмейкинга, оставляя TCP трафик (PSN/Auth) под защитой прокси."
+
 msgid "CA Certificate"
 msgstr "CA сертификат"
+
+msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
+msgstr "Кешировать все встроенные списки и базы (даже если они не выбраны ни в одной секции). Рекомендуется при наличии свободного места или USB-накопителя."
 
 msgid "Cache File Path"
 msgstr "Путь к файлу кэша"
@@ -423,7 +399,7 @@ msgid "Checking..."
 msgstr ""
 
 msgid "Checking…"
-msgstr "Проверка…"
+msgstr ""
 
 msgid "checks"
 msgstr "проверки"
@@ -502,6 +478,9 @@ msgstr "Токен доступа к API Cloudflare WARP"
 
 msgid "Comma-separated list of Telegram user IDs authorized to control the bot."
 msgstr "Список ID пользователей Telegram через запятую, которым разрешено управлять ботом."
+
+msgid "Community Lists"
+msgstr "Списки сообщества (Community Lists)"
 
 msgid "Component update available"
 msgstr "Доступно обновление компонента"
@@ -756,7 +735,7 @@ msgid "Domain test sections"
 msgstr "Секции тестирования доменов"
 
 msgid "Domains"
-msgstr "Домены"
+msgstr "Домены (Domains)"
 
 msgid "Domains automatically detected by Smart Detect or added via Telegram bot. You can manually edit or remove them here."
 msgstr "Домены, автоматически обнаруженные Smart Detect или добавленные через Telegram-бота. Вы можете вручную изменить или удалить их здесь."
@@ -844,12 +823,6 @@ msgstr "Включить быстрый DNS-кэш"
 
 msgid "Enable list updates"
 msgstr "Включить обновление списков"
-
-msgid "Pre-download all preset lists"
-msgstr "Скачивать все предустановленные списки"
-
-msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
-msgstr "Кешировать все встроенные списки и базы (даже если они не выбраны ни в одной секции). Рекомендуется при наличии свободного места или USB-накопителя."
 
 msgid "Enable Mixed Proxy"
 msgstr "Включить смешанный прокси"
@@ -1070,6 +1043,12 @@ msgstr "Proxy protocol для фронтинга"
 msgid "Fuzzing is not supported here because Tachyon needs deterministic runtime validation."
 msgstr "Фаззинг здесь не поддерживается, так как Tachyon требует детерминированной валидации во время выполнения."
 
+msgid "Game Console IPs"
+msgstr "IP-адреса игровых консолей"
+
+msgid "Game Console Optimizer (NAT Type 1)"
+msgstr "Оптимизатор игровых консолей (NAT Type 1)"
+
 msgid "Generate a random 16-character hexadecimal HWID"
 msgstr "Сгенерировать случайный 16-символьный шестнадцатеричный HWID"
 
@@ -1117,7 +1096,6 @@ msgstr "gRPC-сервис"
 
 msgid "Handshake timeout"
 msgstr "Таймаут рукопожатия"
-
 
 msgid "Hide cascade connection nodes"
 msgstr "Скрыть узлы каскадных подключений"
@@ -1239,6 +1217,26 @@ msgstr "Включить серверы"
 msgid "Information"
 msgstr "Информация"
 
+msgid "Init Packet Magic Header (S1)"
+msgstr "Magic Header: Инициализация (S1)"
+
+msgid "Init Packet Magic Header (S3)"
+msgstr "Magic Header: Инициализация (S3)"
+
+msgid "Init Packet Payload (I1)"
+msgstr "Payload: Инициализация (I1)"
+
+msgid "Init Packet Payload (I2)"
+msgstr "Payload: Инициализация (I2)"
+
+msgid "Init Packet Payload (I3)"
+msgstr "Payload: Инициализация (I3)"
+
+msgid "Init Packet Payload (I4)"
+msgstr "Payload: Инициализация (I4)"
+
+msgid "Init Packet Payload (I5)"
+msgstr "Payload: Инициализация (I5)"
 
 msgid "Install"
 msgstr "Установить"
@@ -1339,11 +1337,8 @@ msgstr "Неверный формат JSON"
 msgid "Invalid line: \"%s\". Use: domain ip or ip domain"
 msgstr "Неверная строка: \"%s\". Формат: домен ip или ip домен"
 
-msgid "Invalid NFQWS2 strategy"
-msgstr "Некорректная стратегия NFQWS2"
-
 msgid "Invalid path format. Path must start with \"/\" and contain valid characters"
-msgstr "Неверный формат пути. Путь должен начинаться с \"/\" и содержать допустимые символы"
+msgstr "Неверный формат пути. Должен начинаться с \"/\" и содержать допустимые символы"
 
 msgid "Invalid port number. Must be between 1 and 65535"
 msgstr "Неверный номер порта. Допустимо от 1 до 65535"
@@ -1364,7 +1359,7 @@ msgid "Invalid Shadowsocks URL: missing credentials"
 msgstr "Неверный URL Shadowsocks: отсутствуют учетные данные"
 
 msgid "Invalid Shadowsocks URL: missing method and password separator \":\""
-msgstr "Неверный URL Shadowsocks: отсутствует разделитель метода и пароля \":\""
+msgstr "Недопустимый Shadowsocks URL: отсутствует разделитель метода и пароля \":\""
 
 msgid "Invalid Shadowsocks URL: missing port"
 msgstr "Неверный URL Shadowsocks: отсутствует порт"
@@ -1429,8 +1424,8 @@ msgstr "Неверный URL VLESS: ошибка разбора"
 msgid "Invalid VMess URL: parsing failed"
 msgstr "Некорректный VMess URL: ошибка разбора"
 
-msgid "IP-адреса и подсети (IP CIDR)"
-msgstr ""
+msgid "IP Addresses (IP CIDR)"
+msgstr "IP-адреса и подсети (IP CIDR)"
 
 msgid "IPs"
 msgstr "IP-адреса"
@@ -1468,6 +1463,14 @@ msgstr "JSON outbound должен содержать непустое поле 
 msgid "JSON outbound settings"
 msgstr "Настройки JSON outbound"
 
+msgid "Junk Max Size (Jmax)"
+msgstr "Макс. размер Junk (Jmax)"
+
+msgid "Junk Min Size (Jmin)"
+msgstr "Мин. размер Junk (Jmin)"
+
+msgid "Junk Packet Count (Jc)"
+msgstr "Количество Junk-пакетов (Jc)"
 
 msgid "Kazakhstan (kz)"
 msgstr ""
@@ -1745,6 +1748,9 @@ msgstr "Не отвечает"
 msgid "Not running"
 msgstr "Не запущено"
 
+msgid "Not set"
+msgstr "Не заданы"
+
 msgid "Notify on Certificate Warnings"
 msgstr "Уведомлять о предупреждениях сертификатов"
 
@@ -1771,7 +1777,6 @@ msgstr "Количество последовательных успешных �
 
 msgid "Obfuscation"
 msgstr "Обфускация"
-
 
 msgid "Obfuscation password"
 msgstr "Пароль обфускации"
@@ -1816,7 +1821,7 @@ msgid "Operation timed out"
 msgstr "Время ожидания истекло"
 
 msgid "Option \"%s\" contains an invalid input value."
-msgstr "Опция \"%s\" содержит некорректное значение."
+msgstr "Параметр \"%s\" содержит недопустимое значение."
 
 msgid "Optional — leave empty for default"
 msgstr "Опционально — оставьте пустым для значения по умолчанию"
@@ -1928,6 +1933,9 @@ msgstr "Начало диапазона портов должно быть ме�
 
 msgid "Ports"
 msgstr "Порты"
+
+msgid "Pre-download all preset lists"
+msgstr "Скачивать все предустановленные списки"
 
 msgid "Pre-shared key"
 msgstr "Предварительно распределённый ключ"
@@ -2058,6 +2066,12 @@ msgstr "Выбор ресурсов по IP или CIDR внутри nfqws не 
 msgid "Resource selection by IP or CIDR inside nfqws2 is not supported here; sing-box selects resources before NFQUEUE."
 msgstr "Выбор ресурсов по IP или CIDR внутри nfqws2 не поддерживается здесь; sing-box выбирает ресурсы до NFQUEUE."
 
+msgid "Response Packet Magic Header (S2)"
+msgstr "Magic Header: Ответ (S2)"
+
+msgid "Response Packet Magic Header (S4)"
+msgstr "Magic Header: Ответ (S4)"
+
 msgid "Restart Tachyon"
 msgstr "Перезапустить Tachyon"
 
@@ -2096,6 +2110,9 @@ msgstr "Настройки набора правил"
 
 msgid "Rule sets"
 msgstr "Наборы правил"
+
+msgid "Rule Sets (.srs / .json)"
+msgstr "Наборы правил (.srs / .json)"
 
 msgid "Rules"
 msgstr "Правила"
@@ -2151,8 +2168,14 @@ msgstr "Секретный ключ для аутентификации удал
 msgid "Section"
 msgstr "Секция"
 
+msgid "Section action"
+msgstr "Действие секции"
+
 msgid "Section name"
 msgstr "Название секции"
+
+msgid "Section Rules Content"
+msgstr "Содержимое правил секции"
 
 msgid "Section test order (checked = active, drag rows with △▽):"
 msgstr "Порядок тестирования (отмечены активные, сортировка △▽):"
@@ -2207,6 +2230,9 @@ msgstr "Выберите или введите User-Agent"
 
 msgid "Select or enter path for sing-box cache file. Change this ONLY if you know what you are doing"
 msgstr "Выберите или введите путь к файлу кеша sing-box. Изменяйте это, ТОЛЬКО если вы знаете, что делаете"
+
+msgid "Select or enter the IP addresses of your game consoles."
+msgstr "Выберите или введите IP-адреса ваших игровых приставок."
 
 msgid "Select path for sing-box config file. Change this ONLY if you know what you are doing"
 msgstr "Выберите путь к файлу конфигурации sing-box. Изменяйте это, ТОЛЬКО если вы знаете, что делаете"
@@ -2310,7 +2336,6 @@ msgstr "Информация о сервисах"
 msgid "Settings"
 msgstr "Настройки"
 
-
 msgid "Show metadata on dashboard"
 msgstr "Показывать метаданные на дашборде"
 
@@ -2400,6 +2425,9 @@ msgstr "Сортирует серверы в этой секции по наим
 
 msgid "Source"
 msgstr "Источник"
+
+msgid "Source Devices"
+msgstr "Устройства-источники"
 
 msgid "Source Network Interface"
 msgstr "Сетевой интерфейс источника"
@@ -2776,6 +2804,18 @@ msgstr "Не удалось валидировать стратегию NFQWS2 �
 msgid "Unavailability timeout"
 msgstr "Таймаут недоступности"
 
+msgid "Underload Packet Magic Header (H1)"
+msgstr "Magic Header: Underload (H1)"
+
+msgid "Underload Packet Magic Header (H2)"
+msgstr "Magic Header: Underload (H2)"
+
+msgid "Underload Packet Magic Header (H3)"
+msgstr "Magic Header: Underload (H3)"
+
+msgid "Underload Packet Magic Header (H4)"
+msgstr "Magic Header: Underload (H4)"
+
 msgid "Unexpected ByeDPI strategy argument: %s"
 msgstr "Неожиданный аргумент стратегии ByeDPI: %s"
 
@@ -3045,311 +3085,3 @@ msgstr "sing-box outbound для Zapret2 настроен"
 
 msgid "Zapret2 sing-box outbound is not configured"
 msgstr "sing-box outbound для Zapret2 не настроен"
-
-msgid "checked"
-msgstr "проверено"
-
-msgid "Enter a domain, IP address, or port to test routing. The tracer will show which section intercepts the traffic and which rule matches."
-msgstr "Введите домен, IP-адрес или порт для проверки маршрутизации. Трассировщик покажет, в какую секцию попадет трафик и какое именно правило сработает."
-
-msgid "Enter a valid DNS server address"
-msgstr "Введите корректный адрес DNS сервера"
-
-msgid "Invalid line: \"%s\". Use: domain ip"
-msgstr "Неверный формат строки: \"%s\". Используйте: домен ip"
-
-msgid "One record per line: <code>example.com 192.168.1.100</code>. Lines starting with <code>#</code> are ignored."
-msgstr "По одной записи на строку: <code>example.com 192.168.1.100</code>. Строки, начинающиеся с <code>#</code>, игнорируются."
-
-msgid "Matching Rule"
-msgstr "Сработавшее правило"
-
-msgid "No active routing section intercepts this traffic. Traffic will bypass the custom routing logic and be handled by the default route (Direct/Default)."
-msgstr "Этот трафик не перехватывается ни одной активной секцией маршрутизации. Он пойдет в обход кастомных правил и будет обработан маршрутом по умолчанию (Напрямую/Дефолт)."
-
-msgid "out of"
-msgstr "из"
-
-msgid "Routing Section"
-msgstr "Секция маршрутизации"
-
-msgid "Add URLs or local paths to .lst lists. Only domain rules are supported."
-msgstr "Добавьте URL или локальные пути к .lst спискам. Поддерживаются только доменные правила."
-
-msgid "Regional options cannot be used together"
-msgstr "Региональные опции не могут использоваться одновременно"
-
-msgid "Russia inside restrictions"
-msgstr "Ограничения для России внутри"
-
-msgid "Warning: %s cannot be used together with %s. Previous selections have been removed."
-msgstr "Предупреждение: %s нельзя использовать вместе с %s. Предыдущие выборы были удалены."
-
-msgid "Warning: Russia inside can only be used with %s. %s already in Russia inside and have been removed from selection."
-msgstr "Предупреждение: «Россия внутри» можно использовать только с %s. %s уже находятся в «России внутри» и были удалены из выбора."
-
-msgid "Error saving"
-msgstr "Ошибка сохранения"
-
-msgid "Saved"
-msgstr "Сохранено"
-
-msgid "Checking:"
-msgstr "Проверка:"
-
-msgid "Loading:"
-msgstr "Загрузка:"
-
-msgid "Starting:"
-msgstr "Запуск:"
-
-msgid "Stopping:"
-msgstr "Остановка:"
-
-msgid "AnyTLS"
-msgstr "AnyTLS"
-
-msgid "Snell"
-msgstr "Snell"
-
-msgid "Mieru"
-msgstr "Mieru"
-
-msgid "Sudoku"
-msgstr "Sudoku"
-
-msgid "MASQUE"
-msgstr "MASQUE"
-
-msgid "OpenVPN"
-msgstr "OpenVPN"
-
-msgid "Skip TLS certificate verification"
-msgstr "Пропустить проверку TLS сертификата"
-
-msgid "Generating..."
-msgstr "Генерация..."
-
-msgid "Failed to generate WARP config: "
-msgstr "Не удалось сгенерировать конфиг WARP: "
-
-msgid "Failed to parse WARP config: "
-msgstr "Не удалось разобрать конфиг WARP: "
-
-msgid "Error running generator: "
-msgstr "Ошибка при запуске генератора: "
-
-msgid "Не удалось разобрать файл: "
-msgstr "Не удалось разобрать файл: "
-
-msgid "Not tested"
-msgstr "Не проверено"
-
-msgid "Test connection"
-msgstr "Проверить подключение"
-
-msgid "Destination IP or CIDR"
-msgstr "IP или CIDR назначения"
-
-msgid "Forced destination routing"
-msgstr "Принудительная маршрутизация по IP (Dest)"
-
-msgid "All traffic to these destination IPs will be routed through the section unconditionally, ignoring all other conditions."
-msgstr "Весь трафик к этим IP назначения будет направлен через секцию безусловно, игнорируя все остальные условия."
-
-msgid "Total lines: "
-msgstr "Всего строк: "
-
-msgid "Parsed records: "
-msgstr "Распознано записей: "
-
-msgid "Skipped loopback: "
-msgstr "Пропущено loopback: "
-
-msgid "Skipped comments/invalid: "
-msgstr "Пропущено комментариев/некорректных: "
-
-msgid "New domains: "
-msgstr "Новых доменов: "
-
-msgid "Updated/duplicates: "
-msgstr "Обновлено/дубликатов: "
-
-msgid "GeoIP Country Routing"
-msgstr "Маршрутизация по странам (GeoIP)"
-
-msgid "Select target country or region for this section (e.g. Non-RU for all foreign traffic)."
-msgstr "Выберите целевую страну или регион для этой секции (например, Non-RU для всего зарубежного трафика)."
-
-msgid "🌐 All Traffic (Default)"
-msgstr "🌐 Весь трафик (По умолчанию)"
-
-msgid "🇪🇺/🇺🇸 Non-RU (All Foreign Traffic)"
-msgstr "🇪🇺/🇺🇸 Зарубежный трафик (Non-RU)"
-
-msgid "🇷🇺 RU Only (Russia)"
-msgstr "🇷🇺 Только РФ (Россия)"
-
-msgid "🇺🇸 US Only (United States)"
-msgstr "🇺🇸 Только США (United States)"
-
-msgid "🇨🇳 CN Only (China)"
-msgstr "🇨🇳 Только Китай (China)"
-
-msgid "zapret2 Strategy Constructor"
-msgstr "Конструктор формулы zapret2"
-
-msgid "Build formula"
-msgstr "Собрать формулу"
-
-msgid "Method:"
-msgstr "Метод:"
-
-msgid "Position:"
-msgstr "Позиция:"
-
-msgid "Fooling:"
-msgstr "Fooling:"
-
-msgid "Testing desync strategies..."
-msgstr "Тестирование стратегий обхода..."
-
-msgid "No working desync strategy found for this domain."
-msgstr "Рабочая стратегия обхода для этого домена не найдена."
-
-msgid "Section domains:"
-msgstr "Домены секции:"
-
-msgid "Testing desync strategy:"
-msgstr "Тестирование стратегии:"
-
-msgid "No working desync strategy found for section domains."
-msgstr "Рабочая стратегия обхода для доменов секции не найдена."
-
-msgid "Optimal strategy found and applied: "
-msgstr "Оптимальная стратегия найдена и применена: "
-
-msgid "DPI Blocked"
-msgstr "Заблокировано ТСПУ"
-
-msgid "Applied"
-msgstr "Применено"
-
-msgid "Apply"
-msgstr "Применить"
-
-msgid "Checking\u2026"
-msgstr ""
-
-msgid "Init Packet Magic Header (S1)"
-msgstr "Magic Header: Инициализация (S1)"
-
-msgid "Init Packet Magic Header (S3)"
-msgstr "Magic Header: Инициализация (S3)"
-
-msgid "Init Packet Payload (I1)"
-msgstr "Payload: Инициализация (I1)"
-
-msgid "Init Packet Payload (I2)"
-msgstr "Payload: Инициализация (I2)"
-
-msgid "Init Packet Payload (I3)"
-msgstr "Payload: Инициализация (I3)"
-
-msgid "Init Packet Payload (I4)"
-msgstr "Payload: Инициализация (I4)"
-
-msgid "Init Packet Payload (I5)"
-msgstr "Payload: Инициализация (I5)"
-
-msgid "Invalid Shadowsocks URL: missing method and password separator ":""
-msgstr "Недопустимый Shadowsocks URL: отсутствует разделитель метода и пароля \":\""
-
-msgid "Invalid line: "%s". Use: domain ip or ip domain"
-msgstr "Неверная строка: \"%s\". Формат: домен ip или ip домен"
-
-msgid "Invalid path format. Path must start with "/" and contain valid characters"
-msgstr "Неверный формат пути. Должен начинаться с \"/\" и содержать допустимые символы"
-
-msgid "Junk Max Size (Jmax)"
-msgstr "Макс. размер Junk (Jmax)"
-
-msgid "Junk Min Size (Jmin)"
-msgstr "Мин. размер Junk (Jmin)"
-
-msgid "Junk Packet Count (Jc)"
-msgstr "Количество Junk-пакетов (Jc)"
-
-msgid "Option "%s" contains an invalid input value."
-msgstr "Опция \"%s\" содержит недопустимое значение."
-
-msgid "Preset"
-msgstr "Пресет"
-
-msgid "Response Packet Magic Header (S2)"
-msgstr "Magic Header: Ответ (S2)"
-
-msgid "Response Packet Magic Header (S4)"
-msgstr "Magic Header: Ответ (S4)"
-
-msgid "Starting\u2026"
-msgstr "Запуск\u2026"
-
-msgid "Status / RTT"
-msgstr "Статус / Пинг"
-
-msgid "Stopping\u2026"
-msgstr "Остановка\u2026"
-
-msgid "Underload Packet Magic Header (H1)"
-msgstr "Magic Header: Underload (H1)"
-
-msgid "Underload Packet Magic Header (H2)"
-msgstr "Magic Header: Underload (H2)"
-
-msgid "Underload Packet Magic Header (H3)"
-msgstr "Magic Header: Underload (H3)"
-
-msgid "Underload Packet Magic Header (H4)"
-msgstr "Magic Header: Underload (H4)"
-
-msgid "\u2714 Running"
-msgstr "\u2714 Работает"
-
-msgid "\u2718 Stopped"
-msgstr "\u2718 Остановлено"
-
-
-msgid "Close"
-msgstr "Закрыть"
-
-msgid "Not set"
-msgstr "Не заданы"
-
-msgid "Section action"
-msgstr "Действие секции"
-
-msgid "Community Lists"
-msgstr "Списки сообщества (Community Lists)"
-
-msgid "Domains"
-msgstr "Домены (Domains)"
-
-msgid "IP Addresses (IP CIDR)"
-msgstr "IP-адреса и подсети (IP CIDR)"
-
-msgid "Rule Sets (.srs / .json)"
-msgstr "Наборы правил (.srs / .json)"
-
-msgid ".lst Lists"
-msgstr ".lst списки"
-
-msgid "Source Devices"
-msgstr "Устройства-источники"
-
-msgid "Ports"
-msgstr "Порты"
-
-msgid "Section Rules Content"
-msgstr "Содержимое правил секции"
-

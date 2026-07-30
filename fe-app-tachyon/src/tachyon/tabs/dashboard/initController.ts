@@ -33,7 +33,7 @@ import { fetchHostnames } from '../../fetchers/fetchHostnames';
 
 const DASHBOARD_EXPANDED_SECTIONS_KEY = 'tachyon_dashboard_expanded_sections';
 const expandedSections = new Set<string>(
-  JSON.parse(localStorage.getItem(DASHBOARD_EXPANDED_SECTIONS_KEY) || '[]')
+  JSON.parse(localStorage.getItem(DASHBOARD_EXPANDED_SECTIONS_KEY) || '[]'),
 );
 
 function toggleSectionExpanded(sectionCode: string) {
@@ -42,7 +42,10 @@ function toggleSectionExpanded(sectionCode: string) {
   } else {
     expandedSections.add(sectionCode);
   }
-  localStorage.setItem(DASHBOARD_EXPANDED_SECTIONS_KEY, JSON.stringify(Array.from(expandedSections)));
+  localStorage.setItem(
+    DASHBOARD_EXPANDED_SECTIONS_KEY,
+    JSON.stringify(Array.from(expandedSections)),
+  );
   void renderSectionsWidget();
   void renderConnectionsWidget();
 }
@@ -639,7 +642,7 @@ function startDashboardDataUpdates() {
   sectionsRefreshTimer = setInterval(() => {
     void fetchDashboardSections();
   }, SECTIONS_REFRESH_INTERVAL_MS);
-  
+
   void fetchConnections();
   connectionsRefreshTimer = setInterval(() => {
     void fetchConnections();
@@ -744,15 +747,18 @@ async function handleTestLatency(
     if (latencyType === 'proxy') {
       // Test proxy latency immediately
       const parsedTag = tag.startsWith('[') ? JSON.parse(tag)[0] : tag;
-      const response = await TachyonShellMethods.getClashApiProxyLatency(parsedTag, timeout);
-        if (response.success && response.data) {
-          customProxyLatencies.set(tag, response.data.delay || -1);
-        } else {
-          customProxyLatencies.set(tag, -1);
-        }
-        setLatencyFetching(sectionName, false);
-        completed = true;
-        void fetchDashboardSections({ force: true });
+      const response = await TachyonShellMethods.getClashApiProxyLatency(
+        parsedTag,
+        timeout,
+      );
+      if (response.success && response.data) {
+        customProxyLatencies.set(tag, response.data.delay || -1);
+      } else {
+        customProxyLatencies.set(tag, -1);
+      }
+      setLatencyFetching(sectionName, false);
+      completed = true;
+      void fetchDashboardSections({ force: true });
     } else {
       const startResponse = await TachyonShellMethods.latencyTestStart(
         latencyType,
@@ -1394,8 +1400,8 @@ function updateLatencyProgressInline(
       section.action || '',
     );
 
-    const text = isConnectionNode 
-      ? _('Checking Connection...') 
+    const text = isConnectionNode
+      ? _('Checking Connection...')
       : getLatencyTestLabel(
           sectionsWidget.latencyProgressSections[section.sectionName],
         );
@@ -1562,9 +1568,14 @@ async function fetchConnections() {
   try {
     const [res, hostnames] = await Promise.all([
       TachyonShellMethods.getClashApiConnections(),
-      fetchHostnames()
+      fetchHostnames(),
     ]);
-    if (res.success && res.data && typeof res.data === 'object' && Array.isArray((res.data as any).connections)) {
+    if (
+      res.success &&
+      res.data &&
+      typeof res.data === 'object' &&
+      Array.isArray((res.data as any).connections)
+    ) {
       const connectionsList = (res.data as any).connections;
       const map = new Map<string, IConnection>();
       for (const conn of connectionsList) {
@@ -1582,13 +1593,15 @@ async function fetchConnections() {
           map.set(ip, { ip, count: 1, upload: up, download: down, name });
         }
       }
-      currentConnections = Array.from(map.values()).sort((a, b) => (b.download + b.upload) - (a.download + a.upload));
+      currentConnections = Array.from(map.values()).sort(
+        (a, b) => b.download + b.upload - (a.download + a.upload),
+      );
       connectionsLoading = false;
       connectionsFailed = false;
     } else {
       connectionsFailed = true;
     }
-  } catch(e) {
+  } catch (e) {
     connectionsFailed = true;
   }
   renderConnectionsWidget();
@@ -1597,12 +1610,14 @@ async function fetchConnections() {
 function renderConnectionsWidget() {
   const container = document.getElementById('dashboard-connections-grid');
   if (!container) return;
-  
-  container.replaceChildren(renderConnections(
-    currentConnections,
-    !expandedSections.has('active_clients'),
-    () => toggleSectionExpanded('active_clients')
-  ));
+
+  container.replaceChildren(
+    renderConnections(
+      currentConnections,
+      !expandedSections.has('active_clients'),
+      () => toggleSectionExpanded('active_clients'),
+    ),
+  );
 }
 
 async function renderBandwidthWidget() {
@@ -1739,7 +1754,6 @@ async function onPageMount() {
   void renderSystemInfoWidget();
   void renderServicesInfoWidget();
   syncDashboardServiceAvailability();
-
 
   if (hasRuntimeSnapshot) {
     void refreshRuntimeUiState({ force: true });

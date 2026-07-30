@@ -90,9 +90,7 @@ export function render() {
             selectorSwitchingTag: undefined,
           }),
         ),
-
       ]),
     ],
   );
 }
-

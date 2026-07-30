@@ -1,4 +1,8 @@
-import { onMount, preserveScrollForPage, executeShellCommand } from '../../../helpers';
+import {
+  onMount,
+  preserveScrollForPage,
+  executeShellCommand,
+} from '../../../helpers';
 import { showToast } from '../../../helpers/showToast';
 import { runDnsCheck } from './checks/runDnsCheck';
 import { runSingBoxCheck } from './checks/runSingBoxCheck';
@@ -803,22 +807,32 @@ async function handleGenerateBugReport() {
   setDiagnosticActionLoading('generateBugReport', true);
   try {
     const configResult = await fs.read('/etc/config/tachyon').catch(() => '');
-    const logsResult = await executeShellCommand({ command: '/sbin/logread', args: ['-e', 'tachyon', '-l', '1000'] });
-    const singboxLogsResult = await executeShellCommand({ command: '/sbin/logread', args: ['-e', 'sing-box', '-l', '1000'] });
+    const logsResult = await executeShellCommand({
+      command: '/sbin/logread',
+      args: ['-e', 'tachyon', '-l', '1000'],
+    });
+    const singboxLogsResult = await executeShellCommand({
+      command: '/sbin/logread',
+      args: ['-e', 'sing-box', '-l', '1000'],
+    });
 
     const rawReport = [
       '--- TACHYON CONFIG ---',
       configResult || 'Failed to fetch config',
       '',
       '--- TACHYON LOGS ---',
-      logsResult.code === 0 ? logsResult.stdout : 'Failed to fetch tachyon logs',
+      logsResult.code === 0
+        ? logsResult.stdout
+        : 'Failed to fetch tachyon logs',
       '',
       '--- SING-BOX LOGS ---',
-      singboxLogsResult.code === 0 ? singboxLogsResult.stdout : 'Failed to fetch sing-box logs',
+      singboxLogsResult.code === 0
+        ? singboxLogsResult.stdout
+        : 'Failed to fetch sing-box logs',
     ].join('\n');
 
     const maskedReport = maskGlobalCheckText(rawReport);
-    
+
     // Download as a text file instead of using clipboard, because navigator.clipboard
     // is undefined in insecure contexts (HTTP) which is common for router web interfaces.
     const blob = new Blob([maskedReport], { type: 'text/plain;charset=utf-8' });
@@ -831,7 +845,7 @@ async function handleGenerateBugReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     showToast(_('Bug report downloaded'), 'success');
   } catch (e) {
     logger.error('[DIAGNOSTIC]', 'handleGenerateBugReport - e', e);

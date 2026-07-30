@@ -365,7 +365,6 @@ export namespace Tachyon {
     dns_turbo_cache?: '0' | '1';
   }
 
-
   export interface MethodSuccessResponse<T> {
     success: true;
     data: T;

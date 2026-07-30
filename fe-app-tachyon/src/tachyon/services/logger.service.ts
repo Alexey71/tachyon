@@ -30,7 +30,10 @@ class Logger {
         break;
       default:
         // Hide spammy debug logs from console unless explicitly enabled
-        if (typeof localStorage !== 'undefined' && localStorage.getItem('tachyon_debug') === 'true') {
+        if (
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem('tachyon_debug') === 'true'
+        ) {
           console.log(message);
         }
     }

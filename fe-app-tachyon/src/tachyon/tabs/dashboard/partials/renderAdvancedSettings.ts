@@ -46,7 +46,7 @@ function rerender() {
 export async function loadAdvancedSettingsState() {
   const sections = await getConfigSections();
 
-  const settingsSec = sections.find(s => s['.type'] === 'settings');
+  const settingsSec = sections.find((s) => s['.type'] === 'settings');
   const smartDetect = settingsSec?.smart_detect === '1';
 
   const raw = settingsSec?.smart_detect_sections;
@@ -57,9 +57,14 @@ export async function loadAdvancedSettingsState() {
       : [];
 
   const ruleSections = sections.filter(
-    s => s['.type'] === 'section' && s.enabled !== '0' && (s.action as string) !== 'bypass' && (s.action as string) !== 'block' && (s.action as string) !== 'dns',
+    (s) =>
+      s['.type'] === 'section' &&
+      s.enabled !== '0' &&
+      (s.action as string) !== 'bypass' &&
+      (s.action as string) !== 'block' &&
+      (s.action as string) !== 'dns',
   );
-  const allSectionNames = ruleSections.map(s => s['.name'] as string);
+  const allSectionNames = ruleSections.map((s) => s['.name'] as string);
 
   const deviceIpsPerSection: Record<string, string[]> = {};
   for (const s of ruleSections) {
@@ -73,17 +78,18 @@ export async function loadAdvancedSettingsState() {
   }
 
   const wdRes = await TachyonShellMethods.getWatchdogStatus();
-  const watchdogRunning: boolean =
-    wdRes.success
-      ? Boolean((wdRes as { data: { running: boolean } }).data.running)
-      : false;
+  const watchdogRunning: boolean = wdRes.success
+    ? Boolean((wdRes as { data: { running: boolean } }).data.running)
+    : false;
 
   _state = {
     ..._state,
     watchdogRunning,
     smartDetectEnabled: smartDetect,
     smartDetectSections:
-      smartDetectSections.length > 0 ? smartDetectSections : allSectionNames.slice(0, 1),
+      smartDetectSections.length > 0
+        ? smartDetectSections
+        : allSectionNames.slice(0, 1),
     allSectionNames,
     deviceIpsPerSection,
     dnsTurboCache: settingsSec?.dns_turbo_cache === '1',
@@ -103,8 +109,9 @@ async function toggleWatchdog() {
     await TachyonShellMethods.watchdogStart();
   }
   const wdRes = await TachyonShellMethods.getWatchdogStatus();
-  const running =
-    wdRes.success ? (wdRes as { data: { running: boolean } }).data.running : _state.watchdogRunning;
+  const running = wdRes.success
+    ? (wdRes as { data: { running: boolean } }).data.running
+    : _state.watchdogRunning;
   _state = { ..._state, watchdogRunning: running, watchdogLoading: false };
   rerender();
 }
@@ -142,7 +149,7 @@ async function saveDeviceIps(sectionName: string, ipsText: string) {
   try {
     const ips = ipsText
       .split('\n')
-      .map(l => l.trim())
+      .map((l) => l.trim())
       .filter(Boolean);
     await TachyonShellMethods.uciRunCommand([
       'delete',
@@ -158,7 +165,11 @@ async function saveDeviceIps(sectionName: string, ipsText: string) {
     _state.deviceIpsPerSection[sectionName] = ips;
     showToast(_('Device IPs saved'), 'success');
     // Reload tachyon async so UI stays responsive
-    void TachyonShellMethods.uciRunCommand(['-q', 'commit', TACHYON_UCI_PACKAGE]);
+    void TachyonShellMethods.uciRunCommand([
+      '-q',
+      'commit',
+      TACHYON_UCI_PACKAGE,
+    ]);
   } catch {
     showToast(_('Failed to save device IPs'), 'error');
   }
@@ -205,7 +216,7 @@ function toggleSectionInList(sectionName: string, checked: boolean) {
   if (checked && !arr.includes(sectionName)) {
     arr.push(sectionName);
   } else if (!checked) {
-    arr = arr.filter(s => s !== sectionName);
+    arr = arr.filter((s) => s !== sectionName);
   }
   _state = { ..._state, smartDetectSections: arr };
   rerender();
@@ -254,9 +265,13 @@ function renderDnsTurboCacheSection(state: AdvancedSettingsState) {
       E('span', { class: 'tachyon_adv__section-icon' }, '⚡'),
       E('h3', { class: 'tachyon_adv__section-title' }, _('DNS Turbo Cache')),
     ]),
-    E('p', { class: 'tachyon_adv__hint' }, _(
-      'Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0\u00a0ms.',
-    )),
+    E(
+      'p',
+      { class: 'tachyon_adv__hint' },
+      _(
+        'Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0\u00a0ms.',
+      ),
+    ),
     E('div', { class: 'tachyon_adv__row' }, [
       E('label', { class: 'tachyon_adv__toggle' }, [
         E('input', {
@@ -270,13 +285,18 @@ function renderDnsTurboCacheSection(state: AdvancedSettingsState) {
         E('span', {}, _('Enable DNS Turbo Cache')),
       ]),
     ]),
-    saving ? E('span', { class: 'tachyon_adv__hint' }, _('Saving…')) : E('span', {}),
+    saving
+      ? E('span', { class: 'tachyon_adv__hint' }, _('Saving…'))
+      : E('span', {}),
   ]);
 }
 
 function renderSmartDetectSection(state: AdvancedSettingsState) {
-  const { smartDetectEnabled, smartDetectSections, allSectionNames, saving } = state;
-  const unselected = allSectionNames.filter(s => !smartDetectSections.includes(s));
+  const { smartDetectEnabled, smartDetectSections, allSectionNames, saving } =
+    state;
+  const unselected = allSectionNames.filter(
+    (s) => !smartDetectSections.includes(s),
+  );
 
   const rows: Element[] = [];
 
@@ -288,43 +308,72 @@ function renderSmartDetectSection(state: AdvancedSettingsState) {
             type: 'checkbox',
             checked: true,
             onchange: (e: Event) =>
-              toggleSectionInList(secName, (e.target as HTMLInputElement).checked),
+              toggleSectionInList(
+                secName,
+                (e.target as HTMLInputElement).checked,
+              ),
           }),
-          E('span', { class: 'tachyon_adv__priority-name' }, `${idx + 1}. ${secName}`),
+          E(
+            'span',
+            { class: 'tachyon_adv__priority-name' },
+            `${idx + 1}. ${secName}`,
+          ),
         ]),
         E('div', { class: 'tachyon_adv__arrows' }, [
-          E('button', {
-            class: 'btn tachyon_adv__arrow',
-            type: 'button',
-            title: _('Move up'),
-            disabled: idx === 0,
-            onclick: () => moveSectionUp(idx),
-          }, '△'),
-          E('button', {
-            class: 'btn tachyon_adv__arrow',
-            type: 'button',
-            title: _('Move down'),
-            disabled: idx === smartDetectSections.length - 1,
-            onclick: () => moveSectionDown(idx),
-          }, '▽'),
+          E(
+            'button',
+            {
+              class: 'btn tachyon_adv__arrow',
+              type: 'button',
+              title: _('Move up'),
+              disabled: idx === 0,
+              onclick: () => moveSectionUp(idx),
+            },
+            '△',
+          ),
+          E(
+            'button',
+            {
+              class: 'btn tachyon_adv__arrow',
+              type: 'button',
+              title: _('Move down'),
+              disabled: idx === smartDetectSections.length - 1,
+              onclick: () => moveSectionDown(idx),
+            },
+            '▽',
+          ),
         ]),
       ]),
     );
   });
 
-  unselected.forEach(secName => {
+  unselected.forEach((secName) => {
     rows.push(
-      E('div', { class: 'tachyon_adv__priority-row tachyon_adv__priority-row--off' }, [
-        E('label', { class: 'tachyon_adv__priority-label' }, [
-          E('input', {
-            type: 'checkbox',
-            checked: false,
-            onchange: (e: Event) =>
-              toggleSectionInList(secName, (e.target as HTMLInputElement).checked),
-          }),
-          E('span', { class: 'tachyon_adv__priority-name tachyon_adv__priority-name--off' }, secName),
-        ]),
-      ]),
+      E(
+        'div',
+        { class: 'tachyon_adv__priority-row tachyon_adv__priority-row--off' },
+        [
+          E('label', { class: 'tachyon_adv__priority-label' }, [
+            E('input', {
+              type: 'checkbox',
+              checked: false,
+              onchange: (e: Event) =>
+                toggleSectionInList(
+                  secName,
+                  (e.target as HTMLInputElement).checked,
+                ),
+            }),
+            E(
+              'span',
+              {
+                class:
+                  'tachyon_adv__priority-name tachyon_adv__priority-name--off',
+              },
+              secName,
+            ),
+          ]),
+        ],
+      ),
     );
   });
 
@@ -333,16 +382,23 @@ function renderSmartDetectSection(state: AdvancedSettingsState) {
       E('span', { class: 'tachyon_adv__section-icon' }, '🔍'),
       E('h3', { class: 'tachyon_adv__section-title' }, _('Smart Detect')),
     ]),
-    E('p', { class: 'tachyon_adv__hint' }, _(
-      'Auto-detects blocked domains from logs and adds them to the first section where they work via proxy.',
-    )),
+    E(
+      'p',
+      { class: 'tachyon_adv__hint' },
+      _(
+        'Auto-detects blocked domains from logs and adds them to the first section where they work via proxy.',
+      ),
+    ),
     E('div', { class: 'tachyon_adv__row' }, [
       E('label', { class: 'tachyon_adv__toggle' }, [
         E('input', {
           type: 'checkbox',
           checked: smartDetectEnabled,
           onchange: (e: Event) => {
-            _state = { ..._state, smartDetectEnabled: (e.target as HTMLInputElement).checked };
+            _state = {
+              ..._state,
+              smartDetectEnabled: (e.target as HTMLInputElement).checked,
+            };
             rerender();
           },
         }),
@@ -351,18 +407,24 @@ function renderSmartDetectSection(state: AdvancedSettingsState) {
     ]),
     smartDetectEnabled && rows.length > 0
       ? E('div', { class: 'tachyon_adv__priority-list' }, [
-          E('p', { class: 'tachyon_adv__sub-hint' }, _(
-            'Section test order (checked = active, drag rows with △▽):',
-          )),
+          E(
+            'p',
+            { class: 'tachyon_adv__sub-hint' },
+            _('Section test order (checked = active, drag rows with △▽):'),
+          ),
           ...rows,
         ])
       : E('span', {}),
-    E('button', {
-      class: 'btn cbi-button cbi-button-save tachyon_adv__save-btn',
-      type: 'button',
-      disabled: saving,
-      onclick: () => void saveSmartDetect(),
-    }, saving ? _('Saving…') : _('Save Smart Detect Settings')),
+    E(
+      'button',
+      {
+        class: 'btn cbi-button cbi-button-save tachyon_adv__save-btn',
+        type: 'button',
+        disabled: saving,
+        onclick: () => void saveSmartDetect(),
+      },
+      saving ? _('Saving…') : _('Save Smart Detect Settings'),
+    ),
   ]);
 }
 
@@ -373,34 +435,56 @@ function renderDeviceRoutingSection(state: AdvancedSettingsState) {
     return E('div', { class: 'tachyon_adv__section' }, [
       E('div', { class: 'tachyon_adv__section-header' }, [
         E('span', { class: 'tachyon_adv__section-icon' }, '🖥'),
-        E('h3', { class: 'tachyon_adv__section-title' }, _('Per-Device Routing')),
+        E(
+          'h3',
+          { class: 'tachyon_adv__section-title' },
+          _('Per-Device Routing'),
+        ),
       ]),
-      E('p', { class: 'tachyon_adv__hint' }, _('No active routing sections found.')),
+      E(
+        'p',
+        { class: 'tachyon_adv__hint' },
+        _('No active routing sections found.'),
+      ),
     ]);
   }
 
-  const editors = allSectionNames.map(secName => {
+  const editors = allSectionNames.map((secName) => {
     const currentIps = (deviceIpsPerSection[secName] || []).join('\n');
     const taId = `tachyon-device-ips-${secName}`;
 
     return E('div', { class: 'tachyon_adv__device-block' }, [
       E('div', { class: 'tachyon_adv__device-name' }, secName),
-      E('label', { class: 'tachyon_adv__device-label' }, _('Device IPs (one per line):')),
-      E('textarea', {
-        id: taId,
-        class: 'cbi-input-textarea tachyon_adv__device-ta',
-        rows: 3,
-        placeholder: '192.168.1.100\n192.168.1.105',
-      }, currentIps),
-      E('button', {
-        class: 'btn cbi-button cbi-button-save tachyon_adv__save-btn',
-        type: 'button',
-        disabled: saving,
-        onclick: () => {
-          const ta = document.getElementById(taId) as HTMLTextAreaElement | null;
-          void saveDeviceIps(secName, ta ? ta.value : '');
+      E(
+        'label',
+        { class: 'tachyon_adv__device-label' },
+        _('Device IPs (one per line):'),
+      ),
+      E(
+        'textarea',
+        {
+          id: taId,
+          class: 'cbi-input-textarea tachyon_adv__device-ta',
+          rows: 3,
+          placeholder: '192.168.1.100\n192.168.1.105',
         },
-      }, saving ? _('Saving…') : _('Save')),
+        currentIps,
+      ),
+      E(
+        'button',
+        {
+          class: 'btn cbi-button cbi-button-save tachyon_adv__save-btn',
+          type: 'button',
+          disabled: saving,
+          onclick: () => {
+            const ta = document.getElementById(
+              taId,
+            ) as HTMLTextAreaElement | null;
+            void saveDeviceIps(secName, ta ? ta.value : '');
+          },
+        },
+        saving ? _('Saving…') : _('Save'),
+      ),
     ]);
   });
 
@@ -409,9 +493,13 @@ function renderDeviceRoutingSection(state: AdvancedSettingsState) {
       E('span', { class: 'tachyon_adv__section-icon' }, '🖥'),
       E('h3', { class: 'tachyon_adv__section-title' }, _('Per-Device Routing')),
     ]),
-    E('p', { class: 'tachyon_adv__hint' }, _(
-      'Devices listed here are always routed through the assigned section, regardless of global rules.',
-    )),
+    E(
+      'p',
+      { class: 'tachyon_adv__hint' },
+      _(
+        'Devices listed here are always routed through the assigned section, regardless of global rules.',
+      ),
+    ),
     ...editors,
   ]);
 }
@@ -435,10 +523,16 @@ function renderAdvancedSettingsBody(state: AdvancedSettingsState) {
 export function renderAdvancedSettingsPanel() {
   return E('div', { id: 'tachyon-advanced-settings', class: 'tachyon_adv' }, [
     E('details', { class: 'tachyon_adv__details' }, [
-      E('summary', { class: 'tachyon_adv__summary' }, _('⚙ Advanced Settings')),
-      E('div', { id: 'tachyon-advanced-settings-inner', class: 'tachyon_adv__inner' }, [
-        renderAdvancedSettingsBody(_state),
-      ]),
+      E(
+        'summary',
+        { class: 'tachyon_adv__summary' },
+        _('⚙ Advanced Settings'),
+      ),
+      E(
+        'div',
+        { id: 'tachyon-advanced-settings-inner', class: 'tachyon_adv__inner' },
+        [renderAdvancedSettingsBody(_state)],
+      ),
     ]),
   ]);
 }

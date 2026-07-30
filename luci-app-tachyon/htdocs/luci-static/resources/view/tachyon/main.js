@@ -862,11 +862,7 @@ var FLAG_EMOJI_PATTERN = /([\u{1f1e6}-\u{1f1ff}]{2}|\u{1f3f4}[\u{e0061}-\u{e007a
 var EXACT_FLAG_EMOJI_PATTERN = /^([\u{1f1e6}-\u{1f1ff}]{2}|\u{1f3f4}[\u{e0061}-\u{e007a}]+\u{e007f})$/u;
 function renderFlagEmojis(value) {
   return value.split(FLAG_EMOJI_PATTERN).filter(Boolean).map(
-    (part) => EXACT_FLAG_EMOJI_PATTERN.test(part) ? E(
-      "span",
-      { class: "tachyon_dashboard-page__flag-emoji" },
-      part
-    ) : part
+    (part) => EXACT_FLAG_EMOJI_PATTERN.test(part) ? E("span", { class: "tachyon_dashboard-page__flag-emoji" }, part) : part
   );
 }
 
@@ -1957,7 +1953,9 @@ function renderDefaultState({
   isCollapsed,
   onToggleCollapse
 }) {
-  const isConnectionNode = ["vpn", "awg", "warp"].includes(section.action || "");
+  const isConnectionNode = ["vpn", "awg", "warp"].includes(
+    section.action || ""
+  );
   function testLatency() {
     if (section.withTagSelect) {
       return onTestLatency(
@@ -2012,11 +2010,36 @@ function renderDefaultState({
           style: "display: flex; align-items: center; justify-content: space-between; padding: 12px; min-width: 0; gap: 16px;"
         },
         [
-          E("div", { style: "display: flex; align-items: center; gap: 12px; min-width: 0;" }, [
-            E("b", { style: "overflow-wrap: anywhere; word-break: break-all; min-width: 0;" }, renderFlagEmojis(outbound.displayName)),
-            E("span", { style: "opacity: 0.7; font-size: 13px; white-space: nowrap; flex-shrink: 0;" }, [outbound.type].filter(Boolean)),
-            E("div", { class: getLatencyClass(), style: "white-space: nowrap; flex-shrink: 0;" }, connectionStatusText)
-          ]),
+          E(
+            "div",
+            {
+              style: "display: flex; align-items: center; gap: 12px; min-width: 0;"
+            },
+            [
+              E(
+                "b",
+                {
+                  style: "overflow-wrap: anywhere; word-break: break-all; min-width: 0;"
+                },
+                renderFlagEmojis(outbound.displayName)
+              ),
+              E(
+                "span",
+                {
+                  style: "opacity: 0.7; font-size: 13px; white-space: nowrap; flex-shrink: 0;"
+                },
+                [outbound.type].filter(Boolean)
+              ),
+              E(
+                "div",
+                {
+                  class: getLatencyClass(),
+                  style: "white-space: nowrap; flex-shrink: 0;"
+                },
+                connectionStatusText
+              )
+            ]
+          ),
           E(
             "button",
             {
@@ -2033,8 +2056,18 @@ function renderDefaultState({
             },
             latencyFetching ? [
               renderLoaderCircleIcon24(),
-              E("span", { class: "dashboard-sections-grid-item-test-latency__label" }, _("Checking..."))
-            ] : E("span", { class: "dashboard-sections-grid-item-test-latency__label" }, _("Check Connection"))
+              E(
+                "span",
+                {
+                  class: "dashboard-sections-grid-item-test-latency__label"
+                },
+                _("Checking...")
+              )
+            ] : E(
+              "span",
+              { class: "dashboard-sections-grid-item-test-latency__label" },
+              _("Check Connection")
+            )
           )
         ]
       );
@@ -2139,11 +2172,22 @@ function renderDefaultState({
     );
   }
   if (isConnectionNode) {
-    return E("div", { class: "tachyon_dashboard-page__outbound-section", style: "border: none; padding: 0;" }, [
-      E("div", { style: "display: flex; flex-direction: column; gap: 8px; padding: 0;" }, [
-        ...section.outbounds.map((outbound) => renderOutbound(outbound))
-      ])
-    ]);
+    return E(
+      "div",
+      {
+        class: "tachyon_dashboard-page__outbound-section",
+        style: "border: none; padding: 0;"
+      },
+      [
+        E(
+          "div",
+          {
+            style: "display: flex; flex-direction: column; gap: 8px; padding: 0;"
+          },
+          [...section.outbounds.map((outbound) => renderOutbound(outbound))]
+        )
+      ]
+    );
   }
   const metadataNodes = (section.subscriptionMetadata || []).map((metadata) => renderSubscriptionMetadata(metadata)).filter(Boolean);
   const subscriptionUpdateAction = renderSubscriptionUpdateAction(
@@ -2171,33 +2215,44 @@ function renderDefaultState({
             style: "display: flex; align-items: center; gap: 8px;"
           },
           [
-            svgEl("svg", {
-              width: "16",
-              height: "16",
-              viewBox: "0 0 24 24",
-              fill: "none",
-              stroke: "currentColor",
-              "stroke-width": "2",
-              "stroke-linecap": "round",
-              "stroke-linejoin": "round",
-              style: `transition: transform 0.2s; transform: rotate(${isCollapsed ? "-90deg" : "0deg"})`
-            }, [
-              svgEl("polyline", { points: "6 9 12 15 18 9" })
-            ]),
+            svgEl(
+              "svg",
+              {
+                width: "16",
+                height: "16",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                "stroke-width": "2",
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round",
+                style: `transition: transform 0.2s; transform: rotate(${isCollapsed ? "-90deg" : "0deg"})`
+              },
+              [svgEl("polyline", { points: "6 9 12 15 18 9" })]
+            ),
             E("span", {}, section.displayName),
             isCollapsed ? (() => {
-              const selectedOutbound = section.outbounds.find((o) => o.selected);
+              const selectedOutbound = section.outbounds.find(
+                (o) => o.selected
+              );
               if (!selectedOutbound) return "";
-              const isConnectionNode2 = ["vpn", "awg", "warp"].includes(section.action || "");
+              const isConnectionNode2 = ["vpn", "awg", "warp"].includes(
+                section.action || ""
+              );
               function getLatencyColor() {
                 if (isConnectionNode2) {
-                  if (latencyFetching) return "var(--warn-color-medium, orange)";
-                  if (selectedOutbound.latency === -1) return "var(--error-color-medium, red)";
+                  if (latencyFetching)
+                    return "var(--warn-color-medium, orange)";
+                  if (selectedOutbound.latency === -1)
+                    return "var(--error-color-medium, red)";
                   return selectedOutbound.runtimeAvailable ? "var(--success-color-medium, green)" : "var(--error-color-medium, red)";
                 }
-                if (!selectedOutbound.latency) return "var(--primary-color-low, lightgray)";
-                if (selectedOutbound.latency < 800) return "var(--success-color-medium, green)";
-                if (selectedOutbound.latency < 1500) return "var(--warn-color-medium, orange)";
+                if (!selectedOutbound.latency)
+                  return "var(--primary-color-low, lightgray)";
+                if (selectedOutbound.latency < 800)
+                  return "var(--success-color-medium, green)";
+                if (selectedOutbound.latency < 1500)
+                  return "var(--warn-color-medium, orange)";
                 return "var(--error-color-medium, red)";
               }
               let latencyText = "";
@@ -2206,12 +2261,24 @@ function renderDefaultState({
               } else {
                 latencyText = selectedOutbound.latency ? `${selectedOutbound.latency}ms` : "";
               }
-              return E("span", {
-                style: "font-size: 13px; font-weight: normal; margin-left: 8px; display: inline-flex; align-items: center; gap: 6px;"
-              }, [
-                E("span", { style: "opacity: 0.7;" }, selectedOutbound.displayName),
-                latencyText ? E("span", { style: `color: ${getLatencyColor()};` }, latencyText) : ""
-              ]);
+              return E(
+                "span",
+                {
+                  style: "font-size: 13px; font-weight: normal; margin-left: 8px; display: inline-flex; align-items: center; gap: 6px;"
+                },
+                [
+                  E(
+                    "span",
+                    { style: "opacity: 0.7;" },
+                    selectedOutbound.displayName
+                  ),
+                  latencyText ? E(
+                    "span",
+                    { style: `color: ${getLatencyColor()};` },
+                    latencyText
+                  ) : ""
+                ]
+              );
             })() : ""
           ]
         ),
@@ -2345,64 +2412,119 @@ function renderWidget(props) {
 function renderConnections(connections, isCollapsed, onToggleCollapse) {
   if (connections.length === 0) {
     return E("div", { class: "tachyon_dashboard-page__outbound-section" }, [
-      E("div", {
-        class: "tachyon_dashboard-page__outbound-section__title-section",
-        style: "cursor: pointer; user-select: none;",
-        click: onToggleCollapse
-      }, [
-        E("div", { class: "tachyon_dashboard-page__outbound-section__title-section__title", style: "display: flex; align-items: center; gap: 8px;" }, [
-          svgEl("svg", {
-            width: "16",
-            height: "16",
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            "stroke-width": "2",
-            "stroke-linecap": "round",
-            "stroke-linejoin": "round",
-            style: `transition: transform 0.2s; transform: rotate(${isCollapsed ? "-90deg" : "0deg"})`
-          }, [
-            svgEl("polyline", { points: "6 9 12 15 18 9" })
-          ]),
-          _("Active Clients")
-        ])
-      ]),
-      isCollapsed ? "" : E("div", { class: "tachyon_dashboard-page__outbound-section centered", style: "height: 60px;" }, _("No active clients"))
+      E(
+        "div",
+        {
+          class: "tachyon_dashboard-page__outbound-section__title-section",
+          style: "cursor: pointer; user-select: none;",
+          click: onToggleCollapse
+        },
+        [
+          E(
+            "div",
+            {
+              class: "tachyon_dashboard-page__outbound-section__title-section__title",
+              style: "display: flex; align-items: center; gap: 8px;"
+            },
+            [
+              svgEl(
+                "svg",
+                {
+                  width: "16",
+                  height: "16",
+                  viewBox: "0 0 24 24",
+                  fill: "none",
+                  stroke: "currentColor",
+                  "stroke-width": "2",
+                  "stroke-linecap": "round",
+                  "stroke-linejoin": "round",
+                  style: `transition: transform 0.2s; transform: rotate(${isCollapsed ? "-90deg" : "0deg"})`
+                },
+                [svgEl("polyline", { points: "6 9 12 15 18 9" })]
+              ),
+              _("Active Clients")
+            ]
+          )
+        ]
+      ),
+      isCollapsed ? "" : E(
+        "div",
+        {
+          class: "tachyon_dashboard-page__outbound-section centered",
+          style: "height: 60px;"
+        },
+        _("No active clients")
+      )
     ]);
   }
   const rows = connections.map((c) => {
-    return E("div", { class: "tachyon_dashboard-page__widgets-section__item__row", style: "padding: 8px 0; border-bottom: 1px solid rgba(128, 128, 128, 0.1); display: flex; justify-content: space-between;" }, [
-      E("div", {}, [
-        E("b", {}, c.name ? `${c.name} (${c.ip})` : c.ip),
-        E("span", { style: "opacity: 0.7; font-size: 13px; margin-left: 8px;" }, `(${c.count} conns)`)
-      ]),
-      E("div", { style: "font-size: 13px;" }, `\u25B2 ${prettyBytes(c.upload)} | \u25BC ${prettyBytes(c.download)}`)
-    ]);
+    return E(
+      "div",
+      {
+        class: "tachyon_dashboard-page__widgets-section__item__row",
+        style: "padding: 8px 0; border-bottom: 1px solid rgba(128, 128, 128, 0.1); display: flex; justify-content: space-between;"
+      },
+      [
+        E("div", {}, [
+          E("b", {}, c.name ? `${c.name} (${c.ip})` : c.ip),
+          E(
+            "span",
+            { style: "opacity: 0.7; font-size: 13px; margin-left: 8px;" },
+            `(${c.count} conns)`
+          )
+        ]),
+        E(
+          "div",
+          { style: "font-size: 13px;" },
+          `\u25B2 ${prettyBytes(c.upload)} | \u25BC ${prettyBytes(c.download)}`
+        )
+      ]
+    );
   });
   return E("div", { class: "tachyon_dashboard-page__outbound-section" }, [
-    E("div", {
-      class: "tachyon_dashboard-page__outbound-section__title-section",
-      style: "cursor: pointer; user-select: none;",
-      click: onToggleCollapse
-    }, [
-      E("div", { class: "tachyon_dashboard-page__outbound-section__title-section__title", style: "display: flex; align-items: center; gap: 8px;" }, [
-        svgEl("svg", {
-          width: "16",
-          height: "16",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": "2",
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-          style: `transition: transform 0.2s; transform: rotate(${isCollapsed ? "-90deg" : "0deg"})`
-        }, [
-          svgEl("polyline", { points: "6 9 12 15 18 9" })
-        ]),
-        _("Active Clients")
-      ])
-    ]),
-    isCollapsed ? "" : E("div", { class: "tachyon_dashboard-page__outbound-grid", style: "padding: 12px; display: block;" }, rows)
+    E(
+      "div",
+      {
+        class: "tachyon_dashboard-page__outbound-section__title-section",
+        style: "cursor: pointer; user-select: none;",
+        click: onToggleCollapse
+      },
+      [
+        E(
+          "div",
+          {
+            class: "tachyon_dashboard-page__outbound-section__title-section__title",
+            style: "display: flex; align-items: center; gap: 8px;"
+          },
+          [
+            svgEl(
+              "svg",
+              {
+                width: "16",
+                height: "16",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                "stroke-width": "2",
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round",
+                style: `transition: transform 0.2s; transform: rotate(${isCollapsed ? "-90deg" : "0deg"})`
+              },
+              [svgEl("polyline", { points: "6 9 12 15 18 9" })]
+            ),
+            _("Active Clients")
+          ]
+        )
+      ]
+    ),
+    isCollapsed ? "" : E(
+      "div",
+      {
+        class: "tachyon_dashboard-page__outbound-grid",
+        style: "padding: 12px; display: block;"
+      },
+      rows
+    )
   ]);
 }
 
@@ -3489,7 +3611,9 @@ function getJsonOutbounds(section) {
 }
 function isConnectionAction(action) {
   return Boolean(
-    action && ["connection", "proxy", "outbound", "vpn", "awg", "warp"].includes(action)
+    action && ["connection", "proxy", "outbound", "vpn", "awg", "warp"].includes(
+      action
+    )
   );
 }
 function hasSubscriptionSources(section) {
@@ -5709,7 +5833,10 @@ async function fetchServicesInfo() {
   }
   const tachyon = getSettledMethodResponse("getStatus", tachyonResult);
   const singbox = getSettledMethodResponse("getSingBoxStatus", singboxResult);
-  const watchdog = getSettledMethodResponse("getWatchdogStatus", watchdogResult);
+  const watchdog = getSettledMethodResponse(
+    "getWatchdogStatus",
+    watchdogResult
+  );
   const previousData = store.get().servicesInfoWidget.data;
   store.set({
     servicesInfoWidget: {
@@ -5798,7 +5925,10 @@ function toggleSectionExpanded(sectionCode) {
   } else {
     expandedSections.add(sectionCode);
   }
-  localStorage.setItem(DASHBOARD_EXPANDED_SECTIONS_KEY, JSON.stringify(Array.from(expandedSections)));
+  localStorage.setItem(
+    DASHBOARD_EXPANDED_SECTIONS_KEY,
+    JSON.stringify(Array.from(expandedSections))
+  );
   void renderSectionsWidget();
   void renderConnectionsWidget();
 }
@@ -6309,7 +6439,10 @@ async function handleTestLatency(latencyType, sectionName, tag, timeout) {
   try {
     if (latencyType === "proxy") {
       const parsedTag = tag.startsWith("[") ? JSON.parse(tag)[0] : tag;
-      const response = await TachyonShellMethods.getClashApiProxyLatency(parsedTag, timeout);
+      const response = await TachyonShellMethods.getClashApiProxyLatency(
+        parsedTag,
+        timeout
+      );
       if (response.success && response.data) {
         customProxyLatencies.set(tag, response.data.delay || -1);
       } else {
@@ -6975,7 +7108,9 @@ async function fetchConnections() {
           map.set(ip, { ip, count: 1, upload: up, download: down, name });
         }
       }
-      currentConnections = Array.from(map.values()).sort((a, b) => b.download + b.upload - (a.download + a.upload));
+      currentConnections = Array.from(map.values()).sort(
+        (a, b) => b.download + b.upload - (a.download + a.upload)
+      );
       connectionsLoading = false;
       connectionsFailed = false;
     } else {
@@ -6989,11 +7124,13 @@ async function fetchConnections() {
 function renderConnectionsWidget() {
   const container = document.getElementById("dashboard-connections-grid");
   if (!container) return;
-  container.replaceChildren(renderConnections(
-    currentConnections,
-    !expandedSections.has("active_clients"),
-    () => toggleSectionExpanded("active_clients")
-  ));
+  container.replaceChildren(
+    renderConnections(
+      currentConnections,
+      !expandedSections.has("active_clients"),
+      () => toggleSectionExpanded("active_clients")
+    )
+  );
 }
 async function renderBandwidthWidget() {
   renderStoreWidget(
@@ -7295,7 +7432,6 @@ var styles = `
     justify-content: space-between;
     gap: 8px 10px;
     min-width: 0;
-    flex-wrap: wrap;
 }
 
 .tachyon_dashboard-page__outbound-section__title-section__title {
@@ -7310,8 +7446,7 @@ var styles = `
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    flex: 1 1 auto;
-    flex-wrap: wrap;
+    flex: 0 0 auto;
 }
 
 .tachyon_dashboard-page .btn.tachyon_dashboard-page__outbound-section__subscription-update {
@@ -7389,13 +7524,14 @@ var styles = `
 }
 
 .tachyon_dashboard-page__subscription-meta__title {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow-wrap: anywhere;
-    word-break: break-all;
+    flex: 0 1 auto;
+    width: max-content;
+    max-width: min(28ch, 30%);
+    min-width: min-content;
     color: var(--text-color-high);
     font-weight: 700;
     line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
 .tachyon_dashboard-page__subscription-meta__facts {
@@ -10586,8 +10722,14 @@ async function handleGenerateBugReport() {
   setDiagnosticActionLoading("generateBugReport", true);
   try {
     const configResult = await fs.read("/etc/config/tachyon").catch(() => "");
-    const logsResult = await executeShellCommand({ command: "/sbin/logread", args: ["-e", "tachyon", "-l", "1000"] });
-    const singboxLogsResult = await executeShellCommand({ command: "/sbin/logread", args: ["-e", "sing-box", "-l", "1000"] });
+    const logsResult = await executeShellCommand({
+      command: "/sbin/logread",
+      args: ["-e", "tachyon", "-l", "1000"]
+    });
+    const singboxLogsResult = await executeShellCommand({
+      command: "/sbin/logread",
+      args: ["-e", "sing-box", "-l", "1000"]
+    });
     const rawReport = [
       "--- TACHYON CONFIG ---",
       configResult || "Failed to fetch config",
@@ -11773,10 +11915,7 @@ function renderRouteFilterOptions() {
   if (selectedRouteFilter !== ALL_FILTER_VALUE && !routes.includes(selectedRouteFilter)) {
     selectedRouteFilter = ALL_FILTER_VALUE;
   }
-  const signature = [
-    selectedRouteFilter,
-    ...routes
-  ].join("|");
+  const signature = [selectedRouteFilter, ...routes].join("|");
   if (signature === lastRouteFilterSignature) {
     select.value = selectedRouteFilter;
     return;

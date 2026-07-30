@@ -832,13 +832,14 @@ function getComponentCards(): ComponentCard[] {
     !systemInfo.sing_box_extended &&
     !systemInfo.sing_box_tiny;
   const singBoxExtended =
-    Boolean(systemInfo.sing_box_extended) && !systemInfo.sing_box_compressed && !systemInfo.sing_box_lx;
+    Boolean(systemInfo.sing_box_extended) &&
+    !systemInfo.sing_box_compressed &&
+    !systemInfo.sing_box_lx;
   const singBoxExtendedCompressed =
     Boolean(systemInfo.sing_box_extended) &&
     Boolean(systemInfo.sing_box_compressed);
   const singBoxLx =
-    Boolean(systemInfo.sing_box_extended) &&
-    Boolean(systemInfo.sing_box_lx);
+    Boolean(systemInfo.sing_box_extended) && Boolean(systemInfo.sing_box_lx);
   const singBoxTiny = Boolean(systemInfo.sing_box_tiny);
 
   const tachyonActions = getInstalledUpdateActions(

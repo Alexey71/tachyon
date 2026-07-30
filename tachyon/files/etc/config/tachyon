@@ -39,6 +39,8 @@ config settings 'settings'
         option exclude_ntp '0'
         option shutdown_correctly '0'
         option smart_detect '0'
+        option game_console_optimizer '0'
+        list game_console_ips ''
         # smart_detect: auto-detects blocked domains from logs and adds them to the first
         # section in smart_detect_sections that works via proxy.
         # list smart_detect_sections 'zapret-section'

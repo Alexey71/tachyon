@@ -95,8 +95,8 @@ describe('diagnostic masking', () => {
 
     expect(masked.split('\n')).toHaveLength(raw.split('\n').length);
     expect(masked).not.toContain('vless://secret');
-    expect(masked).toContain('config interface \'lan\'');
-    expect(masked).toContain('config interface \'wan\'');
+    expect(masked).toContain("config interface 'lan'");
+    expect(masked).toContain("config interface 'wan'");
     expect(masked).not.toContain('192.168.1.1');
     expect(masked).not.toContain('provider-password');
     expect(masked).toContain("option proxy_string '*******'");

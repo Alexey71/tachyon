@@ -8,7 +8,10 @@ type SingBoxVariantFields = {
 };
 
 export function isExtendedSingBoxVersion(version?: string) {
-  return String(version || '').includes('extended') || String(version || '').includes('-lx');
+  return (
+    String(version || '').includes('extended') ||
+    String(version || '').includes('-lx')
+  );
 }
 
 export function isLxSingBoxVersion(version?: string) {
@@ -54,10 +57,7 @@ export function formatSingBoxVersion(value: SingBoxVariantFields) {
     normalizedValue.sing_box_compressed
   ) {
     variant = _('compressed');
-  } else if (
-    normalizedValue.sing_box_extended &&
-    normalizedValue.sing_box_lx
-  ) {
+  } else if (normalizedValue.sing_box_extended && normalizedValue.sing_box_lx) {
     variant = _('lx');
   } else if (normalizedValue.sing_box_tiny) {
     variant = _('tiny');
