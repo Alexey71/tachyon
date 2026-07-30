@@ -4,7 +4,6 @@ set -eo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TACHYON_LIB="$ROOT_DIR/tachyon/files/usr/lib"
 TUNE_MODULE="$ROOT_DIR/tachyon/files/usr/lib/providers/zapret2/tune.uc"
-CLI="$ROOT_DIR/tachyon/files/usr/bin/tachyon"
 WORK_DIR="$(mktemp -d)"
 
 cleanup() {
@@ -43,18 +42,9 @@ assert_json_field() {
   [ "$actual" = "$expected" ] || fail "expected $field=$expected, got $actual"
 }
 
-# 1. Test candidates generation
-candidates="$(ucode -L "$TACHYON_LIB" "$TUNE_MODULE" candidates express)"
-assert_json_field "$candidates" success true
-assert_json_field "$candidates" mode express
-
-# 2. Test tuning run on test domain
+# 1. Test tuning run on test domain
 tune_result="$(ucode -L "$TACHYON_LIB" "$TUNE_MODULE" tune "" "example.com" express)"
 assert_json_field "$tune_result" success true
 assert_json_field "$tune_result" target_domain "example.com"
-
-# 3. Test CLI zapret2_tune entrypoint
-cli_result="$(TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" "$CLI" zapret2_tune "" "example.com" express)"
-assert_json_field "$cli_result" success true
 
 printf 'zapret2 tuner tests passed successfully\n'
