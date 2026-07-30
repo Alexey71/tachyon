@@ -1480,101 +1480,7 @@ function latency_test_status(job_id_value) {
     print(as_string(fs.readfile(path)));
 }
 
-function zapret2_tune_worker(path, section_id, target_domain, tune_mode) {
-    let tune_module = LIB_DIR + "/providers/zapret2/tune.uc";
-    let cmd = command_from_args([ "ucode", "-L", LIB_DIR, tune_module, "tune", section_id, target_domain, tune_mode, path ]);
-    let res_output = command_output(cmd);
-    let tune_res = null;
-    try {
-        tune_res = json(res_output);
-    } catch (e) {}
 
-    let state = read_json_file(path) || {};
-    if (type(state) != "object")
-        state = {};
-
-    state.running = false;
-    state.completed_at = now_seconds();
-    state.updated_at = now_seconds();
-
-    if (type(tune_res) == "object" && tune_res.success) {
-        state.success = true;
-        state.message = tune_res.message || "zapret2 strategy tuning completed";
-        state.winning_strategy = tune_res.winning_strategy;
-        state.winning_preset_id = tune_res.winning_preset_id;
-        state.winning_preset_name = tune_res.winning_preset_name;
-        state.best_rtt_ms = tune_res.best_rtt_ms;
-        state.results = tune_res.results;
-    } else {
-        state.success = false;
-        state.message = (type(tune_res) == "object" && tune_res.message) ? tune_res.message : "zapret2 strategy tuning failed";
-        state.winning_strategy = "";
-        state.results = (type(tune_res) == "object" && tune_res.results) ? tune_res.results : [];
-    }
-
-    write_state_file(path, state);
-}
-
-function running_zapret2_tune_action_value(section_id, target_domain, tune_mode, started_at) {
-    return {
-        success: true,
-        running: true,
-        kind: "zapret2_tune",
-        section: as_string(section_id),
-        target_domain: as_string(target_domain),
-        tune_mode: as_string(tune_mode),
-        message: "zapret2 strategy tuning is running",
-        pid: null,
-        started_at: arg_number(started_at),
-        updated_at: null,
-        exit_code: null,
-        progress: {
-            completed: 0,
-            total: 7,
-            failed: 0,
-            current_item: "Initializing..."
-        }
-    };
-}
-
-function zapret2_tune_async(section_id, target_domain, tune_mode) {
-    section_id = as_string(section_id);
-    target_domain = as_string(target_domain);
-    tune_mode = as_string(tune_mode || "express");
-
-    ensure_dirs();
-    let id = job_id();
-    let path = job_state_path_value(ZAPRET2_TUNE_ACTION_DIR, id);
-    if (path == "" || !write_state_file(path, running_zapret2_tune_action_value(section_id, target_domain, tune_mode, now_seconds()))) {
-        action_start_response(false, "", "Failed to write zapret2 tune action state");
-        exit(1);
-    }
-
-    let pid = launch_worker([ "zapret2-tune-worker", path, section_id, target_domain, tune_mode ]);
-    if (pid == "" || !set_running_job_pid_file(path, pid)) {
-        if (pid != "")
-            command_success_from_args([ "kill", pid ]);
-        action_start_response(false, "", "Failed to write zapret2 tune worker pid");
-        exit(1);
-    }
-
-    action_start_response(true, id, "zapret2 strategy tuning started");
-}
-
-function zapret2_tune_status(job_id_value) {
-    let path = job_state_path_value(ZAPRET2_TUNE_ACTION_DIR, job_id_value);
-    if (path == "") {
-        action_start_response(false, "", "Invalid zapret2 tune job id");
-        exit(1);
-    }
-    if (fs.stat(path) == null) {
-        action_start_response(false, "", "zapret2 tune job was not found");
-        exit(1);
-    }
-
-    refresh_pid_job_state(path, "zapret2 tune worker exited unexpectedly");
-    print(as_string(fs.readfile(path)));
-}
 
 function action_dir(kind) {
     kind = as_string(kind);
@@ -1689,12 +1595,6 @@ else if (mode == "latency-test-async")
     latency_test_async(ARGV[1], ARGV[2], ARGV[3], ARGV[4]);
 else if (mode == "latency-test-status")
     latency_test_status(ARGV[1]);
-else if (mode == "zapret2-tune-worker")
-    zapret2_tune_worker(ARGV[1], ARGV[2], ARGV[3], ARGV[4]);
-else if (mode == "zapret2-tune-async")
-    zapret2_tune_async(ARGV[1], ARGV[2], ARGV[3]);
-else if (mode == "zapret2-tune-status")
-    zapret2_tune_status(ARGV[1]);
 else if (mode == "action-ack")
     action_ack(ARGV[1], ARGV[2]);
 else if (mode == "cleanup-action-dir-fixture")
