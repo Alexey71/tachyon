@@ -75,7 +75,7 @@
     <!-- Version & OS Tag -->
     <rect x="0" y="0" width="280" height="28" rx="14" fill="#1E293B" stroke="#38BDF8" stroke-opacity="0.4" stroke-width="1"/>
     <circle cx="16" cy="14" r="4" fill="#10B981"/>
-    <text x="28" y="19" class="badge-text" fill="#38BDF8">v1.2.46 RELEASE | OpenWrt 23-25.x</text>
+    <text x="28" y="19" class="badge-text" fill="#38BDF8">STABLE RELEASE | OpenWrt 23-25.x</text>
 
     <!-- Main Title -->
     <text x="0" y="82" class="title">TACHYON</text>
