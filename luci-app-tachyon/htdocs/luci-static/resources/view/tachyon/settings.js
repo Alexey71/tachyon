@@ -215,15 +215,28 @@ function configureDnsDynamicList(option, getChoices, defaultValue) {
     };
     node.addEventListener("mousedown", refreshBeforeOpening, true);
     node.addEventListener("focusin", refreshBeforeOpening, true);
-    if (!settingsDnsDynamicRefreshers.has(section_id)) {
-      settingsDnsDynamicRefreshers.set(section_id, new Set());
+    if (!settingsDnsDynamicState.refreshers.has(section_id)) {
+      settingsDnsDynamicState.refreshers.set(section_id, new Set());
     }
-    settingsDnsDynamicRefreshers.get(section_id).add(refreshChoices);
+    settingsDnsDynamicState.refreshers.get(section_id).add(refreshChoices);
+    settingsDnsDynamicState.widget = widget;
+    settingsDnsDynamicState.option = this;
     return node;
   };
 }
 
-const settingsDnsDynamicRefreshers = new Map();
+const settingsDnsDynamicState = {
+  dnsType: null,
+  widget: null,
+  option: null,
+  refreshers: new Map(),
+};
+
+function getDefaultDnsServers(dnsType) {
+  const servers = main.DNS_SERVERS_BY_PROTOCOL[dnsType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
+  const keys = Object.keys(servers);
+  return keys.length > 0 ? [keys[0]] : ["77.88.8.8"];
+}
 
 function configureDnsDuration(
   option,
@@ -928,6 +941,8 @@ function showImportHostsModal(section_id, optionRef) {
 }
 
 function createSettingsContent(section, capabilities) {
+  settingsDnsDynamicState.dnsType = uci.get(UCI_PACKAGE, "settings", "dns_type") || "udp";
+
   let o = section.option(
     form.ListValue,
     "dns_type",
@@ -952,8 +967,7 @@ function createSettingsContent(section, capabilities) {
     ),
   );
   configureDnsDynamicList(dnsOption, (_section_id) => {
-    const sel = document.getElementById("cbid.tachyon.settings.dns_type");
-    const dnsType = (sel ? sel.value : null) || "udp";
+    const dnsType = settingsDnsDynamicState.dnsType || "udp";
     return getDnsServerChoices(dnsType);
   }, "77.88.8.8");
 
@@ -972,7 +986,21 @@ function createSettingsContent(section, capabilities) {
   );
 
   dnsTypeOption.onchange = function (_ev, section_id, value) {
-    const refreshers = settingsDnsDynamicRefreshers.get(section_id);
+    const newType = value || "udp";
+    if (newType === settingsDnsDynamicState.dnsType) return;
+    settingsDnsDynamicState.dnsType = newType;
+
+    const widget = settingsDnsDynamicState.widget;
+    if (widget) {
+      const servers = main.DNS_SERVERS_BY_PROTOCOL[newType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
+      const defaultLabels = {};
+      Object.entries(servers).forEach(([v, l]) => { defaultLabels[v] = _(l); });
+      const defaultServers = getDefaultDnsServers(newType);
+      widget.choices = defaultLabels;
+      widget.setValue(defaultServers);
+    }
+
+    const refreshers = settingsDnsDynamicState.refreshers.get(section_id);
     if (refreshers) {
       refreshers.forEach((fn) => fn());
     }

@@ -455,6 +455,8 @@ const outboundNameChoicesInflight = new Map();
 const outboundNameSourceOptions = new Map();
 const sectionGroupSourceOptions = new Map();
 const dashboardFilterChoiceRefreshers = new Map();
+const perRuleDnsTypeState = new Map();
+const perRuleDnsWidgets = new Map();
 const SECTION_CACHE_DIR = "/var/run/tachyon/section-cache";
 const COUNTRY_CODES =
   "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW XK".split(
@@ -1527,6 +1529,7 @@ function configureLiveDynamicListChoices(option, getChoices) {
       dashboardFilterChoiceRefreshers.set(section_id, new Set());
     }
     dashboardFilterChoiceRefreshers.get(section_id).add(refreshChoices);
+    perRuleDnsWidgets.set(section_id, widget);
 
     return node;
   };
@@ -7257,12 +7260,27 @@ function createSectionContent(section) {
   o.depends("action", "dns");
   o.modalonly = true;
   configureLiveDynamicListChoices(o, (section_id) => {
-    const sel = document.getElementById("cbid.tachyon." + section_id + ".dns_type");
-    const dnsType = (sel ? sel.value : null) || "udp";
+    const dnsType = perRuleDnsTypeState.get(section_id) || "udp";
     const servers = main.DNS_SERVERS_BY_PROTOCOL[dnsType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
     return Object.entries(servers).map(([value, label]) => ({ value, label: _(label) }));
   });
-  perRuleDnsTypeOption.onchange = function (_ev, section_id) {
+  perRuleDnsTypeOption.onchange = function (_ev, section_id, value) {
+    const newType = value || "udp";
+    const oldType = perRuleDnsTypeState.get(section_id) || "udp";
+    perRuleDnsTypeState.set(section_id, newType);
+
+    if (newType !== oldType) {
+      const widget = perRuleDnsWidgets.get(section_id);
+      if (widget) {
+        const servers = main.DNS_SERVERS_BY_PROTOCOL[newType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
+        const defaultLabels = {};
+        Object.entries(servers).forEach(([v, l]) => { defaultLabels[v] = _(l); });
+        const defaultServers = Object.keys(servers).slice(0, 1);
+        widget.choices = defaultLabels;
+        widget.setValue(defaultServers);
+      }
+    }
+
     const refreshers = dashboardFilterChoiceRefreshers.get(section_id);
     if (refreshers) {
       refreshers.forEach((fn) => fn());
