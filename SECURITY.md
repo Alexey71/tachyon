@@ -1,25 +1,62 @@
-# Политика безопасности (Security Policy)
+# Security Policy
 
-## Поддерживаемые версии
+## Supported Versions
 
-Обновления безопасности применяются только к актуальной (latest) ветке и последним релизам проекта. Если вы используете старые версии, мы настоятельно рекомендуем обновиться.
+I provide security patches only for the latest stable releases. If you are running an older version, I strongly recommend upgrading immediately.
 
-| Версия | Поддерживается |
-| ------ | -------------- |
-| >= 1.0.0 | ✅ Да |
-| < 1.0.0 | ❌ Нет |
+| Version | Supported |
+| ------- | --------- |
+| >= 1.0.0 | Yes |
+| < 1.0.0 | No |
 
-## Как сообщить об уязвимости
+## Reporting a Vulnerability
 
-Мы серьезно относимся к безопасности проекта. Если вы обнаружили уязвимость, пожалуйста, **не создавайте публичный Issue**. 
+I take the security of Tachyon seriously. If you discover a vulnerability, **please do not open a public issue**.
 
-Вместо этого:
-1. Отправьте нам информацию на email: **dushnilin@gmail.com**
-2. Или воспользуйтесь встроенной функцией **Private vulnerability reporting** во вкладке "Security" этого репозитория на GitHub (если включена).
+Instead, report it through one of the following channels:
 
-**Что желательно указать в отчете:**
-* Описание проблемы и потенциальный вред.
-* Шаги для воспроизведения уязвимости.
-* Любую дополнительную информацию, которая поможет быстрее понять проблему (скриншоты, логи).
+1. **Email:** Send details to **dushnilin@gmail.com**
+2. **GitHub Private Vulnerability Reporting:** Use the built-in "Private vulnerability reporting" feature in the Security tab of this repository.
 
-Мы постараемся ответить на ваше сообщение как можно скорее и будем держать вас в курсе процесса исправления. Спасибо за то, что делаете Tachyon безопаснее!
+### What to include in your report
+
+- A clear description of the vulnerability and its potential impact.
+- Steps to reproduce the issue.
+- Any supporting material: screenshots, logs, proof-of-concept code.
+
+### Response timeline
+
+- **Acknowledgment:** I will confirm receipt of your report within **48 hours**.
+- **Assessment:** I aim to provide an initial assessment within **7 days**.
+- **Fix:** Security patches are prioritized and released as soon as the fix is validated.
+
+I will keep you informed throughout the process and credit you in the release notes unless you prefer to remain anonymous.
+
+## Scope
+
+The following are considered in scope:
+
+- Remote code execution on the router via Tachyon.
+- Authentication or authorization bypass in the LuCI web interface or Telegram bot.
+- Command injection through any user-supplied input (domains, proxy URLs, subscription links, etc.).
+- Path traversal leading to unauthorized file access.
+- DNS rebinding or DNS manipulation exploitable through Tachyon.
+- Information disclosure of sensitive configuration data (API keys, proxy credentials).
+
+The following are **out of scope**:
+
+- Vulnerabilities in upstream projects (sing-box, zapret, OpenWrt itself) — report those to the respective maintainers.
+- Issues that require physical access to the router.
+- Denial of service through resource exhaustion from the local network only.
+
+## Safe Harbor
+
+I support responsible disclosure. If you make a good-faith effort to report a vulnerability in accordance with this policy, I will not take legal action against you or report your activities to law enforcement.
+
+## Encryption
+
+If you need to communicate sensitive information, you may encrypt your email using PGP. Contact me at **dushnilin@gmail.com** to obtain my public key.
+
+---
+
+Thank you for helping keep Tachyon and its users safe.

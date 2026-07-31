@@ -17,7 +17,7 @@
 
 **Tachyon** is a direct fork of **[Forkop by @ushan0v](https://github.com/ushan0v/forkop)** (formerly **Podkop Plus**). The project has evolved into an independent, high-performance network routing engine and DPI bypass framework designed specifically for **OpenWrt** (fully supporting **OpenWrt 23.05, 24.10, 25.x, and SNAPSHOT** builds).
 
-Building upon the solid engineering foundations of the original [Podkop by @itdoginfo](https://github.com/itdoginfo/podkop) and its evolution in [Forkop by @ushan0v](https://github.com/ushan0v/forkop), Tachyon introduces enterprise-grade resilience, multi-protocol routing, and dynamic system self-healing.
+I built upon the solid engineering foundations of the original [Podkop by @itdoginfo](https://github.com/itdoginfo/podkop) and its evolution in [Forkop by @ushan0v](https://github.com/ushan0v/forkop), introducing enterprise-grade resilience, multi-protocol routing, and dynamic system self-healing.
 
 The core backend of Tachyon is written in **ucode** — OpenWrt's native, lightweight scripting language — delivering blazingly fast execution with minimal RAM footprint on embedded hardware.
 
@@ -79,7 +79,7 @@ sh <(wget -O - https://raw.githubusercontent.com/Dushnilin/tachyon/main/install.
 Tachyon stands on the shoulders of incredible open-source projects:
 
 * 🍴 **[Forkop (ushan0v)](https://github.com/ushan0v/forkop)** — Direct parent repository (formerly Podkop Plus).
-* 🐕 **[Podkop (itdoginfo)](https://github.com/itdoginfo/podkop)** — The original project that inspired our architecture.
+* 🐕 **[Podkop (itdoginfo)](https://github.com/itdoginfo/podkop)** — The original project that inspired the architecture.
 * 📦 **[sing-box](https://github.com/SagerNet/sing-box)** — Universal proxy engine.
 * 🚀 **[zapret (bol-van)](https://github.com/bol-van/zapret2)** — DPI desync framework (`nfqws` / `nfqws2`).
 * 🌐 **[ByeDPI](https://github.com/hrbrmstr/byedpi)** — Local SOCKS desync proxy.
