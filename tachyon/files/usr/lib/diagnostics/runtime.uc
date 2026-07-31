@@ -537,7 +537,7 @@ function server_required_inbound_proto(protocol) {
     protocol = as_string(protocol);
     if (protocol == "json_inbound")
         return "";
-    return protocol == "hysteria2" ? "udp" : "tcp";
+    return protocol == "hysteria2" || protocol == "tuic" ? "udp" : "tcp";
 }
 
 function server_runtime_type_for_protocol(protocol) {

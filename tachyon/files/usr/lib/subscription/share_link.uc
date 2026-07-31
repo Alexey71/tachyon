@@ -254,6 +254,40 @@ function serialize_hysteria2(outbound) {
         host_port(outbound.server, port) + query_string(params) + fragment(outbound);
 }
 
+function serialize_tuic(outbound) {
+    let port = as_string(outbound.server_port || "");
+    if (as_string(outbound.uuid || "") == "" || as_string(outbound.server || "") == "" || port == "")
+        return "";
+
+    let userinfo = as_string(outbound.uuid);
+    if (as_string(outbound.password || "") != "")
+        userinfo += ":" + outbound.password;
+
+    let params = [];
+    let tls = type(outbound.tls) == "object" ? outbound.tls : null;
+    if (tls) {
+        add_query(params, "sni", tls.server_name);
+        if (tls.insecure === true)
+            add_query(params, "insecure", "1");
+        if (type(tls.alpn) == "array" && length(tls.alpn) > 0)
+            add_query(params, "alpn", join(",", tls.alpn));
+    }
+    let cc = as_string(outbound.congestion_control || "");
+    if (cc != "" && cc != "bbr")
+        add_query(params, "congestion_control", cc);
+    let udp_mode = as_string(outbound.udp_relay_mode || "");
+    if (udp_mode != "" && udp_mode != "native")
+        add_query(params, "udp_relay_mode", udp_mode);
+    if (outbound.zero_rtt_handshake === true)
+        add_query(params, "zero_rtt_handshake", "1");
+    let hb = as_string(outbound.heartbeat || "");
+    if (hb != "")
+        add_query(params, "heartbeat", hb);
+
+    return "tuic://" + uri_encode(userinfo) + "@" +
+        host_port(outbound.server, port) + query_string(params) + fragment(outbound);
+}
+
 function serialize_vmess(outbound) {
     if (as_string(outbound.uuid) == "" || as_string(outbound.server) == "" || outbound.server_port == null)
         return "";
@@ -319,6 +353,8 @@ function serialize_outbound_link(outbound) {
         return serialize_socks(outbound);
     if (outbound_type == "hysteria2")
         return serialize_hysteria2(outbound);
+    if (outbound_type == "tuic")
+        return serialize_tuic(outbound);
     if (outbound_type == "vmess")
         return serialize_vmess(outbound);
     return "";

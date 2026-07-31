@@ -383,6 +383,7 @@ function tachyon_config_masked_line(line) {
     line = mask_after_token_space(line, "option tailscale_hostname");
     line = mask_after_token_space(line, "list tailscale_advertise_routes");
     line = mask_after_token(line, "option hysteria2_obfs_password");
+    line = mask_after_token(line, "option tuic_password");
     line = mask_after_token(line, "option reality_private_key");
     line = mask_after_token(line, "option reality_public_key");
     line = mask_after_token(line, "option reality_short_id");
@@ -558,7 +559,7 @@ function server_required_inbound_proto(protocol) {
     if (protocol == "json_inbound")
         print("\n");
     else
-        print(protocol == "hysteria2" ? "udp" : "tcp", "\n");
+        print(protocol == "hysteria2" || protocol == "tuic" ? "udp" : "tcp", "\n");
 }
 
 function server_runtime_type_for_protocol(protocol) {

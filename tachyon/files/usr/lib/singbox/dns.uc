@@ -145,6 +145,11 @@ function server_from_options(tag_name, dns_type, dns_server, detour) {
         if (path != "")
             result.path = path;
     }
+    else if (dns_type == "doq") {
+        result.type = "quic";
+        result.server_port = port != "" ? int(port) : 784;
+        result.tls = { enabled: true };
+    }
     else {
         return { unsupported: "unsupported dns_type " + dns_type };
     }
@@ -178,7 +183,12 @@ function server_config(settings, override_state) {
     );
 
     if (bool_option(settings, "dns_doq_ech", false)) {
-        if (result.tls) {
+        if (result.type == "tls" || result.type == "quic") {
+            if (!result.tls) result.tls = { enabled: true };
+            result.tls.ech = { enabled: true };
+        }
+        if (result.type == "https") {
+            if (!result.tls) result.tls = { enabled: true };
             result.tls.ech = { enabled: true };
         }
     }

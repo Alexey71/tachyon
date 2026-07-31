@@ -24,6 +24,7 @@ function is_supported_share_link(line) {
         starts_with(line, "trojan://") ||
         starts_with(line, "hysteria2://") ||
         starts_with(line, "hy2://") ||
+        starts_with(line, "tuic://") ||
         starts_with(line, "socks://") ||
         starts_with(line, "socks4://") ||
         starts_with(line, "socks4a://") ||
@@ -952,6 +953,65 @@ function process_hysteria2(raw, url) {
     return outbound;
 }
 
+function process_tuic(raw, url) {
+    let userinfo = as_string(url.userinfo || "");
+    if (userinfo == "" || url.host == "" || url.port == "")
+        return null;
+
+    let uuid = "";
+    let password = "";
+    let colon_index = index(userinfo, ":");
+    if (colon_index >= 0) {
+        uuid = substr(userinfo, 0, colon_index);
+        password = substr(userinfo, colon_index + 1);
+    } else {
+        uuid = userinfo;
+    }
+
+    if (uuid == "")
+        return null;
+
+    let tls = { enabled: true };
+    if ((url.query.sni || "") != "")
+        tls.server_name = url.query.sni;
+    if (is_true(url.query.allowInsecure || url.query.insecure))
+        tls.insecure = true;
+    if ((url.query.alpn || "") != "")
+        tls.alpn = split_csv(url.query.alpn);
+
+    let outbound = {
+        type: "tuic",
+        tag: url.fragment != "" ? url.fragment : (url.host + ":" + url.port),
+        share_link: raw,
+        server: url.host,
+        server_port: int(url.port),
+        uuid: uuid,
+        tls: tls
+    };
+
+    if (password != "")
+        outbound.password = password;
+
+    let cc = as_string(url.query.congestion_control || "");
+    if (cc != "")
+        outbound.congestion_control = cc;
+    else
+        outbound.congestion_control = "bbr";
+
+    let udp_mode = as_string(url.query.udp_relay_mode || "");
+    if (udp_mode != "")
+        outbound.udp_relay_mode = udp_mode;
+
+    if (is_true(url.query.zero_rtt_handshake))
+        outbound.zero_rtt_handshake = true;
+
+    let heartbeat = as_string(url.query.heartbeat || "");
+    if (heartbeat != "")
+        outbound.heartbeat = heartbeat;
+
+    return outbound;
+}
+
 function string_value(value) {
     return value == null ? "" : as_string(value);
 }
@@ -1054,6 +1114,8 @@ function parse_share_link(line) {
         return process_trojan(line, url);
     if (url.scheme == "hysteria2" || url.scheme == "hy2")
         return process_hysteria2(line, url);
+    if (url.scheme == "tuic")
+        return process_tuic(line, url);
     if (match(url.scheme, /^socks/))
         return process_socks(line, url);
     return null;
@@ -1449,6 +1511,30 @@ function parse_clash_record(record) {
             if (obfs_password != "")
                 outbound.obfs.password = obfs_password;
         }
+        return outbound;
+    }
+    if (proxy_type == "tuic") {
+        let uuid = as_string(record.uuid || "");
+        let password = as_string(record.password || "");
+        if (uuid == "")
+            return null;
+        let outbound = { type: "tuic", tag: name, server: server, server_port: port, uuid: uuid, tls: { enabled: true } };
+        if (password != "")
+            outbound.password = password;
+        if (options.sni != "")
+            outbound.tls.server_name = options.sni;
+        if (is_true(options.skip_verify) || is_true(record["skip-cert-verify"]))
+            outbound.tls.insecure = true;
+        if (options.alpn != "")
+            outbound.tls.alpn = split_csv(options.alpn);
+        let cc = as_string(record["congestion-control"] || record.congestion_control || "");
+        if (cc != "")
+            outbound.congestion_control = cc;
+        let udp_mode = as_string(record["udp-relay-mode"] || record.udp_relay_mode || "");
+        if (udp_mode != "")
+            outbound.udp_relay_mode = udp_mode;
+        if (is_true(record["zero-rtt-握手"]) || is_true(record["zero_rtt_handshake"]))
+            outbound.zero_rtt_handshake = true;
         return outbound;
     }
     if (proxy_type == "socks5" || proxy_type == "socks") {
@@ -2594,6 +2680,16 @@ function normalize_sing_box_hysteria2_outbound(outbound) {
     return outbound;
 }
 
+function normalize_sing_box_tuic_outbound(outbound) {
+    if (type(outbound) == "object" &&
+        lc(as_string(outbound.type || "")) == "tuic" &&
+        type(outbound.tls) == "object" &&
+        outbound.tls.utls != null) {
+        delete outbound.tls.utls;
+    }
+    return outbound;
+}
+
 function sing_box_urltest_group(outbound) {
     return type(outbound) == "object" && lc(as_string(outbound.type || "")) == "urltest";
 }
@@ -2611,6 +2707,7 @@ function normalize_sing_box_json_outbounds(candidates) {
         if (type(outbound) != "object")
             continue;
         outbound = normalize_sing_box_hysteria2_outbound(outbound);
+        outbound = normalize_sing_box_tuic_outbound(outbound);
         push(outbounds, normalize_sing_box_xhttp_transport(outbound));
     }
 

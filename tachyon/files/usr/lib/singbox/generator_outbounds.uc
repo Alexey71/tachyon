@@ -145,7 +145,7 @@ function supported_subscription_outbound(outbound) {
     if (t == "direct" || t == "selector" || t == "urltest" || t == "dns" || t == "block")
         return false;
     return t == "vless" || t == "vmess" || t == "trojan" || t == "shadowsocks" ||
-        t == "socks" || t == "hysteria2";
+        t == "socks" || t == "hysteria2" || t == "tuic";
 }
 
 function outbound_uses_xhttp(outbound) {
@@ -245,6 +245,16 @@ function copy_subscription_outbound(outbound, new_tag) {
             copy[key] = value;
     }
     if (as_string(copy.type || "") == "hysteria2" &&
+        type(copy.tls) == "object" &&
+        copy.tls.utls != null) {
+        let tls = {};
+        for (let key, value in copy.tls) {
+            if (key != "utls")
+                tls[key] = value;
+        }
+        copy.tls = tls;
+    }
+    if (as_string(copy.type || "") == "tuic" &&
         type(copy.tls) == "object" &&
         copy.tls.utls != null) {
         let tls = {};
@@ -429,7 +439,7 @@ function tls_alpn_array(value, transport) {
 function apply_link_tls(outbound, scheme, query) {
     query = object_or_empty(query);
     let security = as_string(query.security || "");
-    if (security == "" && (scheme == "hysteria2" || scheme == "hy2"))
+    if (security == "" && (scheme == "hysteria2" || scheme == "hy2" || scheme == "tuic"))
         security = "tls";
 
     if (security == "" || security == "none")
@@ -449,7 +459,7 @@ function apply_link_tls(outbound, scheme, query) {
     if (length(alpn) > 0)
         tls.alpn = alpn;
 
-    if (scheme != "hysteria2" && scheme != "hy2" && as_string(query.fp || "") != "") {
+    if (scheme != "hysteria2" && scheme != "hy2" && scheme != "tuic" && as_string(query.fp || "") != "") {
         tls.utls = {
             enabled: true,
             fingerprint: as_string(query.fp)
@@ -779,6 +789,58 @@ function manual_hysteria2_outbound(link, tag_name) {
     return outbound;
 }
 
+function manual_tuic_outbound(link, tag_name) {
+    let query = url_query_params(link);
+    let host = url_host(link);
+    let port = parse_port(url_port(link));
+    let userinfo = url_userinfo(link);
+    if (host == "" || port == null || userinfo == "")
+        ctx.runtime_generate_unsupported("manual TUIC proxy link is invalid");
+
+    let uuid = "";
+    let password = "";
+    let colon_index = index(userinfo, ":");
+    if (colon_index >= 0) {
+        uuid = substr(userinfo, 0, colon_index);
+        password = substr(userinfo, colon_index + 1);
+    } else {
+        uuid = userinfo;
+    }
+
+    if (uuid == "")
+        ctx.runtime_generate_unsupported("manual TUIC proxy link is missing UUID");
+
+    let outbound = {
+        type: "tuic",
+        tag: tag_name,
+        server: host,
+        server_port: port,
+        uuid: uuid
+    };
+    if (password != "")
+        outbound.password = password;
+
+    let cc = as_string(query.congestion_control || "");
+    if (cc != "")
+        outbound.congestion_control = cc;
+    else
+        outbound.congestion_control = "bbr";
+
+    let udp_mode = as_string(query.udp_relay_mode || "");
+    if (udp_mode != "")
+        outbound.udp_relay_mode = udp_mode;
+
+    if (is_true(query.zero_rtt_handshake))
+        outbound.zero_rtt_handshake = true;
+
+    let hb = as_string(query.heartbeat || "");
+    if (hb != "")
+        outbound.heartbeat = hb;
+
+    apply_link_tls(outbound, url_scheme(link), query);
+    return outbound;
+}
+
 function manual_link_outbound(link, tag_name) {
     let scheme = url_scheme(link);
     if (scheme == "vmess")
@@ -796,6 +858,8 @@ function manual_link_outbound(link, tag_name) {
         return manual_trojan_outbound(link, tag_name);
     if (scheme == "hysteria2" || scheme == "hy2")
         return manual_hysteria2_outbound(link, tag_name);
+    if (scheme == "tuic")
+        return manual_tuic_outbound(link, tag_name);
     ctx.runtime_generate_unsupported("manual proxy link scheme is not supported by sing-box config generation yet");
 }
 

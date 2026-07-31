@@ -903,8 +903,8 @@ function dns_setting_values(settings, key) {
 
 function validate_dns_settings(settings, sections, context) {
     let dns_type = option(settings, "dns_type", "udp");
-    if (!contains([ "udp", "dot", "doh" ], dns_type))
-        fail_validation("Unsupported DNS protocol type '" + dns_type + "'. Use udp, dot, or doh. Aborted.");
+    if (!contains([ "udp", "dot", "doh", "doq" ], dns_type))
+        fail_validation("Unsupported DNS protocol type '" + dns_type + "'. Use udp, dot, doh, or doq. Aborted.");
 
     let dns_strategy = option(settings, "dns_strategy", "prefer_ipv4");
     if (!contains([ "prefer_ipv4", "ipv4_only", "prefer_ipv6", "ipv6_only" ], dns_strategy))
@@ -1069,7 +1069,7 @@ function validate_proxy_parameter_value(value, allowed, parameter, section) {
 function validate_proxy_parameter_filters(protocols, transports, securities, section) {
     for (let value in protocols)
         validate_proxy_parameter_value(value,
-            [ "awg", "direct", "http", "hysteria2", "shadowsocks", "socks", "trojan", "vless", "vmess" ],
+            [ "awg", "direct", "http", "hysteria2", "shadowsocks", "socks", "trojan", "tuic", "vless", "vmess" ],
             "protocol", section);
     for (let value in transports)
         validate_proxy_parameter_value(value,
@@ -1405,8 +1405,8 @@ function dns_action_has_domain_matchers(section) {
 function validate_dns_action(section, sections, context) {
     let name = section_name(section);
     let dns_type = option(section, "dns_type", "udp");
-    if (!contains([ "udp", "dot", "doh" ], dns_type))
-        fail_validation("DNS rule '" + name + "' uses unsupported protocol '" + dns_type + "'. Use udp, dot, or doh. Aborted.");
+    if (!contains([ "udp", "dot", "doh", "doq" ], dns_type))
+        fail_validation("DNS rule '" + name + "' uses unsupported protocol '" + dns_type + "'. Use udp, dot, doh, or doq. Aborted.");
     let dns_servers = list_option(section, "dns_server");
     if (length(dns_servers) == 0)
         fail_validation("DNS rule '" + name + "' has no DNS server specified. Aborted.");
