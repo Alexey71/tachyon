@@ -1778,6 +1778,7 @@ function dnsTypeChoices() {
   return [
     { value: "doh", label: _("DNS over HTTPS (DoH)") },
     { value: "dot", label: _("DNS over TLS (DoT)") },
+    { value: "doq", label: _("DNS over QUIC (DoQ)") },
     { value: "udp", label: "UDP" },
   ];
 }
@@ -7244,6 +7245,7 @@ function createSectionContent(section) {
   o.default = "udp";
   o.rmempty = false;
   o.modalonly = true;
+  const perRuleDnsTypeOption = o;
 
   o = section.taboption(
     "settings",
@@ -7254,7 +7256,17 @@ function createSectionContent(section) {
   );
   o.depends("action", "dns");
   o.modalonly = true;
-  configureDnsList(o, main.DNS_SERVER_OPTIONS, "8.8.8.8");
+  configureLiveDynamicListChoices(o, (section_id) => {
+    const dnsType = uci.get(UCI_PACKAGE, section_id, "dns_type") || "udp";
+    const servers = main.DNS_SERVERS_BY_PROTOCOL[dnsType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
+    return Object.entries(servers).map(([value, label]) => ({ value, label: _(label) }));
+  });
+  perRuleDnsTypeOption.onchange = function (_ev, section_id) {
+    const refreshers = dashboardFilterChoiceRefreshers.get(section_id);
+    if (refreshers) {
+      refreshers.forEach((fn) => fn());
+    }
+  };
 
   o = section.taboption(
     "settings",

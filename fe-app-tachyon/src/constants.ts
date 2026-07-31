@@ -42,14 +42,41 @@ export const DOMAIN_LIST_OPTIONS = {
   cloudfront: 'CloudFront ASN',
 };
 
-export const DNS_SERVER_OPTIONS = {
-  '1.1.1.1': '1.1.1.1 (Cloudflare)',
-  '8.8.8.8': '8.8.8.8 (Google)',
-  '9.9.9.9': '9.9.9.9 (Quad9)',
-  'dns.adguard-dns.com': 'dns.adguard-dns.com (AdGuard Default)',
-  'unfiltered.adguard-dns.com':
-    'unfiltered.adguard-dns.com (AdGuard Unfiltered)',
-  'family.adguard-dns.com': 'family.adguard-dns.com (AdGuard Family)',
+export const DNS_SERVERS_BY_PROTOCOL: Record<string, Record<string, string>> = {
+  udp: {
+    '1.1.1.1': '1.1.1.1 (Cloudflare)',
+    '8.8.8.8': '8.8.8.8 (Google)',
+    '9.9.9.9': '9.9.9.9 (Quad9)',
+    '77.88.8.8': '77.88.8.8 (Yandex)',
+    '94.140.14.14': '94.140.14.14 (AdGuard)',
+    '185.222.222.222': '185.222.222.222 (DNS.SB)',
+    '194.242.2.2': '194.242.2.2 (Mullvad)',
+  },
+  doh: {
+    'https://cloudflare-dns.com/dns-query': 'Cloudflare',
+    'https://dns.google/dns-query': 'Google',
+    'https://dns.quad9.net/dns-query': 'Quad9',
+    'https://dns.adguard.com/dns-query': 'AdGuard',
+    'https://dns.mullvad.net/dns-query': 'Mullvad',
+    'https://dns.nextdns.io/dns-query': 'NextDNS',
+    'https://doh.cleanbrowsing.org/doh/family-filter/': 'CleanBrowsing Family',
+  },
+  dot: {
+    '1.1.1.1': '1.1.1.1 (Cloudflare)',
+    'dns.google': 'Google',
+    'dns.quad9.net': 'Quad9',
+    'dns.adguard.com': 'AdGuard',
+    'dns.mullvad.net': 'Mullvad',
+    'dns.nextdns.io': 'NextDNS',
+    'common.dot.dns.yandex.net': 'Yandex',
+  },
+  doq: {
+    '1.1.1.1:784': 'Cloudflare',
+    'dns.google:784': 'Google',
+    'dns.adguard.com:785': 'AdGuard',
+    'dns.mullvad.net:784': 'Mullvad',
+    'dns.nextdns.io:784': 'NextDNS',
+  },
 };
 export const BOOTSTRAP_DNS_SERVER_OPTIONS = {
   '77.88.8.8': '77.88.8.8 (Yandex DNS)',

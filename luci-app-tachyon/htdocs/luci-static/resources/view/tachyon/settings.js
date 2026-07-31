@@ -138,6 +138,93 @@ function configureDnsFailoverVisibility(option, dnsOption, bootstrapOption) {
   };
 }
 
+function refreshOptionChoices(option, choices) {
+  delete option.keylist;
+  delete option.vallist;
+  (choices || []).forEach((choice) => {
+    if (typeof choice === "object") {
+      option.value(choice.value, choice.label);
+    } else {
+      option.value(choice);
+    }
+  });
+}
+
+function getDnsServerChoices(dnsType) {
+  const servers = main.DNS_SERVERS_BY_PROTOCOL[dnsType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
+  return Object.entries(servers).map(([value, label]) => ({ value, label: _(label) }));
+}
+
+function configureDnsDynamicList(option, getChoices, defaultValue) {
+  option.default = [defaultValue];
+  option.rmempty = false;
+  option.validate = function (_section_id, value) {
+    const normalized = `${value || ""}`.trim();
+    if (!normalized) {
+      return optionListValues(option, _section_id).length > 0
+        ? true
+        : _("Add at least one DNS server");
+    }
+    const validation = main.validateDNS(normalized);
+    return validation.valid ? true : validation.message;
+  };
+  option.renderWidget = function (section_id, _option_index, cfgvalue) {
+    const values = L.toArray(cfgvalue != null ? cfgvalue : this.default);
+    const choices = getChoices(section_id, values);
+    const labels = {};
+    choices.forEach((choice) => {
+      labels[choice.value] = choice.label;
+    });
+    refreshOptionChoices(this, choices);
+    let choiceSignature = JSON.stringify(
+      choices.map((choice) => [choice.value, choice.label]),
+    );
+    const widget = new ui.DynamicList(values, labels, {
+      id: this.cbid(section_id),
+      sort: this.keylist,
+      optional: this.optional || this.rmempty,
+      datatype: this.datatype,
+      placeholder: this.placeholder,
+      validate: L.bind(this.validate, this, section_id),
+      disabled: this.readonly != null ? this.readonly : this.map.readonly,
+    });
+    const node = widget.render();
+    const refreshChoices = () => {
+      if (!node.isConnected) return false;
+      const currentValues = widget.getValue();
+      const currentChoices = getChoices(section_id, currentValues);
+      const currentLabels = {};
+      currentChoices.forEach((choice) => {
+        currentLabels[choice.value] = choice.label;
+      });
+      const currentSignature = JSON.stringify(
+        currentChoices.map((choice) => [choice.value, choice.label]),
+      );
+      if (currentSignature === choiceSignature) return;
+      choiceSignature = currentSignature;
+      refreshOptionChoices(this, currentChoices);
+      widget.choices = currentLabels;
+      widget.clearChoices();
+      widget.addChoices(
+        currentChoices.map((choice) => choice.value),
+        currentLabels,
+      );
+    };
+    const refreshBeforeOpening = (event) => {
+      if (event.target && event.target.closest(".add-item")) refreshChoices();
+    };
+    node.addEventListener("mousedown", refreshBeforeOpening, true);
+    node.addEventListener("focusin", refreshBeforeOpening, true);
+    if (!settingsDnsDynamicRefreshers.has(section_id)) {
+      settingsDnsDynamicRefreshers.set(section_id, new Set());
+    }
+    settingsDnsDynamicRefreshers.get(section_id).add(refreshChoices);
+    return node;
+  };
+}
+
+const settingsDnsDynamicRefreshers = new Map();
+
 function configureDnsDuration(
   option,
   defaultValue,
@@ -849,9 +936,12 @@ function createSettingsContent(section, capabilities) {
   );
   o.value("doh", _("DNS over HTTPS (DoH)"));
   o.value("dot", _("DNS over TLS (DoT)"));
+  o.value("doq", _("DNS over QUIC (DoQ)"));
   o.value("udp", _("UDP (Unprotected DNS)"));
   o.default = "udp";
   o.rmempty = false;
+
+  const dnsTypeOption = o;
 
   const dnsOption = section.option(
     form.DynamicList,
@@ -861,7 +951,10 @@ function createSettingsContent(section, capabilities) {
       "Main DNS server. If multiple servers are selected, a timeout switches to a backup.",
     ),
   );
-  configureDnsList(dnsOption, main.DNS_SERVER_OPTIONS, "77.88.8.8");
+  configureDnsDynamicList(dnsOption, (section_id) => {
+    const dnsType = uci.get(UCI_PACKAGE, "settings", "dns_type") || "udp";
+    return getDnsServerChoices(dnsType);
+  }, "77.88.8.8");
 
   const bootstrapOption = section.option(
     form.DynamicList,
@@ -876,6 +969,13 @@ function createSettingsContent(section, capabilities) {
     main.BOOTSTRAP_DNS_SERVER_OPTIONS,
     "77.88.8.8",
   );
+
+  dnsTypeOption.onchange = function (_ev, section_id, value) {
+    const refreshers = settingsDnsDynamicRefreshers.get(section_id);
+    if (refreshers) {
+      refreshers.forEach((fn) => fn());
+    }
+  };
 
   o = section.option(
     form.Flag,
