@@ -951,8 +951,9 @@ function createSettingsContent(section, capabilities) {
       "Main DNS server. If multiple servers are selected, a timeout switches to a backup.",
     ),
   );
-  configureDnsDynamicList(dnsOption, (section_id) => {
-    const dnsType = uci.get(UCI_PACKAGE, "settings", "dns_type") || "udp";
+  configureDnsDynamicList(dnsOption, (_section_id) => {
+    const sel = document.getElementById("cbid.tachyon.settings.dns_type");
+    const dnsType = (sel ? sel.value : null) || "udp";
     return getDnsServerChoices(dnsType);
   }, "77.88.8.8");
 

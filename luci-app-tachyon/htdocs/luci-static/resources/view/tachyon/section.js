@@ -7257,7 +7257,8 @@ function createSectionContent(section) {
   o.depends("action", "dns");
   o.modalonly = true;
   configureLiveDynamicListChoices(o, (section_id) => {
-    const dnsType = uci.get(UCI_PACKAGE, section_id, "dns_type") || "udp";
+    const sel = document.getElementById("cbid.tachyon." + section_id + ".dns_type");
+    const dnsType = (sel ? sel.value : null) || "udp";
     const servers = main.DNS_SERVERS_BY_PROTOCOL[dnsType] || main.DNS_SERVERS_BY_PROTOCOL.udp;
     return Object.entries(servers).map(([value, label]) => ({ value, label: _(label) }));
   });
