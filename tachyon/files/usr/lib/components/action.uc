@@ -2169,6 +2169,51 @@ function resolve_tachyon_release(latest_version) {
     };
 }
 
+function reinstall_tachyon() {
+    let latest_version = latest_tachyon_version();
+    if (latest_version == "")
+        latest_version = "unknown";
+    if (latest_version == "unknown")
+        action_fail("tachyon", "reinstall", "Failed to resolve Tachyon release", TACHYON_VERSION, latest_version);
+
+    write_tachyon_latest_version_cache(latest_version, now_seconds());
+    init_tmp_dir() || action_fail("tachyon", "reinstall", "Failed to create temporary directory", TACHYON_VERSION, latest_version);
+    updates_log("Resolving Tachyon release " + latest_version + " packages");
+    let release = resolve_tachyon_release(latest_version);
+    if (release == null)
+        action_fail("tachyon", "reinstall", "Failed to resolve Tachyon release packages", TACHYON_VERSION, latest_version);
+
+    let backend_file = tmp_dir + "/" + release.backend_name;
+    let app_file = tmp_dir + "/" + release.app_name;
+    let i18n_file = release.i18n_url != "" ? tmp_dir + "/" + release.i18n_name : "";
+    if (!download_with_retry(release.backend_url, backend_file, release.backend_name) ||
+        !download_with_retry(release.app_url, app_file, release.app_name) ||
+        (release.i18n_url != "" && !download_with_retry(release.i18n_url, i18n_file, release.i18n_name)))
+        action_fail("tachyon", "reinstall", "Failed to download Tachyon release packages", TACHYON_VERSION, latest_version);
+
+    if (!run_logged("Reinstalling LuCI app package " + release.app_name, pkg_install_files_command([ app_file ])))
+        action_fail("tachyon", "reinstall", "Failed to reinstall LuCI app package", TACHYON_VERSION, latest_version);
+    if (i18n_file != "" && !run_logged("Reinstalling LuCI Russian i18n package " + release.i18n_name, pkg_install_files_command([ i18n_file ])))
+        action_fail("tachyon", "reinstall", "Failed to reinstall LuCI Russian i18n package", TACHYON_VERSION, latest_version);
+    if (!run_logged("Reinstalling Tachyon package " + release.backend_name, pkg_install_files_command([ backend_file ])))
+        action_fail("tachyon", "reinstall", "Failed to reinstall Tachyon package", TACHYON_VERSION, latest_version);
+
+    remove_file("/var/luci-indexcache");
+    command_success("rm -f /var/luci-indexcache* /tmp/luci-indexcache* 2>/dev/null");
+    command_success("rm -rf /tmp/luci-modulecache/ 2>/dev/null");
+    if (file_exists("/etc/init.d/rpcd") && !command_success_from_args([ "/etc/init.d/rpcd", "reload" ]))
+        command_success_from_args([ "/etc/init.d/rpcd", "restart" ]);
+    command_success_from_args([ "killall", "-HUP", "rpcd" ]);
+
+    restart_tachyon_after_successful_change();
+    clear_version_caches();
+    let new_version = installed_package_version("tachyon");
+    if (new_version == "")
+        new_version = latest_version;
+    updates_log("Tachyon reinstalled to " + new_version);
+    action_success("tachyon", "reinstall", "Tachyon has been reinstalled", new_version, latest_version, 1, "latest", release.release_url);
+}
+
 function install_tachyon() {
     let latest_version = latest_tachyon_version();
     if (latest_version == "")
@@ -2271,6 +2316,8 @@ function component_action(component, action) {
         check_tachyon();
     else if (component == "tachyon" && action == "install")
         install_tachyon();
+    else if (component == "tachyon" && action == "reinstall")
+        reinstall_tachyon();
     else if (component == "sing_box" && (action == "check_update" || action == "install" ||
         action == "install_extended" || action == "install_extended_compressed" ||
         action == "install_lx" ||

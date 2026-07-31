@@ -15,6 +15,7 @@ function getEmptyUpdatesActions(): StoreType['updatesActions'] {
   return {
     tachyonCheck: { loading: false },
     tachyonInstall: { loading: false },
+    tachyonReinstall: { loading: false },
     singBoxCheck: { loading: false },
     singBoxInstall: { loading: false },
     singBoxInstallExtended: { loading: false },

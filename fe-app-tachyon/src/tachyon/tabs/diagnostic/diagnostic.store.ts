@@ -133,6 +133,7 @@ export const initialDiagnosticStore: Pick<
   updatesActions: {
     tachyonCheck: { loading: false },
     tachyonInstall: { loading: false },
+    tachyonReinstall: { loading: false },
     singBoxCheck: { loading: false },
     singBoxInstall: { loading: false },
     singBoxInstallExtended: { loading: false },

@@ -573,6 +573,7 @@ export namespace Tachyon {
   export type ComponentAction =
     | 'check_update'
     | 'install'
+    | 'reinstall'
     | 'remove'
     | 'install_extended'
     | 'install_extended_compressed'

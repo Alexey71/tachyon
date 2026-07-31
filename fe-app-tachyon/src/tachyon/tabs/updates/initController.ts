@@ -273,7 +273,10 @@ async function ackComponentActionJob(jobId: string) {
 }
 
 function getExpectedLatestVersionForAction(button: ComponentActionButton) {
-  if (button.component !== 'tachyon' || button.action !== 'install') {
+  if (
+    button.component !== 'tachyon' ||
+    (button.action !== 'install' && button.action !== 'reinstall')
+  ) {
     return undefined;
   }
 
@@ -328,7 +331,10 @@ function patchSystemInfoAfterMutation(result: Tachyon.ComponentActionResult) {
   const version =
     result.current_version || result.latest_version || _('unknown');
 
-  if (result.component === 'tachyon' && result.action === 'install') {
+  if (
+    result.component === 'tachyon' &&
+    (result.action === 'install' || result.action === 'reinstall')
+  ) {
     nextSystemInfo.tachyon_version = version;
   }
 
@@ -469,7 +475,11 @@ async function applyCompletedComponentAction({
     return;
   }
 
-  if (result.action === 'install' || result.action.startsWith('install_')) {
+  if (
+    result.action === 'install' ||
+    result.action === 'reinstall' ||
+    result.action.startsWith('install_')
+  ) {
     setCheckResult(result.component, 'latest', result.latest_version || '');
   } else {
     resetCheckResult(result.component);
@@ -478,7 +488,10 @@ async function applyCompletedComponentAction({
   patchSystemInfoAfterMutation(result);
   setActionLoading(key, false);
 
-  if (result.component === 'tachyon' && result.action === 'install') {
+  if (
+    result.component === 'tachyon' &&
+    (result.action === 'install' || result.action === 'reinstall')
+  ) {
     if (notify && result.message) {
       showToast(result.message, 'success', 1200);
     }
@@ -842,11 +855,20 @@ function getComponentCards(): ComponentCard[] {
     Boolean(systemInfo.sing_box_extended) && Boolean(systemInfo.sing_box_lx);
   const singBoxTiny = Boolean(systemInfo.sing_box_tiny);
 
-  const tachyonActions = getInstalledUpdateActions(
-    'tachyon',
-    'tachyonCheck',
-    'tachyonInstall',
-  );
+  const tachyonActions = [
+    ...getInstalledUpdateActions(
+      'tachyon',
+      'tachyonCheck',
+      'tachyonInstall',
+    ),
+    {
+      key: 'tachyonReinstall' as const,
+      text: _('Reinstall'),
+      icon: renderRotateCcwIcon24,
+      component: 'tachyon' as const,
+      action: 'reinstall' as const,
+    },
+  ];
   const singBoxActions = getInstalledUpdateActions(
     'sing_box',
     'singBoxCheck',
@@ -1122,7 +1144,8 @@ function renderComponentCard(card: ComponentCard) {
   // Render primary and danger buttons in a main row
   const primaryButtons = primaryActions.map((action) => {
     const loading = updatesActions[action.key].loading;
-    const isUpdateOrInstall = action.action === 'install';
+    const isUpdateOrInstall =
+      action.action === 'install' || action.action === 'reinstall';
 
     return renderButton({
       classNames: isUpdateOrInstall ? ['cbi-button-save'] : [],

@@ -6,6 +6,7 @@ export type UpdatesActionKey = keyof StoreType['updatesActions'];
 const componentActionKeyMap: Record<string, UpdatesActionKey> = {
   'tachyon:check_update': 'tachyonCheck',
   'tachyon:install': 'tachyonInstall',
+  'tachyon:reinstall': 'tachyonReinstall',
   'sing_box:check_update': 'singBoxCheck',
   'sing_box:install': 'singBoxInstall',
   'sing_box:install_extended': 'singBoxInstallExtended',

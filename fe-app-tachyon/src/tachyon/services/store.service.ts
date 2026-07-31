@@ -215,6 +215,7 @@ export interface StoreType {
   updatesActions: {
     tachyonCheck: { loading: boolean };
     tachyonInstall: { loading: boolean };
+    tachyonReinstall: { loading: boolean };
     singBoxCheck: { loading: boolean };
     singBoxInstall: { loading: boolean };
     singBoxInstallExtended: { loading: boolean };

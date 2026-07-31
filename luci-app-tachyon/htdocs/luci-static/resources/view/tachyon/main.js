@@ -810,6 +810,124 @@ function validateHysteria2Url(url) {
   }
 }
 
+// src/validators/validateTuicUrl.ts
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+function validateTuicUrl(url) {
+  try {
+    if (!url.startsWith("tuic://")) {
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: must start with tuic://")
+      };
+    }
+    if (/\s/.test(url)) {
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: must not contain spaces")
+      };
+    }
+    const body = url.slice("tuic://".length);
+    const [mainPart] = body.split("#");
+    const [authHostPort, queryString] = mainPart.split("?");
+    if (!authHostPort)
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: missing credentials/server")
+      };
+    const [uuidPasswordPart, hostPortPart] = authHostPort.split("@");
+    if (!uuidPasswordPart)
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: missing UUID")
+      };
+    if (!hostPortPart)
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: missing host & port")
+      };
+    const [uuidPart, passwordPart] = uuidPasswordPart.split(":");
+    const uuid = uuidPart || "";
+    const _password = passwordPart || "";
+    if (!uuid) {
+      return { valid: false, message: _("Invalid TUIC URL: missing UUID") };
+    }
+    if (!isValidUuid(uuid)) {
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: UUID must be a valid UUID v4 format")
+      };
+    }
+    const parsedHostPort = parseHostPort(hostPortPart);
+    if (!parsedHostPort) {
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: invalid host & port")
+      };
+    }
+    const { host, port } = parsedHostPort;
+    if (!host) {
+      return { valid: false, message: _("Invalid TUIC URL: missing host") };
+    }
+    if (!port) {
+      return { valid: false, message: _("Invalid TUIC URL: missing port") };
+    }
+    const cleanedPort = port.replace("/", "");
+    if (!isValidPort(cleanedPort)) {
+      return {
+        valid: false,
+        message: _("Invalid TUIC URL: invalid port number")
+      };
+    }
+    if (queryString) {
+      const params = parseQueryString(queryString);
+      const paramsKeys = Object.keys(params);
+      const validCc = ["bbr", "cubic", "new_reno"];
+      if (paramsKeys.includes("congestion_control") && !validCc.includes(params.congestion_control)) {
+        return {
+          valid: false,
+          message: _(
+            "Invalid TUIC URL: congestion_control must be bbr, cubic, or new_reno"
+          )
+        };
+      }
+      const validUdpMode = ["native", "quic", "qux"];
+      if (paramsKeys.includes("udp_relay_mode") && !validUdpMode.includes(params.udp_relay_mode)) {
+        return {
+          valid: false,
+          message: _(
+            "Invalid TUIC URL: udp_relay_mode must be native, quic, or qux"
+          )
+        };
+      }
+      if (paramsKeys.includes("insecure") && !["0", "1"].includes(params.insecure)) {
+        return {
+          valid: false,
+          message: _("Invalid TUIC URL: insecure must be 0 or 1")
+        };
+      }
+      if (paramsKeys.includes("zero_rtt_handshake") && !["0", "1", "true", "false"].includes(params.zero_rtt_handshake)) {
+        return {
+          valid: false,
+          message: _("Invalid TUIC URL: zero_rtt_handshake must be 0, 1, true, or false")
+        };
+      }
+      if (paramsKeys.includes("sni") && !params.sni) {
+        return {
+          valid: false,
+          message: _("Invalid TUIC URL: sni cannot be empty")
+        };
+      }
+    }
+    return { valid: true, message: _("Valid") };
+  } catch (_e) {
+    return { valid: false, message: _("Invalid TUIC URL: parsing failed") };
+  }
+}
+
 // src/validators/validateProxyUrl.ts
 function validateProxyUrl(url) {
   const trimmedUrl = url.trim();
@@ -831,10 +949,13 @@ function validateProxyUrl(url) {
   if (trimmedUrl.startsWith("hysteria2://") || trimmedUrl.startsWith("hy2://")) {
     return validateHysteria2Url(trimmedUrl);
   }
+  if (trimmedUrl.startsWith("tuic://")) {
+    return validateTuicUrl(trimmedUrl);
+  }
   return {
     valid: false,
     message: _(
-      "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, or hy2://"
+      "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2://, or tuic://"
     )
   };
 }
@@ -4694,6 +4815,7 @@ var initialDiagnosticStore = {
   updatesActions: {
     tachyonCheck: { loading: false },
     tachyonInstall: { loading: false },
+    tachyonReinstall: { loading: false },
     singBoxCheck: { loading: false },
     singBoxInstall: { loading: false },
     singBoxInstallExtended: { loading: false },
@@ -5049,6 +5171,7 @@ var LogNotificationDeduper = class {
 var componentActionKeyMap = {
   "tachyon:check_update": "tachyonCheck",
   "tachyon:install": "tachyonInstall",
+  "tachyon:reinstall": "tachyonReinstall",
   "sing_box:check_update": "singBoxCheck",
   "sing_box:install": "singBoxInstall",
   "sing_box:install_extended": "singBoxInstallExtended",
@@ -5160,6 +5283,7 @@ function getEmptyUpdatesActions() {
   return {
     tachyonCheck: { loading: false },
     tachyonInstall: { loading: false },
+    tachyonReinstall: { loading: false },
     singBoxCheck: { loading: false },
     singBoxInstall: { loading: false },
     singBoxInstallExtended: { loading: false },
@@ -13604,7 +13728,7 @@ async function ackComponentActionJob(jobId) {
   }
 }
 function getExpectedLatestVersionForAction(button) {
-  if (button.component !== "tachyon" || button.action !== "install") {
+  if (button.component !== "tachyon" || button.action !== "install" && button.action !== "reinstall") {
     return void 0;
   }
   return store.get().updatesChecks[button.component].latest_version || void 0;
@@ -13644,7 +13768,7 @@ function patchSystemInfoAfterMutation(result) {
   const systemInfo = store.get().diagnosticsSystemInfo;
   const nextSystemInfo = { ...systemInfo, loading: false, loaded: true };
   const version = result.current_version || result.latest_version || _("unknown");
-  if (result.component === "tachyon" && result.action === "install") {
+  if (result.component === "tachyon" && (result.action === "install" || result.action === "reinstall")) {
     nextSystemInfo.tachyon_version = version;
   }
   if (result.component === "sing_box") {
@@ -13753,14 +13877,14 @@ async function applyCompletedComponentAction({
     }
     return;
   }
-  if (result.action === "install" || result.action.startsWith("install_")) {
+  if (result.action === "install" || result.action === "reinstall" || result.action.startsWith("install_")) {
     setCheckResult(result.component, "latest", result.latest_version || "");
   } else {
     resetCheckResult(result.component);
   }
   patchSystemInfoAfterMutation(result);
   setActionLoading(key, false);
-  if (result.component === "tachyon" && result.action === "install") {
+  if (result.component === "tachyon" && (result.action === "install" || result.action === "reinstall")) {
     if (notify && result.message) {
       showToast(result.message, "success", 1200);
     }
@@ -14028,11 +14152,20 @@ function getComponentCards() {
   const singBoxExtendedCompressed = Boolean(systemInfo.sing_box_extended) && Boolean(systemInfo.sing_box_compressed);
   const singBoxLx = Boolean(systemInfo.sing_box_extended) && Boolean(systemInfo.sing_box_lx);
   const singBoxTiny = Boolean(systemInfo.sing_box_tiny);
-  const tachyonActions = getInstalledUpdateActions(
-    "tachyon",
-    "tachyonCheck",
-    "tachyonInstall"
-  );
+  const tachyonActions = [
+    ...getInstalledUpdateActions(
+      "tachyon",
+      "tachyonCheck",
+      "tachyonInstall"
+    ),
+    {
+      key: "tachyonReinstall",
+      text: _("Reinstall"),
+      icon: renderRotateCcwIcon24,
+      component: "tachyon",
+      action: "reinstall"
+    }
+  ];
   const singBoxActions = getInstalledUpdateActions(
     "sing_box",
     "singBoxCheck",
@@ -14265,7 +14398,7 @@ function renderComponentCard(card) {
   const actionElements = [];
   const primaryButtons = primaryActions.map((action) => {
     const loading2 = updatesActions[action.key].loading;
-    const isUpdateOrInstall = action.action === "install";
+    const isUpdateOrInstall = action.action === "install" || action.action === "reinstall";
     return renderButton({
       classNames: isUpdateOrInstall ? ["cbi-button-save"] : [],
       text: action.text,
