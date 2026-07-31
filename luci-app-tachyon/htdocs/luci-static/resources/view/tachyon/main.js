@@ -13635,10 +13635,6 @@ function getGitHubReleaseUrl(component) {
 function isAnyActionLoading() {
   return Object.values(store.get().updatesActions).some((item) => item.loading);
 }
-function isServiceRuntimeActionLoading() {
-  const state = store.get();
-  return hasLocalMutatingServiceActionLoading(state.diagnosticsActions) || isServiceTransitionStatus(state.servicesInfoWidget.data.tachyonStatus);
-}
 function isSystemInfoLoading() {
   const systemInfo = store.get().diagnosticsSystemInfo;
   return systemInfo.loading || !systemInfo.loaded;
@@ -14289,7 +14285,6 @@ function getComponentCards() {
 function renderComponentCard(card) {
   const updatesActions = store.get().updatesActions;
   const anyActionLoading = isAnyActionLoading();
-  const serviceRuntimeActionLoading = isServiceRuntimeActionLoading();
   const systemInfoLoading = isSystemInfoLoading();
   const headerChildren = [
     E("b", { class: "tachyon_updates-page__component__title" }, card.title),
@@ -14404,7 +14399,7 @@ function renderComponentCard(card) {
       text: action.text,
       icon: action.icon,
       loading: loading2,
-      disabled: systemInfoLoading || serviceRuntimeActionLoading || anyActionLoading && !loading2,
+      disabled: systemInfoLoading || anyActionLoading && !loading2,
       onClick: () => void handleComponentAction(action)
     });
   });
@@ -14415,7 +14410,7 @@ function renderComponentCard(card) {
       text: action.text,
       icon: action.icon,
       loading: loading2,
-      disabled: systemInfoLoading || serviceRuntimeActionLoading || anyActionLoading && !loading2,
+      disabled: systemInfoLoading || anyActionLoading && !loading2,
       onClick: () => void handleComponentAction(action)
     });
   });
@@ -14434,7 +14429,7 @@ function renderComponentCard(card) {
         text: action.text,
         icon: action.icon,
         loading: loading2,
-        disabled: systemInfoLoading || serviceRuntimeActionLoading || anyActionLoading && !loading2,
+        disabled: systemInfoLoading || anyActionLoading && !loading2,
         onClick: () => void handleComponentAction(action)
       });
     });

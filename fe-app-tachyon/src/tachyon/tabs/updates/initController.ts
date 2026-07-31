@@ -18,10 +18,6 @@ import {
   formatSingBoxVersion,
   normalizeSingBoxVariantFields,
 } from '../../helpers/singBoxVariant';
-import {
-  hasLocalMutatingServiceActionLoading,
-  isServiceTransitionStatus,
-} from '../diagnostic/serviceTransition';
 import { shouldApplyCompletedComponentActionResult } from './componentActionCompletion';
 import {
   shouldPreserveCompletedCheckResultOnNextMount,
@@ -140,15 +136,6 @@ function getGitHubReleaseUrl(component: Tachyon.ComponentName) {
 
 function isAnyActionLoading() {
   return Object.values(store.get().updatesActions).some((item) => item.loading);
-}
-
-function isServiceRuntimeActionLoading() {
-  const state = store.get();
-
-  return (
-    hasLocalMutatingServiceActionLoading(state.diagnosticsActions) ||
-    isServiceTransitionStatus(state.servicesInfoWidget.data.tachyonStatus)
-  );
 }
 
 function isSystemInfoLoading() {
@@ -1013,7 +1000,6 @@ function getComponentCards(): ComponentCard[] {
 function renderComponentCard(card: ComponentCard) {
   const updatesActions = store.get().updatesActions;
   const anyActionLoading = isAnyActionLoading();
-  const serviceRuntimeActionLoading = isServiceRuntimeActionLoading();
   const systemInfoLoading = isSystemInfoLoading();
 
   // 1. Header (displays Title, Current Version, no badges)
@@ -1153,9 +1139,7 @@ function renderComponentCard(card: ComponentCard) {
       icon: action.icon,
       loading,
       disabled:
-        systemInfoLoading ||
-        serviceRuntimeActionLoading ||
-        (anyActionLoading && !loading),
+        systemInfoLoading || (anyActionLoading && !loading),
       onClick: () => void handleComponentAction(action),
     });
   });
@@ -1169,9 +1153,7 @@ function renderComponentCard(card: ComponentCard) {
       icon: action.icon,
       loading,
       disabled:
-        systemInfoLoading ||
-        serviceRuntimeActionLoading ||
-        (anyActionLoading && !loading),
+        systemInfoLoading || (anyActionLoading && !loading),
       onClick: () => void handleComponentAction(action),
     });
   });
@@ -1195,7 +1177,6 @@ function renderComponentCard(card: ComponentCard) {
         loading,
         disabled:
           systemInfoLoading ||
-          serviceRuntimeActionLoading ||
           (anyActionLoading && !loading),
         onClick: () => void handleComponentAction(action),
       });

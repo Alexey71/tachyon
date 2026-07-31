@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-30 17:48+0300\n"
-"PO-Revision-Date: 2026-07-30 17:48+0300\n"
+"POT-Creation-Date: 2026-07-31 15:12+0300\n"
+"PO-Revision-Date: 2026-07-31 15:12+0300\n"
 "Last-Translator: Dushnilin <dushnilin@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -1804,12 +1804,12 @@ msgstr ""
 msgid "Install"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:1186
+#: src/tachyon/tabs/updates/initController.ts:1191
 msgid "Install another build:"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:291
-#: src/tachyon/tabs/updates/initController.ts:1044
+#: src/tachyon/tabs/updates/initController.ts:281
+#: src/tachyon/tabs/updates/initController.ts:1052
 msgid "Installed version is newer than release"
 msgstr ""
 
@@ -2045,6 +2045,71 @@ msgstr ""
 msgid "Invalid Trojan URL: parsing failed"
 msgstr ""
 
+#: src/validators/validateTuicUrl.ts:103
+msgid "Invalid TUIC URL: congestion_control must be bbr, cubic, or new_reno"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:128
+msgid "Invalid TUIC URL: insecure must be 0 or 1"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:71
+msgid "Invalid TUIC URL: invalid host & port"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:88
+msgid "Invalid TUIC URL: invalid port number"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:35
+msgid "Invalid TUIC URL: missing credentials/server"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:77
+msgid "Invalid TUIC URL: missing host"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:49
+msgid "Invalid TUIC URL: missing host & port"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:81
+msgid "Invalid TUIC URL: missing port"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:43
+#: src/validators/validateTuicUrl.ts:57
+msgid "Invalid TUIC URL: missing UUID"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:23
+msgid "Invalid TUIC URL: must not contain spaces"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:16
+msgid "Invalid TUIC URL: must start with tuic://"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:152
+msgid "Invalid TUIC URL: parsing failed"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:145
+msgid "Invalid TUIC URL: sni cannot be empty"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:116
+msgid "Invalid TUIC URL: udp_relay_mode must be native, quic, or qux"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:63
+msgid "Invalid TUIC URL: UUID must be a valid UUID v4 format"
+msgstr ""
+
+#: src/validators/validateTuicUrl.ts:138
+msgid "Invalid TUIC URL: zero_rtt_handshake must be 0, 1, true, or false"
+msgstr ""
+
 #: src/validators/validateUrl.ts:9
 #: src/validators/validateUrl.ts:35
 #: src/validators/validateUrl.ts:38
@@ -2165,12 +2230,12 @@ msgstr ""
 msgid "Latency test URL"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:294
-#: src/tachyon/tabs/updates/initController.ts:1042
+#: src/tachyon/tabs/updates/initController.ts:284
+#: src/tachyon/tabs/updates/initController.ts:1050
 msgid "Latest version is installed"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:1044
+#: src/tachyon/tabs/updates/initController.ts:1052
 msgid "Latest version:"
 msgstr ""
 
@@ -2227,11 +2292,11 @@ msgstr ""
 msgid "Loading connections"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:932
-#: src/tachyon/tabs/updates/initController.ts:943
-#: src/tachyon/tabs/updates/initController.ts:954
-#: src/tachyon/tabs/updates/initController.ts:967
-#: src/tachyon/tabs/updates/initController.ts:980
+#: src/tachyon/tabs/updates/initController.ts:941
+#: src/tachyon/tabs/updates/initController.ts:952
+#: src/tachyon/tabs/updates/initController.ts:963
+#: src/tachyon/tabs/updates/initController.ts:976
+#: src/tachyon/tabs/updates/initController.ts:989
 msgid "Loading..."
 msgstr ""
 
@@ -2498,9 +2563,9 @@ msgstr ""
 
 #: src/tachyon/helpers/singBoxVariant.ts:37
 #: src/tachyon/helpers/singBoxVariant.ts:45
-#: src/tachyon/tabs/updates/initController.ts:957
-#: src/tachyon/tabs/updates/initController.ts:970
-#: src/tachyon/tabs/updates/initController.ts:983
+#: src/tachyon/tabs/updates/initController.ts:966
+#: src/tachyon/tabs/updates/initController.ts:979
+#: src/tachyon/tabs/updates/initController.ts:992
 msgid "Not installed"
 msgstr ""
 
@@ -2609,8 +2674,8 @@ msgstr ""
 msgid "Only the specified servers."
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:1035
-#: src/tachyon/tabs/updates/initController.ts:1057
+#: src/tachyon/tabs/updates/initController.ts:1043
+#: src/tachyon/tabs/updates/initController.ts:1065
 msgid "Open"
 msgstr ""
 
@@ -2932,6 +2997,10 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:5290
 msgid "Regular expression must not contain spaces or commas"
+msgstr ""
+
+#: src/tachyon/tabs/updates/initController.ts:853
+msgid "Reinstall"
 msgstr ""
 
 #: src/tachyon/tabs/updates/initController.ts:813
@@ -4089,7 +4158,7 @@ msgstr ""
 #: src/tachyon/services/systemInfo.service.ts:23
 #: src/tachyon/services/systemInfo.service.ts:26
 #: src/tachyon/services/systemInfo.service.ts:27
-#: src/tachyon/tabs/updates/initController.ts:329
+#: src/tachyon/tabs/updates/initController.ts:319
 #: src/tachyon/tabs/diagnostic/checks/runInboundsCheck.ts:25
 msgid "unknown"
 msgstr ""
@@ -4133,11 +4202,11 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:287
+#: src/tachyon/tabs/updates/initController.ts:277
 msgid "Update is available"
 msgstr ""
 
-#: src/tachyon/tabs/updates/initController.ts:1021
+#: src/tachyon/tabs/updates/initController.ts:1029
 msgid "Update is available:"
 msgstr ""
 
@@ -4165,8 +4234,8 @@ msgstr ""
 msgid "Uploaded"
 msgstr ""
 
-#: src/validators/validateProxyUrl.ts:42
-msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, or hy2://"
+#: src/validators/validateProxyUrl.ts:47
+msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2://, or tuic://"
 msgstr ""
 
 #: src/validators/validateUrl.ts:18
@@ -4301,6 +4370,7 @@ msgstr ""
 #: src/validators/validateSocksUrl.ts:75
 #: src/validators/validateSubnet.ts:42
 #: src/validators/validateTrojanUrl.ts:64
+#: src/validators/validateTuicUrl.ts:150
 #: src/validators/validateUrl.ts:32
 #: src/validators/validateVlessUrl.ts:115
 #: src/validators/validateVmessUrl.ts:66

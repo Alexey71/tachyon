@@ -1,4 +1,4 @@
-﻿# RU translations for TACHYON package.
+# RU translations for TACHYON package.
 # Copyright (C) 2026 THE TACHYON COPYRIGHT HOLDER
 # This file is distributed under the same license as the TACHYON package.
 # Dushnilin, 2026.
@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-30 21:35+0300\n"
-"PO-Revision-Date: 2026-07-30 21:35+0300\n"
+"POT-Creation-Date: 2026-07-31 18:12+0300\n"
+"PO-Revision-Date: 2026-07-31 18:12+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -1421,6 +1421,54 @@ msgstr "Неверный URL Trojan: должен начинаться с trojan
 msgid "Invalid Trojan URL: parsing failed"
 msgstr "Неверный URL Trojan: ошибка разбора"
 
+msgid "Invalid TUIC URL: congestion_control must be bbr, cubic, or new_reno"
+msgstr ""
+
+msgid "Invalid TUIC URL: insecure must be 0 or 1"
+msgstr ""
+
+msgid "Invalid TUIC URL: invalid host & port"
+msgstr ""
+
+msgid "Invalid TUIC URL: invalid port number"
+msgstr ""
+
+msgid "Invalid TUIC URL: missing credentials/server"
+msgstr ""
+
+msgid "Invalid TUIC URL: missing host"
+msgstr ""
+
+msgid "Invalid TUIC URL: missing host & port"
+msgstr ""
+
+msgid "Invalid TUIC URL: missing port"
+msgstr ""
+
+msgid "Invalid TUIC URL: missing UUID"
+msgstr ""
+
+msgid "Invalid TUIC URL: must not contain spaces"
+msgstr ""
+
+msgid "Invalid TUIC URL: must start with tuic://"
+msgstr ""
+
+msgid "Invalid TUIC URL: parsing failed"
+msgstr ""
+
+msgid "Invalid TUIC URL: sni cannot be empty"
+msgstr ""
+
+msgid "Invalid TUIC URL: udp_relay_mode must be native, quic, or qux"
+msgstr ""
+
+msgid "Invalid TUIC URL: UUID must be a valid UUID v4 format"
+msgstr ""
+
+msgid "Invalid TUIC URL: zero_rtt_handshake must be 0, 1, true, or false"
+msgstr ""
+
 msgid "Invalid URL format"
 msgstr "Неверный формат URL"
 
@@ -2038,6 +2086,9 @@ msgstr ""
 
 msgid "Regular expression must not contain spaces or commas"
 msgstr "Регулярное выражение не должно содержать пробелы или запятые"
+
+msgid "Reinstall"
+msgstr "Переустановить"
 
 msgid "Remove"
 msgstr "Удалить"
@@ -2900,8 +2951,8 @@ msgstr "Исходящий"
 msgid "Uploaded"
 msgstr "Отдано"
 
-msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, or hy2://"
-msgstr "URL должен начинаться с vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2:// или hy2://"
+msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2://, or tuic://"
+msgstr ""
 
 msgid "URL must use one of the following protocols:"
 msgstr "URL должен использовать один из следующих протоколов:"
