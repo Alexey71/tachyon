@@ -955,6 +955,12 @@ ws
 
 [server.srv1.hysteria2_obfs_password]
 
+[server.srv1.tuic_congestion_control]
+
+[server.srv1.tuic_udp_relay_mode]
+
+[server.srv1.tuic_password]
+
 [server.srv1.mtproto_secret]
 
 [server.srv1.mtproto_faketls]
