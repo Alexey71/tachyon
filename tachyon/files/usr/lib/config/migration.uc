@@ -478,7 +478,8 @@ function migrate_proxy_string(ctx, section) {
 
 function cache_section_safe(section) {
     section = as_string(section);
-    return section != "" && index(section, "/") < 0 && index(section, "..") < 0;
+    return section != "" && index(section, "/") < 0 && index(section, "..") < 0
+        && match(section, /[^A-Za-z0-9_+.\-]/) == null;
 }
 
 function subscription_cache_paths(section) {
@@ -1416,7 +1417,7 @@ function remove_legacy_server_country_cache() {
 function remove_cache_path(path) {
     path = as_string(path);
     if (index(path, "*") >= 0)
-        run("rm -f " + path);
+        run("rm -f " + shell_quote(path));
     else
         fs.unlink(path);
 }

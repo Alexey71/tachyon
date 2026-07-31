@@ -78,6 +78,10 @@ fi
 
 TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate
 /usr/bin/tachyon package_postinst
+
+# Harden config: telegram bot_token must not be world-readable
+chmod 600 /etc/config/tachyon
+chown root:root /etc/config/tachyon
 endef
 
 define Package/tachyon/conffiles

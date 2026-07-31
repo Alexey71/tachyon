@@ -247,7 +247,7 @@ function apply_selections(state, selections) {
     if (!write_state(candidate_path, candidate))
         return false;
 
-    let status = command_status(command_from_args([ SERVICE_BIN, "dns_failover_apply", candidate_path ]) + " >/dev/null 2>&1");
+    let status = command_status(command_from_args([ "timeout", "10", SERVICE_BIN, "dns_failover_apply", candidate_path ]) + " >/dev/null 2>&1");
     remove_file(candidate_path);
     if (status != 0)
         return false;
@@ -272,9 +272,11 @@ function apply_selections(state, selections) {
             }
             
             if (is_isp) {
-                system("/usr/bin/tachyon telegram send '⚠️ Все основные " + item.kind + " DNS недоступны. Включен аварийный DNS провайдера (" + values[selected.index] + ")! Запросы теперь видит ваш провайдер.' </dev/null >/dev/null 2>&1 1000<&- &");
+                let notice = "⚠️ Все основные " + item.kind + " DNS недоступны. Включен аварийный DNS провайдера (" + values[selected.index] + ")! Запросы теперь видит ваш провайдер.";
+                system(command_from_args([ "/usr/bin/tachyon", "telegram", "send", notice ]) + " </dev/null >/dev/null 2>&1 1000<&- &");
             } else if (selected.reason == "recovery" && selected.index < configured_len) {
-                system("/usr/bin/tachyon telegram send '✅ " + item.kind + " DNS восстановлен. Возврат на безопасный сервер: " + values[selected.index] + "' </dev/null >/dev/null 2>&1 1000<&- &");
+                let notice = "✅ " + item.kind + " DNS восстановлен. Возврат на безопасный сервер: " + values[selected.index];
+                system(command_from_args([ "/usr/bin/tachyon", "telegram", "send", notice ]) + " </dev/null >/dev/null 2>&1 1000<&- &");
             }
         }
     }

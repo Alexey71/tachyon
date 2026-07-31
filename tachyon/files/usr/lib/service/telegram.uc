@@ -97,15 +97,25 @@ function get_file_url(token, file_id) {
 
 // ─── State Management ────────────────────────────────────────────────────────
 
+// chat_id arrives from untrusted Telegram payloads; keep /tmp paths traversal-safe
+function tg_state_path(chat_id) {
+    let safe_id = as_string(chat_id);
+    if (!match(safe_id, /^-?[0-9]+$/))
+        return null;
+    return "/tmp/tg_state_" + safe_id + ".json";
+}
+
 function get_tg_state(chat_id) {
-    let f = "/tmp/tg_state_" + chat_id + ".json";
+    let f = tg_state_path(chat_id);
+    if (!f) return null;
     let data = fs.readfile(f);
     if (data) { try { return json(data); } catch(e) {} }
     return null;
 }
 
 function set_tg_state(chat_id, state_obj) {
-    let f = "/tmp/tg_state_" + chat_id + ".json";
+    let f = tg_state_path(chat_id);
+    if (!f) return;
     if (state_obj == null) fs.unlink(f);
     else fs.writefile(f, sprintf("%J", state_obj));
 }
@@ -119,10 +129,130 @@ function is_admin(chat_id, admin_ids_str) {
     return false;
 }
 
+// ─── Safe command executor (whitelist-only, no shell interpretation) ─────────
+
+let safe_exec_patterns = {
+    tachyon: {
+        bin: "/usr/bin/tachyon",
+        min_args: 0,
+        max_args: 1,
+        usage: "tachyon [get_status|doctor|show_sing_box_version|show_version]"
+    },
+    logread: {
+        bin: "/sbin/logread",
+        min_args: 0,
+        max_args: 0,
+        extra_pattern: /^-t$/,
+        usage: "logread (без параметров)"
+    },
+    ubus: {
+        bin: "/bin/ubus",
+        args: [ "call", "system", "board" ],
+        exact: true,
+        usage: "ubus call system board"
+    },
+    df: {
+        bin: "/bin/df",
+        args: [ "-h" ],
+        exact: true,
+        usage: "df -h"
+    },
+    free: {
+        bin: "/usr/bin/free",
+        min_args: 0,
+        max_args: 0,
+        usage: "free"
+    },
+    uptime: {
+        bin: "/usr/bin/uptime",
+        min_args: 0,
+        max_args: 0,
+        usage: "uptime"
+    },
+    nft: {
+        bin: "/usr/sbin/nft",
+        args: [ "list", "tables" ],
+        exact: true,
+        usage: "nft list tables"
+    }
+};
+
+function parse_command_words(text) {
+    // Split on whitespace while honoring single/double quotes; shell metacharacters
+    // stay literal because they are passed as exact argv to command_from_args().
+    let words = [];
+    let cur = "";
+    let quote = null;
+    for (let i = 0; i < length(text); i++) {
+        let ch = substr(text, i, 1);
+        if (quote) {
+            if (ch == quote) quote = null;
+            else cur += ch;
+            continue;
+        }
+        if (ch == "'" || ch == "\"") { quote = ch; continue; }
+        if (ch == " " || ch == "\t" || ch == "\n") {
+            if (cur != "") { push(words, cur); cur = ""; }
+            continue;
+        }
+        cur += ch;
+    }
+    if (cur != "") push(words, cur);
+    return { words: words, error: quote ? "unclosed quote" : null };
+}
+
+function safe_allowed_commands_text() {
+    let lines = [];
+    for (let k in keys(safe_exec_patterns)) {
+        let p = safe_exec_patterns[k];
+        push(lines, "<code>" + p.usage + "</code>");
+    }
+    return join("\n", lines);
+}
+
+function safe_execute(exec_text) {
+    let parsed = parse_command_words(exec_text);
+    if (parsed.error || length(parsed.words) == 0)
+        return { status: 1, output: "Неверный формат команды" };
+
+    let argv = parsed.words;
+    let command_name = argv[0];
+    // strip any leading path, e.g. "/sbin/logread" -> "logread"
+    let base_match = match(command_name, /([^\/]+)$/);
+    let base = base_match ? base_match[1] : command_name;
+
+    let policy = safe_exec_patterns[base];
+    if (!policy)
+        return { status: 1, output: "Команда '" + base + "' не входит в список разрешённых" };
+
+    let rest = slice(argv, 1);
+
+    if (policy.exact) {
+        if (length(rest) != length(policy.args)) return { status: 1, output: "Аргументы не совпадают с разрешённым шаблоном" };
+        for (let i = 0; i < length(rest); i++)
+            if (rest[i] != policy.args[i]) return { status: 1, output: "Аргументы не совпадают с разрешённым шаблоном" };
+    } else if (policy.args) {
+        for (let arg in rest)
+            if (!match(arg, safe_exec_patterns[base].extra_pattern)) return { status: 1, output: "Аргумент не разрешён: " + arg };
+    } else {
+        if (length(rest) < policy.min_args || length(rest) > policy.max_args) return { status: 1, output: "Неверное число аргументов" };
+        // For tachyon: allow only read-only subcommand verbs
+        if (base == "tachyon" && length(rest) == 1) {
+            let allowed_sub = { get_status: 1, doctor: 1, show_version: 1, show_sing_box_version: 1, show_config: 1, get_system_info: 1 };
+            if (!allowed_sub[rest[0]]) return { status: 1, output: "Подкоманда '" + rest[0] + "' не входит в whitelist" };
+        }
+    }
+
+    let full_argv = [ policy.bin ];
+    for (let a in rest) push(full_argv, a);
+    return command_capture(command_from_args(full_argv));
+}
+
 function escape_html(text) {
     text = replace(as_string(text), /&/g, "&amp;");
     text = replace(text, /</g, "&lt;");
     text = replace(text, />/g, "&gt;");
+    text = replace(text, /"/g, "&quot;");
     return text;
 }
 
@@ -760,18 +890,174 @@ function exec_doctor(token, chat_id) {
 }
 
 function exec_restart(token, chat_id) {
-    send_message(token, chat_id, "🔄 <b>Перезапускаю службы Tachyon...</b>", "HTML");
-    let st = command_status("/usr/bin/tachyon restart");
-    if (st == 0) send_message(token, chat_id, "✅ <b>Перезапуск выполнен успешно!</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
-    else send_message(token, chat_id, "❌ <b>Ошибка при перезапуске.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+    let text = "⚠️ <b>Перезапустить службы Tachyon?</b>\nТекущие соединения будут разорваны на время перезапуска.";
+    let keyboard = [
+        [{ text: "✅ Да, перезапустить", callback_data: "/confirm_restart" }],
+        [{ text: "⬅️ Отмена", callback_data: "/menu" }]
+    ];
+    send_message(token, chat_id, text, "HTML", keyboard);
+}
+
+function apply_confirmed_restart(token, chat_id, msg_id) {
+    edit_message(token, chat_id, msg_id, "🔄 <b>Перезапускаю службы Tachyon...</b>", "HTML");
+    let st = command_status(command_from_args(["/usr/bin/tachyon", "restart"]));
+    let text = (st == 0) ? "✅ <b>Перезапуск выполнен успешно!</b>" : "❌ <b>Ошибка при перезапуске.</b>";
+    send_message(token, chat_id, text, "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+}
+
+// ─── Backup restore: safe extraction, UCI validation, rollback ───────────────
+
+function backup_archive_members(dl_path) {
+    let out = command_output_from_args([ "tar", "-tzf", dl_path ]);
+    let members = [];
+    for (let line in split(out, "\n")) {
+        line = trim(line);
+        if (line == "") continue;
+        push(members, line);
+    }
+    return members;
+}
+
+function backup_archive_safe(members) {
+    for (let m in members) {
+        // Reject absolute paths, ".." traversal, and unexpected members
+        if (substr(m, 0, 1) == "/") return { ok: false, reason: "absolute path: " + m };
+        if (match(m, /\.\./)) return { ok: false, reason: "path traversal: " + m };
+        if (m != "config/tachyon" && !match(m, /^tachyon\//))
+            return { ok: false, reason: "unexpected member: " + m };
+    }
+    return { ok: true };
+}
+
+function backup_extract_dir() {
+    let ts = time();
+    let rand = sprintf("%04x", int(Math.random() * 65536));
+    return "/tmp/tachyon_restore_" + as_string(ts) + "_" + rand;
+}
+
+function config_sane_preview(path) {
+    let data = fs.readfile(path);
+    if (data == null) return false;
+    // Minimal UCI sanity: must contain at least one "config <type> '<name>'" line
+    return match(data, /(^|\n)[ \t]*config[ \t]+[A-Za-z0-9_-]+/) != null;
+}
+
+function restore_config_from_backup(backup_path) {
+    system(command_from_args([ "rm", "-f", "/etc/config/tachyon" ]) + " >/dev/null 2>&1");
+    if (backup_path && fs.stat(backup_path))
+        system(command_from_args([ "cp", "-a", backup_path, "/etc/config/tachyon" ]) + " >/dev/null 2>&1");
+}
+
+function apply_backup_restore(token, chat_id, dl_path) {
+    let members = backup_archive_members(dl_path);
+    if (length(members) == 0) {
+        fs.unlink(dl_path);
+        send_message(token, chat_id, "❌ <b>Архив пуст или повреждён.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        return;
+    }
+
+    let safety = backup_archive_safe(members);
+    if (!safety.ok) {
+        fs.unlink(dl_path);
+        send_message(token, chat_id, "❌ <b>Небезопасный архив:</b> " + escape_html(safety.reason), "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        return;
+    }
+
+    send_message(token, chat_id, "🔄 <b>Проверяю и восстанавливаю бэкап...</b>", "HTML");
+
+    let stage = backup_extract_dir();
+    command_status(command_from_args([ "rm", "-rf", stage ]));
+    if (command_status(command_from_args([ "mkdir", "-p", stage ])) != 0 ||
+        command_status(command_from_args([ "tar", "-xzf", dl_path, "-C", stage ])) != 0) {
+        command_status(command_from_args([ "rm", "-rf", stage ]));
+        fs.unlink(dl_path);
+        send_message(token, chat_id, "❌ <b>Не удалось распаковать архив.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        return;
+    }
+    fs.unlink(dl_path);
+
+    let staged_config = stage + "/config/tachyon";
+    let had_config = fs.stat(staged_config) != null;
+    if (had_config && !config_sane_preview(staged_config)) {
+        command_status(command_from_args([ "rm", "-rf", stage ]));
+        send_message(token, chat_id, "❌ <b>config/tachyon в архиве не похож на валидный UCI.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        return;
+    }
+
+    let staged_data = stage + "/tachyon";
+    let had_data = fs.stat(staged_data) != null;
+    if (!had_config && !had_data) {
+        command_status(command_from_args([ "rm", "-rf", stage ]));
+        send_message(token, chat_id, "❌ <b>В архиве нет ни config/tachyon, ни каталога tachyon/.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        return;
+    }
+
+    // Snapshot live targets so a failed reload can be rolled back
+    let cfg_backup = "/tmp/tachyon_restore_cfg_backup." + as_string(time());
+    if (fs.stat("/etc/config/tachyon")) {
+        if (command_status(command_from_args([ "cp", "-a", "/etc/config/tachyon", cfg_backup ])) != 0) {
+            command_status(command_from_args([ "rm", "-rf", stage ]));
+            send_message(token, chat_id, "❌ <b>Не удалось сохранить текущий конфиг.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+            return;
+        }
+    }
+    let data_backup = "/tmp/tachyon_restore_data_backup." + as_string(time());
+    if (fs.stat("/etc/tachyon")) {
+        if (command_status(command_from_args([ "cp", "-a", "/etc/tachyon", data_backup ])) != 0) {
+            command_status(command_from_args([ "rm", "-f", cfg_backup ]));
+            command_status(command_from_args([ "rm", "-rf", stage ]));
+            send_message(token, chat_id, "❌ <b>Не удалось сохранить текущие данные /etc/tachyon.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+            return;
+        }
+    }
+
+    // Apply staged config
+    if (had_config) {
+        if (command_status(command_from_args([ "cp", "-a", staged_config, "/etc/config/tachyon.restored" ])) != 0 ||
+            command_status(command_from_args([ "mv", "/etc/config/tachyon.restored", "/etc/config/tachyon" ])) != 0) {
+            restore_config_from_backup(cfg_backup);
+            command_status(command_from_args([ "rm", "-rf", stage ]));
+            send_message(token, chat_id, "❌ <b>Ошибка записи /etc/config/tachyon.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+            return;
+        }
+        command_status(command_from_args([ "chmod", "600", "/etc/config/tachyon" ]));
+        // Validate through the real UCI parser
+        if (command_status(command_from_args([ "/sbin/uci", "show", "tachyon" ])) != 0) {
+            restore_config_from_backup(cfg_backup);
+            command_status(command_from_args([ "rm", "-rf", stage, data_backup, cfg_backup ]));
+            send_message(token, chat_id, "❌ <b>Восстановленный конфиг не прошёл проверку UCI. Выполнен откат.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+            return;
+        }
+    }
+
+    // Apply staged data directory
+    if (had_data) {
+        command_status(command_from_args([ "rm", "-rf", "/etc/tachyon" ]));
+        if (command_status(command_from_args([ "cp", "-a", staged_data, "/etc/tachyon" ])) != 0) {
+            command_status(command_from_args([ "rm", "-rf", "/etc/tachyon" ]));
+            if (fs.stat(data_backup))
+                command_status(command_from_args([ "mv", data_backup, "/etc/tachyon" ]));
+            restore_config_from_backup(cfg_backup);
+            command_status(command_from_args([ "rm", "-rf", stage ]));
+            send_message(token, chat_id, "❌ <b>Ошибка записи /etc/tachyon. Выполнен откат.</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+            return;
+        }
+    }
+
+    command_status(command_from_args([ "rm", "-rf", stage ]));
+    command_status(command_from_args([ "rm", "-f", cfg_backup ]));
+    command_status(command_from_args([ "rm", "-rf", data_backup ]));
+
+    send_message(token, chat_id, "✅ <b>Бэкап восстановлен. Перезапускаю Tachyon...</b>", "HTML");
+    command_status(command_from_args([ "/usr/bin/tachyon", "restart" ]));
+    send_message(token, chat_id, "✅ <b>Готово!</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
 }
 
 function exec_backup(token, chat_id) {
     send_message(token, chat_id, "⏳ <b>Собираю бэкап...</b>", "HTML");
     let file_path = "/tmp/tachyon_backup.tar.gz";
-    let cmd = "tar -czf " + file_path + " -C /etc config/tachyon tachyon 2>/dev/null";
-    command_status(cmd);
-    
+    command_status(command_from_args([ "tar", "-czf", file_path, "-C", "/etc", "config/tachyon", "tachyon" ]) + " 2>/dev/null");
+
     if (fs.stat(file_path)) {
         send_document(token, chat_id, file_path);
         fs.unlink(file_path);
@@ -782,11 +1068,10 @@ function exec_backup(token, chat_id) {
 
 function exec_support_bundle(token, chat_id) {
     send_message(token, chat_id, "⏳ <b>Формирую Support Bundle...</b>", "HTML");
-    command_status("ip route > /tmp/tachyon_ip_route.txt");
-    command_status("logread > /tmp/tachyon_logread.txt");
+    system(command_from_args([ "ip", "route" ]) + " > /tmp/tachyon_ip_route.txt");
+    system(command_from_args([ "logread" ]) + " > /tmp/tachyon_logread.txt");
     let file_path = "/tmp/support_bundle.tar.gz";
-    let cmd = "tar -czf " + file_path + " /etc/config/tachyon /var/etc/tachyon /etc/config/network /etc/config/firewall /tmp/dhcp.leases /tmp/tachyon_ip_route.txt /tmp/tachyon_logread.txt 2>/dev/null";
-    command_status(cmd);
+    command_status(command_from_args([ "tar", "-czf", file_path, "/etc/config/tachyon", "/var/etc/tachyon", "/etc/config/network", "/etc/config/firewall", "/tmp/dhcp.leases", "/tmp/tachyon_ip_route.txt", "/tmp/tachyon_logread.txt" ]) + " 2>/dev/null");
     
     if (fs.stat(file_path)) {
         send_document(token, chat_id, file_path);
@@ -997,6 +1282,19 @@ function handle_qos_toggle(token, chat_id, msg_id) {
     view_qos(token, chat_id, msg_id);
 }
 
+function valid_updatable_component(name) {
+    name = as_string(name);
+    let allowed = {
+        tachyon: 1,
+        sing_box: 1,
+        "sing-box": 1,
+        zapret: 1,
+        zapret2: 1,
+        byedpi: 1
+    };
+    return allowed[name] ? true : false;
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 function dispatch_command(token, chat_id, text, msg_id) {
@@ -1018,9 +1316,37 @@ function dispatch_command(token, chat_id, text, msg_id) {
     
     if (cmd == "/sections") return view_sections(token, chat_id, msg_id);
     if (cmd == "/devices") return view_devices(token, chat_id, msg_id);
+    if (match(cmd, /^\/toggle_mac /)) {
+        let mac = trim(substr(cmd, 12));
+        let c = uci_core.cursor();
+        c.load(CONFIG_NAME);
+        let blocked = {};
+        c.foreach(CONFIG_NAME, "section", function(s) {
+            if (s[".type"] == "settings") {
+                let bl = s.blocked_macs;
+                if (type(bl) == "array") {
+                    for (let m in bl) blocked[trim(as_string(m))] = true;
+                } else if (bl) {
+                    blocked[trim(as_string(bl))] = true;
+                }
+            }
+        });
+        if (blocked[mac]) {
+            c.delete_list(CONFIG_NAME, "settings", "blocked_macs", mac);
+        } else {
+            c.add_list(CONFIG_NAME, "settings", "blocked_macs", mac);
+        }
+        c.commit(CONFIG_NAME);
+        command_status(command_from_args(["/usr/bin/tachyon", "reload"]));
+        return view_devices(token, chat_id, null);
+    }
     if (cmd == "/watchdog") return view_watchdog(token, chat_id, msg_id);
     if (cmd == "/doctor") return exec_doctor(token, chat_id);
     if (cmd == "/restart") return exec_restart(token, chat_id);
+    if (cmd == "/confirm_restart") {
+        if (msg_id) return apply_confirmed_restart(token, chat_id, msg_id);
+        return exec_restart(token, chat_id);
+    }
     if (cmd == "/backup") return exec_backup(token, chat_id);
     if (cmd == "/support_bundle") return exec_support_bundle(token, chat_id);
     if (cmd == "/close_connections") return exec_close_connections(token, chat_id);
@@ -1029,14 +1355,22 @@ function dispatch_command(token, chat_id, text, msg_id) {
     
     if (match(cmd, /^\/update_component /)) {
         let comp = trim(substr(cmd, 17));
-        if (msg_id) edit_message(token, chat_id, msg_id, "⏳ <b>Запуск обновления " + comp + "...</b>\nПроцесс запущен в фоне. Зайдите позже.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
-        else send_message(token, chat_id, "⏳ <b>Запуск обновления " + comp + "...</b>\nПроцесс запущен в фоне. Зайдите позже.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
-        command_status("/usr/bin/tachyon component_action_async " + comp + " install");
+        if (!valid_updatable_component(comp)) {
+            send_message(token, chat_id, "❌ <b>Неизвестный компонент:</b> <code>" + escape_html(comp) + "</code>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+            return;
+        }
+        if (msg_id) edit_message(token, chat_id, msg_id, "⏳ <b>Запуск обновления " + escape_html(comp) + "...</b>\nПроцесс запущен в фоне. Зайдите позже.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        else send_message(token, chat_id, "⏳ <b>Запуск обновления " + escape_html(comp) + "...</b>\nПроцесс запущен в фоне. Зайдите позже.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+        command_status(command_from_args(["/usr/bin/tachyon", "component_action_async", comp, "install"]));
         return;
     }
     
     if (match(cmd, /^\/admin_add /)) {
         let fwd_id = trim(substr(cmd, 11));
+        if (!match(fwd_id, /^-?[0-9]+$/)) {
+            send_message(token, chat_id, "❌ Неверный Chat ID.", "HTML");
+            return;
+        }
         let c = uci_core.cursor(); c.load(CONFIG_NAME);
         let s = c.get_all(CONFIG_NAME, "telegram");
         let current_admins = option(s, "admin_ids", "");
@@ -1089,6 +1423,11 @@ function dispatch_command(token, chat_id, text, msg_id) {
         let sec = trim(substr(cmd, 12));
         let c = uci_core.cursor();
         c.load(CONFIG_NAME);
+        let s = c.get_all(CONFIG_NAME, sec);
+        if (!s) {
+            send_message(token, chat_id, "❌ Секция <code>" + sec + "</code> не найдена.", "HTML");
+            return view_sections(token, chat_id, null);
+        }
         c.delete(CONFIG_NAME, sec);
         c.commit(CONFIG_NAME);
         send_message(token, chat_id, "✅ Секция <code>" + sec + "</code> удалена.", "HTML");
@@ -1191,17 +1530,6 @@ function dispatch_command(token, chat_id, text, msg_id) {
         }
     }
     
-    if (match(cmd, /^\/sec_view /)) {
-        let sec = trim(substr(cmd, 10));
-        return view_section_detail(token, chat_id, msg_id, sec);
-    }
-    
-    if (match(cmd, /^\/sec_toggle /)) {
-        let sec = trim(substr(cmd, 12));
-        api.toggle_section(sec);
-        return view_section_detail(token, chat_id, msg_id, sec);
-    }
-    
     // Default / Help
     if (!msg_id) {
         view_menu(token, chat_id, null);
@@ -1216,10 +1544,6 @@ function process_updates(token, admin_ids) {
     
     for (let upd in res.result) {
         let update_id = upd.update_id;
-        if (update_id >= offset) {
-            offset = update_id + 1;
-            fs.writefile(OFFSET_FILE, as_string(offset));
-        }
         
         let cb = upd.callback_query;
         if (cb) {
@@ -1258,12 +1582,7 @@ function process_updates(token, admin_ids) {
                         push(dl_args, file_url);
                         command_status(command_from_args(dl_args));
                         if (fs.stat(dl_path)) {
-                            send_message(token, chat_id, "🔄 <b>Восстанавливаю бэкап...</b>", "HTML");
-                            command_status("tar -xzf " + dl_path + " -C /etc");
-                            fs.unlink(dl_path);
-                            send_message(token, chat_id, "✅ <b>Бэкап восстановлен. Перезапускаю Tachyon...</b>", "HTML");
-                            command_status("/usr/bin/tachyon restart");
-                            send_message(token, chat_id, "✅ <b>Успешно!</b>", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+                            apply_backup_restore(token, chat_id, dl_path);
                         } else {
                             send_message(token, chat_id, "❌ <b>Ошибка загрузки файла.</b>", "HTML");
                         }
@@ -1287,8 +1606,8 @@ function process_updates(token, admin_ids) {
             if (msg.text) {
                 if (match(msg.text, /^> /)) {
                     let exec_cmd = trim(substr(msg.text, 2));
-                    send_message(token, chat_id, "⏳ Выполняю:\n`" + escape_html(exec_cmd) + "`", "HTML");
-                    let out = command_capture(exec_cmd);
+                    send_message(token, chat_id, "⏳ Выполняю из разрешённого набора (whitelist):\n`" + escape_html(exec_cmd) + "`", "HTML");
+                    let out = safe_execute(exec_cmd);
                     let result_text = "<b>Выполнено (код " + out.status + "):</b>\n<pre>" + escape_html(out.output || "Нет вывода") + "</pre>";
                     if (length(result_text) > 4000) result_text = substr(result_text, 0, 4000) + "...</pre>";
                     send_message(token, chat_id, result_text, "HTML");
@@ -1296,9 +1615,10 @@ function process_updates(token, admin_ids) {
                 }
 
                 if (msg.text == "/cancel") {
-                set_tg_state(chat_id, null);
-                send_message(token, chat_id, "❌ Действие отменено.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
-                continue;
+                    set_tg_state(chat_id, null);
+                    send_message(token, chat_id, "❌ Действие отменено.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+                    continue;
+                }
             }
             
             let state = get_tg_state(chat_id);
@@ -1383,8 +1703,11 @@ function process_updates(token, admin_ids) {
 
             dispatch_command(token, chat_id, msg.text, null);
         }
+        if (update_id >= offset) {
+            offset = update_id + 1;
+        }
     }
-}
+    fs.writefile(OFFSET_FILE, as_string(offset));
 }
 
 // ─── Entry Point ─────────────────────────────────────────────────────────────
@@ -1562,7 +1885,16 @@ else if (mode == "worker")
     exit(worker());
 else if (mode == "status")
     exit(get_status());
-else if (mode != "") {
-    warn("Usage: service/telegram.uc <start-runtime|stop-runtime|worker|status> ...\n");
+else if (mode == "send") {
+    // Collect remaining args after "send" as the message text
+    let msg_parts = [];
+    for (let i = 2; i < length(ARGV); i++)
+        push(msg_parts, ARGV[i]);
+    let message = join(" ", msg_parts);
+    if (message == "") { warn("No message text\n"); exit(1); }
+    exit(send_api(message));
+}
+else {
+    warn("Usage: service/telegram.uc <start-runtime|stop-runtime|worker|status|send ...> ...\n");
     exit(1);
 }

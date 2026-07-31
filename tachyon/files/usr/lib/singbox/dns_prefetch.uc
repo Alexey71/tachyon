@@ -208,9 +208,16 @@ function prefetch() {
         }
     }
 
-    // 3. Resolve all via local DNS to warm FakeIP cache
-    for (let domain in domains)
-        common.command_success_from_args([ "nslookup", domain, "127.0.0.1" ]);
+    // 3. Resolve all via local DNS to warm FakeIP cache (batched parallel)
+    let batch = [];
+    for (let i, domain in domains) {
+        push(batch, common.shell_quote(domain));
+        if (length(batch) >= 15 || i == length(domains) - 1) {
+            let batch_cmd = "for d in " + join(" ", batch) + "; do nslookup \"$d\" 127.0.0.1 >/dev/null 2>&1; done &";
+            common.command_success_from_args(["sh", "-c", batch_cmd]);
+            batch = [];
+        }
+    }
 }
 
 let mode = ARGV[0];

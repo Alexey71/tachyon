@@ -58,7 +58,9 @@ function get_clash_proxies_data() {
     if (res && res.status == 0 && res.output != "") {
         try {
             return json(res.output);
-        } catch (e) {}
+        } catch (e) {
+            warn("api: failed to parse proxies JSON: " + as_string(e) + "\n");
+        }
     }
     return null;
 }
@@ -149,7 +151,7 @@ function get_system_status() {
 
 function clash_request(method, endpoint, payload) {
     let url = get_clash_url(endpoint);
-    let payload_path = "/tmp/clash_payload_" + method + "_" + time() + "_" + clock()[1] + ".json";
+    let payload_path = "/tmp/clash_payload_" + method + "_" + time() + "_" + sprintf("%04x", int(Math.random() * 65536)) + ".json";
     let res = null;
     try {
         let args = [ "curl", "-s", "-X", method ];
@@ -186,7 +188,7 @@ function clash_request(method, endpoint, payload) {
 function get_clash_connections() {
     let args = [ "curl", "-s", get_clash_url("connections") ];
     let res = command_capture(command_from_args(args));
-    if (res.status == 0 && res.output != "") {
+    if (res && res.status == 0 && res.output != "") {
         try {
             return json(res.output);
         } catch (e) {}
@@ -309,8 +311,7 @@ function get_servers() {
 }
 
 function reload_tachyon() {
-    common.command_status("/usr/bin/tachyon reload");
-    return true;
+    return common.command_status("/usr/bin/tachyon reload") == 0;
 }
 
 function toggle_section(sec_name) {

@@ -35,12 +35,6 @@
         ],
         "/usr/sbin/sing-box": [
           "exec"
-        ],
-        "/bin/uclient-fetch": [
-          "exec"
-        ],
-        "/usr/bin/wget": [
-          "exec"
         ]
       },
       "ubus": {

@@ -3,6 +3,7 @@
 let fs = require("fs");
 let constants = require("core.constants");
 let uci_core = require("core.uci");
+let common = require("core.common");
 
 function as_string(value) {
     return value == null ? "" : "" + value;
@@ -546,14 +547,14 @@ function discover_awg_mtu() {
                 let test_mtus = [1500, 1400, 1280, 1200];
                 for (let test_mtu in test_mtus) {
                     let payload = test_mtu - 28;
-                    let result = system(sprintf("ping -c 1 -W 1 -M do -s %d %s >/dev/null 2>&1", payload, endpoint));
+                    let result = command_status(command_from_args(["ping", "-c", "1", "-W", "1", "-M", "do", "-s", as_string(payload), endpoint]));
                     if (result == 0) {
                         best_mtu = test_mtu;
                         break;
                     }
                 }
                 log_message(sprintf("Discovered optimal MTU %d for %s", best_mtu, section[".name"]), "info");
-                system(sprintf("uci set tachyon.%s.awg_mtu='%d'", section[".name"], best_mtu));
+                command_status(command_from_args(["uci", "set", "tachyon." + section[".name"] + ".awg_mtu=" + as_string(best_mtu)]));
                 changed = true;
             }
         }

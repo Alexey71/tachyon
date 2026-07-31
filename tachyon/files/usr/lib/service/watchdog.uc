@@ -712,11 +712,12 @@ function check_urltest_switches() {
             for (let name in proxies) {
                 let p = proxies[name];
                 if (p.type == "URLTest" && p.now) {
-                    let last_now = trim(fs.readfile("/tmp/watchdog_urltest_" + name) || "");
+                    let safe_name = replace(name, /[^a-zA-Z0-9_\-]/g, "_");
+                    let last_now = trim(fs.readfile("/tmp/watchdog_urltest_" + safe_name) || "");
                     if (last_now != "" && last_now != p.now) {
                         send_telegram_notification("🔀 *Watchdog:* Смена прокси в группе `" + name + "`\nНовый активный узел: `" + p.now + "`");
                     }
-                    fs.writefile("/tmp/watchdog_urltest_" + name, p.now);
+                    fs.writefile("/tmp/watchdog_urltest_" + safe_name, p.now);
                 }
             }
         } catch(e) {}
@@ -885,7 +886,21 @@ function setup_honeypot_listener() {
     system("mkfifo /tmp/tachyon_honeypot.fifo >/dev/null 2>&1");
     system("chmod 0660 /tmp/tachyon_honeypot.fifo >/dev/null 2>&1");
 
-    command_success_from_args(["sh", "-c", "kill -9 $(pgrep -f 'tail -f /tmp/tachyon_honeypot.fifo') 2>/dev/null"]);
+    let hp_pid = trim(fs.readfile("/var/run/tachyon_honeypot_listener.pid") || "");
+    if (hp_pid != "" && match(hp_pid, /^[0-9]+$/) != null) {
+        if (process_running(hp_pid)) {
+            command_success_from_args([ "kill", hp_pid ]);
+            let wait_limit = 20;
+            while (wait_limit > 0 && process_running(hp_pid)) {
+                sleep(100);
+                wait_limit--;
+            }
+            if (process_running(hp_pid)) {
+                command_success_from_args([ "kill", "-9", hp_pid ]);
+            }
+        }
+    }
+    remove_file("/var/run/tachyon_honeypot_listener.pid");
 
     let fifo_fd = fs.open("/tmp/tachyon_honeypot.fifo", "r+");
     if (uloop && fifo_fd) {
@@ -909,10 +924,11 @@ function setup_honeypot_listener() {
         let cfg = settings();
         let ttl = cfg.honeypot_ttl || "86400";
         let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
-        system("tail -f /tmp/tachyon_honeypot.fifo | while read ip; do " +
-               "if [ -n \"$ip\" ]; then " +
-               "nft add element inet " + nft_table + " tachyon_honeypot { \"$ip\" timeout " + ttl + "s } >/dev/null 2>&1; " +
-               "fi; done </dev/null >/dev/null 2>&1 1000<&- & echo $! > /var/run/tachyon_honeypot_listener.pid");
+        let hp_cmd = "tail -f /tmp/tachyon_honeypot.fifo | while read ip; do " +
+            "if [ -n \"$ip\" ]; then " +
+            "nft add element inet " + shell_quote(nft_table) + " tachyon_honeypot { \"$ip\" timeout " + shell_quote(ttl) + "s } >/dev/null 2>&1; " +
+            "fi; done </dev/null >/dev/null 2>&1 1000<&- & echo $! > /var/run/tachyon_honeypot_listener.pid";
+        system(hp_cmd);
     }
 }
 

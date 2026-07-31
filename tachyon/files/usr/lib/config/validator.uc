@@ -217,6 +217,8 @@ function safe_rm_rf(path) {
     path = as_string(path);
     if (path == "" || substr(path, 0, length("/var/run/tachyon/")) != "/var/run/tachyon/")
         return true;
+    if (index(path, "..") >= 0)
+        return true;
 
     return run_args([ "rm", "-rf", path ]);
 }
