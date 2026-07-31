@@ -140,7 +140,7 @@ function get_system_status() {
     } else {
         let apk_out = common.command_output("apk list tachyon 2>/dev/null");
         if (apk_out && trim(apk_out) != "") {
-            let m = match(apk_out, /tachyon-([0-9\.\-a-zA-Z]+)/);
+            let m = match(apk_out, /tachyon-([0-9A-Za-z._+-]+)/);
             if (m && m[1]) ver = m[1];
         }
     }

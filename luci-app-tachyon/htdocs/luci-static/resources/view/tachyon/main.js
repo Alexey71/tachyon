@@ -1072,7 +1072,7 @@ async function withTimeout(promise, timeoutMs, operationName, timeoutMessage = _
   } finally {
     clearTimeout(timeoutId);
     const elapsed = performance.now() - start;
-    logger.info("[SHELL]", `[${operationName}] took ${elapsed.toFixed(2)} ms`);
+    logger.debug("[SHELL]", `[${operationName}] took ${elapsed.toFixed(2)} ms`);
   }
 }
 
@@ -3192,7 +3192,7 @@ var TachyonShellMethods = {
   globalCheck: async (masked = true) => callBaseMethod(Tachyon.AvailableMethods.GLOBAL_CHECK, [
     masked ? "masked" : "raw"
   ]),
-  doctor: async () => callBaseMethod(Tachyon.AvailableMethods.DOCTOR),
+  doctor: async () => callBaseMethod(Tachyon.AvailableMethods.DOCTOR, [], "/usr/bin/tachyon", { timeout: 3e4 }),
   showSingBoxConfig: async (masked = true) => callBaseMethod(Tachyon.AvailableMethods.SHOW_SING_BOX_CONFIG, [
     masked ? "masked" : "raw"
   ]),
@@ -10790,18 +10790,34 @@ async function handleRunDoctor() {
   setDiagnosticActionLoading("doctor", true);
   try {
     const doctorRes = await TachyonShellMethods.doctor();
+    if (!doctorRes || typeof doctorRes !== "object") {
+      showToast(_("Doctor failed") + ": " + _("Unknown error"), "error");
+      return;
+    }
     if (doctorRes.success) {
+      const rawData = doctorRes.data;
+      const data = typeof rawData === "object" && rawData !== null ? rawData : null;
+      const report = data ? String(data.report ?? "") : String(rawData ?? "");
+      const issues = data ? Number(data.issues ?? 0) : 0;
+      const fixed = data ? Number(data.fixed ?? 0) : 0;
+      const title = issues > 0 ? _("Doctor repair") + " \u2014 " + _("Issues") + ": " + issues + ", " + _("Fixed") + ": " + fixed : _("Doctor repair") + " \u2014 " + _("No issues found");
       ui.showModal(
-        _("Run doctor repair"),
-        renderModal(doctorRes.data ?? "", "doctor_repair", {
+        title,
+        renderModal(report, "doctor_repair", {
           initialAutoRefresh: false
         })
       );
     } else {
-      logger.error("[DIAGNOSTIC]", "handleRunDoctor - e", doctorRes);
+      const errorMsg = typeof doctorRes.error === "string" ? doctorRes.error : _("Unknown error");
+      showToast(_("Doctor failed") + ": " + errorMsg, "error");
     }
   } catch (e) {
-    logger.error("[DIAGNOSTIC]", "handleRunDoctor - e", e);
+    logger.error(
+      "[DIAGNOSTIC]",
+      "handleRunDoctor - e",
+      e instanceof Error ? e.message : String(e)
+    );
+    showToast(_("Doctor failed"), "error");
   } finally {
     setDiagnosticActionLoading("doctor", false);
     runChecks();

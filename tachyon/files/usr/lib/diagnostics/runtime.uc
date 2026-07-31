@@ -91,6 +91,9 @@ function command_status(command) {
     return normalize_status(system(command));
 }
 
+const UCI_BACKUP_DIR = "/etc/backup";
+const UCI_BACKUP_PATH = UCI_BACKUP_DIR + "/tachyon_config";
+
 function command_capture(command) {
     let pipe = fs.popen(command, "r");
     if (!pipe)
@@ -99,6 +102,71 @@ function command_capture(command) {
     let data = pipe.read("all");
     let status = normalize_status(pipe.close());
     return { status, output: data == null ? "" : as_string(data) };
+}
+
+function uci_backup_save() {
+    try {
+        let data = fs.readfile(TACHYON_CONFIG);
+        if (data == null || data == "") return false;
+        fs.mkdir(UCI_BACKUP_DIR);
+        return fs.writefile(UCI_BACKUP_PATH, data) != null;
+    } catch (e) { return false; }
+}
+
+function uci_backup_restore() {
+    try {
+        let data = fs.readfile(UCI_BACKUP_PATH);
+        if (data == null || data == "") return false;
+        fs.unlink(TACHYON_CONFIG);
+        return fs.writefile(TACHYON_CONFIG, data) != null;
+    } catch (e) { return false; }
+}
+
+function uci_config_valid() {
+    let data = fs.readfile(TACHYON_CONFIG);
+    if (data == null || data == "") return false;
+    let res = command_status("uci -c /etc/config valid " + CONFIG_NAME + " >/dev/null 2>&1");
+    return res == 0;
+}
+
+function dns_check_through_singbox(domain) {
+    let res = command_capture("nslookup -port=53 " + shell_quote(domain) + " " + SB_DNS_INBOUND_ADDRESS + " 2>&1");
+    return index(res.output, "Address:") >= 0 && index(res.output, "#53") >= 0 && index(res.output, "NXDOMAIN") < 0;
+}
+
+function get_wan_interface() {
+    let res = command_capture("uci get network.wan.device 2>/dev/null");
+    let iface = (res.status == 0) ? trim(res.output) : "";
+    if (iface == "") iface = "eth0";
+    return iface;
+}
+
+function wan_has_ip() {
+    let iface = get_wan_interface();
+    let out = command_capture("ip addr show " + shell_quote(iface) + " 2>/dev/null").output;
+    return index(out, "inet ") >= 0;
+}
+
+function default_gateway_exists() {
+    let out = command_capture("ip route 2>/dev/null").output;
+    return index(out, "default") >= 0;
+}
+
+function get_all_dns_servers(cfg, key) {
+    let servers = [];
+    let raw = cfg[key];
+    if (type(raw) == "array") {
+        for (let s in raw) {
+            let trimmed = trim(as_string(s));
+            if (trimmed != "") push(servers, split(trimmed, "#")[0]);
+        }
+    } else if (raw && trim(as_string(raw)) != "") {
+        for (let s in split(trim(as_string(raw)), /\s+/)) {
+            let trimmed = trim(s);
+            if (trimmed != "") push(servers, split(trimmed, "#")[0]);
+        }
+    }
+    return servers;
 }
 
 function command_output(command) {
@@ -2062,6 +2130,27 @@ function run_doctor_checks() {
         }
     }
 
+    // 2b. UCI Config Integrity Check
+    if (has_sections) {
+        if (uci_config_valid()) {
+            doc_check("✅", "UCI config", "valid", "");
+            uci_backup_save();
+        } else {
+            issues++;
+            if (uci_backup_restore()) {
+                command_status("sleep 1");
+                if (uci_config_valid()) {
+                    doc_check("❌", "UCI config", "corrupted", "→ FIXED: восстановлен из backup");
+                    fixed++;
+                } else {
+                    doc_check("❌", "UCI config", "corrupted", "→ backup тоже повреждён, проверьте /etc/config/tachyon вручную");
+                }
+            } else {
+                doc_check("❌", "UCI config", "corrupted or missing", "→ backup не найден, восстановите конфиг вручную");
+            }
+        }
+    }
+
     // 3. Nftables Table Check
     let routing_mode = cfg.routing_mode || "nftables";
     if (routing_mode == "nftables") {
@@ -2269,6 +2358,47 @@ function run_doctor_checks() {
         }
     }
 
+    // 5b. DNS Resolution through sing-box
+    if (has_sections) {
+        if (dns_check_through_singbox("google.com")) {
+            doc_check("✅", "sing-box DNS", "resolving via " + SB_DNS_INBOUND_ADDRESS, "");
+        } else {
+            issues++;
+            module_status(DNS_APPLY_UC, [ "configure", "force" ]);
+            command_status("sleep 1");
+            if (dns_check_through_singbox("google.com")) {
+                doc_check("❌", "sing-box DNS", "not resolving", "→ FIXED: dnsmasq перенаправлен на sing-box");
+                fixed++;
+            } else {
+                command_status(init_script + " restart >/dev/null 2>&1");
+                command_status("sleep 3");
+                if (dns_check_through_singbox("google.com")) {
+                    doc_check("❌", "sing-box DNS", "not resolving", "→ FIXED: sing-box перезапущен");
+                    fixed++;
+                } else {
+                    doc_check("❌", "sing-box DNS", "not resolving", "→ критическая ошибка DNS");
+                }
+            }
+        }
+    }
+
+    // 5c. Multi-DNS validation
+    let all_bootstrap = get_all_dns_servers(cfg, "bootstrap_dns_server");
+    if (length(all_bootstrap) == 0) all_bootstrap = ["77.88.8.8"];
+    let reachable_count = 0;
+    for (let srv in all_bootstrap) {
+        if (dns_check_resolve_host("openwrt.org", srv, 2) != "")
+            reachable_count++;
+    }
+    if (reachable_count == length(all_bootstrap)) {
+        doc_check("✅", "DNS servers", sprintf("all %d reachable", reachable_count), "");
+    } else if (reachable_count > 0) {
+        doc_check("⚠️", "DNS servers", sprintf("%d/%d reachable", reachable_count, length(all_bootstrap)), "→ некоторые серверы недоступны");
+    } else {
+        issues++;
+        doc_check("❌", "DNS servers", "all unreachable", "→ все bootstrap DNS серверы недоступны");
+    }
+
     // 6. Clash API Check
     let clash_addr = clash_api_url();
     let curl_clash = command_capture("curl -s -o /dev/null -w %{http_code} http://" + clash_addr + "/version");
@@ -2276,7 +2406,19 @@ function run_doctor_checks() {
         doc_check("✅", "Clash API", "reachable (" + clash_addr + ")", "");
     } else {
         issues++;
-        doc_check("⚠️", "Clash API", "unreachable", "→ sing-box запущен?");
+        if (pid != "") {
+            command_status(init_script + " restart >/dev/null 2>&1");
+            command_status("sleep 3");
+            let curl_clash2 = command_capture("curl -s -o /dev/null -w %{http_code} http://" + clash_addr + "/version");
+            if (curl_clash2.status == 0 && int(curl_clash2.output) == 200) {
+                doc_check("❌", "Clash API", "unreachable", "→ FIXED: sing-box перезапущен");
+                fixed++;
+            } else {
+                doc_check("❌", "Clash API", "unreachable", "→ sing-box не отвечает на Clash API");
+            }
+        } else {
+            doc_check("⚠️", "Clash API", "unreachable", "→ sing-box не запущен");
+        }
     }
 
     // 7. Free RAM Check
@@ -2294,6 +2436,21 @@ function run_doctor_checks() {
     if (free_mb > 20) {
         doc_check("✅", "Free RAM", sprintf("%dMB", free_mb), "");
     } else if (free_mb >= 0) {
+        issues++;
+        let scale = 1.0;
+        let scale_path = "/etc/tachyon/mem_scale";
+        let scale_data = fs.readfile(scale_path);
+        if (scale_data != null) {
+            let parsed_scale = double(trim(as_string(scale_data)));
+            if (parsed_scale > 0.1) scale = parsed_scale;
+        }
+        let new_scale = scale * 0.8;
+        if (new_scale < 0.2) new_scale = 0.2;
+        fs.mkdir("/etc/tachyon");
+        fs.writefile(scale_path, sprintf("%.2f", new_scale));
+        command_status("/usr/bin/tachyon restart >/dev/null 2>&1");
+        doc_check("⚠️", "Free RAM", sprintf("%dMB", free_mb), sprintf("→ FIXED: GOMEMLIMIT снижен до %.2f, services перезапущены", new_scale));
+        fixed++;
         issues++;
         doc_check("⚠️", "Free RAM", sprintf("%dMB", free_mb), "→ Мало памяти!");
     } else {
@@ -2419,6 +2576,55 @@ function run_doctor_checks() {
         }
     }
 
+    // 14. WAN Interface Check
+    if (wan_has_ip()) {
+        doc_check("✅", "WAN interface", get_wan_interface() + " up", "");
+    } else if (bootstrap_dns_reachable || dns_main_reachable) {
+        doc_check("ℹ️", "WAN interface", get_wan_interface() + " no IP (but DNS reachable — proxy working)", "");
+    } else {
+        issues++;
+        command_status("ifdown wan >/dev/null 2>&1 && ifup wan >/dev/null 2>&1");
+        command_status("sleep 2");
+        if (wan_has_ip()) {
+            doc_check("❌", "WAN interface", get_wan_interface() + " no IP", "→ FIXED: WAN interface перезапущен");
+            fixed++;
+        } else {
+            doc_check("❌", "WAN interface", "no IP address", "→ проверьте подключение к провайдеру");
+        }
+    }
+
+    // 15. Default Gateway Check
+    if (default_gateway_exists()) {
+        doc_check("✅", "Default gateway", "present", "");
+    } else if (bootstrap_dns_reachable || dns_main_reachable) {
+        doc_check("ℹ️", "Default gateway", "not found (but DNS reachable — proxy working)", "");
+    } else {
+        issues++;
+        command_status("ifdown wan >/dev/null 2>&1 && ifup wan >/dev/null 2>&1");
+        command_status("sleep 2");
+        if (default_gateway_exists()) {
+            doc_check("❌", "Default gateway", "missing", "→ FIXED: маршрут восстановлен через ifup wan");
+            fixed++;
+        } else {
+            doc_check("❌", "Default gateway", "missing", "→ проверьте конфигурацию сети");
+        }
+    }
+
+    // 16. Subscription Health Check
+    if (has_sections && cfg.subscription_url) {
+        let sub_url = trim(as_string(cfg.subscription_url));
+        if (sub_url != "") {
+            let sub_check = command_capture("curl -s -o /dev/null -w %{http_code} --connect-timeout 5 " + shell_quote(sub_url) + " 2>&1");
+            let sub_code = int(sub_check.output);
+            if (sub_check.status == 0 && sub_code >= 200 && sub_code < 400) {
+                doc_check("✅", "Subscription", "active (HTTP " + sub_code + ")", "");
+            } else {
+                issues++;
+                doc_check("⚠️", "Subscription", "unreachable (HTTP " + sub_code + ")", "→ обновите подписку вручную");
+            }
+        }
+    }
+
     push(report, "");
     if (issues == 0) {
         push(report, "✅ Всё в порядке — проблем не обнаружено");
@@ -2484,16 +2690,12 @@ function query_llm(provider, api_key, custom_url, prompt_text) {
 
 function doctor(format) {
     let res = run_doctor_checks();
-    if (format == "json") {
-        print(sprintf("%J\n", {
-            success: true,
-            issues: res.issues,
-            fixed: res.fixed,
-            report: res.report
-        }));
-    } else {
-        print(res.report);
-    }
+    print(sprintf("%J\n", {
+        success: true,
+        issues: res.issues,
+        fixed: res.fixed,
+        report: res.report
+    }));
     return 0;
 }
 
@@ -2510,8 +2712,21 @@ function ai_doctor() {
     let res = run_doctor_checks();
     let report = res.report;
 
-    let sys_context = sprintf("Tachyon Doctor Report:\n%s\n", report);
-    let prompt = sprintf("Вы — ИИ-ассистент \"Tachyon AI Doctor\" для сервиса обхода блокировок на OpenWrt.\nПроанализируйте диагностический отчет и логи роутера ниже.\n\n%s\n\nСформулируйте краткий, понятный пользователю диагноз проблемы (на русском языке, максимум 3 лаконичных пункта/совета).\nЕсли обнаружена известная проблема, которую можно исправить в один клик, обязательно укажите в самом конце ответа специальный тег:\nFIX: <код_исправления>\n\nДоступные коды исправления (выберите не более одного, если применимо):\n- start_singbox (если sing-box остановлен/упал)\n- rebuild_rules (если правила nftables нарушены)\n- fix_dnsmasq (если проблемы в конфигурации dnsmasq)\n- fix_resolv_symlink (если повреждена ссылка resolv.conf)\n- start_watchdog (если служба watchdog остановлена)\n\nЕсли авто-исправление не применимо, не пишите тег FIX.", sys_context);
+    let dns_type = cfg.dns_type || "doh";
+    let version = trim(command_output("cat /etc/tachyon/version 2>/dev/null")) || "unknown";
+    let singbox_running = trim(command_output("pgrep -x sing-box 2>/dev/null")) != "";
+    let uptime_out = trim(command_output("cat /proc/uptime 2>/dev/null"));
+    let uptime_min = uptime_out != "" ? int(split(uptime_out, ".")[0]) / 60 : 0;
+
+    let sys_context = sprintf(
+        "Tachyon Doctor Report:\n%s\n" +
+        "Version: %s\n" +
+        "DNS type: %s\n" +
+        "sing-box running: %s\n" +
+        "Uptime: %d minutes\n",
+        report, version, dns_type, singbox_running ? "yes" : "no", uptime_min
+    );
+    let prompt = sprintf("Вы — ИИ-ассистент \"Tachyon AI Doctor\" для сервиса обхода блокировок на OpenWrt.\nПроанализируйте диагностический отчет ниже.\n\n%s\n\nСформулируйте краткий диагноз (на русском, максимум 3 пункта).\nЕсли авто-исправление возможно, укажите в конце:\nFIX: <код>\n\nДоступные коды:\n- start_singbox (sing-box упал)\n- rebuild_rules (nftables нарушены)\n- fix_dnsmasq (конфиг dnsmasq)\n- fix_resolv_symlink (resolv.conf повреждён)\n- start_watchdog (watchdog остановлен)\n- restart_singbox_dns (sing-box DNS не отвечает)\n- fix_uci_config (конфиг Tachyon повреждён)\n- fix_wan_interface (WAN интерфейс не работает)\n- fix_gateway (шлюз отсутствует)\n\nЕсли авто-исправление не применимо, не пишите тег FIX.", sys_context);
 
     let provider = cfg.ai_doctor_provider || "openai";
     let api_key = cfg.ai_doctor_api_key || "";

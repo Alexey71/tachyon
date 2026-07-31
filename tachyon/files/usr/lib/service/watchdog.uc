@@ -685,6 +685,60 @@ function check_firewall_rules() {
     ai_heal_community_subnet_sets();
 }
 
+function ai_heal_wan_interface() {
+    let iface = trim(uci_core.get(CONFIG_NAME, "network", "wan", "device") || "eth0");
+    let out = command_capture("ip addr show " + shell_quote(iface) + " 2>/dev/null").output;
+    if (index(out, "inet ") >= 0) return;
+
+    let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
+    if (tcfg.notify_crash != "0") {
+        send_telegram_notification("⚠️ *Watchdog:* WAN интерфейс " + iface + " без IP. Перезапуск wan...");
+    }
+    system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
+}
+
+function ai_heal_gateway() {
+    let out = command_capture("ip route 2>/dev/null").output;
+    if (index(out, "default") >= 0) return;
+
+    let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
+    if (tcfg.notify_crash != "0") {
+        send_telegram_notification("⚠️ *Watchdog:* Default gateway отсутствует. Перезапуск wan...");
+    }
+    system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
+}
+
+function ai_heal_subscriptions() {
+    let cfg = settings();
+    let sub_url = trim(cfg.subscription_url || "");
+    if (sub_url == "") return;
+
+    let res = command_capture("curl -s -o /dev/null -w %{http_code} --connect-timeout 10 " + shell_quote(sub_url) + " 2>&1");
+    let code = int(res.output);
+    if (res.status == 0 && code >= 200 && code < 400) return;
+
+    let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
+    if (tcfg.notify_crash != "0") {
+        send_telegram_notification("⚠️ *Watchdog:* Подписка недоступна (HTTP " + code + "). Обновите подписку вручную.");
+    }
+}
+
+function ai_heal_uci_config() {
+    let data = fs.readfile("/etc/config/tachyon");
+    if (data == null || data == "") {
+        let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
+        if (tcfg.notify_crash != "0") {
+            send_telegram_notification("⚠️ *Watchdog:* Конфигурация Tachyon повреждена! Восстановление из backup...");
+        }
+        let backup = fs.readfile("/etc/backup/tachyon_config");
+        if (backup != null && backup != "") {
+            fs.unlink("/etc/config/tachyon");
+            fs.writefile("/etc/config/tachyon", backup);
+            system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
+        }
+    }
+}
+
 function ai_full_health_audit() {
     check_memory();
     ai_heal_nftables();
@@ -692,6 +746,10 @@ function ai_full_health_audit() {
     ai_heal_dns();
     ai_heal_proxy_connectivity();
     ai_heal_community_subnet_sets();
+    ai_heal_wan_interface();
+    ai_heal_gateway();
+    ai_heal_subscriptions();
+    ai_heal_uci_config();
     ai_heal_tproxy_port();
     ai_export_status();
 }

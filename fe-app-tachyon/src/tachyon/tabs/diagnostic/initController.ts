@@ -710,21 +710,56 @@ async function handleRunDoctor() {
   try {
     const doctorRes = await TachyonShellMethods.doctor();
 
+    if (!doctorRes || typeof doctorRes !== 'object') {
+      showToast(_('Doctor failed') + ': ' + _('Unknown error'), 'error');
+      return;
+    }
+
     if (doctorRes.success) {
+      const rawData = (doctorRes as { data?: unknown }).data;
+      const data =
+        typeof rawData === 'object' && rawData !== null
+          ? (rawData as Record<string, unknown>)
+          : null;
+      const report = data ? String(data.report ?? '') : String(rawData ?? '');
+      const issues = data ? Number(data.issues ?? 0) : 0;
+      const fixed = data ? Number(data.fixed ?? 0) : 0;
+
+      const title =
+        issues > 0
+          ? _('Doctor repair') +
+            ' \u2014 ' +
+            _('Issues') +
+            ': ' +
+            issues +
+            ', ' +
+            _('Fixed') +
+            ': ' +
+            fixed
+          : _('Doctor repair') + ' \u2014 ' + _('No issues found');
+
       ui.showModal(
-        _('Run doctor repair'),
-        renderModal(doctorRes.data ?? '', 'doctor_repair', {
+        title,
+        renderModal(report, 'doctor_repair', {
           initialAutoRefresh: false,
         }),
       );
     } else {
-      logger.error('[DIAGNOSTIC]', 'handleRunDoctor - e', doctorRes);
+      const errorMsg =
+        typeof doctorRes.error === 'string'
+          ? doctorRes.error
+          : _('Unknown error');
+      showToast(_('Doctor failed') + ': ' + errorMsg, 'error');
     }
   } catch (e) {
-    logger.error('[DIAGNOSTIC]', 'handleRunDoctor - e', e);
+    logger.error(
+      '[DIAGNOSTIC]',
+      'handleRunDoctor - e',
+      e instanceof Error ? e.message : String(e),
+    );
+    showToast(_('Doctor failed'), 'error');
   } finally {
     setDiagnosticActionLoading('doctor', false);
-    // Reload state so the diagnostics dashboard indicators reflect the newly fixed parameters!
     runChecks();
   }
 }
