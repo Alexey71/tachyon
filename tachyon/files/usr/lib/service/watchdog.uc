@@ -256,6 +256,8 @@ let last_urltest_check = 0;
 let pending_smart_domains = {};
 let smart_detect_last_run = 0;
 let last_subnet_heal_time = 0;
+let last_wan_heal_time = 0;
+let last_gateway_heal_time = 0;
 
 function check_tachyon_cli_running() {
     let running = false;
@@ -686,21 +688,38 @@ function check_firewall_rules() {
 }
 
 function ai_heal_wan_interface() {
-    let iface = trim(uci_core.get(CONFIG_NAME, "network", "wan", "device") || "eth0");
-    let out = command_capture("ip addr show " + shell_quote(iface) + " 2>/dev/null").output;
+    let now = time();
+    if (now - last_wan_heal_time < 300) return;
+    if (is_reload_in_progress()) return;
+
+    let proto = uci_core.get(CONFIG_NAME, "network", "wan", "proto") || "pppoe";
+    let device = trim(uci_core.get(CONFIG_NAME, "network", "wan", "device") || "eth0");
+
+    let iface_to_check = device;
+    if (proto == "pppoe") {
+        iface_to_check = "pppoe-wan";
+    }
+
+    let out = command_capture("ip addr show " + shell_quote(iface_to_check) + " 2>/dev/null").output;
     if (index(out, "inet ") >= 0) return;
 
+    last_wan_heal_time = now;
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.notify_crash != "0") {
-        send_telegram_notification("⚠️ *Watchdog:* WAN интерфейс " + iface + " без IP. Перезапуск wan...");
+        send_telegram_notification("⚠️ *Watchdog:* WAN интерфейс " + iface_to_check + " без IP (" + proto + "). Перезапуск wan...");
     }
     system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
 }
 
 function ai_heal_gateway() {
+    let now = time();
+    if (now - last_gateway_heal_time < 300) return;
+    if (is_reload_in_progress()) return;
+
     let out = command_capture("ip route 2>/dev/null").output;
     if (index(out, "default") >= 0) return;
 
+    last_gateway_heal_time = now;
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.notify_crash != "0") {
         send_telegram_notification("⚠️ *Watchdog:* Default gateway отсутствует. Перезапуск wan...");
