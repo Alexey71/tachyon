@@ -3,31 +3,58 @@
 
 const fs = require('fs');
 
-// Paul Hsieh's SuperFastHash
-function sfh_hash(data) {
-  let hash = 0;
-  let i = data.length;
-  let k;
-  while (i >= 4) {
-    k = (data.charCodeAt(i - 4) & 0xff) |
-        ((data.charCodeAt(i - 3) & 0xff) << 8) |
-        ((data.charCodeAt(i - 2) & 0xff) << 16) |
-        ((data.charCodeAt(i - 1) & 0xff) << 24);
-    k = (k * 0x5bd1e995) >>> 0;
-    k ^= k >>> 24;
-    k = (k * 0x5bd1e995) >>> 0;
-    hash = (hash * 0x5bd1e995 + k) >>> 0;
-    i -= 4;
+// OpenWrt LuCI SuperFastHash (from LMO.md / template_lmo.c)
+// sfh_get16 reads uint16 in little-endian
+function sfh_get16(d, off) {
+  return (d[off] & 0xff) + ((d[off + 1] & 0xff) << 8);
+}
+
+function sfh_hash(str) {
+  const data = Buffer.from(str, 'utf8');
+  const len = data.length;
+  if (len <= 0) return 0;
+
+  let hash = len;
+  let rem = len & 3;
+  let offset = 0;
+  const words = len >> 2;
+
+  // Main loop
+  for (let i = 0; i < words; i++) {
+    hash += sfh_get16(data, offset);
+    let tmp = (sfh_get16(data, offset + 2) << 11) ^ hash;
+    hash = (hash << 16) ^ tmp;
+    offset += 4;
+    hash += hash >>> 11;
   }
-  switch (i) {
-    case 3: hash ^= (data.charCodeAt(i - 3) & 0xff) << 16;
-    case 2: hash ^= (data.charCodeAt(i - 2) & 0xff) << 8;
-    case 1: hash ^= (data.charCodeAt(i - 1) & 0xff);
-            hash = (hash * 0x5bd1e995) >>> 0;
+
+  // Handle end cases
+  switch (rem) {
+    case 3:
+      hash += sfh_get16(data, offset);
+      hash ^= hash << 16;
+      hash ^= data[offset + 2] << 18;
+      hash += hash >>> 11;
+      break;
+    case 2:
+      hash += sfh_get16(data, offset);
+      hash ^= hash << 11;
+      hash += hash >>> 17;
+      break;
+    case 1:
+      hash += data[offset];
+      hash ^= hash << 10;
+      hash += hash >>> 1;
   }
-  hash ^= hash >>> 13;
-  hash = (hash * 0x5bd1e995) >>> 0;
-  hash ^= hash >>> 15;
+
+  // Force "avalanching" of final 127 bits
+  hash ^= hash << 3;
+  hash += hash >>> 5;
+  hash ^= hash << 4;
+  hash += hash >>> 17;
+  hash ^= hash << 25;
+  hash += hash >>> 6;
+
   return hash >>> 0;
 }
 
@@ -41,7 +68,6 @@ function parsePo(content) {
   let state = null;
   let msgid = '';
   let msgstr = '';
-  let key = '';
 
   function flush() {
     if (state === 'msgstr' && msgid !== '' && msgstr !== '') {
@@ -83,23 +109,15 @@ function compileLmo(entries) {
     const keyId = sfh_hash(entry.key);
     const valId = sfh_hash(entry.value);
 
-    // Write value to payload
     const paddedLen = valBuf.length + pad4(valBuf.length);
     const padded = Buffer.alloc(paddedLen, 0);
     valBuf.copy(padded);
     payload.push(padded);
 
-    index.push({
-      keyId,
-      valId,
-      offset,
-      length: valBuf.length,
-    });
-
+    index.push({ keyId, valId, offset, length: valBuf.length });
     offset += paddedLen;
   }
 
-  // Build index section
   const indexBuf = Buffer.alloc(index.length * 16);
   for (let i = 0; i < index.length; i++) {
     indexBuf.writeUInt32BE(index[i].keyId, i * 16);
@@ -108,7 +126,6 @@ function compileLmo(entries) {
     indexBuf.writeUInt32BE(index[i].length, i * 16 + 12);
   }
 
-  // Total: payload + index + 4 bytes for index offset
   const payloadData = Buffer.concat(payload);
   const totalLen = payloadData.length + indexBuf.length + 4;
   const out = Buffer.alloc(totalLen);
@@ -119,7 +136,6 @@ function compileLmo(entries) {
   return out;
 }
 
-// Main
 const [input, output] = process.argv.slice(2);
 if (!input || !output) {
   console.error('Usage: node po2lmo.js input.po output.lmo');
