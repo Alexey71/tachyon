@@ -3161,74 +3161,98 @@ msgstr "Проверки здоровья"
 msgid "Enable Proxy Health Monitor"
 msgstr "Мониторинг здоровья прокси"
 
-msgid "Check interval (s)"
-msgstr "Интервал проверки (с)"
+msgid "Periodically checks if the proxy is responding. Restarts Tachyon after consecutive failures."
+msgstr "Периодически проверяет работоспособность прокси. Перезапускает Tachyon после последовательных сбоев."
 
-msgid "Fast tier, 15-120s"
-msgstr "Быстрый тир, 15-120с"
+msgid "Proxy Health Check Interval (s)"
+msgstr "Интервал проверки прокси (с)"
 
-msgid "Fail threshold"
-msgstr "Порог ошибок"
+msgid "How often to check proxy health in seconds (fast tier, default 30)."
+msgstr "Как часто проверять прокси в секундах (быстрый тир, по умолчанию 30)."
 
-msgid "Consecutive fails before restart"
-msgstr "Подряд идущих ошибок перед перезапуском"
+msgid "Proxy Fail Threshold"
+msgstr "Порог ошибок прокси"
 
-msgid "Health Check URL"
-msgstr "URL проверки здоровья"
+msgid "Number of consecutive failures before restarting (default 3)."
+msgstr "Количество последовательных сбоев перед перезапуском (по умолчанию 3)."
+
+msgid "Proxy Health Check URL"
+msgstr "URL проверки прокси"
+
+msgid "URL to test through the proxy (default: Cloudflare 204)."
+msgstr "URL для теста через прокси (по умолчанию: Cloudflare 204)."
 
 msgid "Enable DNS Continuous Check"
 msgstr "Непрерывная проверка DNS"
 
+msgid "Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."
+msgstr "Быстрый мониторинг DNS по умолчанию. Переключает bootstrap DNS при сбое."
+
 msgid "DNS Check Interval (s)"
 msgstr "Интервал проверки DNS (с)"
 
-msgid "30-300s"
-msgstr "30-300с"
+msgid "How often to check DNS health in seconds (default 60)."
+msgstr "Как часто проверять DNS в секундах (по умолчанию 60)."
 
-msgid "Protection"
-msgstr "Защита"
+msgid "Enable Firewall Reload Dedup"
+msgstr "Дедупликация перезагрузки файрвола"
 
-msgid "Firewall Reload Dedup (prevents connection drops)"
-msgstr "Дедупликация перезагрузки файрвола (предотвращает обрывы)"
+msgid "Prevents multiple reload_firewall calls within 120 seconds to avoid connection drops."
+msgstr "Предотвращает множественные вызовы reload_firewall в течение 120 секунд для избежания обрывов."
 
-msgid "Config Validation (validates before restart)"
-msgstr "Валидация конфига (проверка перед перезапуском)"
-
-msgid "Graceful Degradation (skip failed checks, continue)"
-msgstr "Graceful Degradation (пропуск ошибок, продолжение работы)"
-
-msgid "Monitoring & Analytics"
-msgstr "Мониторинг и аналитика"
-
-msgid "Health Metrics"
+msgid "Enable Health Metrics"
 msgstr "Метрики здоровья"
+
+msgid "Records proxy/DNS latency and health status in hourly buckets for analysis."
+msgstr "Записывает латентность прокси/DNS и статус здоровья в часовые интервалы для анализа."
 
 msgid "Metrics Retention (hours)"
 msgstr "Хранение метрик (часов)"
 
-msgid "1-168h"
-msgstr "1-168ч"
+msgid "How many hours of metrics to keep (default 24)."
+msgstr "Сколько часов хранить метрики (по умолчанию 24)."
 
-msgid "Anomaly Detection (reconnect frequency)"
-msgstr "Обнаружение аномалий (частота переподключений)"
+msgid "Enable Smart Cooldowns"
+msgstr "Smart Cooldowns"
+
+msgid "Use 3-tier check intervals: fast (15s), normal (120s), slow (300s) instead of a single interval."
+msgstr "3-уровневые интервалы проверок: быстрый (15с), нормальный (120с), медленный (300с)."
+
+msgid "Enable Config Validation"
+msgstr "Валидация конфига"
+
+msgid "Validates sing-box config before restart to prevent boot loops on broken configs."
+msgstr "Проверяет конфиг sing-box перед перезапуском для предотвращения boot loop на сломанных конфигах."
+
+msgid "Enable Graceful Degradation"
+msgstr "Graceful Degradation"
+
+msgid "If one health check fails with an error, continue running other checks instead of stopping."
+msgstr "Если одна проверка падает с ошибкой, продолжает другие проверки вместо остановки."
+
+msgid "Persistent Smart Detect"
+msgstr "Persistent Smart Detect"
+
+msgid "Store auto-detected domains in /etc instead of /tmp to survive reboots."
+msgstr "Хранить авто-обнаруженные домены в /etc вместо /tmp для сохранения после перезагрузок."
+
+msgid "Enable Adaptive Intervals"
+msgstr "Адаптивные интервалы"
+
+msgid "Automatically increase check intervals when healthy (to 5 min) and decrease on problems (to 120s)."
+msgstr "Автоматически увеличивает интервалы при стабильности (до 5 мин) и уменьшает при проблемах (до 120с)."
+
+msgid "Enable Anomaly Detection"
+msgstr "Обнаружение аномалий"
+
+msgid "Monitors sing-box reconnect frequency. Alerts if too many reconnects per hour."
+msgstr "Мониторит частоту переподключений sing-box. Уведомляет при превышении лимита."
 
 msgid "Reconnect Threshold"
 msgstr "Порог переподключений"
 
-msgid "Max reconnects/hour"
-msgstr "Макс. переподключений/час"
-
-msgid "Optimization"
-msgstr "Оптимизация"
-
-msgid "Smart Cooldowns (15s/120s/300s tier intervals)"
-msgstr "Smart Cooldowns (15с/120с/300с интервалы)"
-
-msgid "Adaptive Intervals (longer when healthy)"
-msgstr "Адаптивные интервалы (длиннее при стабильности)"
-
-msgid "Persistent Smart Detect (survive reboots)"
-msgstr "Persistent Smart Detect (сохраняется после перезагрузки)"
+msgid "Max reconnects per hour before alert (default 10)."
+msgstr "Макс. переподключений в час перед алертом (по умолчанию 10)."
 
 msgid "Save AI Watchdog Settings"
 msgstr "Сохранить настройки AI Watchdog"
