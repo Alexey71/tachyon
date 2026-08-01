@@ -1627,6 +1627,9 @@ function process_updates(token, admin_ids) {
     
     for (let upd in res.result) {
         let update_id = upd.update_id;
+        if (update_id >= offset) {
+            offset = update_id + 1;
+        }
         
         let cb = upd.callback_query;
         if (cb) {
@@ -1785,9 +1788,6 @@ function process_updates(token, admin_ids) {
             }
 
             dispatch_command(token, chat_id, msg.text, null);
-        }
-        if (update_id >= offset) {
-            offset = update_id + 1;
         }
     }
     fs.writefile(OFFSET_FILE, as_string(offset));
