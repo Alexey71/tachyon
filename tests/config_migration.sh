@@ -175,7 +175,7 @@ assert(JSON.stringify(config.settings.dns_server) === JSON.stringify(['9.9.9.9']
 assert(JSON.stringify(config.settings.bootstrap_dns_server) === JSON.stringify(['1.1.1.1']), 'legacy Bootstrap DNS scalar migrated to ordered list');
 assert(config.settings.config_version === '1.0.5', 'legacy config should be marked at the current schema version');
 assert(config.settings.component_update_check_enabled === '1', 'component update checks should be enabled during migration');
-assert(JSON.stringify(config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls']), 'legacy config should record named migrations');
+assert(JSON.stringify(config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls', 'dns_hosts_to_option']), 'legacy config should record named migrations');
 
 function assert(condition, message) {
   if (!condition) {
@@ -394,7 +394,7 @@ function assert(condition, message) {
 assert(out.changed === true, '1.0.1 config should require migration');
 assert(out.config.settings.config_version === '1.0.5', 'config schema version should advance to 1.0.5');
 assert(out.config.settings.component_update_check_enabled === '1', 'updates from 1.0.1 and below should enable component update checks');
-assert(JSON.stringify(out.config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls']), 'named migrations should be recorded');
+assert(JSON.stringify(out.config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls', 'dns_hosts_to_option']), 'named migrations should be recorded');
 assert(!Object.prototype.hasOwnProperty.call(section, 'interfaces'), 'parent interface list should be removed');
 assert(JSON.stringify(interfaces.map(item => item.name)) === JSON.stringify(['awg0', 'tun0']), 'interfaces should keep their order');
 for (const item of interfaces) {
@@ -432,7 +432,7 @@ function assert(condition, message) {
 
 assert(out.config.settings.component_update_check_enabled === '0', '1.0.2 config must preserve an explicitly disabled component check');
 assert(out.config.settings.config_version === '1.0.5', '1.0.2 config should advance through the HTTP URL migration schema');
-assert(JSON.stringify(out.config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls']), 'newer configs should mark skipped migrations');
+assert(JSON.stringify(out.config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls', 'dns_hosts_to_option']), 'newer configs should mark skipped migrations');
 NODE
 
 cat >"$WORK_DIR/forkop-1.0.4-http.json" <<'JSON'
@@ -498,7 +498,7 @@ assert(JSON.stringify(jsonOutbounds[1]) === JSON.stringify({
   server_port: 8080,
 }), 'unnamed HTTP URL should receive a unique http tag');
 assert(jsonOutbounds[2].type === 'direct' && jsonOutbounds[2].tag === 'http', 'existing JSON outbounds should remain unchanged');
-assert(JSON.stringify(out.config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls']), 'HTTP URL migration should be recorded');
+assert(JSON.stringify(out.config.settings.applied_migrations) === JSON.stringify(['interface_sections', 'enable_component_checks', 'http_connection_urls', 'dns_hosts_to_option']), 'HTTP URL migration should be recorded');
 NODE
 
 cat >"$WORK_DIR/forkop-1.0.5-http.json" <<'JSON'
@@ -613,7 +613,7 @@ grep -Fxq 'tachyon.settings.config_version=1.0.5' "$WORK_DIR/runtime-version.sta
   fail "runtime version migration must advance config_version"
 grep -Fxq 'tachyon.settings.component_update_check_enabled=1' "$WORK_DIR/runtime-version.state" ||
   fail "runtime version migration must enable component update checks"
-grep -Fq 'tachyon.settings.applied_migrations=interface_sections enable_component_checks http_connection_urls' "$WORK_DIR/runtime-version.state" ||
+grep -Fq 'tachyon.settings.applied_migrations=interface_sections enable_component_checks http_connection_urls dns_hosts_to_option' "$WORK_DIR/runtime-version.state" ||
   fail "runtime migration must record stable migration names"
 grep -Eq '^tachyon\.main\.outbound_jsons=\{ "type": "http", "tag": "http", "server": "proxy\.example", "server_port": 8080 \}$' "$WORK_DIR/runtime-version.state" ||
   fail "runtime migration must convert native HTTP proxy links to JSON outbounds"
@@ -684,6 +684,22 @@ if (outbound.server !== 'stable.example' || !outbound.share_link || !outbound.sh
   process.exit(1);
 }
 NODE
+
+cat >"$WORK_DIR/dns_hosts_list.state" <<'EOF_UCI'
+tachyon.settings=settings
+tachyon.settings.dns_hosts=0.0.0.0 ads.example.com
+tachyon.settings.dns_hosts=127.0.0.1 tracker.local
+EOF_UCI
+: >"$WORK_DIR/dns_hosts_list.log"
+TACHYON_UCI_STATE_FILE="$WORK_DIR/dns_hosts_list.state" \
+TACHYON_UCI_LOG_FILE="$WORK_DIR/dns_hosts_list.log" \
+TACHYON_CONFIG_NAME="tachyon" \
+TACHYON_INTERNAL_CONFIG_TRIGGER_GUARD="$WORK_DIR/internal-config-change" \
+ucode -L "$TACHYON_LIB" "$MIGRATION" migrate
+
+grep -Fxq 'tachyon.settings.dns_hosts=0.0.0.0 ads.example.com
+127.0.0.1 tracker.local' "$WORK_DIR/dns_hosts_list.state" ||
+  fail "dns_hosts list-to-option migration must join entries with newline"
 
 : >"$WORK_DIR/uci-commit.log"
 : >"$WORK_DIR/uci-commit.state"

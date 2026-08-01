@@ -410,12 +410,7 @@ function base_config(settings, service_address, runtime_context) {
     
     let raw_dns_hosts = settings["dns_hosts"];
     let dns_hosts_entries = [];
-    if (type(raw_dns_hosts) == "array") {
-        for (let item in raw_dns_hosts) {
-            for (let line in split(as_string(item), "\n"))
-                push(dns_hosts_entries, line);
-        }
-    } else if (raw_dns_hosts != null && raw_dns_hosts != "") {
+    if (raw_dns_hosts != null && raw_dns_hosts != "") {
         for (let line in split(as_string(raw_dns_hosts), "\n"))
             push(dns_hosts_entries, line);
     }

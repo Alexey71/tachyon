@@ -856,10 +856,9 @@ function showImportHostsModal(section_id, optionRef) {
       finalEntries.push(`${domain} ${ip}`);
     }
 
-    uci.set(UCI_PACKAGE, section_id, "dns_hosts", finalEntries);
+    uci.set(UCI_PACKAGE, section_id, "dns_hosts", finalEntries.join("\n"));
     if (uiEl && typeof uiEl.setValue === "function") {
-      const _curVal = typeof uiEl.getValue === "function" ? uiEl.getValue() : null;
-      uiEl.setValue(Array.isArray(_curVal) ? finalEntries : finalEntries.join("\n"));
+      uiEl.setValue(finalEntries.join("\n"));
     }
 
     ui.hideModal();
@@ -1127,7 +1126,7 @@ function createSettingsContent(section, capabilities) {
     if (lines.length === 0) {
       uci.unset(UCI_PACKAGE, section_id, "dns_hosts");
     } else {
-      uci.set(UCI_PACKAGE, section_id, "dns_hosts", lines);
+      uci.set(UCI_PACKAGE, section_id, "dns_hosts", lines.join("\n"));
     }
   };
   dnsHostsOpt.remove = function(section_id) {
