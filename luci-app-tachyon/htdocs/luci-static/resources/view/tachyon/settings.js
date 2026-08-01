@@ -1753,6 +1753,115 @@ function createSettingsContent(section, capabilities) {
   };
   wdStatusOpt.depends("enable_watchdog", "1");
 
+  // ─── AI Watchdog Settings ──────────────────────────────────────────────────
+
+  // Proxy Health Monitor
+  o = section.option(form.Flag, "ai_proxy_health_enabled", _("Enable Proxy Health Monitor"),
+    _("Periodically checks if the proxy is responding. Restarts Tachyon after consecutive failures."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  o = section.option(form.Value, "ai_proxy_health_interval", _("Proxy Health Check Interval (s)"),
+    _("How often to check proxy health in seconds (fast tier, default 30)."));
+  o.default = "30";
+  o.datatype = "min(15)";
+  o.depends("ai_proxy_health_enabled", "1");
+
+  o = section.option(form.Value, "ai_proxy_health_fail_threshold", _("Proxy Fail Threshold"),
+    _("Number of consecutive failures before restarting (default 3)."));
+  o.default = "3";
+  o.datatype = "min(1)";
+  o.depends("ai_proxy_health_enabled", "1");
+
+  o = section.option(form.Value, "ai_proxy_health_url", _("Proxy Health Check URL"),
+    _("URL to test through the proxy (default: Cloudflare 204)."));
+  o.default = "https://cp.cloudflare.com/generate_204";
+  o.depends("ai_proxy_health_enabled", "1");
+
+  // DNS Continuous Check
+  o = section.option(form.Flag, "ai_dns_continuous_enabled", _("Enable DNS Continuous Check"),
+    _("Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  o = section.option(form.Value, "ai_dns_interval", _("DNS Check Interval (s)"),
+    _("How often to check DNS health in seconds (default 60)."));
+  o.default = "60";
+  o.datatype = "min(30)";
+  o.depends("ai_dns_continuous_enabled", "1");
+
+  // Reload Dedup
+  o = section.option(form.Flag, "ai_reload_dedup_enabled", _("Enable Firewall Reload Dedup"),
+    _("Prevents multiple reload_firewall calls within 120 seconds to avoid connection drops."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  // Metrics
+  o = section.option(form.Flag, "ai_metrics_enabled", _("Enable Health Metrics"),
+    _("Records proxy/DNS latency and health status in hourly buckets for analysis."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  o = section.option(form.Value, "ai_metrics_retention_hours", _("Metrics Retention (hours)"),
+    _("How many hours of metrics to keep (default 24)."));
+  o.default = "24";
+  o.datatype = "min(1)";
+  o.depends("ai_metrics_enabled", "1");
+
+  // Smart Cooldowns
+  o = section.option(form.Flag, "ai_smart_cooldowns_enabled", _("Enable Smart Cooldowns"),
+    _("Use 3-tier check intervals: fast (15s), normal (120s), slow (300s) instead of a single interval."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  // Config Validation
+  o = section.option(form.Flag, "ai_config_validation_enabled", _("Enable Config Validation"),
+    _("Validates sing-box config before restart to prevent boot loops on broken configs."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  // Graceful Degradation
+  o = section.option(form.Flag, "ai_graceful_degradation_enabled", _("Enable Graceful Degradation"),
+    _("If one health check fails with an error, continue running other checks instead of stopping."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  // Persistent Smart Detect
+  o = section.option(form.Flag, "ai_persistent_smart_detect", _("Persistent Smart Detect"),
+    _("Store auto-detected domains in /etc instead of /tmp to survive reboots."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  // Adaptive Intervals
+  o = section.option(form.Flag, "ai_adaptive_intervals_enabled", _("Enable Adaptive Intervals"),
+    _("Automatically increase check intervals when healthy (to 5 min) and decrease on problems (to 120s)."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  // Anomaly Detection
+  o = section.option(form.Flag, "ai_anomaly_detection_enabled", _("Enable Anomaly Detection"),
+    _("Monitors sing-box reconnect frequency. Alerts if too many reconnects per hour."));
+  o.default = "1";
+  o.rmempty = false;
+  o.depends("enable_watchdog", "1");
+
+  o = section.option(form.Value, "ai_anomaly_reconnect_threshold", _("Reconnect Threshold"),
+    _("Max reconnects per hour before alert (default 10)."));
+  o.default = "10";
+  o.datatype = "min(1)";
+  o.depends("ai_anomaly_detection_enabled", "1");
+
+  // ─── End AI Watchdog Settings ──────────────────────────────────────────────
+
   // Smart Detect
   o = section.option(
     form.Flag,

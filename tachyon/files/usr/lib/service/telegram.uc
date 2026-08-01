@@ -1218,6 +1218,7 @@ function view_watchdog(token, chat_id, msg_id) {
     let keyboard = [];
     if (running) {
         push(keyboard, [{ text: "⏹️ Остановить Watchdog", callback_data: "/wd_stop" }]);
+        push(keyboard, [{ text: "📊 Полный статус AI", callback_data: "/ai_status_full" }]);
     } else {
         push(keyboard, [{ text: "▶️ Запустить Watchdog", callback_data: "/wd_start" }]);
     }
@@ -1253,6 +1254,16 @@ function exec_ai_heal(token, chat_id, msg_id) {
 
     let keyboard = [[{ text: "⬅️ В меню", callback_data: "/menu" }]];
     send_message(token, chat_id, text, "HTML", keyboard);
+}
+
+function exec_ai_status_full(token, chat_id, msg_id) {
+    send_message(token, chat_id, "🔍 <b>Сбор полного AI Watchdog статуса...</b>", "HTML");
+    let res = command_capture("/usr/bin/tachyon ai_status_full");
+    let data = res.output || "Нет данных.";
+    let text = "🤖 <b>AI Watchdog — Полный статус:</b>\n\n<pre>" + escape_html(data) + "</pre>";
+    let keyboard = [[{ text: "⬅️ Назад", callback_data: "/watchdog" }]];
+    if (msg_id) edit_message(token, chat_id, msg_id, text, "HTML", keyboard);
+    else send_message(token, chat_id, text, "HTML", keyboard);
 }
 
 function view_qos(token, chat_id, msg_id) {
@@ -1345,6 +1356,7 @@ function dispatch_command(token, chat_id, text, msg_id) {
     }
     if (cmd == "/watchdog") return view_watchdog(token, chat_id, msg_id);
     if (cmd == "/doctor") return exec_doctor(token, chat_id);
+    if (cmd == "/ai_status_full") return exec_ai_status_full(token, chat_id, msg_id);
     if (cmd == "/restart") return exec_restart(token, chat_id);
     if (cmd == "/confirm_restart") {
         if (msg_id) return apply_confirmed_restart(token, chat_id, msg_id);

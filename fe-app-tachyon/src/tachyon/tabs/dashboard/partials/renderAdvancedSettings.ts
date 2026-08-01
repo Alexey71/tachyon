@@ -14,6 +14,24 @@ interface AdvancedSettingsState {
   allSectionNames: string[];
   deviceIpsPerSection: Record<string, string[]>;
   dnsTurboCache: boolean;
+  aiWatchdog: {
+    proxyHealthEnabled: boolean;
+    proxyHealthInterval: string;
+    proxyHealthFailThreshold: string;
+    proxyHealthUrl: string;
+    dnsContinuousEnabled: boolean;
+    dnsInterval: string;
+    reloadDedupEnabled: boolean;
+    metricsEnabled: boolean;
+    metricsRetentionHours: string;
+    smartCooldownsEnabled: boolean;
+    configValidationEnabled: boolean;
+    gracefulDegradationEnabled: boolean;
+    persistentSmartDetect: boolean;
+    adaptiveIntervalsEnabled: boolean;
+    anomalyDetectionEnabled: boolean;
+    anomalyReconnectThreshold: string;
+  };
   saving: boolean;
   loaded: boolean;
 }
@@ -26,6 +44,24 @@ let _state: AdvancedSettingsState = {
   allSectionNames: [],
   deviceIpsPerSection: {},
   dnsTurboCache: false,
+  aiWatchdog: {
+    proxyHealthEnabled: true,
+    proxyHealthInterval: '30',
+    proxyHealthFailThreshold: '3',
+    proxyHealthUrl: 'https://cp.cloudflare.com/generate_204',
+    dnsContinuousEnabled: true,
+    dnsInterval: '60',
+    reloadDedupEnabled: true,
+    metricsEnabled: true,
+    metricsRetentionHours: '24',
+    smartCooldownsEnabled: true,
+    configValidationEnabled: true,
+    gracefulDegradationEnabled: true,
+    persistentSmartDetect: true,
+    adaptiveIntervalsEnabled: true,
+    anomalyDetectionEnabled: true,
+    anomalyReconnectThreshold: '10',
+  },
   saving: false,
   loaded: false,
 };
@@ -93,6 +129,24 @@ export async function loadAdvancedSettingsState() {
     allSectionNames,
     deviceIpsPerSection,
     dnsTurboCache: settingsSec?.dns_turbo_cache === '1',
+    aiWatchdog: {
+      proxyHealthEnabled: settingsSec?.ai_proxy_health_enabled !== '0',
+      proxyHealthInterval: (settingsSec?.ai_proxy_health_interval as string) || '30',
+      proxyHealthFailThreshold: (settingsSec?.ai_proxy_health_fail_threshold as string) || '3',
+      proxyHealthUrl: (settingsSec?.ai_proxy_health_url as string) || 'https://cp.cloudflare.com/generate_204',
+      dnsContinuousEnabled: settingsSec?.ai_dns_continuous_enabled !== '0',
+      dnsInterval: (settingsSec?.ai_dns_interval as string) || '60',
+      reloadDedupEnabled: settingsSec?.ai_reload_dedup_enabled !== '0',
+      metricsEnabled: settingsSec?.ai_metrics_enabled !== '0',
+      metricsRetentionHours: (settingsSec?.ai_metrics_retention_hours as string) || '24',
+      smartCooldownsEnabled: settingsSec?.ai_smart_cooldowns_enabled !== '0',
+      configValidationEnabled: settingsSec?.ai_config_validation_enabled !== '0',
+      gracefulDegradationEnabled: settingsSec?.ai_graceful_degradation_enabled !== '0',
+      persistentSmartDetect: settingsSec?.ai_persistent_smart_detect !== '0',
+      adaptiveIntervalsEnabled: settingsSec?.ai_adaptive_intervals_enabled !== '0',
+      anomalyDetectionEnabled: settingsSec?.ai_anomaly_detection_enabled !== '0',
+      anomalyReconnectThreshold: (settingsSec?.ai_anomaly_reconnect_threshold as string) || '10',
+    },
     loaded: true,
   };
   rerender();
@@ -195,6 +249,41 @@ async function saveDnsTurboCache(enabled: boolean) {
   rerender();
 }
 
+async function saveAiWatchdogSettings() {
+  _state = { ..._state, saving: true };
+  rerender();
+  try {
+    const ai = _state.aiWatchdog;
+    const cmds: string[][] = [
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_proxy_health_enabled=${ai.proxyHealthEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_proxy_health_interval=${ai.proxyHealthInterval}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_proxy_health_fail_threshold=${ai.proxyHealthFailThreshold}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_proxy_health_url=${ai.proxyHealthUrl}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_dns_continuous_enabled=${ai.dnsContinuousEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_dns_interval=${ai.dnsInterval}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_reload_dedup_enabled=${ai.reloadDedupEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_metrics_enabled=${ai.metricsEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_metrics_retention_hours=${ai.metricsRetentionHours}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_smart_cooldowns_enabled=${ai.smartCooldownsEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_config_validation_enabled=${ai.configValidationEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_graceful_degradation_enabled=${ai.gracefulDegradationEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_persistent_smart_detect=${ai.persistentSmartDetect ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_adaptive_intervals_enabled=${ai.adaptiveIntervalsEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_anomaly_detection_enabled=${ai.anomalyDetectionEnabled ? '1' : '0'}`],
+      ['set', `${TACHYON_UCI_PACKAGE}.settings.ai_anomaly_reconnect_threshold=${ai.anomalyReconnectThreshold}`],
+    ];
+    for (const cmd of cmds) {
+      await TachyonShellMethods.uciRunCommand(cmd);
+    }
+    await TachyonShellMethods.uciRunCommand(['commit', TACHYON_UCI_PACKAGE]);
+    showToast(_('AI Watchdog settings saved. Restart watchdog to apply.'), 'success');
+  } catch {
+    showToast(_('Failed to save AI Watchdog settings'), 'error');
+  }
+  _state = { ..._state, saving: false };
+  rerender();
+}
+
 function moveSectionUp(idx: number) {
   if (idx <= 0) return;
   const arr = [..._state.smartDetectSections];
@@ -288,6 +377,118 @@ function renderDnsTurboCacheSection(state: AdvancedSettingsState) {
     saving
       ? E('span', { class: 'tachyon_adv__hint' }, _('Saving…'))
       : E('span', {}),
+  ]);
+}
+
+function renderAiWatchdogSection(state: AdvancedSettingsState) {
+  const { aiWatchdog, saving, watchdogRunning } = state;
+
+  const toggle = (key: keyof typeof aiWatchdog, label: string) =>
+    E('div', { class: 'tachyon_adv__row' }, [
+      E('label', { class: 'tachyon_adv__toggle' }, [
+        E('input', {
+          type: 'checkbox',
+          checked: Boolean(aiWatchdog[key]),
+          onchange: (e: Event) => {
+            const val = (e.target as HTMLInputElement).checked;
+            _state = { ..._state, aiWatchdog: { ..._state.aiWatchdog, [key]: val } };
+            rerender();
+          },
+        }),
+        E('span', {}, _(label)),
+      ]),
+    ]);
+
+  const numInput = (key: keyof typeof aiWatchdog, label: string, hint: string, min: number) =>
+    E('div', { class: 'tachyon_adv__row' }, [
+      E('label', { class: 'tachyon_adv__label' }, _(label)),
+      E('input', {
+        type: 'number',
+        class: 'cbi-input-text',
+        value: aiWatchdog[key] as string,
+        min: String(min),
+        onchange: (e: Event) => {
+          const val = (e.target as HTMLInputElement).value;
+          _state = { ..._state, aiWatchdog: { ..._state.aiWatchdog, [key]: val } };
+        },
+      }),
+      E('span', { class: 'tachyon_adv__hint' }, _(hint)),
+    ]);
+
+  const textInput = (key: keyof typeof aiWatchdog, label: string) =>
+    E('div', { class: 'tachyon_adv__row' }, [
+      E('label', { class: 'tachyon_adv__label' }, _(label)),
+      E('input', {
+        type: 'text',
+        class: 'cbi-input-text',
+        value: aiWatchdog[key] as string,
+        style: 'width: 100%;',
+        onchange: (e: Event) => {
+          const val = (e.target as HTMLInputElement).value;
+          _state = { ..._state, aiWatchdog: { ..._state.aiWatchdog, [key]: val } };
+        },
+      }),
+    ]);
+
+  return E('div', { class: 'tachyon_adv__section' }, [
+    E('div', { class: 'tachyon_adv__section-header' }, [
+      E('span', { class: 'tachyon_adv__section-icon' }, '🤖'),
+      E('h3', { class: 'tachyon_adv__section-title' }, _('AI Watchdog')),
+    ]),
+    E('p', { class: 'tachyon_adv__hint' }, _(
+      'Advanced self-healing features. Requires Watchdog to be enabled.',
+    )),
+
+    // Health Checks group
+    E('div', { class: 'tachyon_adv__group' }, [
+      E('h4', { class: 'tachyon_adv__group-title' }, _('Health Checks')),
+      toggle('proxyHealthEnabled', 'Enable Proxy Health Monitor'),
+      aiWatchdog.proxyHealthEnabled ? E('div', { class: 'tachyon_adv__subrows' }, [
+        numInput('proxyHealthInterval', 'Check interval (s)', 'Fast tier, 15-120s', 15),
+        numInput('proxyHealthFailThreshold', 'Fail threshold', 'Consecutive fails before restart', 1),
+        textInput('proxyHealthUrl', 'Health Check URL'),
+      ]) : E('span', {}),
+      toggle('dnsContinuousEnabled', 'Enable DNS Continuous Check'),
+      aiWatchdog.dnsContinuousEnabled ? E('div', { class: 'tachyon_adv__subrows' }, [
+        numInput('dnsInterval', 'DNS Check Interval (s)', '30-300s', 30),
+      ]) : E('span', {}),
+    ]),
+
+    // Protection group
+    E('div', { class: 'tachyon_adv__group' }, [
+      E('h4', { class: 'tachyon_adv__group-title' }, _('Protection')),
+      toggle('reloadDedupEnabled', 'Firewall Reload Dedup (prevents connection drops)'),
+      toggle('configValidationEnabled', 'Config Validation (validates before restart)'),
+      toggle('gracefulDegradationEnabled', 'Graceful Degradation (skip failed checks, continue)'),
+    ]),
+
+    // Monitoring group
+    E('div', { class: 'tachyon_adv__group' }, [
+      E('h4', { class: 'tachyon_adv__group-title' }, _('Monitoring & Analytics')),
+      toggle('metricsEnabled', 'Health Metrics'),
+      aiWatchdog.metricsEnabled ? E('div', { class: 'tachyon_adv__subrows' }, [
+        numInput('metricsRetentionHours', 'Metrics Retention (hours)', '1-168h', 1),
+      ]) : E('span', {}),
+      toggle('anomalyDetectionEnabled', 'Anomaly Detection (reconnect frequency)'),
+      aiWatchdog.anomalyDetectionEnabled ? E('div', { class: 'tachyon_adv__subrows' }, [
+        numInput('anomalyReconnectThreshold', 'Reconnect Threshold', 'Max reconnects/hour', 1),
+      ]) : E('span', {}),
+    ]),
+
+    // Optimization group
+    E('div', { class: 'tachyon_adv__group' }, [
+      E('h4', { class: 'tachyon_adv__group-title' }, _('Optimization')),
+      toggle('smartCooldownsEnabled', 'Smart Cooldowns (15s/120s/300s tier intervals)'),
+      toggle('adaptiveIntervalsEnabled', 'Adaptive Intervals (longer when healthy)'),
+      toggle('persistentSmartDetect', 'Persistent Smart Detect (survive reboots)'),
+    ]),
+
+    E('button', {
+      class: 'btn cbi-button cbi-button-save tachyon_adv__save-btn',
+      type: 'button',
+      disabled: saving || !watchdogRunning,
+      onclick: () => void saveAiWatchdogSettings(),
+    }, saving ? _('Saving…') : watchdogRunning ? _('Save AI Watchdog Settings') : _('Start Watchdog first')),
   ]);
 }
 
@@ -511,6 +712,8 @@ function renderAdvancedSettingsBody(state: AdvancedSettingsState) {
 
   return E('div', { class: 'tachyon_adv__body' }, [
     renderWatchdogSection(state),
+    E('hr', { class: 'tachyon_adv__divider' }),
+    renderAiWatchdogSection(state),
     E('hr', { class: 'tachyon_adv__divider' }),
     renderDnsTurboCacheSection(state),
     E('hr', { class: 'tachyon_adv__divider' }),

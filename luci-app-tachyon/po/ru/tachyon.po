@@ -3148,3 +3148,102 @@ msgstr "sing-box outbound для Zapret2 настроен"
 
 msgid "Zapret2 sing-box outbound is not configured"
 msgstr "sing-box outbound для Zapret2 не настроен"
+
+msgid "AI Watchdog"
+msgstr "ИИ Watchdog"
+
+msgid "Advanced self-healing features. Requires Watchdog to be enabled."
+msgstr "Расширенные функции самовосстановления. Требуется включённый Watchdog."
+
+msgid "Health Checks"
+msgstr "Проверки здоровья"
+
+msgid "Enable Proxy Health Monitor"
+msgstr "Мониторинг здоровья прокси"
+
+msgid "Check interval (s)"
+msgstr "Интервал проверки (с)"
+
+msgid "Fast tier, 15-120s"
+msgstr "Быстрый тир, 15-120с"
+
+msgid "Fail threshold"
+msgstr "Порог ошибок"
+
+msgid "Consecutive fails before restart"
+msgstr "Подряд идущих ошибок перед перезапуском"
+
+msgid "Health Check URL"
+msgstr "URL проверки здоровья"
+
+msgid "Enable DNS Continuous Check"
+msgstr "Непрерывная проверка DNS"
+
+msgid "DNS Check Interval (s)"
+msgstr "Интервал проверки DNS (с)"
+
+msgid "30-300s"
+msgstr "30-300с"
+
+msgid "Protection"
+msgstr "Защита"
+
+msgid "Firewall Reload Dedup (prevents connection drops)"
+msgstr "Дедупликация перезагрузки файрвола (предотвращает обрывы)"
+
+msgid "Config Validation (validates before restart)"
+msgstr "Валидация конфига (проверка перед перезапуском)"
+
+msgid "Graceful Degradation (skip failed checks, continue)"
+msgstr "Graceful Degradation (пропуск ошибок, продолжение работы)"
+
+msgid "Monitoring & Analytics"
+msgstr "Мониторинг и аналитика"
+
+msgid "Health Metrics"
+msgstr "Метрики здоровья"
+
+msgid "Metrics Retention (hours)"
+msgstr "Хранение метрик (часов)"
+
+msgid "1-168h"
+msgstr "1-168ч"
+
+msgid "Anomaly Detection (reconnect frequency)"
+msgstr "Обнаружение аномалий (частота переподключений)"
+
+msgid "Reconnect Threshold"
+msgstr "Порог переподключений"
+
+msgid "Max reconnects/hour"
+msgstr "Макс. переподключений/час"
+
+msgid "Optimization"
+msgstr "Оптимизация"
+
+msgid "Smart Cooldowns (15s/120s/300s tier intervals)"
+msgstr "Smart Cooldowns (15с/120с/300с интервалы)"
+
+msgid "Adaptive Intervals (longer when healthy)"
+msgstr "Адаптивные интервалы (длиннее при стабильности)"
+
+msgid "Persistent Smart Detect (survive reboots)"
+msgstr "Persistent Smart Detect (сохраняется после перезагрузки)"
+
+msgid "Save AI Watchdog Settings"
+msgstr "Сохранить настройки AI Watchdog"
+
+msgid "AI Watchdog settings saved. Restart watchdog to apply."
+msgstr "Настройки AI Watchdog сохранены. Перезапустите watchdog для применения."
+
+msgid "Failed to save AI Watchdog settings"
+msgstr "Ошибка сохранения настроек AI Watchdog"
+
+msgid "Start Watchdog first"
+msgstr "Сначала запустите Watchdog"
+
+msgid "Saving…"
+msgstr "Сохранение…"
+
+msgid "Section test order (checked = active, drag rows with △▽):"
+msgstr "Порядок проверки секций (галочка = активна, перетаскивайте △▽):"

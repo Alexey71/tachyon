@@ -123,6 +123,9 @@ function show_help() {
     print("    global_check            Run global system check\n");
     print("    doctor                  Run doctor diagnostics checks\n");
     print("    ai_doctor               Run AI doctor diagnostics completions\n");
+    print("    ai_status               Show AI watchdog status\n");
+    print("    ai_status_full          Show full AI watchdog status (JSON)\n");
+    print("    ai_heal                 Run AI watchdog heal cycle\n");
     print("    watchdog                Manage watchdog daemon (start-runtime|stop-runtime|status)\n");
     print("    telegram_status         Get Telegram bot running status\n");
     print("    telegram_start          Start Telegram bot\n");
@@ -208,6 +211,7 @@ function command_spec(command) {
         watchdog_stop: [ "service/watchdog.uc", "stop-runtime", 0 ],
         ai_heal: [ "service/watchdog.uc", "ai-heal", 0 ],
         ai_status: [ "service/watchdog.uc", "ai-status", 0 ],
+        ai_status_full: [ "service/watchdog.uc", "ai-status-full", 0 ],
         telegram: [ "service/telegram.uc", "", 2 ],
         telegram_status: [ "service/telegram.uc", "status", 0 ],
         telegram_start: [ "service/telegram.uc", "start-runtime", 0 ],

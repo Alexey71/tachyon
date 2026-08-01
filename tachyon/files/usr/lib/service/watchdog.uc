@@ -10,7 +10,7 @@ const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const PID_FILE = "/var/run/tachyon_watchdog.pid";
 const WATCHDOG_UC = LIB_DIR + "/service/watchdog.uc";
 const PAUSE_FILE = "/tmp/tachyon_paused_until";
-const SMART_DETECT_SEEN_FILE = "/tmp/tachyon_smart_detect_seen.json";
+const SMART_DETECT_SEEN_FILE = "/etc/tachyon/smart_detect_seen.json";
 
 
 let as_string = common.as_string;
@@ -258,6 +258,17 @@ let smart_detect_last_run = 0;
 let last_subnet_heal_time = 0;
 let last_wan_heal_time = 0;
 let last_gateway_heal_time = 0;
+let last_reload_time = 0;
+let proxy_consecutive_fails = 0;
+let dns_consecutive_fails = 0;
+let ai_healthy_streak = 0;
+let proxy_latency_history = [];
+let dns_latency_history = [];
+let last_anomaly_check = 0;
+let last_metrics_export = 0;
+let last_fast_check = 0;
+let last_normal_check = 0;
+let last_slow_check = 0;
 
 function check_tachyon_cli_running() {
     let running = false;
@@ -294,6 +305,7 @@ function handle_singbox_stop_event(reason) {
     if (process_running(list_update_pid, "ucode")) return;
 
     log_message("sing-box is stopped (" + as_string(reason || "health check") + "). Restarting Tachyon...", "warn");
+    increment_reconnect_count();
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.notify_crash != "0") {
         send_telegram_notification("⚠️ *Watchdog:* sing-box остановлен. Перезапускаю службы Tachyon...");
@@ -374,9 +386,11 @@ let ai_incidents_count = 0;
 let last_ai_incident = null;
 
 function ai_export_status() {
+    let is_healthy = last_ai_incident == null || (time() - last_ai_incident.timestamp >= 300);
+    if (is_healthy) ai_healthy_streak++;
     let status_obj = {
         timestamp: time(),
-        status: last_ai_incident != null && (time() - last_ai_incident.timestamp < 300) ? "repaired" : "healthy",
+        status: is_healthy ? "healthy" : "repaired",
         ai_active: true,
         incidents_resolved_total: ai_incidents_count,
         last_incident: last_ai_incident
@@ -386,6 +400,7 @@ function ai_export_status() {
 
 function ai_heal_report(event_type, description, resolution, status_code) {
     ai_incidents_count++;
+    ai_healthy_streak = 0;
     last_ai_incident = {
         type: event_type,
         description: description,
@@ -427,10 +442,10 @@ function ai_heal_nftables() {
                 "nftables",
                 "Таблица правил nftables очищена или повреждена",
                 "Выполнена быстрая регенерация правил TachyonTable и цепочки TPROXY",
-                "fixed"
-            );
-            system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
-            return false;
+            "fixed"
+        );
+        safe_reload_firewall();
+        return false;
         }
     }
     return true;
@@ -450,7 +465,7 @@ function ai_heal_qos() {
             "Применены высокоприоритетные метки DSCP EF (0x2e) для Voice/RTC и DSCP AF41 (0x22) для Gaming",
             "fixed"
         );
-        system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+        safe_reload_firewall();
         return false;
     }
     return true;
@@ -675,7 +690,7 @@ function ai_heal_tproxy_port() {
             "Выполнен reload_firewall для восстановления TPROXY правил",
             "fixed"
         );
-        system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
+        safe_reload_firewall();
         return false;
     }
     return true;
@@ -758,19 +773,253 @@ function ai_heal_uci_config() {
     }
 }
 
+// ─── AI Settings helpers ──────────────────────────────────────────────────────
+function ai_setting(key, default_val) {
+    let cfg = settings();
+    let val = cfg[key];
+    return val != null ? as_string(val) : as_string(default_val);
+}
+function ai_enabled(key, default_val) {
+    return ai_setting(key, default_val) == "1";
+}
+
+// ─── Reload dedup: prevent multiple reload_firewall per cycle ─────────────────
+function safe_reload_firewall() {
+    if (ai_enabled("ai_reload_dedup_enabled", "1")) {
+        let now = time();
+        if (now - last_reload_time < 120) return;
+        last_reload_time = now;
+    }
+    system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+}
+
+// ─── Config validation: sing-box check ────────────────────────────────────────
+function validate_singbox_config() {
+    if (!ai_enabled("ai_config_validation_enabled", "1")) return true;
+    return command_success_from_args(["sing-box", "check", "-c", "/etc/sing-box/config.json"]);
+}
+
+// ─── Proxy Health Monitor (fast tier) ─────────────────────────────────────────
+function ai_heal_proxy_health() {
+    if (!ai_enabled("ai_proxy_health_enabled", "1")) return;
+    if (is_reload_in_progress()) return;
+
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return;
+
+    let proxy_port = "4534";
+    let sb_cfg_data = fs.readfile("/etc/sing-box/config.json");
+    if (sb_cfg_data) {
+        try {
+            let sb_cfg = json(sb_cfg_data);
+            if (sb_cfg.inbounds) {
+                for (let inb in sb_cfg.inbounds) {
+                    if (inb.type == "http" || inb.type == "mixed") {
+                        proxy_port = as_string(inb.listen_port || 4534);
+                        break;
+                    }
+                }
+            }
+        } catch(e) {}
+    }
+
+    let check_url = ai_setting("ai_proxy_health_url", "https://cp.cloudflare.com/generate_204");
+    let threshold = int(ai_setting("ai_proxy_health_fail_threshold", "3"));
+
+    let start_time = time();
+    let proxy_ok = command_success_from_args([
+        "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "--connect-timeout", "3", "--max-time", "5",
+        "--proxy", "http://127.0.0.1:" + proxy_port,
+        check_url
+    ]);
+    let elapsed = (time() - start_time) * 1000;
+
+    push(proxy_latency_history, { ok: proxy_ok, ms: elapsed, ts: time() });
+    if (length(proxy_latency_history) > 20) {
+        let new_arr = [];
+        for (let i = length(proxy_latency_history) - 20; i < length(proxy_latency_history); i++)
+            push(new_arr, proxy_latency_history[i]);
+        proxy_latency_history = new_arr;
+    }
+
+    if (!proxy_ok) {
+        proxy_consecutive_fails++;
+        if (proxy_consecutive_fails >= threshold) {
+            ai_heal_report(
+                "proxy_health",
+                sprintf("Proxy health check failed %d times consecutively (port %s)", proxy_consecutive_fails, proxy_port),
+                "Restarting Tachyon to restore proxy connectivity",
+                "fixed"
+            );
+            if (ai_enabled("ai_config_validation_enabled", "1") && !validate_singbox_config()) {
+                log_message("sing-box config validation failed before proxy restart", "err");
+                return;
+            }
+            system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+            proxy_consecutive_fails = 0;
+        }
+    } else {
+        proxy_consecutive_fails = 0;
+    }
+}
+
+// ─── DNS Continuous Check (fast tier) ─────────────────────────────────────────
+function ai_heal_dns_continuous() {
+    if (!ai_enabled("ai_dns_continuous_enabled", "1")) return;
+    if (is_reload_in_progress()) return;
+
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return;
+
+    let start_time = time();
+    let dns_ok = command_success_from_args([
+        "nslookup", "-port=53", "check.tachyon", "127.0.0.1"
+    ]);
+    let elapsed = (time() - start_time) * 1000;
+
+    push(dns_latency_history, { ok: dns_ok, ms: elapsed, ts: time() });
+    if (length(dns_latency_history) > 20) {
+        let new_arr = [];
+        for (let i = length(dns_latency_history) - 20; i < length(dns_latency_history); i++)
+            push(new_arr, dns_latency_history[i]);
+        dns_latency_history = new_arr;
+    }
+
+    if (!dns_ok) {
+        dns_consecutive_fails++;
+        if (dns_consecutive_fails >= 3) {
+            let sb_dns_ok = command_success_from_args([
+                "nslookup", "-port=5353", "check.tachyon", "127.0.0.1"
+            ]);
+            if (sb_dns_ok) {
+                ai_heal_report(
+                    "dns_continuous",
+                    "DNS on port 53 failed 3 times, port 5353 works (dnsmasq redirect issue)",
+                    "Restoring dnsmasq config and reloading",
+                    "fixed"
+                );
+                system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
+                system("/sbin/uci commit dhcp >/dev/null 2>&1");
+                system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
+                dns_consecutive_fails = 0;
+            }
+        }
+    } else {
+        dns_consecutive_fails = 0;
+    }
+}
+
+// ─── Metrics export (normal tier) ─────────────────────────────────────────────
+function export_metrics() {
+    if (!ai_enabled("ai_metrics_enabled", "1")) return;
+
+    let now = time();
+    let metrics_path = "/tmp/tachyon_metrics.json";
+    let data = { hours: [] };
+    let existing = fs.readfile(metrics_path);
+    if (existing) {
+        try { data = json(existing) || data; } catch(e) {}
+    }
+
+    let hour_bucket = int(now / 3600) * 3600;
+    let last_bucket = length(data.hours) > 0 ? data.hours[length(data.hours) - 1] : null;
+    if (last_bucket && int(last_bucket.ts) == hour_bucket) {
+        last_bucket.proxy_ok = proxy_consecutive_fails == 0;
+        last_bucket.proxy_lat_ms = average_latency(proxy_latency_history);
+        last_bucket.dns_lat_ms = average_latency(dns_latency_history);
+        last_bucket.incidents = ai_incidents_count;
+    } else {
+        push(data.hours, {
+            ts: hour_bucket,
+            proxy_ok: proxy_consecutive_fails == 0,
+            proxy_lat_ms: average_latency(proxy_latency_history),
+            dns_lat_ms: average_latency(dns_latency_history),
+            incidents: ai_incidents_count
+        });
+    }
+
+    let retention = int(ai_setting("ai_metrics_retention_hours", "24"));
+    while (length(data.hours) > retention)
+        data.hours = slice(data.hours, 1);
+
+    fs.writefile(metrics_path, sprintf("%J\n", data));
+}
+
+function average_latency(history) {
+    let sum = 0;
+    let count = 0;
+    for (let entry in history) {
+        if (entry.ok) {
+            sum += entry.ms;
+            count++;
+        }
+    }
+    return count > 0 ? int(sum / count) : -1;
+}
+
+// ─── Anomaly Detection (slow tier) ────────────────────────────────────────────
+function analyze_anomalies() {
+    if (!ai_enabled("ai_anomaly_detection_enabled", "1")) return;
+
+    let now = time();
+    if (now - last_anomaly_check < 300) return;
+    last_anomaly_check = now;
+
+    let threshold = int(ai_setting("ai_anomaly_reconnect_threshold", "10"));
+    let count_file = "/tmp/tachyon_reconnect_count";
+    let count_data = fs.readfile(count_file) || "0";
+    let reconnects = int(trim(count_data));
+
+    if (reconnects > threshold) {
+        ai_heal_report(
+            "anomaly_reconnects",
+            sprintf("sing-box reconnected %d times in the last hour (threshold: %d)", reconnects, threshold),
+            "High reconnect rate detected. Check proxy server health or ISP stability.",
+            "warn"
+        );
+        fs.writefile(count_file, "0\n");
+    }
+}
+
+function increment_reconnect_count() {
+    let count_file = "/tmp/tachyon_reconnect_count";
+    let count = int(trim(fs.readfile(count_file) || "0")) + 1;
+    fs.writefile(count_file, as_string(count) + "\n");
+}
+
+// ─── Adaptive Intervals ───────────────────────────────────────────────────────
+function adaptive_normal_interval() {
+    if (!ai_enabled("ai_adaptive_intervals_enabled", "1")) return 120;
+    return ai_healthy_streak > 25 ? 300 : 120;
+}
+
+// ─── Graceful Degradation wrapper ─────────────────────────────────────────────
+function safe_call(fn, name) {
+    if (!ai_enabled("ai_graceful_degradation_enabled", "1")) {
+        fn();
+        return;
+    }
+    try {
+        fn();
+    } catch(e) {
+        log_message("Graceful degradation: " + name + " failed: " + (e instanceof Error ? e.message : String(e)), "err");
+    }
+}
+
+// ─── Full health audit ────────────────────────────────────────────────────────
 function ai_full_health_audit() {
-    check_memory();
-    ai_heal_nftables();
-    ai_heal_qos();
-    ai_heal_dns();
-    ai_heal_proxy_connectivity();
-    ai_heal_community_subnet_sets();
-    ai_heal_wan_interface();
-    ai_heal_gateway();
-    ai_heal_subscriptions();
-    ai_heal_uci_config();
-    ai_heal_tproxy_port();
-    ai_export_status();
+    safe_call(check_memory, "check_memory");
+    safe_call(ai_heal_nftables, "ai_heal_nftables");
+    safe_call(ai_heal_qos, "ai_heal_qos");
+    safe_call(ai_heal_dns, "ai_heal_dns");
+    safe_call(ai_heal_proxy_connectivity, "ai_heal_proxy_connectivity");
+    safe_call(ai_heal_community_subnet_sets, "ai_heal_community_subnet_sets");
+    safe_call(ai_heal_wan_interface, "ai_heal_wan_interface");
+    safe_call(ai_heal_gateway, "ai_heal_gateway");
+    safe_call(ai_heal_subscriptions, "ai_heal_subscriptions");
+    safe_call(ai_heal_uci_config, "ai_heal_uci_config");
+    safe_call(ai_heal_tproxy_port, "ai_heal_tproxy_port");
+    safe_call(ai_export_status, "ai_export_status");
 }
 
 function check_urltest_switches() {
@@ -1061,6 +1310,9 @@ function worker() {
     ai_heal_subnet_cache();
     run_zero_rtt_prefetching();
 
+    // Ensure /etc/tachyon exists for persistent smart detect
+    try { fs.mkdir("/etc/tachyon"); } catch(e) {}
+
     if (uloop) {
         try {
             uloop.init();
@@ -1072,32 +1324,60 @@ function worker() {
     let log_pipe = setup_syslog_listener();
     let ubus_conn = setup_ubus_listener();
 
-    function perform_periodic_checks() {
-        check_auto_resume_pause();
+    function perform_fast_checks() {
         check_singbox_process();
+        safe_call(ai_heal_proxy_health, "ai_heal_proxy_health");
+        safe_call(ai_heal_dns_continuous, "ai_heal_dns_continuous");
+    }
+
+    function perform_normal_checks() {
+        check_auto_resume_pause();
         ai_full_health_audit();
-        smart_detect_process_pending();
+        safe_call(smart_detect_process_pending, "smart_detect_process_pending");
+        safe_call(export_metrics, "export_metrics");
+    }
+
+    function perform_slow_checks() {
+        safe_call(ai_heal_community_subnet_sets, "ai_heal_community_subnet_sets");
+        safe_call(ai_heal_tproxy_port, "ai_heal_tproxy_port");
+        safe_call(ai_heal_subscriptions, "ai_heal_subscriptions");
+        safe_call(ai_heal_uci_config, "ai_heal_uci_config");
+        safe_call(analyze_anomalies, "analyze_anomalies");
     }
 
     if (uloop) {
-        let timer_cb;
-        timer_cb = function() {
+        let tick;
+        tick = function() {
+            let now = time();
             try {
-                perform_periodic_checks();
+                if (now - last_fast_check >= 15) {
+                    last_fast_check = now;
+                    perform_fast_checks();
+                }
+                if (now - last_normal_check >= adaptive_normal_interval()) {
+                    last_normal_check = now;
+                    perform_normal_checks();
+                }
+                if (now - last_slow_check >= 300) {
+                    last_slow_check = now;
+                    perform_slow_checks();
+                }
             } catch (e) {
-                log_message("Error in periodic check: " + as_string(e), "err");
+                log_message("Error in tick: " + as_string(e), "err");
             }
-            uloop.timer(120000, timer_cb);
+            uloop.timer(5000, tick);
         };
-        uloop.timer(10000, timer_cb);
+        uloop.timer(10000, tick);
 
-        log_message("Watchdog running in event-driven uloop mode.", "info");
+        log_message("Watchdog running in event-driven uloop mode (fast: 15s, normal: adaptive, slow: 300s).", "info");
         uloop.run();
     } else {
         log_message("uloop not available. Running Watchdog in legacy fallback loop mode.", "warn");
         while (true) {
-            perform_periodic_checks();
-            sleep(60000);
+            perform_fast_checks();
+            perform_normal_checks();
+            perform_slow_checks();
+            sleep(15000);
         }
     }
 
@@ -1125,6 +1405,62 @@ function print_ai_status() {
     }
 }
 
+function print_ai_status_full() {
+    let now = time();
+    let proxy_ok = proxy_consecutive_fails == 0;
+    let dns_ok = dns_consecutive_fails == 0;
+
+    let sb_uptime = 0;
+    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    if (sb_pid != "" && process_running(sb_pid, "sing-box")) {
+        try {
+            let stat_data = fs.readfile("/proc/" + sb_pid + "/stat");
+            if (stat_data) {
+                let fields = split(trim(stat_data), /[ \t]+/);
+                if (length(fields) >= 22) {
+                    let starttime = int(fields[21]);
+                    let clk_tck = 100;
+                    let uptime_seconds = 0;
+                    try { uptime_seconds = int(trim(fs.readfile("/proc/uptime") || "0")); } catch(e) {}
+                    sb_uptime = uptime_seconds - int(starttime / clk_tck);
+                }
+            }
+        } catch(e) {}
+    }
+
+    let mem_mb = -1;
+    let mem_info = fs.readfile("/proc/meminfo") || "";
+    for (let line in split(mem_info, "\n")) {
+        if (index(line, "MemAvailable:") == 0) {
+            let fields = split(trim(line), /[ \t]+/);
+            if (length(fields) >= 2) mem_mb = int(fields[1]) / 1024;
+            break;
+        }
+    }
+
+    let status = last_ai_incident != null && (now - last_ai_incident.timestamp < 300) ? "repaired" : "healthy";
+
+    let result = {
+        status: status,
+        ai_active: true,
+        uptime_s: sb_uptime,
+        memory_mb: mem_mb,
+        proxy_ok: proxy_ok,
+        proxy_latency_ms: average_latency(proxy_latency_history),
+        proxy_consecutive_fails: proxy_consecutive_fails,
+        dns_ok: dns_ok,
+        dns_latency_ms: average_latency(dns_latency_history),
+        dns_consecutive_fails: dns_consecutive_fails,
+        incidents_total: ai_incidents_count,
+        last_incident: last_ai_incident,
+        healthy_streak: ai_healthy_streak,
+        adaptive_interval_s: adaptive_normal_interval(),
+        reconnects_hour: int(trim(fs.readfile("/tmp/tachyon_reconnect_count") || "0"))
+    };
+
+    print(sprintf("%J\n", result));
+}
+
 let mode = (ARGV[0] == "") ? ARGV[1] : ARGV[0];
 if (!mode) mode = "";
 
@@ -1145,7 +1481,11 @@ else if (mode == "ai-status") {
     print_ai_status();
     exit(0);
 }
+else if (mode == "ai-status-full") {
+    print_ai_status_full();
+    exit(0);
+}
 else {
-    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status> ...\n");
+    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status|ai-status-full> ...\n");
     exit(1);
 }

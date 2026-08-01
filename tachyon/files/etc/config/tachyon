@@ -47,6 +47,25 @@ config settings 'settings'
         # list smart_detect_sections 'main-proxy'
         # Ordered: first section where the domain works via proxy wins.
 
+        # ─── AI Watchdog settings ─────────────────────────────────────────────
+        option ai_proxy_health_enabled '1'
+        option ai_proxy_health_interval '30'
+        option ai_proxy_health_fail_threshold '3'
+        option ai_proxy_health_url 'https://cp.cloudflare.com/generate_204'
+        option ai_dns_continuous_enabled '1'
+        option ai_dns_interval '60'
+        option ai_reload_dedup_enabled '1'
+        option ai_metrics_enabled '1'
+        option ai_metrics_retention_hours '24'
+        option ai_smart_cooldowns_enabled '1'
+        option ai_config_validation_enabled '1'
+        option ai_graceful_degradation_enabled '1'
+        option ai_telegram_status_enabled '1'
+        option ai_persistent_smart_detect '1'
+        option ai_adaptive_intervals_enabled '1'
+        option ai_anomaly_detection_enabled '1'
+        option ai_anomaly_reconnect_threshold '10'
+
 
 #config section 'subscription_example'
 #        option label 'Subscription'
