@@ -759,9 +759,9 @@ function ensure_community_ruleset(config, section_name, community) {
         let etc_srs = "/etc/tachyon/rulesets/community-" + community + ".srs";
         let local_path = null;
 
-        if (fs.stat(tmp_srs) != null && int(fs.stat(tmp_srs).size || 0) > 0)
+        if (fs.stat(tmp_srs) != null && int(fs.stat(tmp_srs).size || 0) > 100)
             local_path = tmp_srs;
-        else if (fs.stat(etc_srs) != null && int(fs.stat(etc_srs).size || 0) > 0)
+        else if (fs.stat(etc_srs) != null && int(fs.stat(etc_srs).size || 0) > 100)
             local_path = etc_srs;
 
         if (local_path != null) {
