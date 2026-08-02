@@ -4,6 +4,7 @@ import { normalizeCompiledVersion } from '../../../helpers/normalizeCompiledVers
 import { showToast } from '../../../helpers/showToast';
 import {
   renderDownloadIcon24,
+  renderGlobeIcon24,
   renderRotateCcwIcon24,
   renderSearchIcon24,
   renderXIcon24,
@@ -59,6 +60,7 @@ interface ComponentCard {
   version: string;
   latestVersion?: string;
   releaseUrl?: string;
+  repoUrl?: string;
   actions: ComponentActionButton[];
 }
 
@@ -818,6 +820,14 @@ function getOptionalComponentActions({
   ];
 }
 
+const COMPONENT_REPO_URLS: Record<Tachyon.ComponentName, string> = {
+  tachyon: 'https://github.com/Dushnilin/tachyon',
+  sing_box: 'https://github.com/SagerNet/sing-box',
+  zapret: 'https://github.com/remittor/zapret-openwrt',
+  zapret2: 'https://github.com/1andrevich/zapret2-openwrt',
+  byedpi: 'https://github.com/DPITrickster/ByeDPI-OpenWrt',
+};
+
 function getComponentCards(): ComponentCard[] {
   const systemInfo = normalizeSingBoxVariantFields(
     store.get().diagnosticsSystemInfo,
@@ -942,6 +952,7 @@ function getComponentCards(): ComponentCard[] {
         : normalizeCompiledVersion(systemInfo.tachyon_version),
       latestVersion: getLatestVersion('tachyon'),
       releaseUrl: getGitHubReleaseUrl('tachyon'),
+      repoUrl: COMPONENT_REPO_URLS.tachyon,
       actions: tachyonActions,
     },
     {
@@ -953,6 +964,7 @@ function getComponentCards(): ComponentCard[] {
         : formatSingBoxVersion(systemInfo),
       latestVersion: getLatestVersion('sing_box'),
       releaseUrl: getGitHubReleaseUrl('sing_box'),
+      repoUrl: COMPONENT_REPO_URLS.sing_box,
       actions: singBoxActions,
     },
     {
@@ -966,6 +978,7 @@ function getComponentCards(): ComponentCard[] {
           : _('Not installed'),
       latestVersion: getLatestVersion('zapret'),
       releaseUrl: getGitHubReleaseUrl('zapret'),
+      repoUrl: COMPONENT_REPO_URLS.zapret,
       actions: zapretActions,
     },
     {
@@ -979,6 +992,7 @@ function getComponentCards(): ComponentCard[] {
           : _('Not installed'),
       latestVersion: getLatestVersion('zapret2'),
       releaseUrl: getGitHubReleaseUrl('zapret2'),
+      repoUrl: COMPONENT_REPO_URLS.zapret2,
       actions: zapret2Actions,
     },
     {
@@ -992,6 +1006,7 @@ function getComponentCards(): ComponentCard[] {
           : _('Not installed'),
       latestVersion: getLatestVersion('byedpi'),
       releaseUrl: getGitHubReleaseUrl('byedpi'),
+      repoUrl: COMPONENT_REPO_URLS.byedpi,
       actions: byedpiActions,
     },
   ];
@@ -1011,6 +1026,21 @@ function renderComponentCard(card: ComponentCard) {
       card.version,
     ),
   ];
+  if (card.repoUrl) {
+    headerChildren.push(
+      E(
+        'a',
+        {
+          class: 'tachyon_updates-page__component__repo-link',
+          href: card.repoUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          title: card.repoUrl,
+        },
+        renderGlobeIcon24(),
+      ),
+    );
+  }
   const header = E(
     'div',
     { class: 'tachyon_updates-page__component__header' },

@@ -1908,6 +1908,30 @@ function renderInfoIcon24() {
   );
 }
 
+// src/icons/renderGlobeIcon24.ts
+function renderGlobeIcon24() {
+  return svgEl(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: "14",
+      height: "14",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      class: "lucide lucide-globe-icon lucide-globe"
+    },
+    [
+      svgEl("circle", { cx: "12", cy: "12", r: "10" }),
+      svgEl("path", { d: "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" }),
+      svgEl("path", { d: "M2 12h20" })
+    ]
+  );
+}
+
 // src/helpers/prettyBytes.ts
 function prettyBytes(n) {
   const UNITS = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
@@ -14178,6 +14202,13 @@ function getOptionalComponentActions({
     }
   ];
 }
+var COMPONENT_REPO_URLS = {
+  tachyon: "https://github.com/Dushnilin/tachyon",
+  sing_box: "https://github.com/SagerNet/sing-box",
+  zapret: "https://github.com/remittor/zapret-openwrt",
+  zapret2: "https://github.com/1andrevich/zapret2-openwrt",
+  byedpi: "https://github.com/DPITrickster/ByeDPI-OpenWrt"
+};
 function getComponentCards() {
   const systemInfo = normalizeSingBoxVariantFields(
     store.get().diagnosticsSystemInfo
@@ -14286,6 +14317,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : normalizeCompiledVersion(systemInfo.tachyon_version),
       latestVersion: getLatestVersion("tachyon"),
       releaseUrl: getGitHubReleaseUrl("tachyon"),
+      repoUrl: COMPONENT_REPO_URLS.tachyon,
       actions: tachyonActions
     },
     {
@@ -14295,6 +14327,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : formatSingBoxVersion(systemInfo),
       latestVersion: getLatestVersion("sing_box"),
       releaseUrl: getGitHubReleaseUrl("sing_box"),
+      repoUrl: COMPONENT_REPO_URLS.sing_box,
       actions: singBoxActions
     },
     {
@@ -14304,6 +14337,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : zapretInstalled ? systemInfo.zapret_version : _("Not installed"),
       latestVersion: getLatestVersion("zapret"),
       releaseUrl: getGitHubReleaseUrl("zapret"),
+      repoUrl: COMPONENT_REPO_URLS.zapret,
       actions: zapretActions
     },
     {
@@ -14313,6 +14347,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : zapret2Installed ? systemInfo.zapret2_version : _("Not installed"),
       latestVersion: getLatestVersion("zapret2"),
       releaseUrl: getGitHubReleaseUrl("zapret2"),
+      repoUrl: COMPONENT_REPO_URLS.zapret2,
       actions: zapret2Actions
     },
     {
@@ -14322,6 +14357,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : byedpiInstalled ? systemInfo.byedpi_version : _("Not installed"),
       latestVersion: getLatestVersion("byedpi"),
       releaseUrl: getGitHubReleaseUrl("byedpi"),
+      repoUrl: COMPONENT_REPO_URLS.byedpi,
       actions: byedpiActions
     }
   ];
@@ -14338,6 +14374,21 @@ function renderComponentCard(card) {
       card.version
     )
   ];
+  if (card.repoUrl) {
+    headerChildren.push(
+      E(
+        "a",
+        {
+          class: "tachyon_updates-page__component__repo-link",
+          href: card.repoUrl,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          title: card.repoUrl
+        },
+        renderGlobeIcon24()
+      )
+    );
+  }
   const header = E(
     "div",
     { class: "tachyon_updates-page__component__header" },
@@ -14699,6 +14750,24 @@ var styles6 = `
     color: var(--text-color-medium, #888);
     font-size: 13px;
     font-weight: normal;
+}
+
+.tachyon_updates-page__component__repo-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    color: var(--text-color-medium, #888);
+    text-decoration: none;
+    transition: color 0.15s, background-color 0.15s;
+    flex-shrink: 0;
+}
+
+.tachyon_updates-page__component__repo-link:hover {
+    color: var(--link-color, #3498db);
+    background-color: var(--background-color-low, rgba(0, 0, 0, 0.05));
 }
 
 .tachyon_updates-page__component__details {

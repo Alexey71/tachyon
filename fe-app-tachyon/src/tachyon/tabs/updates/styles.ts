@@ -74,6 +74,24 @@ export const styles = `
     font-weight: normal;
 }
 
+.tachyon_updates-page__component__repo-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    color: var(--text-color-medium, #888);
+    text-decoration: none;
+    transition: color 0.15s, background-color 0.15s;
+    flex-shrink: 0;
+}
+
+.tachyon_updates-page__component__repo-link:hover {
+    color: var(--link-color, #3498db);
+    background-color: var(--background-color-low, rgba(0, 0, 0, 0.05));
+}
+
 .tachyon_updates-page__component__details {
     display: flex;
     flex-direction: column;
