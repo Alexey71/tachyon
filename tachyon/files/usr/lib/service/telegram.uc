@@ -653,15 +653,16 @@ function view_outbounds(token, chat_id, msg_id, group_name) {
         for (let i = 0; i < length(servers); i++) {
             let name = servers[i];
             let proxy = data.proxies[name];
-            if (!proxy) continue;
             let delay = "N/A";
-            if (type(proxy.history) == "array" && length(proxy.history) > 0) {
-                let last = proxy.history[length(proxy.history) - 1];
-                if (last && last.delay) delay = last.delay + " ms";
+            if (proxy) {
+                if (type(proxy.history) == "array" && length(proxy.history) > 0) {
+                    let last = proxy.history[length(proxy.history) - 1];
+                    if (last && last.delay) delay = last.delay + " ms";
+                }
             }
             let marker = (name == active_server) ? "🔵" : "•";
             text += marker + " <code>" + escape_html(name) + "</code>: <code>" + delay + "</code>\n";
-            
+
             if (count < 18) {
                 push(row, { text: (name == active_server ? "🔵 " : "") + name, callback_data: "/sw " + group_name + " " + name });
                 if (length(row) == 2) {
@@ -1630,7 +1631,8 @@ function process_updates(token, admin_ids) {
         if (update_id >= offset) {
             offset = update_id + 1;
         }
-        
+
+        try {
         let cb = upd.callback_query;
         if (cb) {
             let chat_id = cb.message ? cb.message.chat.id : cb.from.id;
@@ -1638,23 +1640,23 @@ function process_updates(token, admin_ids) {
                 tg_request(token, "answerCallbackQuery", { callback_query_id: cb.id, text: "Access Denied" });
                 continue;
             }
-            dispatch_command(token, chat_id, cb.data, cb.message.message_id);
+            dispatch_command(token, chat_id, cb.data, cb.message ? cb.message.message_id : null);
             tg_request(token, "answerCallbackQuery", { callback_query_id: cb.id });
             continue;
         }
-        
+
         let msg = upd.message;
         if (msg) {
             let chat_id = msg.chat ? msg.chat.id : null;
             if (!chat_id) continue;
-            
+
             if (!is_admin(chat_id, admin_ids)) {
                 if (msg.text || msg.document) {
                     send_message(token, chat_id, "❌ Доступ запрещен. Ваш Chat ID: `" + chat_id + "`", "Markdown");
                 }
                 continue;
             }
-            
+
             if (msg.document) {
                 let doc = msg.document;
                 if (match(doc.file_name || "", /\.tar\.gz$/)) {
@@ -1706,14 +1708,24 @@ function process_updates(token, admin_ids) {
                     continue;
                 }
             }
-            
+
             let state = get_tg_state(chat_id);
             if (state) {
-                // handle state
-                set_tg_state(chat_id, null); // clear immediately
+                if (msg.text && substr(msg.text, 0, 1) == "/") {
+                    set_tg_state(chat_id, null);
+                    dispatch_command(token, chat_id, msg.text, null);
+                    continue;
+                }
+
+                if (!msg.text) {
+                    send_message(token, chat_id, "⚠️ Ожидается текстовое сообщение. Попробуйте ещё раз или /cancel.", "HTML");
+                    continue;
+                }
+
+                set_tg_state(chat_id, null);
                 let c = uci_core.cursor();
                 c.load(CONFIG_NAME);
-                
+
                 if (state.action == "set_str") {
                     let val = trim(msg.text);
                     c.set(CONFIG_NAME, state.sname, state.key, val);
@@ -1734,8 +1746,7 @@ function process_updates(token, admin_ids) {
                     }
                     view_set_arr(token, chat_id, null, state.stype, state.sname, state.key);
                 }
-
-                if (state.action == "sec_create") {
+                else if (state.action == "sec_create") {
                     let new_sec = trim(msg.text);
                     if (match(new_sec, /^[a-zA-Z0-9_]+$/)) {
                         c.set(CONFIG_NAME, new_sec, "section");
@@ -1767,13 +1778,13 @@ function process_updates(token, admin_ids) {
                     let items = split(trim(msg.text), /[ \n,;]+/);
                     let valid_items = [];
                     for (let x in items) if (trim(x) != "") push(valid_items, trim(x));
-                    
+
                     if (length(valid_items) > 0) {
                         let field = "domain_suffix";
                         if (state.list == "ip") field = "ip_cidr";
                         else if (state.list == "src") field = "src_ip";
                         else if (state.list == "ruleset") field = "community_lists";
-                        
+
                         let current = common.list_option(c.get_all(CONFIG_NAME, state.sec), field);
                         for (let x in valid_items) push(current, x);
                         c.set(CONFIG_NAME, state.sec, field, current);
@@ -1788,6 +1799,9 @@ function process_updates(token, admin_ids) {
             }
 
             dispatch_command(token, chat_id, msg.text, null);
+        }
+        } catch (e) {
+            command_success_from_args(["logger", "-t", "tachyon", "[err] Telegram update " + update_id + " failed: " + (e instanceof Error ? e.message : String(e))]);
         }
     }
     fs.writefile(OFFSET_FILE, as_string(offset));

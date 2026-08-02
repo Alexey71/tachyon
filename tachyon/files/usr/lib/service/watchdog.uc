@@ -1110,6 +1110,7 @@ function smart_detect_process_pending() {
     }
 
     for (let domain in candidate_domains) {
+        try {
         seen[domain] = now;
         let direct_ok = command_success_from_args([
             "curl", "-s", "-I", "--connect-timeout", "4", "--max-time", "6",
@@ -1143,6 +1144,9 @@ function smart_detect_process_pending() {
         }
         if (!added) {
             log_message("Smart Detect: domain " + domain + " not handled by any section", "info");
+        }
+        } catch (e) {
+            log_message("Smart Detect: failed to process " + domain + ": " + (e instanceof Error ? e.message : String(e)), "err");
         }
     }
 
