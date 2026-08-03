@@ -10,3 +10,5 @@ sandbox/
 dist/
 build-out/
 scratch/
+tmp_*/
+tmp_test*.uc
