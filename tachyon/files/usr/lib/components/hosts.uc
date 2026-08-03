@@ -72,38 +72,43 @@ function download_with_retry(url, output_path, label) {
 
 function parse_hosts_file(path) {
     let entries = [];
-    let fh = fs.open(path, "r");
-    if (fh == null)
-        return entries;
+    let fh = null;
+    try {
+        fh = fs.open(path, "r");
+        if (fh == null)
+            return entries;
 
-    let line;
-    while ((line = fh.read("line")) != null) {
-        line = trim(line);
-        if (line == "" || substr(line, 0, 1) == "#")
-            continue;
+        let line;
+        while ((line = fh.read("line")) != null) {
+            line = trim(line);
+            if (line == "" || substr(line, 0, 1) == "#")
+                continue;
 
-        let parts = split(line, /[ \t]+/);
-        if (length(parts) < 2)
-            continue;
+            let parts = split(line, /[ \t]+/);
+            if (length(parts) < 2)
+                continue;
 
-        let p1 = parts[0];
-        let p2 = parts[1];
+            let p1 = parts[0];
+            let p2 = parts[1];
 
-        if (core_ip.valid_ip(p1)) {
-            let ip = p1;
-            for (let i = 1; i < length(parts); i++) {
-                let domain = parts[i];
-                if (domain != "" && substr(domain, 0, 1) != "#" && index(domain, ":") == -1)
+            if (core_ip.valid_ip(p1)) {
+                let ip = p1;
+                for (let i = 1; i < length(parts); i++) {
+                    let domain = parts[i];
+                    if (domain != "" && substr(domain, 0, 1) != "#" && index(domain, ":") == -1)
+                        push(entries, { ip: ip, domain: domain });
+                }
+            } else if (core_ip.valid_ip(p2)) {
+                let domain = p1;
+                let ip = p2;
+                if (index(domain, ":") == -1)
                     push(entries, { ip: ip, domain: domain });
             }
-        } else if (core_ip.valid_ip(p2)) {
-            let domain = p1;
-            let ip = p2;
-            if (index(domain, ":") == -1)
-                push(entries, { ip: ip, domain: domain });
         }
+    } catch(e) {
+        log("Error parsing hosts file " + path + ": " + as_string(e), "error");
     }
-    fh.close();
+    if (fh) fh.close();
     return entries;
 }
 

@@ -1442,15 +1442,19 @@ function ensure_runtime_cache_format() {
 }
 
 function remove_legacy_server_country_cache() {
-    fs.unlink(TACHYON_RUNTIME_STATE_DIR + "/server-country-cache.json");
+    try { fs.unlink(TACHYON_RUNTIME_STATE_DIR + "/server-country-cache.json"); } catch(e) {}
 }
 
 function remove_cache_path(path) {
     path = as_string(path);
-    if (index(path, "*") >= 0)
-        run("rm -f " + shell_quote(path));
-    else
-        fs.unlink(path);
+    try {
+        if (index(path, "*") >= 0)
+            run("rm -f " + shell_quote(path));
+        else
+            fs.unlink(path);
+    } catch(e) {
+        log_message("Failed to remove cache path: " + path, "warn");
+    }
 }
 
 function apply_operations(cursor, operations) {

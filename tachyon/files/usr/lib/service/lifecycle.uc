@@ -858,8 +858,10 @@ function stop_main() {
     module_success(ZAPRET2_UC, [ "stop-runtime" ]);
     module_success(BYEDPI_UC, [ "stop-runtime" ]);
 
-    if (command_success_from_args([ "nft", "list", "table", "inet", NFT_TABLE_NAME ]))
-        command_success_from_args([ "nft", "delete", "table", "inet", NFT_TABLE_NAME ]);
+    if (command_success_from_args([ "nft", "list", "table", "inet", NFT_TABLE_NAME ])) {
+        if (!command_success_from_args([ "nft", "delete", "table", "inet", NFT_TABLE_NAME ]))
+            log_message("Failed to delete nft table " + NFT_TABLE_NAME, "warn");
+    }
 
     if (module_success(NFT_UC, [ "tproxy-marking-rule4-present", RT_TABLE_NAME, NFT_FAKEIP_MARK ]))
         command_success_from_args([ "ip", "-4", "rule", "del", "fwmark", NFT_FAKEIP_MARK + "/" + NFT_FAKEIP_MARK, "table", RT_TABLE_NAME, "priority", "105" ]);

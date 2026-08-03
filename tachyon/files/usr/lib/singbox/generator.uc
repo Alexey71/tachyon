@@ -452,46 +452,51 @@ function base_config(settings, service_address, runtime_context) {
     // Read remote hosts lists cache file
     let hosts_cache_st = fs.stat(HOSTS_CACHE_FILE);
     if (hosts_cache_st != null && int(hosts_cache_st.size) > 0) {
-        let fh = fs.open(HOSTS_CACHE_FILE, "r");
-        if (fh != null) {
-            let line;
-            while ((line = fh.read("line")) != null) {
-                line = trim(line);
-                if (line == "" || substr(line, 0, 1) == "#")
-                    continue;
-                let parts = split(line, /[ \t]+/);
-                if (length(parts) >= 2) {
-                    let p1 = parts[0];
-                    let p2 = parts[1];
-                    if (core_ip.valid_ip(p1)) {
-                        let ip = p1;
-                        let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
-                        for (let i = 1; i < length(parts); i++) {
-                            let d = parts[i];
-                            if (d != "" && substr(d, 0, 1) != "#" && index(d, ":") == -1) {
+        let fh = null;
+        try {
+            fh = fs.open(HOSTS_CACHE_FILE, "r");
+            if (fh != null) {
+                let line;
+                while ((line = fh.read("line")) != null) {
+                    line = trim(line);
+                    if (line == "" || substr(line, 0, 1) == "#")
+                        continue;
+                    let parts = split(line, /[ \t]+/);
+                    if (length(parts) >= 2) {
+                        let p1 = parts[0];
+                        let p2 = parts[1];
+                        if (core_ip.valid_ip(p1)) {
+                            let ip = p1;
+                            let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
+                            for (let i = 1; i < length(parts); i++) {
+                                let d = parts[i];
+                                if (d != "" && substr(d, 0, 1) != "#" && index(d, ":") == -1) {
+                                    push(dns_rules, {
+                                        action: "predefined",
+                                        domain: [d],
+                                        answer: [d + ". 60 IN " + rr_type + " " + ip]
+                                    });
+                                }
+                            }
+                        } else if (core_ip.valid_ip(p2)) {
+                            let domain = p1;
+                            let ip = p2;
+                            if (index(domain, ":") == -1) {
+                                let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
                                 push(dns_rules, {
                                     action: "predefined",
-                                    domain: [d],
-                                    answer: [d + ". 60 IN " + rr_type + " " + ip]
+                                    domain: [domain],
+                                    answer: [domain + ". 60 IN " + rr_type + " " + ip]
                                 });
                             }
-                        }
-                    } else if (core_ip.valid_ip(p2)) {
-                        let domain = p1;
-                        let ip = p2;
-                        if (index(domain, ":") == -1) {
-                            let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
-                            push(dns_rules, {
-                                action: "predefined",
-                                domain: [domain],
-                                answer: [domain + ". 60 IN " + rr_type + " " + ip]
-                            });
                         }
                     }
                 }
             }
-            fh.close();
+        } catch(e) {
+            warn("Error reading hosts cache: ", as_string(e), "\n");
         }
+        if (fh) fh.close();
     }
     
     for (let rule in dns_config.rules)

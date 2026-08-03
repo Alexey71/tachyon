@@ -805,6 +805,13 @@ function init_config(populate_nft, caches_prepared, no_refresh) {
         exit(1);
     }
 
+    // Cleanup stale temp config files from previous failed runs
+    try {
+        let stale = trim(command_output_from_args([ "find", "/tmp", "-maxdepth", "1", "-name", "config.json.*.tmp.*", "-mmin", "+5", "-type", "f" ]));
+        for (let path in split(stale, "\n"))
+            if (trim(path) != "") remove_file(trim(path));
+    } catch(e) {}
+
     let mwan3_active = module_success([ LIB_DIR + "/config/validator.uc", "mwan3-is-active" ]);
     let output_interface = option(settings, "output_network_interface", "");
     if (mwan3_active && output_interface != "")
