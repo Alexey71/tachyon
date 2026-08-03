@@ -175,7 +175,8 @@ tui_progress() {
     _current="$1"
     _total="$2"
     _label="${3:-}"
-    _w=$((_tui_width() - 8))
+    _w="$(_tui_width)"
+    _w=$((_w - 8))
     [ "$_w" -lt 10 ] 2>/dev/null && _w=10
 
     _pct=0
