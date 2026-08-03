@@ -563,10 +563,24 @@ function sing_box_version_is_extended(value) {
     return index(as_string(value), "extended") >= 0 || index(as_string(value), "-lx") >= 0;
 }
 
+function file_size_value(path) {
+    let st = fs.stat(as_string(path));
+    return st == null ? -1 : int(st.size || 0);
+}
+
+function file_is_usable(path, min_bytes) {
+    let size = file_size_value(path);
+    if (size < 0)
+        return false;
+    return min_bytes == null ? true : size >= int(min_bytes);
+}
+
 function module_exports() {
     return {
         write_file_atomic,
-        is_process_name_running
+        is_process_name_running,
+        file_is_usable,
+        file_size_value
     };
 }
 
@@ -643,6 +657,10 @@ else if (mode == "normalize-strategy-whitespace")
     normalize_strategy_whitespace(ARGV[1]);
 else if (mode == "text-list-to-lines")
     text_list_to_lines(ARGV[1], ARGV[2]);
+else if (mode == "file-is-usable")
+    exit(file_is_usable(ARGV[1], ARGV[2] == null ? null : int(ARGV[2])) ? 0 : 1);
+else if (mode == "file-size")
+    printf("%d\n", file_size_value(ARGV[1]));
 else {
     warn("Usage: core/helpers.uc <operation> ...\n");
     exit(1);

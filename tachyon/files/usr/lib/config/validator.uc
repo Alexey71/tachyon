@@ -1,6 +1,7 @@
 #!/usr/bin/env ucode
 
 let fs = require("fs");
+let helpers = require("core.helpers");
 let uci_core = require("core.uci");
 let fixture_uci_data = null;
 let subscription_parser_module = null;
@@ -147,8 +148,7 @@ function file_executable(path) {
 }
 
 function file_nonempty(path) {
-    let stat = fs.stat(as_string(path));
-    return stat != null && stat.size != null && stat.size > 0;
+    return helpers.file_is_usable(path, 0);
 }
 
 function shell_quote(value) {

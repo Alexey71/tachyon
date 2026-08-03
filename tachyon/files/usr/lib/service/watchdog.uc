@@ -567,8 +567,8 @@ function ai_heal_subnet_cache() {
         let etc_path = etc_dir + "/" + entry;
         let tmp_st = fs.stat(tmp_path);
         let etc_st = fs.stat(etc_path);
-        if (etc_st == null || int(etc_st.size) == 0) continue;
-        if (tmp_st != null && int(tmp_st.size) > 0) continue;
+        if (!helpers.file_is_usable(etc_path, 50)) continue;
+        if (helpers.file_is_usable(tmp_path, 50)) continue;
         // /tmp file missing or empty, restore from persistent storage
         let content = fs.readfile(etc_path);
         if (content == null || content == "") continue;
@@ -907,6 +907,152 @@ function ai_heal_dns_continuous() {
     } else {
         dns_consecutive_fails = 0;
     }
+}
+
+// ─── AI Empty Sections Recovery ─────────────────────────────────────────────
+let last_section_heal_attempt = 0;
+function ai_heal_empty_sections() {
+    if (!ai_enabled("ai_section_failover_enabled", "1")) return;
+    if (is_reload_in_progress()) return;
+    let now = time();
+    if (now - last_section_heal_attempt < 120) return;
+    last_section_heal_attempt = now;
+
+    let cfg = settings();
+    let sections = common.object_or_empty(uci_core.get_all(CONFIG_NAME));
+    let recovered = [];
+
+    for (let name in sections) {
+        let s = common.object_or_empty(sections[name]);
+        let action = common.as_string(s.action || "");
+        if (!common.is_connections_action(action)) continue;
+        let sub_urls = list_option(s, "subscription_url");
+        if (length(sub_urls) == 0) continue;
+
+        let cache_path = "/var/run/tachyon/section-cache/" + name + ".json";
+        let cache = common.object_or_empty(read_json_file(cache_path));
+        let servers = common.array_or_empty(cache.servers);
+        let urls = common.array_or_empty(cache.urls);
+        let selector_urls = common.array_or_empty(cache.selector_urls);
+        let usable = length(servers) + length(urls) + length(selector_urls);
+        if (usable > 0) continue;
+
+        // Section with subscriptions but 0 usable outbounds — trigger async reload
+        log_message("Empty proxy section '" + name + "' — triggering subscription update", "warn");
+        system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(name) + " >/dev/null 2>&1 1000<&- &");
+        push(recovered, name);
+    }
+
+    if (length(recovered) > 0) {
+        ai_heal_report(
+            "empty_proxy_sections",
+            "Empty proxy sections detected: " + join(", ", recovered),
+            "Auto-triggering subscription update for " + as_string(length(recovered)) + " section(s)",
+            "fixed"
+        );
+    }
+}
+
+// ─── DNS Loop Recovery (dead proxy + DNS detour = total DNS loss) ────────────
+let DNS_RECOVERY_STATE_FILE = "/var/run/tachyon/dns-detour-recovery.json";
+let dns_recovery_active = false;
+
+function is_dns_dead() {
+    let port53 = command_success_from_args(["nslookup", "-port=53", "check.tachyon", "127.0.0.1"]);
+    let port5353 = command_success_from_args(["nslookup", "-port=5353", "check.tachyon", "127.0.0.1"]);
+    return !port53 && !port5353;
+}
+
+function read_dns_recovery_state() {
+    let data = read_json_file(DNS_RECOVERY_STATE_FILE);
+    return common.object_or_empty(data);
+}
+
+function write_dns_recovery_state(state) {
+    common.write_json_file(DNS_RECOVERY_STATE_FILE, state);
+}
+
+function remove_dns_recovery_state() {
+    try { fs.unlink(DNS_RECOVERY_STATE_FILE); } catch(e) {}
+}
+
+let last_dns_loop_heal_attempt = 0;
+function ai_heal_dns_loop() {
+    if (!ai_enabled("ai_dns_loop_heal_enabled", "1")) return;
+    if (is_reload_in_progress()) return;
+    let now = time();
+    if (now - last_dns_loop_heal_attempt < 60) return;
+    last_dns_loop_heal_attempt = now;
+
+    let cfg = settings();
+    let detour_enabled = common.bool_option(cfg, "dns_detour_enabled", false);
+    if (!detour_enabled) return;
+
+    let detour_section = common.option(cfg, "dns_detour_section", "");
+    if (detour_section == "") return;
+
+    // Check if DNS is dead
+    if (!is_dns_dead()) {
+        // DNS works — if we were in recovery, try to restore
+        let recovery = read_dns_recovery_state();
+        if (recovery.phase == "detour_disabled") {
+            // DNS is working now without detour — subscriptions might be restored
+            // Try re-enabling detour
+            let test_dns = command_success_from_args(["nslookup", "-port=53", "check.tachyon", "127.0.0.1"]);
+            if (test_dns) {
+                log_message("DNS loop recovery: DNS works, re-enabling DNS detour section", "info");
+                system("/sbin/uci set tachyon.settings.dns_detour_enabled='1' >/dev/null 2>&1");
+                system("/sbin/uci commit tachyon >/dev/null 2>&1");
+                system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+                remove_dns_recovery_state();
+                ai_heal_report(
+                    "dns_loop_recovery",
+                    "DNS recovered with detour re-enabled",
+                    "Restored DNS detour section " + detour_section,
+                    "fixed"
+                );
+            }
+        }
+        return;
+    }
+
+    // DNS is dead — check if detour section has outbounds
+    let recovery = read_dns_recovery_state();
+    if (recovery.phase == "detour_disabled") {
+        // Already in recovery — just wait and retry
+        log_message("DNS loop recovery: DNS still dead, retrying subscription update", "info");
+        system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(detour_section) + " >/dev/null 2>&1 1000<&- &");
+        return;
+    }
+
+    // Check if detour section is empty
+    let cache_path = "/var/run/tachyon/section-cache/" + detour_section + ".json";
+    let cache = common.object_or_empty(read_json_file(cache_path));
+    let servers = common.array_or_empty(cache.servers);
+    let urls = common.array_or_empty(cache.urls);
+    let usable = length(servers) + length(urls);
+
+    if (usable > 0) {
+        // Section has outbounds but DNS is still dead — may be transient
+        return;
+    }
+
+    // Detour section empty AND DNS dead — disable DNS detour to recover
+    log_message("DNS loop detected: DNS detour section '" + detour_section + "' is empty, disabling DNS detour to recover", "warn");
+    system("/sbin/uci set tachyon.settings.dns_detour_enabled='0' >/dev/null 2>&1");
+    system("/sbin/uci commit tachyon >/dev/null 2>&1");
+    system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+    write_dns_recovery_state({ phase: "detour_disabled", section: detour_section, ts: now });
+
+    // Trigger subscription update for the empty section
+    system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(detour_section) + " >/dev/null 2>&1 1000<&- &");
+
+    ai_heal_report(
+        "dns_loop_detected",
+        "DNS loop: detour section '" + detour_section + "' has 0 outbounds, DNS completely dead",
+        "Temporarily disabled DNS detour to restore DNS, triggered subscription reload",
+        "fixed"
+    );
 }
 
 // ─── Metrics export (normal tier) ─────────────────────────────────────────────
@@ -1346,6 +1492,8 @@ function worker() {
         safe_call(ai_heal_tproxy_port, "ai_heal_tproxy_port");
         safe_call(ai_heal_subscriptions, "ai_heal_subscriptions");
         safe_call(ai_heal_uci_config, "ai_heal_uci_config");
+        safe_call(ai_heal_empty_sections, "ai_heal_empty_sections");
+        safe_call(ai_heal_dns_loop, "ai_heal_dns_loop");
         safe_call(analyze_anomalies, "analyze_anomalies");
     }
 

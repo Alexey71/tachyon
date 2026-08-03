@@ -1,6 +1,7 @@
 #!/usr/bin/env ucode
 
 let fs = require("fs");
+let helpers = require("core.helpers");
 let constants = require("core.constants");
 let uci_core = require("core.uci");
 
@@ -106,8 +107,7 @@ function file_exists(path) {
 }
 
 function file_nonempty(path) {
-    let stat = fs.stat(as_string(path));
-    return stat != null && int(stat.size || 0) > 0;
+    return helpers.file_is_usable(path, 0);
 }
 
 function path_basename(path) {

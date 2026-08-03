@@ -2,6 +2,7 @@
 
 let fs = require("fs");
 let common = require("core.common");
+let helpers = require("core.helpers");
 let runtime_constants = require("singbox.constants");
 let runtime_dns = require("singbox.dns");
 let runtime_route = require("singbox.route");
@@ -720,8 +721,7 @@ function ensure_custom_ruleset(config, reference) {
         if (extension != "srs" && extension != "json")
             ctx.runtime_generate_unsupported("local rule_set extension is not supported by sing-box config generation");
         // Skip broken local ruleset files — nonexistent or suspiciously small
-        let st = fs.stat(reference);
-        if (st == null || int(st.size || 0) < 100)
+        if (!helpers.file_is_usable(reference, 100))
             return null;
         push(config.route.rule_set, {
             type: "local",
@@ -763,9 +763,9 @@ function ensure_community_ruleset(config, section_name, community) {
         let etc_srs = "/etc/tachyon/rulesets/community-" + community + ".srs";
         let local_path = null;
 
-        if (fs.stat(tmp_srs) != null && int(fs.stat(tmp_srs).size || 0) > 100)
+        if (helpers.file_is_usable(tmp_srs, 100))
             local_path = tmp_srs;
-        else if (fs.stat(etc_srs) != null && int(fs.stat(etc_srs).size || 0) > 100)
+        else if (helpers.file_is_usable(etc_srs, 100))
             local_path = etc_srs;
 
         if (local_path != null) {

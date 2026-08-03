@@ -2,6 +2,7 @@
 
 let fs = require("fs");
 let common = require("core.common");
+let helpers = require("core.helpers");
 let core_ip = require("core.ip");
 let uci_core = require("core.uci");
 let rule_config = require("config.rule");
@@ -1777,8 +1778,7 @@ function nft_populate_runtime_set_for_section(section, deferred_sections, table,
                 "/etc/tachyon/rulesets/community-subnets-" + service + ".lst"
             ];
             for (let path in cached_paths) {
-                let st = fs.stat(path);
-                if (st != null && int(st.size) > 50) {
+                if (helpers.file_is_usable(path, 50)) {
                     nft_add_file_chunks_to_family_sets(path, table, sets.subnets, sets.subnets6, "ips", "", "5000");
                     break;
                 }
@@ -1810,8 +1810,7 @@ function nft_add_subnet_file_for_section(section, filepath, table, common_set, i
 }
 
 function file_nonempty(path) {
-    let stat = fs.stat(as_string(path));
-    return stat != null && int(stat.size) > 0;
+    return helpers.file_is_usable(path, 0);
 }
 
 function nft_add_extracted_ruleset_subnets(unscoped_path, scoped_path, label, table, common_set, ip_port_set, chunk_size_text, common6_set, ip_port6_set) {

@@ -191,6 +191,7 @@ package_runtime_bin="$WORK_DIR/package-runtime-bin"
 mkdir -p "$package_runtime_lib/components" "$package_runtime_lib/core" "$package_runtime_lib/singbox" "$package_runtime_bin"
 cp "$UPDATER" "$package_runtime_lib/components/updater.uc"
 cp "$TACHYON_LIB/core/common.uc" "$package_runtime_lib/core/common.uc"
+cp "$TACHYON_LIB/core/helpers.uc" "$package_runtime_lib/core/helpers.uc"
 cat >"$package_runtime_lib/core/constants.uc" <<'UCODE'
 function module_exports() {
   return {};
@@ -380,6 +381,7 @@ cp "$UPDATES_UC" "$fake_lib/components/updates.uc"
 cp "$TACHYON_LIB/config/connections.uc" "$fake_lib/config/connections.uc"
 cp "$TACHYON_LIB/core/uci.uc" "$fake_lib/core/uci.uc"
 cp "$TACHYON_LIB/core/common.uc" "$fake_lib/core/common.uc"
+cp "$TACHYON_LIB/core/helpers.uc" "$fake_lib/core/helpers.uc"
 cat >"$fake_lib/components/action.uc" <<'UCODE'
 #!/usr/bin/env ucode
 if ((ARGV[0] || "") == "component-action") {

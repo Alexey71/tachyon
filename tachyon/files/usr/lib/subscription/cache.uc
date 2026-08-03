@@ -1,6 +1,7 @@
 #!/usr/bin/env ucode
 
 let fs = require("fs");
+let helpers = require("core.helpers");
 let uci_core = require("core.uci");
 let connections = require("config.connections");
 let subscription_share_link = require("subscription.share_link");
@@ -537,8 +538,7 @@ function unlink_path(path) {
 }
 
 function file_nonempty(path) {
-    let stat = fs.stat(as_string(path));
-    return stat != null && stat.size != null && stat.size > 0;
+    return helpers.file_is_usable(path, 0);
 }
 
 function files_equal(left, right) {

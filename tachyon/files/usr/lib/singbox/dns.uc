@@ -68,6 +68,18 @@ function detour_tag(settings) {
     return section_name == "" ? "" : runtime_constants.outbound_tag(section_name);
 }
 
+function configured_server_count(settings, key) {
+    let count = length(list_option(settings, key));
+    if (count == 0) count = 1;
+    return count;
+}
+
+function is_wan_fallback_index(settings, index) {
+    if (!bool_option(settings, "fallback_wan_main", false))
+        return false;
+    return int(index) >= configured_server_count(settings, "dns_server");
+}
+
 function state_template(settings) {
     return {
         version: 1,
@@ -175,11 +187,15 @@ function bootstrap_server(tag_name, value) {
 
 function server_config(settings, override_state) {
     let active = active_values(settings, override_state);
+    let is_wan = is_wan_fallback_index(settings, active.state.main_index);
+    // WAN fallback servers must always use direct UDP — never detour through proxy
+    let dns_type = is_wan ? "udp" : active.state.dns_type;
+    let detour = is_wan ? "" : active.state.dns_detour;
     let result = server_from_options(
         runtime_constants.DNS_SERVER_TAG,
-        active.state.dns_type,
+        dns_type,
         active.main,
-        active.state.dns_detour
+        detour
     );
 
     if (bool_option(settings, "dns_doq_ech", false)) {
@@ -233,11 +249,13 @@ function add_active_health_inbound(result) {
     push(result.sniff_inbounds, inbound_tag);
 }
 
-function add_health_candidate(result, kind, index_value, server) {
+function add_health_candidate(result, kind, index_value, server, override_dns_type, override_detour) {
     let server_tag = health_tag(kind, index_value, "server");
     let inbound_tag = health_tag(kind, index_value, "in");
+    let dns_type = override_dns_type || result.state.dns_type;
+    let detour = override_detour != null ? override_detour : result.state.dns_detour;
     let dns_server = kind == "main"
-        ? server_from_options(server_tag, result.state.dns_type, server, result.state.dns_detour)
+        ? server_from_options(server_tag, dns_type, server, detour)
         : bootstrap_server(server_tag, server);
 
     if (dns_server.unsupported) {
@@ -279,8 +297,11 @@ function config(settings, override_state) {
         add_active_health_inbound(result);
 
     if (length(state.main_servers) > 1)
-        for (let i = 0; i < length(state.main_servers); i++)
-            add_health_candidate(result, "main", i, state.main_servers[i]);
+        for (let i = 0; i < length(state.main_servers); i++) {
+            // Health probes always use direct connection (no detour) to test DNS server reachability
+            let dns_type = is_wan_fallback_index(settings, i) ? "udp" : state.dns_type;
+            add_health_candidate(result, "main", i, state.main_servers[i], dns_type, "");
+        }
 
     if (length(state.bootstrap_servers) > 1)
         for (let i = 0; i < length(state.bootstrap_servers); i++)
