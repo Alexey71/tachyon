@@ -1398,7 +1398,7 @@ function component_update_check_result_cacheable(value) {
     let status = as_string(value.status || "");
     return value.success === true && as_string(value.action) == "check_update" &&
         valid_component_name(value.component) &&
-        (status == "latest" || status == "outdated" || status == "dev");
+        (status == "latest" || status == "outdated" || status == "dev" || status == "outdated_same_release");
 }
 
 function cache_component_update_check_result(value, notify_update) {

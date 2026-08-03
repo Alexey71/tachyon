@@ -4413,6 +4413,14 @@ msgstr ""
 msgid "Update is available:"
 msgstr ""
 
+#: src/tachyon/tabs/updates/initController.ts:1059
+msgid "Update is available for current release"
+msgstr ""
+
+#: src/tachyon/tabs/updates/initController.ts:1059
+msgid "Update is available for current release:"
+msgstr ""
+
 #: src/tachyon/tabs/dashboard/partials/renderSections.ts:218
 #: src/tachyon/tabs/dashboard/partials/renderSections.ts:231
 #: src/tachyon/tabs/dashboard/partials/renderSections.ts:232

@@ -9,6 +9,7 @@ const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const BIN_PATH = getenv("TACHYON_BIN") || constants.TACHYON_BIN || "/usr/bin/tachyon";
 const SERVICE_INIT = getenv("TACHYON_SERVICE_INIT") || constants.TACHYON_SERVICE_INIT || "/etc/init.d/tachyon";
 const TACHYON_VERSION = getenv("TACHYON_VERSION") || constants.TACHYON_VERSION || "";
+const TACHYON_COMMIT_SHA = getenv("TACHYON_COMMIT_SHA") || constants.TACHYON_COMMIT_SHA || "";
 const TACHYON_RELEASE_REPO = getenv("TACHYON_RELEASE_REPO") || constants.TACHYON_RELEASE_REPO || "Dushnilin/tachyon";
 const RUNTIME_STATE_DIR = getenv("TACHYON_RUNTIME_STATE_DIR") || "/var/run/tachyon";
 const SYSTEM_INFO_CACHE_FILE = getenv("TACHYON_SYSTEM_INFO_CACHE_FILE") || RUNTIME_STATE_DIR + "/system-info.json";
@@ -2101,10 +2102,27 @@ function install_package_sing_box(action, tiny) {
 }
 
 function check_tachyon() {
-    let metadata = fetch_tachyon_latest_release_metadata();
-    let fields = split(metadata, "\t");
-    let latest_version = length(fields) > 0 && as_string(fields[0]) != "" ? as_string(fields[0]) : "unknown";
-    let release_url = length(fields) > 1 ? as_string(fields[1]) : "";
+    let release_json = latest_tachyon_release_json();
+    let metadata = "";
+    let latest_version = "unknown";
+    let release_url = "";
+
+    if (release_json != "") {
+        let tsv = trim(helper_output_input(release_json, "release-metadata-tsv", []));
+        if (tsv != "") {
+            let fields = split(tsv, "\t");
+            latest_version = length(fields) > 0 && as_string(fields[0]) != "" ? as_string(fields[0]) : "unknown";
+            release_url = length(fields) > 1 ? as_string(fields[1]) : "";
+        }
+    }
+
+    if (latest_version == "unknown") {
+        metadata = fetch_tachyon_latest_release_metadata();
+        let fields = split(metadata, "\t");
+        latest_version = length(fields) > 0 && as_string(fields[0]) != "" ? as_string(fields[0]) : "unknown";
+        release_url = length(fields) > 1 ? as_string(fields[1]) : "";
+    }
+
     if (latest_version == "unknown")
         action_fail("tachyon", "check_update", "Failed to check Tachyon updates", TACHYON_VERSION, latest_version);
 
@@ -2120,6 +2138,15 @@ function check_tachyon() {
     let status = status_from_compare(int(compare));
     if (status == "")
         action_fail("tachyon", "check_update", "Failed to compare Tachyon versions", TACHYON_VERSION, latest_version);
+
+    if (status == "latest" && release_json != "" && TACHYON_COMMIT_SHA != "" && TACHYON_COMMIT_SHA != "unknown") {
+        let remote_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
+        if (remote_sha != "" && remote_sha != TACHYON_COMMIT_SHA) {
+            updates_log("Tachyon same release update found: " + TACHYON_COMMIT_SHA + " -> " + remote_sha);
+            action_success("tachyon", "check_update", "Update is available for current release", TACHYON_VERSION, latest_version, 0, "outdated_same_release", release_url);
+        }
+    }
+
     if (status == "latest") {
         updates_log("Tachyon is already up to date (" + TACHYON_VERSION + ")");
         action_success("tachyon", "check_update", "Latest version is installed", TACHYON_VERSION, latest_version, 0, status, release_url);

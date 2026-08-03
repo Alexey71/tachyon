@@ -104,7 +104,9 @@ define Package/tachyon/install
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
 	$(INSTALL_BIN) ./files/etc/hotplug.d/iface/99-tachyon-wan-monitor $(1)/etc/hotplug.d/iface/99-tachyon-wan-monitor
 
-	sed -i -e 's/__COMPILED_VERSION_VARIABLE__/$(TACHYON_COMPILED_VERSION)/g' $(1)/usr/lib/tachyon/core/constants.uc
+	sed -i -e 's/__COMPILED_VERSION_VARIABLE__/$(TACHYON_COMPILED_VERSION)/g' \
+		-e 's/__COMPILED_COMMIT_SHA__/$(shell git -C $(TOPDIR)/../ rev-parse --short HEAD 2>/dev/null || echo unknown)/g' \
+		$(1)/usr/lib/tachyon/core/constants.uc
 endef
 
 $(eval $(call BuildPackage,tachyon))

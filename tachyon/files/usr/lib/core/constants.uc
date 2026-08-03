@@ -62,6 +62,7 @@ function constants_map() {
     let c = {};
 
     c.TACHYON_VERSION = detect_installed_version();
+    c.TACHYON_COMMIT_SHA = env("TACHYON_COMMIT_SHA", "__COMPILED_COMMIT_SHA__");
     c.TACHYON_CONFIG_NAME = env("TACHYON_CONFIG_NAME", "tachyon");
     c.TACHYON_CONFIG = env("TACHYON_CONFIG", "/etc/config/" + c.TACHYON_CONFIG_NAME);
     c.TACHYON_BIN = env("TACHYON_BIN", "/usr/bin/tachyon");

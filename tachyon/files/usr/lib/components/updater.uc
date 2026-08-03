@@ -271,6 +271,13 @@ function release_metadata_tsv() {
     print(tag, "\t", as_string(release.html_url || ""), "\n");
 }
 
+function release_commit_sha() {
+    let release = object_or_empty(read_stdin_json());
+    let sha = as_string(release.target_commitish || "");
+    if (sha != "")
+        print(sha, "\n");
+}
+
 function openwrt_release_value(path, key) {
     let data = fs.readfile(path);
     if (data == null)
@@ -1060,6 +1067,11 @@ function updates_check_result_row(component, current_version, latest_version, st
         return;
     }
 
+    if (status == "outdated_same_release") {
+        print("Update is available for current release\t", component, " update is available for current release: ", current_version, "\n");
+        return;
+    }
+
     if (status == "dev") {
         print("Installed version is newer than release\t", component, " installed version is newer than upstream release: ", current_version, " -> ", latest_version, "\n");
         return;
@@ -1216,6 +1228,8 @@ else if (mode == "tachyon-release-plan")
     tachyon_release_plan(ARGV[1], ARGV[2], ARGV[3]);
 else if (mode == "release-metadata-tsv")
     release_metadata_tsv();
+else if (mode == "release-commit-sha")
+    release_commit_sha();
 else if (mode == "openwrt-release-value")
     openwrt_release_value(ARGV[1], ARGV[2]);
 else if (mode == "openwrt-release-series")

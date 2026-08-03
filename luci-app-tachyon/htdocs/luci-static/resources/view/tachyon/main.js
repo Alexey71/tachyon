@@ -13675,7 +13675,7 @@ function isNotInstalled(version) {
 }
 function shouldShowInstallAfterCheck(component) {
   const status = getVisibleCheckResult(component)?.status;
-  return status === "outdated" || status === "dev";
+  return status === "outdated" || status === "dev" || status === "outdated_same_release";
 }
 function getVisibleCheckResult(component) {
   if (!shouldExposeCheckResults({
@@ -13745,7 +13745,7 @@ function resetCheckResult(component) {
 function applyCachedCheckResults(results) {
   results.forEach((result) => {
     const status = result.status || null;
-    if (status === "latest" || status === "outdated" || status === "dev") {
+    if (status === "latest" || status === "outdated" || status === "dev" || status === "outdated_same_release") {
       setCheckResult(
         result.component,
         status,
@@ -14401,6 +14401,25 @@ function renderComponentCard(card) {
     const latestValueNodes = [];
     if (checkResult.status === "outdated") {
       labelText = _("Update is available:");
+      const versionToShow = checkResult.latest_version || card.latestVersion || card.version;
+      if (checkResult.release_url) {
+        latestValueNodes.push(
+          E(
+            "a",
+            {
+              class: "tachyon_updates-page__component__release-version-link",
+              href: checkResult.release_url,
+              target: "_blank",
+              rel: "noopener noreferrer"
+            },
+            versionToShow || _("Open")
+          )
+        );
+      } else if (versionToShow) {
+        latestValueNodes.push(document.createTextNode(versionToShow));
+      }
+    } else if (checkResult.status === "outdated_same_release") {
+      labelText = _("Update is available for current release:");
       const versionToShow = checkResult.latest_version || card.latestVersion || card.version;
       if (checkResult.release_url) {
         latestValueNodes.push(

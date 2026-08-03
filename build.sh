@@ -22,6 +22,8 @@ if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 APK_INTERNAL_VERSION="$RELEASE_VERSION"
 
+GIT_COMMIT_SHA="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+
 WSL_NATIVE_ROOT="${WSL_NATIVE_ROOT:-$DEFAULT_BUILD_HOME/build/tachyon}"
 WORK_DIR="${WORK_DIR:-$ROOT_DIR/.wsl-build}"
 SDK_WORK_DIR="${SDK_WORK_DIR:-$WORK_DIR/sdk}"
@@ -254,6 +256,7 @@ build_backend_root() {
   cp -a "$ROOT_DIR/tachyon/files/usr/lib/." "$output_root/usr/lib/tachyon/"
 
   sed -i -e "s/__COMPILED_VERSION_VARIABLE__/${RELEASE_VERSION}/g" \
+    -e "s/__COMPILED_COMMIT_SHA__/${GIT_COMMIT_SHA}/g" \
     "$output_root/usr/lib/tachyon/core/constants.uc"
 
   normalize_package_root_modes "$output_root"

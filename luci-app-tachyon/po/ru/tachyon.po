@@ -3083,6 +3083,12 @@ msgstr "Доступно обновление"
 msgid "Update is available:"
 msgstr "Доступна новая версия:"
 
+msgid "Update is available for current release"
+msgstr "Доступно обновление текущего релиза"
+
+msgid "Update is available for current release:"
+msgstr "Доступно обновление текущего релиза:"
+
 msgid "Update subscriptions"
 msgstr "Обновить подписки"
 
