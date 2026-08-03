@@ -548,8 +548,13 @@ function reload_sing_box_runtime(previous_pid, config_hash_before, config_hash_a
     command_success_from_args([ "logger", "-t", "tachyon", "[info] Hot-reloading sing-box runtime (SIGHUP) PID: " + previous_pid ]);
     if (previous_pid > 0) {
         if (!command_success_from_args([ "kill", "-HUP", as_string(previous_pid) ])) {
-            command_success_from_args([ "logger", "-t", "tachyon", "[fatal] Failed to send SIGHUP to sing-box. Aborted." ]);
-            exit(1);
+            // Process died between config generation and signal delivery (race condition).
+            // Fall back to a clean start instead of aborting the entire reload.
+            command_success_from_args([ "logger", "-t", "tachyon", "[warn] Failed to send SIGHUP to sing-box (process already gone); falling back to start." ]);
+            if (!command_success_from_args([ "/etc/init.d/sing-box", "start" ])) {
+                command_success_from_args([ "logger", "-t", "tachyon", "[fatal] Failed to start sing-box after SIGHUP fallback. Aborted." ]);
+                exit(1);
+            }
         }
     } else {
         command_success_from_args([ "logger", "-t", "tachyon", "[info] sing-box is not running. Using start." ]);
@@ -558,6 +563,7 @@ function reload_sing_box_runtime(previous_pid, config_hash_before, config_hash_a
             exit(1);
         }
     }
+
 }
 
 function sing_box_service_running() {

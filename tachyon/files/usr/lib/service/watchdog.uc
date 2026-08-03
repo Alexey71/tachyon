@@ -4,6 +4,7 @@ let fs = require("fs");
 let uci_core = require("core.uci");
 let common = require("core.common");
 let helpers = require("core.helpers");
+let connections = require("config.connections");
 
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
@@ -925,12 +926,12 @@ function ai_heal_empty_sections() {
     for (let name in sections) {
         let s = common.object_or_empty(sections[name]);
         let action = common.as_string(s.action || "");
-        if (!common.is_connections_action(action)) continue;
-        let sub_urls = list_option(s, "subscription_url");
+        if (!connections.is_connections_action(action)) continue;
+        let sub_urls = common.list_option(s, "subscription_url");
         if (length(sub_urls) == 0) continue;
 
         let cache_path = "/var/run/tachyon/section-cache/" + name + ".json";
-        let cache = common.object_or_empty(read_json_file(cache_path));
+        let cache = common.object_or_empty(common.read_json_file(cache_path));
         let servers = common.array_or_empty(cache.servers);
         let urls = common.array_or_empty(cache.urls);
         let selector_urls = common.array_or_empty(cache.selector_urls);
@@ -964,7 +965,7 @@ function is_dns_dead() {
 }
 
 function read_dns_recovery_state() {
-    let data = read_json_file(DNS_RECOVERY_STATE_FILE);
+    let data = common.read_json_file(DNS_RECOVERY_STATE_FILE);
     return common.object_or_empty(data);
 }
 
@@ -1027,7 +1028,7 @@ function ai_heal_dns_loop() {
 
     // Check if detour section is empty
     let cache_path = "/var/run/tachyon/section-cache/" + detour_section + ".json";
-    let cache = common.object_or_empty(read_json_file(cache_path));
+    let cache = common.object_or_empty(common.read_json_file(cache_path));
     let servers = common.array_or_empty(cache.servers);
     let urls = common.array_or_empty(cache.urls);
     let usable = length(servers) + length(urls);
@@ -1148,7 +1149,7 @@ function safe_call(fn, name) {
     try {
         fn();
     } catch(e) {
-        log_message("Graceful degradation: " + name + " failed: " + (e instanceof Error ? e.message : String(e)), "err");
+        log_message("Graceful degradation: " + name + " failed: " + as_string(e), "err");
     }
 }
 
@@ -1292,7 +1293,7 @@ function smart_detect_process_pending() {
             log_message("Smart Detect: domain " + domain + " not handled by any section", "info");
         }
         } catch (e) {
-            log_message("Smart Detect: failed to process " + domain + ": " + (e instanceof Error ? e.message : String(e)), "err");
+            log_message("Smart Detect: failed to process " + domain + ": " + as_string(e), "err");
         }
     }
 
@@ -1475,14 +1476,14 @@ function worker() {
     let ubus_conn = setup_ubus_listener();
 
     function perform_fast_checks() {
-        check_singbox_process();
+        safe_call(check_singbox_process, "check_singbox_process");
         safe_call(ai_heal_proxy_health, "ai_heal_proxy_health");
         safe_call(ai_heal_dns_continuous, "ai_heal_dns_continuous");
     }
 
     function perform_normal_checks() {
-        check_auto_resume_pause();
-        ai_full_health_audit();
+        safe_call(check_auto_resume_pause, "check_auto_resume_pause");
+        safe_call(ai_full_health_audit, "ai_full_health_audit");
         safe_call(smart_detect_process_pending, "smart_detect_process_pending");
         safe_call(export_metrics, "export_metrics");
     }

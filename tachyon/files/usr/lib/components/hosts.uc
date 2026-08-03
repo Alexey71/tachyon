@@ -2,6 +2,7 @@
 
 let fs = require("fs");
 let uci = require("core.uci");
+let core_ip = require("core.ip");
 
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const HOSTS_CACHE_DIR = getenv("TACHYON_HOSTS_CACHE_DIR") || "/etc/tachyon/hosts-lists";
@@ -36,13 +37,16 @@ function file_nonempty(path) {
 }
 
 function remove_file(path) {
-    fs.remove(path);
+    run("rm -f " + shell_quote(path));
 }
 
 function http_get_to_file(url, output_path) {
-    mkdir_p(dirname(output_path));
-    let cmd = "wget -q -O " + shell_quote(output_path) + " --timeout=" + CONNECT_TIMEOUT + " " + shell_quote(url);
-    return run(cmd);
+    run("mkdir -p " + shell_quote(HOSTS_TMP_DIR));
+    let cmd = "wget -q -O " + shell_quote(output_path) + " --timeout=" + CONNECT_TIMEOUT + " " + shell_quote(url) + " 2>&1";
+    log("Running: " + cmd);
+    let result = run(cmd);
+    log("wget exit: " + as_string(result) + " file_exists: " + as_string(fs.stat(output_path) != null));
+    return result;
 }
 
 function download_with_retry(url, output_path, label) {
@@ -113,7 +117,6 @@ function write_hosts_cache(entries, source_urls) {
     }
 
     fh.write("# Tachyon hosts lists — combined cache\n");
-    fh.write("# Generated: " + strftime("%Y-%m-%d %H:%M:%S", localtime()) + "\n");
     if (source_urls != null) {
         for (let url in source_urls)
             fh.write("# Source: " + url + "\n");
@@ -164,7 +167,7 @@ function hosts_list_update(target_url) {
 
     for (let url in urls) {
         let label = "hosts list from " + url;
-        let safe_name = replace(url, /[^a-zA-Z0-9]/, "_");
+        let safe_name = replace(replace(url, /:/g, "_"), /[^a-zA-Z0-9_]/g, "_");
         let tmp_file = HOSTS_TMP_DIR + "/list-" + safe_name + ".txt";
 
         if (download_with_retry(url, tmp_file, label) != null) {

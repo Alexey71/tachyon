@@ -2219,7 +2219,7 @@ function process_updates(token, admin_ids) {
             dispatch_command(token, chat_id, msg.text, null);
         }
         } catch (e) {
-            command_success_from_args(["logger", "-t", "tachyon", "[err] Telegram update " + update_id + " failed: " + (e instanceof Error ? e.message : String(e))]);
+            command_success_from_args(["logger", "-t", "tachyon", "[err] Telegram update " + update_id + " failed: " + as_string(e)]);
         }
     }
     fs.writefile(OFFSET_FILE, as_string(offset));
