@@ -2667,7 +2667,8 @@ function list_update() {
     // с reload-firewall, который пересоздаёт таблицы и сеты nftables)
     log_message("Waiting for reload lock to apply nft rules", "debug");
     if (!acquire_runtime_lock(RELOAD_LOCK_DIR, true)) {
-        log_message("Could not acquire reload lock for nft apply; skipping nft update", "warn");
+        log_message("Could not acquire reload lock for nft apply; saving pending marker for next attempt", "warn");
+        try { fs.writefile("/tmp/tachyon_list_update_pending_nft", as_string(now_seconds())); } catch(e) {}
         list_update_pid_end();
         exit(1);
     }

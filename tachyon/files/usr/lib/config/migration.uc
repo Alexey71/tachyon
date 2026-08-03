@@ -1333,7 +1333,12 @@ function apply_migrations(ctx) {
         if (seen[migration.id])
             continue;
 
-        migration.run(ctx);
+        try {
+            migration.run(ctx);
+        } catch(e) {
+            log_message("Migration '" + migration.id + "' failed: " + as_string(e), "err");
+            continue;
+        }
         seen[migration.id] = true;
         push(applied, migration.id);
         added = true;
@@ -1422,14 +1427,16 @@ function ensure_runtime_cache_format() {
             subscription_share_link.populate_subscription_dir(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR);
         clear_subscription_runtime_cache();
         ensure_runtime_dirs();
-        fs.writefile(TACHYON_RUNTIME_CACHE_FORMAT_FILE, TACHYON_RUNTIME_CACHE_FORMAT + "\n");
+        if (fs.writefile(TACHYON_RUNTIME_CACHE_FORMAT_FILE, TACHYON_RUNTIME_CACHE_FORMAT + "\n") == null)
+            log_message("Failed to write runtime cache format file", "warn");
     }
 
     if (first_line(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE) != TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT) {
         run("rm -rf " + shell_quote(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR));
         ensure_dir(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR);
         run("chmod 700 " + shell_quote(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR) + " >/dev/null 2>&1");
-        fs.writefile(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE, TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT + "\n");
+        if (fs.writefile(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE, TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT + "\n") == null)
+            log_message("Failed to write persistent cache format file", "warn");
         run("chmod 600 " + shell_quote(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE) + " >/dev/null 2>&1");
     }
 }
@@ -1454,22 +1461,26 @@ function apply_operations(cursor, operations) {
     };
 
     for (let op in operations) {
-        if (op.op == "create") {
-            if (op.anonymous && type(cursor.add) == "function")
-                created[as_string(op.section)] = cursor.add(CONFIG_NAME, op.type);
-            else
-                cursor.set(CONFIG_NAME, op.section, op.type);
+        try {
+            if (op.op == "create") {
+                if (op.anonymous && type(cursor.add) == "function")
+                    created[as_string(op.section)] = cursor.add(CONFIG_NAME, op.type);
+                else
+                    cursor.set(CONFIG_NAME, op.section, op.type);
+            }
+            else if (op.op == "set")
+                cursor.set(CONFIG_NAME, section_ref(op.section), op.option, op.value);
+            else if (op.op == "delete")
+                cursor.delete(CONFIG_NAME, section_ref(op.section), op.option);
+            else if (op.op == "add_list")
+                cursor.set(CONFIG_NAME, section_ref(op.section), op.option, op.values);
+            else if (op.op == "set_list")
+                cursor.set(CONFIG_NAME, section_ref(op.section), op.option, op.values);
+            else if (op.op == "set_type")
+                cursor.set(CONFIG_NAME, section_ref(op.section), op.type);
+        } catch(e) {
+            log_message("Migration operation '" + op.op + "' failed: " + as_string(e), "err");
         }
-        else if (op.op == "set")
-            cursor.set(CONFIG_NAME, section_ref(op.section), op.option, op.value);
-        else if (op.op == "delete")
-            cursor.delete(CONFIG_NAME, section_ref(op.section), op.option);
-        else if (op.op == "add_list")
-            cursor.set(CONFIG_NAME, section_ref(op.section), op.option, op.values);
-        else if (op.op == "set_list")
-            cursor.set(CONFIG_NAME, section_ref(op.section), op.option, op.values);
-        else if (op.op == "set_type")
-            cursor.set(CONFIG_NAME, section_ref(op.section), op.type);
     }
 }
 
@@ -1549,7 +1560,12 @@ function migrate_runtime(source) {
     if (!ctx.changed)
         return true;
 
-    apply_operations(cursor, ctx.operations);
+    try {
+        apply_operations(cursor, ctx.operations);
+    } catch(e) {
+        log_message("Migration apply_operations failed: " + as_string(e), "err");
+        return false;
+    }
     let committed = commit_cursor(cursor);
     for (let path in ctx.removed_caches)
         remove_cache_path(path);
