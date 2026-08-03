@@ -55,9 +55,45 @@ An intelligent diagnostic and repair engine available via CLI (`tachyon doctor`)
 * **OOM Watchdog & Memory Tuning**: Continuous RAM health monitoring. Dynamically adjusts process limits (`GOMEMLIMIT`) under memory pressure and sends Telegram alerts.
 * **MSS Clamping (MTU Fix)**: Automated resolution of MTU fragmentation and frozen TCP handshakes over tunnel interfaces.
 
+#### 🛡️ Watchdog — Protection & Self-Healing System
+
+Watchdog is the heart of Tachyon's stability. It continuously monitors all critical services and automatically recovers from failures without rebooting the router. Version 1.2.57 introduces a comprehensive overhaul of the protection system:
+
+**Atomic Operations & Data Integrity:**
+* **Atomic UCI Restore**: All configuration changes are written through an intermediate backup — if a write fails, the system restores the previous working state.
+* **Backup Validation**: Before restoring configuration, backups are checked for integrity and validity — corrupted backups are discarded.
+* **Atomic JSON Writes**: sing-box generator, subscription cache, diagnostics, and runtime write configs via `tmp` + `mv`, preventing partial writes on crash.
+
+**Restart-Loop Protection:**
+* **Proxy Cooldown**: Maximum 3 proxy restarts per 10 minutes (`safe_proxy_restart()`). When the limit is exceeded, restarts are suspended and a notification is sent.
+* **Restart Lock**: A `PROXY_RESTART_LOCK` mutex prevents concurrent sing-box restarts from different threads.
+* **DNS Loop Cooldown**: When DNS query loops are detected, automatic switching is suspended for 5 minutes to allow stabilization.
+
+**Data Correctness:**
+* **Empty Section Validation**: Checks for actual data in `domain`, `domain_suffix`, `ip_cidr` sections — empty sections are not written to config.
+* **Correct Config Reading**: Fixed a bug where the `"network"` section was read instead of `CONFIG_NAME`.
+* **nslookup Fix**: BusyBox compatibility — correct `nslookup -type=A` and `-port=53` operation.
+
+**Telegram Bot & Notifications:**
+* **Notification Rate Limiting**: Maximum 10 Telegram notifications per 5 minutes, preventing spam during mass failures.
+* **Atomic Telegram Config Restore**: Bot config is restored via `cp` to tmp then `mv` — preventing corruption on failure.
+* **Persistent Paths**: Backups and staging files stored in `/etc/.tachyon/` — survive between reboots.
+
+**Firewall & nftables:**
+* **Background Reload**: Firewall reload runs in the background (`reload_firewall &`), not blocking the main watchdog thread.
+* **nftables Table Check**: nftables operations only execute after confirming the table exists.
+* **Reload Deduplication**: Eliminated duplicate `reload_firewall` calls from different modules.
+
+**Wan-Monitor & Routing:**
+* **Wan-Monitor Notification Rate Limit**: 60-second cooldown between WAN problem notifications.
+* **Merged Recovery**: Unified function for restoring both WAN and gateway routes — prevents races during parallel recovery.
+* **Orphan Config Cleanup**: Automatic removal of temporary configs left over from interrupted startups.
+
 ### 🖥️ Modern Web Interface (LuCI)
 * Native integration into OpenWrt's LuCI dashboard.
 * Real-time latency tracking, subscription manager, rule editor, and service controls.
+* **Dynamic Repository Links**: The globe icon in each component card links to the installed variant's repository (extended → `shtorm-7/sing-box-extended`, lx → `Leadaxe/sing-box-lx`, stable → `SagerNet/sing-box`).
+* **Commit-Level Update Tracking**: The updates interface shows "Update available for current release" when a newer commit is available within the same release tag (e.g., 1.2.57).
 
 ---
 

@@ -1156,6 +1156,12 @@ function build_system_info() {
     let sing_box_compressed = flags.extended == 1 && sing_box_marker_is("extended-compressed") ? 1 : 0;
     let sing_box_lx = flags.extended == 1 && sing_box_marker_is("lx") ? 1 : 0;
 
+    let sing_box_repo_url = "https://github.com/SagerNet/sing-box";
+    if (sing_box_lx == 1)
+        sing_box_repo_url = "https://github.com/Leadaxe/sing-box-lx";
+    else if (flags.extended == 1)
+        sing_box_repo_url = "https://github.com/shtorm-7/sing-box-extended";
+
     let zapret_installed = provider_installed(ZAPRET_RUNTIME_UC) ? 1 : 0;
     let zapret_version = zapret_installed ? provider_version(ZAPRET_RUNTIME_UC) : "not installed";
     let zapret2_installed = provider_installed(ZAPRET2_RUNTIME_UC) ? 1 : 0;
@@ -1174,6 +1180,7 @@ function build_system_info() {
         sing_box_compressed,
         sing_box_lx,
         sing_box_tailscale: flags.tailscale,
+        sing_box_repo_url,
         zapret_version,
         zapret_installed,
         zapret2_version,

@@ -14327,7 +14327,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : formatSingBoxVersion(systemInfo),
       latestVersion: getLatestVersion("sing_box"),
       releaseUrl: getGitHubReleaseUrl("sing_box"),
-      repoUrl: COMPONENT_REPO_URLS.sing_box,
+      repoUrl: systemInfo.sing_box_repo_url || COMPONENT_REPO_URLS.sing_box,
       actions: singBoxActions
     },
     {
