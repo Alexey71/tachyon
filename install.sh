@@ -6,6 +6,11 @@ INSTALLER_VERSION="2.0.1"
 REPO_OWNER="Dushnilin"
 REPO_NAME="tachyon"
 
+# ─── Source TUI helpers (self-contained, no external deps) ───────────────────
+_TUI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}" 2>/dev/null)" && pwd)"
+[ -f "$_TUI_DIR/installer_tui.sh" ] && . "$_TUI_DIR/installer_tui.sh"
+unset _TUI_DIR
+
 REQUIRED_SPACE_KB=15360
 CONNECT_TIMEOUT_SECONDS=15
 METADATA_TIMEOUT_SECONDS=60
@@ -59,18 +64,30 @@ log_line() {
 msg() {
     log_line "INFO  $1"
     [ "$QUIET" -eq 1 ] && return 0
-    printf '\033[32;1m%s\033[0m\n' "$1"
+    if command -v tui_info >/dev/null 2>&1; then
+        tui_info "$1"
+    else
+        printf '\033[32;1m%s\033[0m\n' "$1"
+    fi
 }
 
 warn() {
     log_line "WARN  $1"
-    printf '\033[33;1m%s\033[0m\n' "$1" >&2
+    if command -v tui_warn >/dev/null 2>&1; then
+        tui_warn "$1"
+    else
+        printf '\033[33;1m%s\033[0m\n' "$1" >&2
+    fi
 }
 
 fail() {
     log_line "FAIL  $1"
-    printf '\033[31;1m%s\033[0m\n' "$1" >&2
-    printf '\033[31;1m%s\033[0m\n' "See $LOG_FILE for details." >&2
+    if command -v tui_err >/dev/null 2>&1; then
+        tui_err "$1"
+    else
+        printf '\033[31;1m%s\033[0m\n' "$1" >&2
+        printf '\033[31;1m%s\033[0m\n' "See $LOG_FILE for details." >&2
+    fi
     exit 1
 }
 
@@ -81,13 +98,16 @@ debug() {
 }
 
 step() {
-    # Announce a top-level installation stage, numbered for clarity.
     step_no="$1"
     step_total="$2"
     step_text="$3"
     log_line "STEP  [$step_no/$step_total] $step_text"
     [ "$QUIET" -eq 1 ] && return 0
-    printf '\033[34;1m[%s/%s]\033[0m \033[1m%s\033[0m\n' "$step_no" "$step_total" "$step_text"
+    if command -v tui_step >/dev/null 2>&1; then
+        tui_step "$step_no" "$step_total" "$step_text"
+    else
+        printf '\033[34;1m[%s/%s]\033[0m \033[1m%s\033[0m\n' "$step_no" "$step_total" "$step_text"
+    fi
 }
 
 usage() {
@@ -1956,6 +1976,11 @@ main() {
     detect_fetcher
     check_system
 
+    # Print TUI banner
+    if [ "$QUIET" -eq 0 ] && command -v tui_banner >/dev/null 2>&1; then
+        tui_banner
+    fi
+
     if [ "$DRY_RUN" -eq 1 ]; then
         warn "Dry-run mode: no packages, files, or configuration will be changed."
     fi
@@ -2006,16 +2031,35 @@ print_summary() {
     elapsed=$((end_time - START_TIME))
     [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0
 
-    printf '\n'
-    if [ "$DRY_RUN" -eq 1 ]; then
-        msg "Dry run complete in ${elapsed}s — no changes were made."
+    if command -v tui_box_start >/dev/null 2>&1; then
+        tui_box_start
+        if [ "$DRY_RUN" -eq 1 ]; then
+            tui_box_line "Dry run complete in ${elapsed}s — no changes were made."
+        else
+            tui_box_line_color "Tachyon $TACHYON_PACKAGE_VERSION installed successfully (${elapsed}s)" "$_c_green"
+        fi
+        tui_box_line "Release: ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
+        [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && tui_box_line "Legacy installation migrated and removed."
+        tui_box_line "Log: $LOG_FILE"
+        if command -v tui_box_divider >/dev/null 2>&1; then
+            tui_box_divider
+        else
+            tui_divider
+        fi
+        tui_box_line_color "Open LuCI and review your rules before enabling Tachyon" "$_c_yellow"
+        tui_box_end
     else
-        msg "Tachyon $TACHYON_PACKAGE_VERSION has been installed successfully (${elapsed}s)"
+        printf '\n'
+        if [ "$DRY_RUN" -eq 1 ]; then
+            msg "Dry run complete in ${elapsed}s — no changes were made."
+        else
+            msg "Tachyon $TACHYON_PACKAGE_VERSION has been installed successfully (${elapsed}s)"
+        fi
+        msg "Source release: ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
+        [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && msg "Legacy installation migrated and removed."
+        msg "Full log: $LOG_FILE"
+        warn "Open LuCI and review your rules before enabling Tachyon"
     fi
-    msg "Source release: ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
-    [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && msg "Legacy installation migrated and removed."
-    msg "Full log: $LOG_FILE"
-    warn "Open LuCI and review your rules before enabling Tachyon"
 }
 
 main "$@"
