@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-31 18:12+0300\n"
-"PO-Revision-Date: 2026-07-31 18:12+0300\n"
+"POT-Creation-Date: 2026-08-03 20:40+0300\n"
+"PO-Revision-Date: 2026-08-03 20:40+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -158,6 +158,9 @@ msgstr "Адрес"
 msgid "Administrator Chat IDs"
 msgstr "Telegram ID администраторов"
 
+msgid "Advanced self-healing features. Requires Watchdog to be enabled."
+msgstr "Расширенные функции самовосстановления. Требуется включённый Watchdog."
+
 msgid "Advertise exit node"
 msgstr "Анонсировать exit node"
 
@@ -166,6 +169,12 @@ msgstr "Анонсировать маршруты"
 
 msgid "AEAD Method"
 msgstr "Метод AEAD"
+
+msgid "AI Watchdog"
+msgstr "ИИ Watchdog"
+
+msgid "AI Watchdog settings saved. Restart watchdog to apply."
+msgstr "Настройки AI Watchdog сохранены. Перезапустите watchdog для применения."
 
 msgid "All"
 msgstr "Все"
@@ -248,6 +257,9 @@ msgstr "Автоматически определяет заблокирован
 msgid "Auto-generate HWID"
 msgstr "Автогенерация HWID"
 
+msgid "Auto-update Hosts Lists"
+msgstr "Автообновление списков хостов"
+
 msgid "Automatic component update checks"
 msgstr "Автоматическая проверка обновлений компонентов"
 
@@ -263,8 +275,14 @@ msgstr "Автоматически проверять наличие новых 
 msgid "Automatically generate a Cloudflare WARP account and configure all AmneziaWG settings."
 msgstr "Автоматически сгенерировать аккаунт Cloudflare WARP и настроить все параметры AmneziaWG."
 
+msgid "Automatically increase check intervals when healthy (to 5 min) and decrease on problems (to 120s)."
+msgstr "Автоматически увеличивает интервалы при стабильности (до 5 мин) и уменьшает при проблемах (до 120с)."
+
 msgid "Automatically select the fastest node in the current level"
 msgstr "Автовыбор самого быстрого узла уровня"
+
+msgid "Automatically update remote hosts lists on schedule"
+msgstr "Автоматически обновлять удалённые списки хостов по расписанию"
 
 msgid "Available actions"
 msgstr "Доступные действия"
@@ -638,6 +656,9 @@ msgstr ""
 msgid "DNS Check Interval"
 msgstr "Период проверки DNS"
 
+msgid "DNS Check Interval (s)"
+msgstr "Интервал проверки DNS (с)"
+
 msgid "DNS Failures Before Switching"
 msgstr "Ошибок DNS перед переключением"
 
@@ -646,6 +667,9 @@ msgstr "DNS на роутере"
 
 msgid "DNS over HTTPS (DoH)"
 msgstr "DNS через HTTPS (DoH)"
+
+msgid "DNS over QUIC (DoQ)"
+msgstr ""
 
 msgid "DNS over TLS (DoT)"
 msgstr "DNS через TLS (DoT)"
@@ -721,6 +745,12 @@ msgstr "Не тестировать серверы с одним из выбра
 
 msgid "Do not test specified servers."
 msgstr "Не тестировать указанные серверы."
+
+msgid "Doctor failed"
+msgstr ""
+
+msgid "Doctor repair"
+msgstr ""
 
 msgid "Does not resolve"
 msgstr "Не резолвится"
@@ -809,6 +839,12 @@ msgstr "Изменить"
 msgid "Enable"
 msgstr "Включить"
 
+msgid "Enable Adaptive Intervals"
+msgstr "Адаптивные интервалы"
+
+msgid "Enable Anomaly Detection"
+msgstr "Обнаружение аномалий"
+
 msgid "Enable authentication"
 msgstr "Включить авторизацию"
 
@@ -821,8 +857,23 @@ msgstr "Включить автостарт"
 msgid "Enable built-in DNS resolver for domains handled by this section"
 msgstr "Включить встроенный DNS резолвер для доменов, обрабатываемых этой секцией"
 
+msgid "Enable Config Validation"
+msgstr "Валидация конфига"
+
+msgid "Enable DNS Continuous Check"
+msgstr "Непрерывная проверка DNS"
+
 msgid "Enable DNS Turbo Cache"
 msgstr "Включить быстрый DNS-кэш"
+
+msgid "Enable Firewall Reload Dedup"
+msgstr "Дедупликация перезагрузки файрвола"
+
+msgid "Enable Graceful Degradation"
+msgstr "Graceful Degradation"
+
+msgid "Enable Health Metrics"
+msgstr "Метрики здоровья"
 
 msgid "Enable list updates"
 msgstr "Включить обновление списков"
@@ -835,6 +886,12 @@ msgstr "Включить аутентификацию смешанного пр�
 
 msgid "Enable Output Network Interface"
 msgstr "Включить выходной сетевой интерфейс"
+
+msgid "Enable Proxy Health Monitor"
+msgstr "Мониторинг здоровья прокси"
+
+msgid "Enable Smart Cooldowns"
+msgstr "Smart Cooldowns"
 
 msgid "Enable Smart Detect"
 msgstr "Включить Smart Detect"
@@ -971,6 +1028,9 @@ msgstr ""
 msgid "Failed to parse WARP config:"
 msgstr ""
 
+msgid "Failed to save AI Watchdog settings"
+msgstr "Ошибка сохранения настроек AI Watchdog"
+
 msgid "Failed to save device IPs"
 msgstr "Ошибка сохранения IP устройств"
 
@@ -1010,6 +1070,9 @@ msgstr "FakeTLS-хост"
 msgid "Fallback on unknown DC"
 msgstr "Fallback для неизвестного DC"
 
+msgid "Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."
+msgstr "Быстрый мониторинг DNS по умолчанию. Переключает bootstrap DNS при сбое."
+
 msgid "Faster server search interval"
 msgstr "Интервал поиска более быстрого сервера"
 
@@ -1027,6 +1090,9 @@ msgstr "Порт в firewall для WAN"
 
 msgid "Fix the highlighted fields and save again."
 msgstr "Исправьте подсвеченные поля и сохраните снова."
+
+msgid "Fixed"
+msgstr ""
 
 msgid "Forced device routing"
 msgstr "Принудительная маршрутизация устройств"
@@ -1103,6 +1169,9 @@ msgstr "gRPC-сервис"
 msgid "Handshake timeout"
 msgstr "Таймаут рукопожатия"
 
+msgid "Health Checks"
+msgstr "Проверки здоровья"
+
 msgid "Hide cascade connection nodes"
 msgstr "Скрыть узлы каскадных подключений"
 
@@ -1148,11 +1217,23 @@ msgstr "Проверка верхних DNS"
 msgid "Host"
 msgstr "Хост"
 
+msgid "Hosts Lists Update Interval"
+msgstr "Интервал обновления списков хостов"
+
+msgid "How many hours of metrics to keep (default 24)."
+msgstr "Сколько часов хранить метрики (по умолчанию 24)."
+
 msgid "How often higher priority levels are checked while a lower level is active"
 msgstr "Как часто проверяются уровни с более высоким приоритетом, пока активен уровень с более низким"
 
 msgid "How often the currently selected server is checked"
 msgstr "Как часто проверяется текущий выбранный сервер"
+
+msgid "How often to check DNS health in seconds (default 60)."
+msgstr "Как часто проверять DNS в секундах (по умолчанию 60)."
+
+msgid "How often to check proxy health in seconds (fast tier, default 30)."
+msgstr "Как часто проверять прокси в секундах (быстрый тир, по умолчанию 30)."
 
 msgid "How often to check Telegram for new messages (default: 5)."
 msgstr "Как часто проверять Telegram на наличие новых сообщений (по умолчанию: 5)."
@@ -1177,6 +1258,9 @@ msgstr "HWID"
 
 msgid "Idle timeout"
 msgstr "Таймаут простоя"
+
+msgid "If one health check fails with an error, continue running other checks instead of stopping."
+msgstr "Если одна проверка падает с ошибкой, продолжает другие проверки вместо остановки."
 
 msgid "Import"
 msgstr "Импортировать"
@@ -1493,6 +1577,9 @@ msgstr "Только IPv6"
 msgid "Isolate BitTorrent traffic and force it direct to prevent VPN bans"
 msgstr "Изолировать BitTorrent-трафик и направлять напрямую во избежание банов VPN"
 
+msgid "Issues"
+msgstr ""
+
 msgid "Issues detected"
 msgstr "Обнаружены проблемы"
 
@@ -1640,6 +1727,9 @@ msgstr "Совпадение найдено"
 msgid "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)"
 msgstr "Сопоставление трафика по DSCP-метке пакета (назначается в Windows через Policy-Based QoS). Примеры: 46 (EF), 0x2e, 34 (AF41)"
 
+msgid "Max reconnects per hour before alert (default 10)."
+msgstr "Макс. переподключений в час перед алертом (по умолчанию 10)."
+
 msgid "Maximum time to wait for example.com to resolve during a DNS health check."
 msgstr "Максимальное время ожидания разрешения example.com при проверке доступности DNS."
 
@@ -1648,6 +1738,9 @@ msgstr "Использование памяти"
 
 msgid "Method"
 msgstr "Метод"
+
+msgid "Metrics Retention (hours)"
+msgstr "Хранение метрик (часов)"
 
 msgid "Minimum latency difference in milliseconds that triggers switching to a faster server."
 msgstr "Минимальная разница в задержке (мс), при которой происходит переключение на более быстрый сервер."
@@ -1666,6 +1759,12 @@ msgstr "Наблюдаемые интерфейсы"
 
 msgid "Monitoring"
 msgstr "Мониторинг"
+
+msgid "Monitoring & Analytics"
+msgstr ""
+
+msgid "Monitors sing-box reconnect frequency. Alerts if too many reconnects per hour."
+msgstr "Мониторит частоту переподключений sing-box. Уведомляет при превышении лимита."
 
 msgid "Move down"
 msgstr "Вниз"
@@ -1751,6 +1850,9 @@ msgstr "Включённые серверные inbounds не настроены
 msgid "No file selected"
 msgstr "Файл не выбран"
 
+msgid "No issues found"
+msgstr ""
+
 msgid "No other marking rules found"
 msgstr "Другие правила маркировки не найдены"
 
@@ -1826,6 +1928,9 @@ msgstr "Уведомлять об обновлениях подписок"
 msgid "Number of consecutive failed checks required before switching DNS servers."
 msgstr "Количество последовательных неудачных проверок, необходимое для переключения DNS-сервера."
 
+msgid "Number of consecutive failures before restarting (default 3)."
+msgstr "Количество последовательных сбоев перед перезапуском (по умолчанию 3)."
+
 msgid "Number of consecutive successful checks required before returning to a higher-priority DNS server."
 msgstr "Количество последовательных успешных проверок, необходимое для возврата к DNS-серверу с более высоким приоритетом."
 
@@ -1873,6 +1978,9 @@ msgstr "Открыть страницу проекта"
 
 msgid "Operation timed out"
 msgstr "Время ожидания истекло"
+
+msgid "Optimization"
+msgstr ""
 
 msgid "Option \"%s\" contains an invalid input value."
 msgstr "Параметр \"%s\" содержит недопустимое значение."
@@ -1958,8 +2066,14 @@ msgstr "Маршрутизация по устройствам"
 msgid "Periodically check the current level and switch to a faster server even when the current one works."
 msgstr "Периодически проверять текущий уровень и переключаться на более быстрый сервер, даже если текущий работает."
 
+msgid "Periodically checks if the proxy is responding. Restarts Tachyon after consecutive failures."
+msgstr "Периодически проверяет работоспособность прокси. Перезапускает Tachyon после последовательных сбоев."
+
 msgid "Persistent Keepalive"
 msgstr ""
+
+msgid "Persistent Smart Detect"
+msgstr "Persistent Smart Detect"
 
 msgid "Pin on dashboard"
 msgstr "Закрепить на дашборде"
@@ -2009,6 +2123,9 @@ msgstr "Текст префикса"
 msgid "Preshared Key"
 msgstr "Общий ключ"
 
+msgid "Prevents multiple reload_firewall calls within 120 seconds to avoid connection drops."
+msgstr "Предотвращает множественные вызовы reload_firewall в течение 120 секунд для избежания обрывов."
+
 msgid "Priority"
 msgstr "Приоритет"
 
@@ -2030,8 +2147,20 @@ msgstr "Настройки приоритета"
 msgid "Private Key"
 msgstr "Приватный ключ"
 
+msgid "Protection"
+msgstr ""
+
 msgid "Protocol"
 msgstr "Протокол"
+
+msgid "Proxy Fail Threshold"
+msgstr "Порог ошибок прокси"
+
+msgid "Proxy Health Check Interval (s)"
+msgstr "Интервал проверки прокси (с)"
+
+msgid "Proxy Health Check URL"
+msgstr "URL проверки прокси"
 
 msgid "Proxy link is unavailable"
 msgstr "Ссылка прокси недоступна"
@@ -2075,6 +2204,12 @@ msgstr "Reality short ID"
 msgid "Reality short ID must contain 1-8 hex digits"
 msgstr "Reality short ID должен содержать 1-8 hex-символов"
 
+msgid "Reconnect Threshold"
+msgstr "Порог переподключений"
+
+msgid "Records proxy/DNS latency and health status in hourly buckets for analysis."
+msgstr "Записывает латентность прокси/DNS и статус здоровья в часовые интервалы для анализа."
+
 msgid "Records: %d"
 msgstr "Записей: %d"
 
@@ -2089,6 +2224,9 @@ msgstr "Регулярное выражение не должно содержа
 
 msgid "Reinstall"
 msgstr "Переустановить"
+
+msgid "Remote Hosts Lists"
+msgstr "Удалённые списки хостов"
 
 msgid "Remove"
 msgstr "Удалить"
@@ -2207,6 +2345,9 @@ msgstr ""
 msgid "Save"
 msgstr "Сохранить"
 
+msgid "Save AI Watchdog Settings"
+msgstr "Сохранить настройки AI Watchdog"
+
 msgid "Save Smart Detect Settings"
 msgstr "Сохранить настройки Smart Detect"
 
@@ -2235,7 +2376,7 @@ msgid "Section Rules Content"
 msgstr "Содержимое правил секции"
 
 msgid "Section test order (checked = active, drag rows with △▽):"
-msgstr "Порядок тестирования (отмечены активные, сортировка △▽):"
+msgstr "Порядок проверки секций (галочка = активна, перетаскивайте △▽):"
 
 msgid "Sections"
 msgstr "Секции"
@@ -2540,6 +2681,9 @@ msgstr "Запустить бота"
 msgid "Start Tachyon"
 msgstr "Запустить Tachyon"
 
+msgid "Start Watchdog first"
+msgstr "Сначала запустите Watchdog"
+
 msgid "Starting…"
 msgstr "Запуск…"
 
@@ -2563,6 +2707,9 @@ msgstr "Остановлен"
 
 msgid "Stopping…"
 msgstr "Остановка…"
+
+msgid "Store auto-detected domains in /etc instead of /tmp to survive reboots."
+msgstr "Хранить авто-обнаруженные домены в /etc вместо /tmp для сохранения после перезагрузок."
 
 msgid "Strict ECH + DoQ DNS Enforcer"
 msgstr "Strict ECH Enforcer"
@@ -2957,11 +3104,17 @@ msgstr ""
 msgid "URL must use one of the following protocols:"
 msgstr "URL должен использовать один из следующих протоколов:"
 
+msgid "URL to test through the proxy (default: Cloudflare 204)."
+msgstr "URL для теста через прокси (по умолчанию: Cloudflare 204)."
+
 msgid "URL used to check whether a server is alive"
 msgstr "URL для проверки доступности сервера"
 
 msgid "URL used to test server latency"
 msgstr "URL для тестирования задержки сервера"
+
+msgid "URLs of remote hosts files to download and apply. Supports standard hosts format: <code>IP domain</code>. Entries are resolved via both dnsmasq and sing-box DNS."
+msgstr "URL удалённых файлов хостов для загрузки и применения. Поддерживается стандартный формат hosts: <code>IP domain</code>. Записи разрешаются через dnsmasq и DNS sing-box."
 
 msgid "URLTest"
 msgstr "URLTest"
@@ -2974,6 +3127,9 @@ msgstr "Детали URLTest недоступны"
 
 msgid "URLTest settings"
 msgstr "Настройки URLTest"
+
+msgid "Use 3-tier check intervals: fast (15s), normal (120s), slow (300s) instead of a single interval."
+msgstr "3-уровневые интервалы проверок: быстрый (15с), нормальный (120с), медленный (300с)."
 
 msgid "Use 32 hex characters"
 msgstr "Укажите 32 hex-символа"
@@ -3017,6 +3173,9 @@ msgstr "Используйте формат длительности sing-box, �
 msgid "Use sing-box duration format like 1d, 12h or 30m"
 msgstr "Используйте формат длительности sing-box, например 1d, 12h или 30m"
 
+msgid "Use sing-box duration format like 1d, 12h or 6h"
+msgstr "Используйте формат длительности sing-box: 1d, 12h или 6h"
+
 msgid "Used by"
 msgstr "Используется"
 
@@ -3031,6 +3190,9 @@ msgstr "Имя пользователя не может быть пустым"
 
 msgid "Valid"
 msgstr "Валидно"
+
+msgid "Validates sing-box config before restart to prevent boot loops on broken configs."
+msgstr "Проверяет конфиг sing-box перед перезапуском для предотвращения boot loop на сломанных конфигах."
 
 msgid "Validation errors:"
 msgstr "Ошибки валидации:"
@@ -3148,126 +3310,3 @@ msgstr "sing-box outbound для Zapret2 настроен"
 
 msgid "Zapret2 sing-box outbound is not configured"
 msgstr "sing-box outbound для Zapret2 не настроен"
-
-msgid "AI Watchdog"
-msgstr "ИИ Watchdog"
-
-msgid "Advanced self-healing features. Requires Watchdog to be enabled."
-msgstr "Расширенные функции самовосстановления. Требуется включённый Watchdog."
-
-msgid "Health Checks"
-msgstr "Проверки здоровья"
-
-msgid "Enable Proxy Health Monitor"
-msgstr "Мониторинг здоровья прокси"
-
-msgid "Periodically checks if the proxy is responding. Restarts Tachyon after consecutive failures."
-msgstr "Периодически проверяет работоспособность прокси. Перезапускает Tachyon после последовательных сбоев."
-
-msgid "Proxy Health Check Interval (s)"
-msgstr "Интервал проверки прокси (с)"
-
-msgid "How often to check proxy health in seconds (fast tier, default 30)."
-msgstr "Как часто проверять прокси в секундах (быстрый тир, по умолчанию 30)."
-
-msgid "Proxy Fail Threshold"
-msgstr "Порог ошибок прокси"
-
-msgid "Number of consecutive failures before restarting (default 3)."
-msgstr "Количество последовательных сбоев перед перезапуском (по умолчанию 3)."
-
-msgid "Proxy Health Check URL"
-msgstr "URL проверки прокси"
-
-msgid "URL to test through the proxy (default: Cloudflare 204)."
-msgstr "URL для теста через прокси (по умолчанию: Cloudflare 204)."
-
-msgid "Enable DNS Continuous Check"
-msgstr "Непрерывная проверка DNS"
-
-msgid "Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."
-msgstr "Быстрый мониторинг DNS по умолчанию. Переключает bootstrap DNS при сбое."
-
-msgid "DNS Check Interval (s)"
-msgstr "Интервал проверки DNS (с)"
-
-msgid "How often to check DNS health in seconds (default 60)."
-msgstr "Как часто проверять DNS в секундах (по умолчанию 60)."
-
-msgid "Enable Firewall Reload Dedup"
-msgstr "Дедупликация перезагрузки файрвола"
-
-msgid "Prevents multiple reload_firewall calls within 120 seconds to avoid connection drops."
-msgstr "Предотвращает множественные вызовы reload_firewall в течение 120 секунд для избежания обрывов."
-
-msgid "Enable Health Metrics"
-msgstr "Метрики здоровья"
-
-msgid "Records proxy/DNS latency and health status in hourly buckets for analysis."
-msgstr "Записывает латентность прокси/DNS и статус здоровья в часовые интервалы для анализа."
-
-msgid "Metrics Retention (hours)"
-msgstr "Хранение метрик (часов)"
-
-msgid "How many hours of metrics to keep (default 24)."
-msgstr "Сколько часов хранить метрики (по умолчанию 24)."
-
-msgid "Enable Smart Cooldowns"
-msgstr "Smart Cooldowns"
-
-msgid "Use 3-tier check intervals: fast (15s), normal (120s), slow (300s) instead of a single interval."
-msgstr "3-уровневые интервалы проверок: быстрый (15с), нормальный (120с), медленный (300с)."
-
-msgid "Enable Config Validation"
-msgstr "Валидация конфига"
-
-msgid "Validates sing-box config before restart to prevent boot loops on broken configs."
-msgstr "Проверяет конфиг sing-box перед перезапуском для предотвращения boot loop на сломанных конфигах."
-
-msgid "Enable Graceful Degradation"
-msgstr "Graceful Degradation"
-
-msgid "If one health check fails with an error, continue running other checks instead of stopping."
-msgstr "Если одна проверка падает с ошибкой, продолжает другие проверки вместо остановки."
-
-msgid "Persistent Smart Detect"
-msgstr "Persistent Smart Detect"
-
-msgid "Store auto-detected domains in /etc instead of /tmp to survive reboots."
-msgstr "Хранить авто-обнаруженные домены в /etc вместо /tmp для сохранения после перезагрузок."
-
-msgid "Enable Adaptive Intervals"
-msgstr "Адаптивные интервалы"
-
-msgid "Automatically increase check intervals when healthy (to 5 min) and decrease on problems (to 120s)."
-msgstr "Автоматически увеличивает интервалы при стабильности (до 5 мин) и уменьшает при проблемах (до 120с)."
-
-msgid "Enable Anomaly Detection"
-msgstr "Обнаружение аномалий"
-
-msgid "Monitors sing-box reconnect frequency. Alerts if too many reconnects per hour."
-msgstr "Мониторит частоту переподключений sing-box. Уведомляет при превышении лимита."
-
-msgid "Reconnect Threshold"
-msgstr "Порог переподключений"
-
-msgid "Max reconnects per hour before alert (default 10)."
-msgstr "Макс. переподключений в час перед алертом (по умолчанию 10)."
-
-msgid "Save AI Watchdog Settings"
-msgstr "Сохранить настройки AI Watchdog"
-
-msgid "AI Watchdog settings saved. Restart watchdog to apply."
-msgstr "Настройки AI Watchdog сохранены. Перезапустите watchdog для применения."
-
-msgid "Failed to save AI Watchdog settings"
-msgstr "Ошибка сохранения настроек AI Watchdog"
-
-msgid "Start Watchdog first"
-msgstr "Сначала запустите Watchdog"
-
-msgid "Saving…"
-msgstr "Сохранение…"
-
-msgid "Section test order (checked = active, drag rows with △▽):"
-msgstr "Порядок проверки секций (галочка = активна, перетаскивайте △▽):"
