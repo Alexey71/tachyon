@@ -1336,7 +1336,7 @@ function apply_migrations(ctx) {
         try {
             migration.run(ctx);
         } catch(e) {
-            log_message("Migration '" + migration.id + "' failed: " + as_string(e), "err");
+            warn("Migration '" + migration.id + "' failed: " + as_string(e) + "\n");
             continue;
         }
         seen[migration.id] = true;
@@ -1427,8 +1427,8 @@ function ensure_runtime_cache_format() {
             subscription_share_link.populate_subscription_dir(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR);
         clear_subscription_runtime_cache();
         ensure_runtime_dirs();
-        if (fs.writefile(TACHYON_RUNTIME_CACHE_FORMAT_FILE, TACHYON_RUNTIME_CACHE_FORMAT + "\n") == null)
-            log_message("Failed to write runtime cache format file", "warn");
+            if (fs.writefile(TACHYON_RUNTIME_CACHE_FORMAT_FILE, TACHYON_RUNTIME_CACHE_FORMAT + "\n") == null)
+                warn("Failed to write runtime cache format file\n");
     }
 
     if (first_line(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE) != TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT) {
@@ -1436,7 +1436,7 @@ function ensure_runtime_cache_format() {
         ensure_dir(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR);
         run("chmod 700 " + shell_quote(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_DIR) + " >/dev/null 2>&1");
         if (fs.writefile(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE, TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT + "\n") == null)
-            log_message("Failed to write persistent cache format file", "warn");
+            warn("Failed to write persistent cache format file\n");
         run("chmod 600 " + shell_quote(TACHYON_PERSISTENT_SUBSCRIPTION_CACHE_FORMAT_FILE) + " >/dev/null 2>&1");
     }
 }
@@ -1453,7 +1453,7 @@ function remove_cache_path(path) {
         else
             fs.unlink(path);
     } catch(e) {
-        log_message("Failed to remove cache path: " + path, "warn");
+        warn("Failed to remove cache path: " + path + "\n");
     }
 }
 
@@ -1483,7 +1483,7 @@ function apply_operations(cursor, operations) {
             else if (op.op == "set_type")
                 cursor.set(CONFIG_NAME, section_ref(op.section), op.type);
         } catch(e) {
-            log_message("Migration operation '" + op.op + "' failed: " + as_string(e), "err");
+            warn("Migration operation '" + op.op + "' failed: " + as_string(e) + "\n");
         }
     }
 }
@@ -1567,7 +1567,7 @@ function migrate_runtime(source) {
     try {
         apply_operations(cursor, ctx.operations);
     } catch(e) {
-        log_message("Migration apply_operations failed: " + as_string(e), "err");
+        warn("Migration apply_operations failed: " + as_string(e) + "\n");
         return false;
     }
     let committed = commit_cursor(cursor);
