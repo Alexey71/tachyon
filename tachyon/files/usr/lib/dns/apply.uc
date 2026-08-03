@@ -6,6 +6,7 @@ let uci = require("core.uci");
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const SB_DNS_INBOUND_ADDRESS = getenv("SB_DNS_INBOUND_ADDRESS") || "127.0.0.42";
 const DNSMASQ_INIT = getenv("DNSMASQ_INIT") || "/etc/init.d/dnsmasq";
+const HOSTS_CACHE_FILE = getenv("TACHYON_HOSTS_CACHE_FILE") || "/etc/tachyon/hosts-lists/combined.txt";
 
 function as_string(value) {
     return value == null ? "" : "" + value;
@@ -188,10 +189,16 @@ function dnsmasq_configure_default_instance() {
         backup_dnsmasq_config_option("cachesize", "tachyon_cachesize");
     }
 
+    backup_dnsmasq_config_option("addn_hosts", "tachyon_addn_hosts");
+
     uci_delete("dhcp.@dnsmasq[0].server");
     uci_add_list("dhcp.@dnsmasq[0].server", SB_DNS_INBOUND_ADDRESS);
     uci_set("dhcp.@dnsmasq[0].noresolv", "1");
     uci_set("dhcp.@dnsmasq[0].cachesize", "0");
+
+    if (fs.stat(HOSTS_CACHE_FILE) != null) {
+        uci_set("dhcp.@dnsmasq[0].addn_hosts", HOSTS_CACHE_FILE);
+    }
 }
 
 function dnsmasq_restore_default_instance() {
@@ -224,6 +231,8 @@ function dnsmasq_restore_default_instance() {
         restore_dnsmasq_config_option("cachesize", "tachyon_cachesize", "");
     else if (managed_global_dns)
         uci_set("dhcp.@dnsmasq[0].cachesize", "150");
+
+    restore_dnsmasq_config_option("addn_hosts", "tachyon_addn_hosts", "");
 }
 
 function dnsmasq_configure(force) {

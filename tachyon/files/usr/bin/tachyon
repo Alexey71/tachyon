@@ -119,6 +119,8 @@ function show_help() {
     print("    component_action_status Get background component action status\n");
     print("    component_updates_if_due Check installed components for updates when due\n");
     print("    component_update_check_cache Get cached component update check results\n");
+    print("    hosts_list_update [url] Update custom hosts lists (all or specific URL)\n");
+    print("    hosts_list_status       Show hosts lists status\n");
     print("    check_dns_available     Check DNS server availability\n");
     print("    global_check            Run global system check\n");
     print("    doctor                  Run doctor diagnostics checks\n");
@@ -201,6 +203,8 @@ function command_spec(command) {
         component_action_status: [ "components/updates.uc", "component-action-status", 1 ],
         component_updates_if_due: [ "components/updates.uc", "component-updates-if-due", 0 ],
         component_update_check_cache: [ "components/updates.uc", "component-update-check-cache", 0 ],
+        hosts_list_update: [ "components/hosts.uc", "list-update", 1 ],
+        hosts_list_status: [ "components/hosts.uc", "list-status", 0 ],
         extract_ruleset: [ "diagnostics/runtime.uc", "extract-ruleset", 1 ],
         check_dns_available: [ "diagnostics/runtime.uc", "check-dns-available", 0 ],
         global_check: [ "diagnostics/runtime.uc", "global-check", 2 ],

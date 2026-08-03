@@ -1222,6 +1222,44 @@ function createSettingsContent(section, capabilities) {
     ]);
   };
 
+  // ─── Remote Hosts Lists ──────────────────────────────────────────────────
+
+  const hostsListUrlsOpt = section.option(
+    form.DynamicList,
+    "hosts_list_urls",
+    _("Remote Hosts Lists"),
+    _("URLs of remote hosts files to download and apply. Supports standard hosts format: <code>IP domain</code>. Entries are resolved via both dnsmasq and sing-box DNS."),
+  );
+  hostsListUrlsOpt.placeholder = "https://raw.githubusercontent.com/.../hosts";
+
+  o = section.option(
+    form.Flag,
+    "hosts_list_auto_update",
+    _("Auto-update Hosts Lists"),
+    _("Automatically update remote hosts lists on schedule"),
+  );
+  o.default = "0";
+  o.rmempty = false;
+
+  o = section.option(
+    form.Value,
+    "hosts_list_update_interval",
+    _("Hosts Lists Update Interval"),
+    _("Use sing-box duration format like 1d, 12h or 6h"),
+  );
+  o.depends("hosts_list_auto_update", "1");
+  o.placeholder = "24h";
+  o.default = "24h";
+  o.rmempty = false;
+  o.validate = function (_section_id, value) {
+    if (!value) return true;
+    return /^(?=.*[1-9])([0-9]+(?:\.[0-9]+)?(?:ns|us|ms|s|m|h|d))+$/.test(value)
+      ? true
+      : _("Use sing-box duration format like 1d, 12h or 6h");
+  };
+
+  // ─── DNS Strategy ────────────────────────────────────────────────────────
+
   o = section.option(form.ListValue, "dns_strategy", _("DNS Strategy"));
   o.value("prefer_ipv4", _("Prefer IPv4"));
   o.value("ipv4_only", _("IPv4 only"));

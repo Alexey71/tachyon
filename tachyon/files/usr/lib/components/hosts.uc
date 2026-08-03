@@ -1,0 +1,223 @@
+#!/usr/bin/env ucode
+
+let fs = require("fs");
+let uci = require("core.uci");
+
+const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
+const HOSTS_CACHE_DIR = getenv("TACHYON_HOSTS_CACHE_DIR") || "/etc/tachyon/hosts-lists";
+const HOSTS_CACHE_FILE = HOSTS_CACHE_DIR + "/combined.txt";
+const HOSTS_TMP_DIR = getenv("TACHYON_HOSTS_TMP_DIR") || "/tmp/tachyon/hosts-lists";
+const CONNECT_TIMEOUT = "30";
+
+function as_string(value) {
+    return value == null ? "" : "" + value;
+}
+
+function shell_quote(value) {
+    return "'" + replace(as_string(value), /'/g, "'\\''") + "'";
+}
+
+function run(command) {
+    return system(command) == 0;
+}
+
+function log(message, level) {
+    level = as_string(level || "info");
+    run("logger -t " + shell_quote("tachyon-hosts") + " " + shell_quote("[" + level + "] " + as_string(message)));
+}
+
+function mkdir_p(path) {
+    run("mkdir -p " + shell_quote(path));
+}
+
+function file_nonempty(path) {
+    let st = fs.stat(path);
+    return st != null && int(st.size) > 0;
+}
+
+function remove_file(path) {
+    fs.remove(path);
+}
+
+function http_get_to_file(url, output_path) {
+    mkdir_p(dirname(output_path));
+    let cmd = "wget -q -O " + shell_quote(output_path) + " --timeout=" + CONNECT_TIMEOUT + " " + shell_quote(url);
+    return run(cmd);
+}
+
+function download_with_retry(url, output_path, label) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        let current_url = url;
+        if (attempt == 2 && index(current_url, "https://github.com/") == 0) {
+            log("Retrying " + as_string(label) + " via gh-proxy.com mirror", "warn");
+            current_url = "https://gh-proxy.com/" + url;
+        } else if (attempt == 3 && index(current_url, "https://github.com/") == 0) {
+            log("Retrying " + as_string(label) + " via ghproxy.net mirror", "warn");
+            current_url = "https://ghproxy.net/" + url;
+        } else if (attempt > 1) {
+            log("Retrying " + as_string(label), "warn");
+        }
+
+        log("Downloading " + as_string(label) + " (attempt " + attempt + "/3)");
+        if (http_get_to_file(current_url, output_path) && file_nonempty(output_path))
+            return output_path;
+        remove_file(output_path);
+    }
+    return null;
+}
+
+function parse_hosts_file(path) {
+    let entries = [];
+    let fh = fs.open(path, "r");
+    if (fh == null)
+        return entries;
+
+    let line;
+    while ((line = fh.read("line")) != null) {
+        line = trim(line);
+        if (line == "" || substr(line, 0, 1) == "#")
+            continue;
+
+        let parts = split(line, /[ \t]+/);
+        if (length(parts) < 2)
+            continue;
+
+        let p1 = parts[0];
+        let p2 = parts[1];
+
+        if (core_ip.valid_ip(p1)) {
+            let ip = p1;
+            for (let i = 1; i < length(parts); i++) {
+                let domain = parts[i];
+                if (domain != "" && substr(domain, 0, 1) != "#" && index(domain, ":") == -1)
+                    push(entries, { ip: ip, domain: domain });
+            }
+        } else if (core_ip.valid_ip(p2)) {
+            let domain = p1;
+            let ip = p2;
+            if (index(domain, ":") == -1)
+                push(entries, { ip: ip, domain: domain });
+        }
+    }
+    fh.close();
+    return entries;
+}
+
+function write_hosts_cache(entries, source_urls) {
+    mkdir_p(HOSTS_CACHE_DIR);
+
+    let fh = fs.open(HOSTS_CACHE_FILE, "w");
+    if (fh == null) {
+        log("Failed to open " + HOSTS_CACHE_FILE + " for writing", "error");
+        return false;
+    }
+
+    fh.write("# Tachyon hosts lists — combined cache\n");
+    fh.write("# Generated: " + strftime("%Y-%m-%d %H:%M:%S", localtime()) + "\n");
+    if (source_urls != null) {
+        for (let url in source_urls)
+            fh.write("# Source: " + url + "\n");
+    }
+    fh.write("# Entries: " + length(entries) + "\n");
+    fh.write("#\n");
+
+    for (let entry in entries)
+        fh.write(entry.ip + " " + entry.domain + "\n");
+
+    fh.close();
+    log("Wrote " + length(entries) + " hosts entries to " + HOSTS_CACHE_FILE);
+    return true;
+}
+
+function get_hosts_urls() {
+    let urls = [];
+    let uci_urls = uci.get(CONFIG_NAME + ".settings.hosts_list_urls");
+    if (uci_urls == "")
+        return urls;
+
+    if (type(uci_urls) == "array") {
+        for (let url in uci_urls) {
+            let s = trim(url);
+            if (s != "")
+                push(urls, s);
+        }
+    } else {
+        let s = trim(uci_urls);
+        if (s != "")
+            push(urls, s);
+    }
+    return urls;
+}
+
+function hosts_list_update(target_url) {
+    let urls = target_url != null && target_url != "" ? [target_url] : get_hosts_urls();
+    if (length(urls) == 0) {
+        log("No hosts list URLs configured", "warn");
+        print('{"success":false,"error":"no_urls","entries":0}');
+        return false;
+    }
+
+    mkdir_p(HOSTS_TMP_DIR);
+
+    let all_entries = [];
+    let updated_urls = [];
+
+    for (let url in urls) {
+        let label = "hosts list from " + url;
+        let safe_name = replace(url, /[^a-zA-Z0-9]/, "_");
+        let tmp_file = HOSTS_TMP_DIR + "/list-" + safe_name + ".txt";
+
+        if (download_with_retry(url, tmp_file, label) != null) {
+            let entries = parse_hosts_file(tmp_file);
+            log("Parsed " + length(entries) + " entries from " + url);
+            for (let entry in entries)
+                push(all_entries, entry);
+            push(updated_urls, url);
+        } else {
+            log("Failed to download hosts list from " + url, "error");
+        }
+        remove_file(tmp_file);
+    }
+
+    if (length(all_entries) == 0) {
+        log("No valid hosts entries found in any list", "error");
+        print('{"success":false,"error":"empty","entries":0}');
+        return false;
+    }
+
+    if (!write_hosts_cache(all_entries, updated_urls)) {
+        print('{"success":false,"error":"write_failed","entries":0}');
+        return false;
+    }
+
+    log("Hosts lists updated: " + length(all_entries) + " entries from " + length(updated_urls) + " sources");
+
+    print('{"success":true,"entries":' + length(all_entries) + ',"sources":' + length(updated_urls) + '}');
+    return true;
+}
+
+function hosts_list_status() {
+    let urls = get_hosts_urls();
+    let cache_exists = fs.stat(HOSTS_CACHE_FILE) != null;
+    let entry_count = 0;
+
+    if (cache_exists) {
+        let st = fs.stat(HOSTS_CACHE_FILE);
+        entry_count = int(st.size);
+    }
+
+    print('{"urls":' + length(urls) + ',"cache_exists":' + (cache_exists ? 'true' : 'false') + ',"cache_size":' + entry_count + '}');
+}
+
+let command = ARGV[0] || "";
+
+if (command == "list-update") {
+    let target_url = ARGV[1] || "";
+    exit(hosts_list_update(target_url) ? 0 : 1);
+} else if (command == "list-status") {
+    hosts_list_status();
+    exit(0);
+}
+
+warn("Usage: components/hosts.uc <list-update [url]|list-status>\n");
+exit(1);

@@ -67,6 +67,11 @@ config settings 'settings'
         option ai_anomaly_detection_enabled '1'
         option ai_anomaly_reconnect_threshold '10'
 
+        # ─── Hosts Lists ────────────────────────────────────────────────────────
+        # list hosts_list_urls 'https://raw.githubusercontent.com/.../hosts'
+        option hosts_list_auto_update '0'
+        option hosts_list_update_interval '24h'
+
 
 #config section 'subscription_example'
 #        option label 'Subscription'
