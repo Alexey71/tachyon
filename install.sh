@@ -1318,6 +1318,22 @@ pkg_install_files() {
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
         apk add --allow-untrusted "$@" </dev/null
+        local rc=$?
+        if [ $rc -ne 0 ]; then
+            # apk may report warnings as errors even though the package installed successfully
+            # (e.g., ip-full conflict with ip, missing optional deps, etc.)
+            # Check if at least one of the requested packages is now installed
+            local pkg_file
+            for pkg_file in "$@"; do
+                local pkg_name
+                pkg_name="$(basename "$pkg_file" | sed 's/\.[^.]*$//')"
+                if pkg_is_installed "$pkg_name"; then
+                    warn "Package manager reported non-critical errors during installation (package is installed OK)"
+                    return 0
+                fi
+            done
+            return $rc
+        fi
     else
         opkg install --force-overwrite --force-downgrade "$@" </dev/null
     fi
