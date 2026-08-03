@@ -11,6 +11,11 @@ REPO_NAME="tachyon"
 # Degrades gracefully when TERM is dumb or stdout is not a terminal.
 
 # ─── Color detection ──────────────────────────────────────────────────────────
+# We use printf to resolve ESC sequences into actual bytes.
+# Busybox printf on OpenWrt does not interpret \033 inside %s arguments,
+# so the variables must contain the real ESC character (0x1b) at assignment time.
+ESC="$(printf '\033')"
+
 _tui_colors=0
 if [ -t 1 ] 2>/dev/null; then
     case "${TERM:-dumb}" in
@@ -20,21 +25,21 @@ if [ -t 1 ] 2>/dev/null; then
 fi
 
 if [ "$_tui_colors" -eq 1 ]; then
-    _c_reset='\033[0m'
-    _c_bold='\033[1m'
-    _c_dim='\033[2m'
-    _c_red='\033[31;1m'
-    _c_green='\033[32;1m'
-    _c_yellow='\033[33;1m'
-    _c_blue='\033[34;1m'
-    _c_cyan='\033[36;1m'
-    _c_magenta='\033[35;1m'
-    _c_white='\033[37;1m'
-    _c_bg_blue='\033[44m'
-    _c_bg_green='\033[42m'
-    _c_bg_red='\033[41m'
-    _c_bg_yellow='\033[43m'
-    _c_underline='\033[4m'
+    _c_reset="${ESC}[0m"
+    _c_bold="${ESC}[1m"
+    _c_dim="${ESC}[2m"
+    _c_red="${ESC}[31;1m"
+    _c_green="${ESC}[32;1m"
+    _c_yellow="${ESC}[33;1m"
+    _c_blue="${ESC}[34;1m"
+    _c_cyan="${ESC}[36;1m"
+    _c_magenta="${ESC}[35;1m"
+    _c_white="${ESC}[37;1m"
+    _c_bg_blue="${ESC}[44m"
+    _c_bg_green="${ESC}[42m"
+    _c_bg_red="${ESC}[41m"
+    _c_bg_yellow="${ESC}[43m"
+    _c_underline="${ESC}[4m"
 else
     _c_reset=''
     _c_bold=''
@@ -111,6 +116,7 @@ _tui_pad() {
 tui_banner() {
     printf '\n'
     printf '  %s%sTachyon Installer%s v%s%s\n' "$_c_cyan" "$_c_bold" "$_c_reset" "$_c_bold" "$INSTALLER_VERSION"
+    printf '%s' "$_c_reset"
     printf '%s\n' ""
     printf '%s%s%s\n' "$_c_dim" "$(_tui_hline '─')" "$_c_reset"
 }
@@ -367,7 +373,7 @@ msg() {
     if command -v tui_info >/dev/null 2>&1; then
         tui_info "$1"
     else
-        printf '\033[32;1m%s\033[0m\n' "$1"
+        printf '%s%s%s\n' "${_c_green}${_c_bold}" "$1" "$_c_reset"
     fi
 }
 
@@ -376,7 +382,7 @@ warn() {
     if command -v tui_warn >/dev/null 2>&1; then
         tui_warn "$1"
     else
-        printf '\033[33;1m%s\033[0m\n' "$1" >&2
+        printf '%s%s%s\n' "${_c_yellow}${_c_bold}" "$1" "$_c_reset" >&2
     fi
 }
 
@@ -385,8 +391,8 @@ fail() {
     if command -v tui_err >/dev/null 2>&1; then
         tui_err "$1"
     else
-        printf '\033[31;1m%s\033[0m\n' "$1" >&2
-        printf '\033[31;1m%s\033[0m\n' "See $LOG_FILE for details." >&2
+        printf '%s%s%s\n' "${_c_red}${_c_bold}" "$1" "$_c_reset" >&2
+        printf '%s%sLog: %s%s\n' "$_c_dim" "" "$LOG_FILE" "$_c_reset" >&2
     fi
     exit 1
 }
@@ -394,7 +400,7 @@ fail() {
 debug() {
     log_line "DEBUG $1"
     [ "$VERBOSE" -eq 1 ] || return 0
-    printf '\033[36m[debug] %s\033[0m\n' "$1"
+    printf '%s[debug] %s%s\n' "$_c_cyan" "$1" "$_c_reset"
 }
 
 step() {
@@ -406,7 +412,7 @@ step() {
     if command -v tui_step >/dev/null 2>&1; then
         tui_step "$step_no" "$step_total" "$step_text"
     else
-        printf '\033[34;1m[%s/%s]\033[0m \033[1m%s\033[0m\n' "$step_no" "$step_total" "$step_text"
+        printf '%s[%s/%s]%s %s%s%s\n' "$_c_blue$_c_bold" "$step_no" "$step_total" "$_c_reset" "$_c_bold" "$step_text" "$_c_reset"
     fi
 }
 
@@ -1565,6 +1571,8 @@ download_with_retry() {
     url="$1"
     output_path="$2"
     label="$3"
+    dl_num="${4:-}"
+    dl_total="${5:-}"
     attempt=1
     max_attempts=3
 
@@ -1578,7 +1586,11 @@ download_with_retry() {
             current_url="https://ghproxy.net/$url"
         fi
 
-        msg "Downloading $label ($attempt/$max_attempts)"
+        if [ -n "$dl_num" ] && [ -n "$dl_total" ]; then
+            msg "[$dl_num/$dl_total] Downloading $label"
+        else
+            msg "Downloading $label"
+        fi
 
         if download_file_once "$current_url" "$output_path" && [ -s "$output_path" ]; then
             return 0
@@ -1609,9 +1621,9 @@ pkg_list_update() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk update </dev/null
+        apk update >/dev/null 2>&1
     else
-        opkg update </dev/null
+        opkg update >/dev/null 2>&1
     fi
 }
 
@@ -1624,9 +1636,9 @@ pkg_install_name() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk add "$pkg_name" </dev/null
+        apk add "$pkg_name" >/dev/null 2>&1
     else
-        opkg install "$pkg_name" </dev/null
+        opkg install "$pkg_name" >/dev/null 2>&1
     fi
 }
 
@@ -1637,7 +1649,7 @@ pkg_install_files() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk add --allow-untrusted "$@" </dev/null
+        apk add --allow-untrusted "$@" >/dev/null 2>&1
         local rc=$?
         if [ $rc -ne 0 ]; then
             # apk may report warnings as errors even though the package installed successfully
@@ -1655,7 +1667,7 @@ pkg_install_files() {
             return $rc
         fi
     else
-        opkg install --force-overwrite --force-downgrade "$@" </dev/null
+        opkg install --force-overwrite --force-downgrade "$@" >/dev/null 2>&1
     fi
 }
 
@@ -2173,14 +2185,17 @@ download_tachyon_packages() {
         return 0
     fi
 
-    download_with_retry "$TACHYON_SHA256_URL" "$TACHYON_SHA256_FILE" "sha256sums.txt" || fail "Failed to download sha256sums.txt"
+    local _total=3
+    [ -n "$TACHYON_I18N_URL" ] && _total=4
 
-    download_with_retry "$TACHYON_BACKEND_URL" "$TACHYON_BACKEND_FILE" "$TACHYON_BACKEND_NAME" || fail "Failed to download $TACHYON_BACKEND_NAME"
-    download_with_retry "$TACHYON_APP_URL" "$TACHYON_APP_FILE" "$TACHYON_APP_NAME" || fail "Failed to download $TACHYON_APP_NAME"
+    download_with_retry "$TACHYON_SHA256_URL" "$TACHYON_SHA256_FILE" "sha256sums.txt" 1 "$_total" || fail "Failed to download sha256sums.txt"
+
+    download_with_retry "$TACHYON_BACKEND_URL" "$TACHYON_BACKEND_FILE" "$TACHYON_BACKEND_NAME" 2 "$_total" || fail "Failed to download $TACHYON_BACKEND_NAME"
+    download_with_retry "$TACHYON_APP_URL" "$TACHYON_APP_FILE" "$TACHYON_APP_NAME" 3 "$_total" || fail "Failed to download $TACHYON_APP_NAME"
 
     if [ -n "$TACHYON_I18N_URL" ]; then
         TACHYON_I18N_FILE="$TMP_DIR/$TACHYON_I18N_NAME"
-        download_with_retry "$TACHYON_I18N_URL" "$TACHYON_I18N_FILE" "$TACHYON_I18N_NAME" || fail "Failed to download $TACHYON_I18N_NAME"
+        download_with_retry "$TACHYON_I18N_URL" "$TACHYON_I18N_FILE" "$TACHYON_I18N_NAME" 4 "$_total" || fail "Failed to download $TACHYON_I18N_NAME"
     fi
 
     msg "Verifying package checksums..."
