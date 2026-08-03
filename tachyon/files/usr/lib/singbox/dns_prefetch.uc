@@ -185,8 +185,16 @@ function prefetch() {
     if (!common.bool_option(settings, "dns_turbo_cache", true))
         return;
 
-    // Give sing-box time to fully initialize before issuing queries.
-    common.command_success_from_args([ "sleep", "10" ]);
+    // Give sing-box time to fully initialize — poll instead of blocking sleep
+    let ready = false;
+    for (let i = 0; i < 20; i++) {
+        if (common.command_success_from_args(["nslookup", "localhost", "127.0.0.1"])) {
+            ready = true;
+            break;
+        }
+        common.command_success_from_args(["sleep", "1"]);
+    }
+    if (!ready) return;
 
     // 1. Collect domains from user's actual sections (highest priority)
     let seen = {};

@@ -20,6 +20,8 @@ let shell_quote = common.shell_quote;
 let proxy_restart_count = 0;
 let proxy_restart_window_start = time();
 const PROXY_RESTART_LOCK = "/var/run/tachyon_proxy_restart.lock";
+let telegram_msg_count = 0;
+let telegram_msg_window = time();
 
 let command_from_args = common.command_from_args;
 let command_status = common.command_status;
@@ -78,6 +80,13 @@ function log_message(message, level) {
 }
 
 function send_telegram_notification(message) {
+    let now = time();
+    if (now - telegram_msg_window > 300) {
+        telegram_msg_count = 0;
+        telegram_msg_window = now;
+    }
+    if (telegram_msg_count >= 10) return;
+    telegram_msg_count++;
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.enabled == "1" && tcfg.bot_token && tcfg.admin_ids) {
         system("/usr/bin/tachyon telegram send " + shell_quote(message) + " </dev/null >/dev/null 2>&1 1000<&- &");
@@ -722,42 +731,32 @@ function check_firewall_rules() {
     ai_heal_community_subnet_sets();
 }
 
-function ai_heal_wan_interface() {
+function ai_heal_wan_and_gateway() {
     let now = time();
     if (now - last_wan_heal_time < 300) return;
     if (is_reload_in_progress()) return;
 
+    let need_restart = false;
+
+    // Check WAN interface
     let proto = uci_core.get("network", "wan", "proto") || "pppoe";
     let device = trim(uci_core.get("network", "wan", "device") || "eth0");
-
     let iface_to_check = device;
-    if (proto == "pppoe") {
-        iface_to_check = "pppoe-wan";
-    }
+    if (proto == "pppoe") iface_to_check = "pppoe-wan";
 
     let out = command_capture("ip addr show " + shell_quote(iface_to_check) + " 2>/dev/null").output;
-    if (index(out, "inet ") >= 0) return;
+    if (index(out, "inet ") < 0) need_restart = true;
+
+    // Check gateway
+    let route_out = command_capture("ip route 2>/dev/null").output;
+    if (index(route_out, "default") < 0) need_restart = true;
+
+    if (!need_restart) return;
 
     last_wan_heal_time = now;
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.notify_crash != "0") {
-        send_telegram_notification("⚠️ *Watchdog:* WAN интерфейс " + iface_to_check + " без IP (" + proto + "). Перезапуск wan...");
-    }
-    system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
-}
-
-function ai_heal_gateway() {
-    let now = time();
-    if (now - last_gateway_heal_time < 300) return;
-    if (is_reload_in_progress()) return;
-
-    let out = command_capture("ip route 2>/dev/null").output;
-    if (index(out, "default") >= 0) return;
-
-    last_gateway_heal_time = now;
-    let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
-    if (tcfg.notify_crash != "0") {
-        send_telegram_notification("⚠️ *Watchdog:* Default gateway отсутствует. Перезапуск wan...");
+        send_telegram_notification("⚠️ *Watchdog:* WAN/Gateway проблема. Перезапуск wan...");
     }
     system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
 }
@@ -814,11 +813,11 @@ function ai_enabled(key, default_val) {
 
 // ─── Reload dedup: prevent multiple reload_firewall per cycle ─────────────────
 function safe_reload_firewall() {
-    if (ai_enabled("ai_reload_dedup_enabled", "1")) {
-        let now = time();
-        if (now - last_reload_time < 120) return;
-        last_reload_time = now;
-    }
+    let now = time();
+    let elapsed = now - last_reload_time;
+    let min_interval = 120;
+    if (ai_enabled("ai_reload_dedup_enabled", "1") && elapsed < min_interval) return;
+    last_reload_time = now;
     system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
 }
 
@@ -958,7 +957,10 @@ function ai_heal_empty_sections() {
         let servers = common.array_or_empty(cache.servers);
         let urls = common.array_or_empty(cache.urls);
         let selector_urls = common.array_or_empty(cache.selector_urls);
-        let usable = length(servers) + length(urls) + length(selector_urls);
+        let domains = common.array_or_empty(cache.domain);
+        let domain_suffixes = common.array_or_empty(cache.domain_suffix);
+        let ip_cidrs = common.array_or_empty(cache.ip_cidr);
+        let usable = length(servers) + length(urls) + length(selector_urls) + length(domains) + length(domain_suffixes) + length(ip_cidrs);
         if (usable > 0) continue;
 
         // Section with subscriptions but 0 usable outbounds — trigger async reload
@@ -1019,8 +1021,8 @@ function ai_heal_dns_loop() {
         // DNS works — if we were in recovery, try to restore
         let recovery = read_dns_recovery_state();
         if (recovery.phase == "detour_disabled") {
-            // DNS is working now without detour — subscriptions might be restored
-            // Try re-enabling detour
+            let reenable_cooldown = recovery.ts ? (now - int(recovery.ts)) : 0;
+            if (reenable_cooldown < 300) return;
             let test_dns = command_success_from_args(["nslookup", "check.tachyon", "127.0.0.1"]);
             if (test_dns) {
                 log_message("DNS loop recovery: DNS works, re-enabling DNS detour section", "info");
@@ -1183,8 +1185,7 @@ function ai_full_health_audit() {
     safe_call(ai_heal_dns, "ai_heal_dns");
     safe_call(ai_heal_proxy_connectivity, "ai_heal_proxy_connectivity");
     safe_call(ai_heal_community_subnet_sets, "ai_heal_community_subnet_sets");
-    safe_call(ai_heal_wan_interface, "ai_heal_wan_interface");
-    safe_call(ai_heal_gateway, "ai_heal_gateway");
+    safe_call(ai_heal_wan_and_gateway, "ai_heal_wan_and_gateway");
     safe_call(ai_heal_subscriptions, "ai_heal_subscriptions");
     safe_call(ai_heal_uci_config, "ai_heal_uci_config");
     safe_call(ai_heal_tproxy_port, "ai_heal_tproxy_port");
@@ -1486,6 +1487,15 @@ function worker() {
     // Ensure /etc/tachyon exists for persistent smart detect
     try { fs.mkdir("/etc/tachyon"); } catch(e) {}
 
+    // H-14: Save config backup after successful start
+    let current_cfg = fs.readfile("/etc/config/tachyon");
+    if (current_cfg != null && current_cfg != "") {
+        try { fs.writefile("/etc/backup/tachyon_config", current_cfg); } catch(e) {}
+    }
+
+    // H-8: Write keepalive timestamp for init.d supervision
+    try { fs.writefile("/var/run/tachyon_watchdog.keepalive", as_string(time())); } catch(e) {}
+
     if (uloop) {
         try {
             uloop.init();
@@ -1525,6 +1535,7 @@ function worker() {
         tick = function() {
             let now = time();
             try {
+                try { fs.writefile("/var/run/tachyon_watchdog.keepalive", as_string(time())); } catch(e) {}
                 if (now - last_fast_check >= 15) {
                     last_fast_check = now;
                     perform_fast_checks();

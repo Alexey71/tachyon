@@ -109,7 +109,16 @@ function uci_backup_save() {
         let data = fs.readfile(TACHYON_CONFIG);
         if (data == null || data == "") return false;
         fs.mkdir(UCI_BACKUP_DIR);
-        return fs.writefile(UCI_BACKUP_PATH, data) != null;
+        let tmp = UCI_BACKUP_PATH + ".tmp";
+        if (fs.writefile(tmp, data) == null) {
+            try { fs.unlink(tmp); } catch(e) {}
+            return false;
+        }
+        if (!fs.rename(tmp, UCI_BACKUP_PATH)) {
+            try { fs.unlink(tmp); } catch(e) {}
+            return false;
+        }
+        return true;
     } catch (e) { return false; }
 }
 
@@ -117,8 +126,16 @@ function uci_backup_restore() {
     try {
         let data = fs.readfile(UCI_BACKUP_PATH);
         if (data == null || data == "") return false;
-        fs.unlink(TACHYON_CONFIG);
-        return fs.writefile(TACHYON_CONFIG, data) != null;
+        let tmp = TACHYON_CONFIG + ".tmp";
+        if (fs.writefile(tmp, data) == null) {
+            try { fs.unlink(tmp); } catch(e) {}
+            return false;
+        }
+        if (!fs.rename(tmp, TACHYON_CONFIG)) {
+            try { fs.unlink(tmp); } catch(e) {}
+            return false;
+        }
+        return true;
     } catch (e) { return false; }
 }
 
@@ -130,7 +147,7 @@ function uci_config_valid() {
 }
 
 function dns_check_through_singbox(domain) {
-    let res = command_capture("nslookup -port=53 " + shell_quote(domain) + " " + SB_DNS_INBOUND_ADDRESS + " 2>&1");
+    let res = command_capture("nslookup " + shell_quote(domain) + " " + SB_DNS_INBOUND_ADDRESS + " 2>&1");
     return index(res.output, "Address:") >= 0 && index(res.output, "#53") >= 0 && index(res.output, "NXDOMAIN") < 0;
 }
 
@@ -2447,7 +2464,9 @@ function run_doctor_checks() {
         let new_scale = scale * 0.8;
         if (new_scale < 0.2) new_scale = 0.2;
         fs.mkdir("/etc/tachyon");
-        fs.writefile(scale_path, sprintf("%.2f", new_scale));
+        let scale_tmp = scale_path + ".tmp";
+        if (fs.writefile(scale_tmp, sprintf("%.2f", new_scale)) != null)
+            fs.rename(scale_tmp, scale_path);
         command_status("/usr/bin/tachyon restart >/dev/null 2>&1");
         doc_check("⚠️", "Free RAM", sprintf("%dMB", free_mb), sprintf("→ FIXED: GOMEMLIMIT снижен до %.2f, services перезапущены", new_scale));
         fixed++;
@@ -2528,7 +2547,9 @@ function run_doctor_checks() {
         let new_scale = scale * 0.8;
         if (new_scale < 0.2) new_scale = 0.2;
         fs.mkdir("/etc/tachyon");
-        fs.writefile(scale_path, sprintf("%.2f", new_scale));
+        let scale_tmp2 = scale_path + ".tmp";
+        if (fs.writefile(scale_tmp2, sprintf("%.2f", new_scale)) != null)
+            fs.rename(scale_tmp2, scale_path);
         command_status("logread -c >/dev/null 2>&1");
 
         doc_check("❌", "System OOM checks", sprintf("OOM detected (current scale: %.2f)", scale), sprintf("→ FIXED: Scaled GOMEMLIMIT to %.2f and cleared logs", new_scale));

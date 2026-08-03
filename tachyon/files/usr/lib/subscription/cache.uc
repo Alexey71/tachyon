@@ -1725,10 +1725,10 @@ function download_subscription_into_cache(section_name_value, subscription_url, 
         }
 
         if (files_equal(normalized_tmpfile, subscription_json_path)) {
-            write_text(subscription_url_cache_path, subscription_url);
-            write_text(subscription_user_agent_cache_path, effective_user_agent);
-            write_text(subscription_hwid_cache_path, effective_hwid);
-            write_text(subscription_device_headers_cache_path, subscription_device_headers_signature);
+            write_text_if_changed(subscription_url_cache_path, subscription_url);
+            write_text_if_changed(subscription_user_agent_cache_path, effective_user_agent);
+            write_text_if_changed(subscription_hwid_cache_path, effective_hwid);
+            write_text_if_changed(subscription_device_headers_cache_path, subscription_device_headers_signature);
             persist_subscription_cache(cache_section, subscription_json_path, subscription_url, effective_user_agent, effective_hwid, metadata_tmpfile, subscription_device_headers_signature) ||
                 log_message("Failed to persist last working subscription cache for source '" + cache_section + "'", "warn");
             if (!file_nonempty(metadata_output_path))
@@ -1751,10 +1751,10 @@ function download_subscription_into_cache(section_name_value, subscription_url, 
                 return 1;
             }
 
-            write_text(subscription_url_cache_path, subscription_url);
-            write_text(subscription_user_agent_cache_path, effective_user_agent);
-            write_text(subscription_hwid_cache_path, effective_hwid);
-            write_text(subscription_device_headers_cache_path, subscription_device_headers_signature);
+            write_text_if_changed(subscription_url_cache_path, subscription_url);
+            write_text_if_changed(subscription_user_agent_cache_path, effective_user_agent);
+            write_text_if_changed(subscription_hwid_cache_path, effective_hwid);
+            write_text_if_changed(subscription_device_headers_cache_path, subscription_device_headers_signature);
             persist_subscription_cache(cache_section, subscription_json_path, subscription_url, effective_user_agent, effective_hwid, metadata_tmpfile, subscription_device_headers_signature) ||
                 log_message("Failed to persist last working subscription cache for source '" + cache_section + "'", "warn");
             if (!file_nonempty(metadata_output_path))
@@ -1775,10 +1775,10 @@ function download_subscription_into_cache(section_name_value, subscription_url, 
             return 1;
         }
 
-        write_text(subscription_url_cache_path, subscription_url);
-        write_text(subscription_user_agent_cache_path, effective_user_agent);
-        write_text(subscription_hwid_cache_path, effective_hwid);
-        write_text(subscription_device_headers_cache_path, subscription_device_headers_signature);
+write_text_if_changed(subscription_url_cache_path, subscription_url);
+            write_text_if_changed(subscription_user_agent_cache_path, effective_user_agent);
+            write_text_if_changed(subscription_hwid_cache_path, effective_hwid);
+            write_text_if_changed(subscription_device_headers_cache_path, subscription_device_headers_signature);
         persist_subscription_cache(cache_section, subscription_json_path, subscription_url, effective_user_agent, effective_hwid, metadata_tmpfile, subscription_device_headers_signature) ||
             log_message("Failed to persist last working subscription cache for source '" + cache_section + "'", "warn");
         if (!file_nonempty(metadata_output_path))

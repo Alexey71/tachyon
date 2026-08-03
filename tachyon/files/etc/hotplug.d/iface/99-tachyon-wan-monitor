@@ -1,5 +1,15 @@
 #!/bin/sh
 # Only process ifup and ifdown events for WAN interfaces
+# Rate limit: max 1 notification per 60 seconds
+COOLDOWN_FILE="/tmp/tachyon_wan_monitor_cooldown"
+NOW=$(date +%s)
+if [ -f "$COOLDOWN_FILE" ]; then
+    LAST=$(cat "$COOLDOWN_FILE" 2>/dev/null || echo 0)
+    DIFF=$((NOW - LAST))
+    [ "$DIFF" -lt 60 ] && exit 0
+fi
+echo "$NOW" > "$COOLDOWN_FILE"
+
 case "$INTERFACE" in
     wan*|wwan*|lte*)
         case "$ACTION" in
