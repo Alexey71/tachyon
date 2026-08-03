@@ -136,9 +136,9 @@ function postinst_restore() {
     if (env("IPKG_INSTROOT", "") != "" || !path_exists(PACKAGE_UPGRADE_STATE))
         return true;
 
-    command_success_from_args([ INIT_PATH, "start" ]);
+    let started = command_success_from_args([ INIT_PATH, "start" ]);
     unlink_if_exists(PACKAGE_UPGRADE_STATE);
-    return true;
+    return started;
 }
 
 function luci_cache_globs() {

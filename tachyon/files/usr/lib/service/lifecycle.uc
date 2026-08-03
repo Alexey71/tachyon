@@ -560,7 +560,8 @@ function discover_awg_mtu() {
         }
     }
     if (changed) {
-        system("uci commit tachyon");
+        if (!command_success_from_args(["uci", "commit", "tachyon"]))
+            log_message("AWG MTU: uci commit tachyon failed", "warn");
     }
 }
 
@@ -794,8 +795,12 @@ function start_main() {
 
 function start_impl() {
     // Start Watchdog & Telegram Bot early so they remain active even if proxy configuration fails
-    module_status(WATCHDOG_UC, [ "start-runtime" ]);
-    module_status(TELEGRAM_UC, [ "start-runtime" ]);
+    let wd_status = module_status(WATCHDOG_UC, [ "start-runtime" ]);
+    if (wd_status != 0)
+        log_message("Watchdog start-runtime failed (status " + as_string(wd_status) + ")", "warn");
+    let tg_status = module_status(TELEGRAM_UC, [ "start-runtime" ]);
+    if (tg_status != 0)
+        log_message("Telegram start-runtime failed (status " + as_string(tg_status) + ")", "warn");
 
     let status = start_main();
     if (status != 0)

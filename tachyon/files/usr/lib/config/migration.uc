@@ -1550,10 +1550,11 @@ function migrate_runtime(source) {
         return true;
 
     apply_operations(cursor, ctx.operations);
+    let committed = commit_cursor(cursor);
     for (let path in ctx.removed_caches)
         remove_cache_path(path);
 
-    return commit_cursor(cursor);
+    return committed;
 }
 
 function commit_runtime() {

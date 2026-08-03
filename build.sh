@@ -523,17 +523,57 @@ write_backend_apk_scripts() {
 
   cat > "$scripts_dir/backend-pre-install.sh" <<'EOF'
 #!/usr/bin/ucode
+let fs = require("fs");
+let cfg = "/etc/config/tachyon";
+let backup = "/etc/.tachyon/.cfg-backup.pre-install";
+system("mkdir -p /etc/.tachyon 2>/dev/null");
+if (fs.stat(cfg)) {
+    let data = fs.readfile(cfg);
+    if (data != null && data != "")
+        fs.writefile(backup, data);
+}
 exit(0);
 EOF
 
   cat > "$scripts_dir/backend-post-install.sh" <<'EOF'
 #!/usr/bin/ucode
+let fs = require("fs");
+let cfg = "/etc/config/tachyon";
+let backup = "/etc/.tachyon/.cfg-backup.pre-install";
+function sha256(path) {
+    let pipe = fs.popen("sha256sum " + path + " 2>/dev/null", "r");
+    if (!pipe) return "";
+    let data = pipe.read("all");
+    let status = pipe.close();
+    if (status != 0 || data == null) return "";
+    let parts = ("" + data).split(/\s+/);
+    return parts[0] || "";
+}
+function restore_cfg_from_backup() {
+    if (!fs.stat(backup)) return;
+    let backup_hash = sha256(backup);
+    let cfg_hash = sha256(cfg);
+    if (backup_hash != "" && cfg_hash != "" && backup_hash != cfg_hash) {
+        let bk_data = fs.readfile(backup);
+        if (bk_data != null && bk_data != "") {
+            let tmp = cfg + ".restore-tmp";
+            if (fs.writefile(tmp, bk_data) != null) {
+                fs.rename(tmp, cfg);
+                system("chmod 0600 " + cfg + " 2>/dev/null");
+            }
+        }
+    }
+    fs.unlink(backup);
+}
 if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
     system("rm -rf /usr/lib/lua/luci/i18n/forkop.* /www/luci-static/resources/i18n/forkop.* /usr/share/luci/menu.d/luci-app-forkop.json /usr/share/rpcd/acl.d/luci-app-forkop.json /etc/uci-defaults/50_luci-forkop 2>/dev/null || true");
+    let is_legacy_migration = false;
     if (system("test -f /etc/config/forkop") == 0) {
         system("mv /etc/config/forkop /etc/config/tachyon");
+        is_legacy_migration = true;
     } else if (system("test -f /etc/config/forkop_plus") == 0) {
         system("mv /etc/config/forkop_plus /etc/config/tachyon");
+        is_legacy_migration = true;
     } else if (system("test -f /etc/config/podkop") == 0) {
         system("mv /etc/config/podkop /etc/config/tachyon");
         system("TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate-podkop");
@@ -543,6 +583,8 @@ if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
         system("TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate-podkop");
         exit(system("/usr/bin/tachyon package_postinst"));
     }
+    if (!is_legacy_migration)
+        restore_cfg_from_backup();
     exit(system("TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate && /usr/bin/tachyon package_postinst"));
 }
 exit(0);
@@ -566,12 +608,43 @@ EOF
 
   cat > "$scripts_dir/backend-post-upgrade.sh" <<'EOF'
 #!/usr/bin/ucode
+let fs = require("fs");
+let cfg = "/etc/config/tachyon";
+let backup = "/etc/.tachyon/.cfg-backup.pre-install";
+function sha256(path) {
+    let pipe = fs.popen("sha256sum " + path + " 2>/dev/null", "r");
+    if (!pipe) return "";
+    let data = pipe.read("all");
+    let status = pipe.close();
+    if (status != 0 || data == null) return "";
+    let parts = ("" + data).split(/\s+/);
+    return parts[0] || "";
+}
+function restore_cfg_from_backup() {
+    if (!fs.stat(backup)) return;
+    let backup_hash = sha256(backup);
+    let cfg_hash = sha256(cfg);
+    if (backup_hash != "" && cfg_hash != "" && backup_hash != cfg_hash) {
+        let bk_data = fs.readfile(backup);
+        if (bk_data != null && bk_data != "") {
+            let tmp = cfg + ".restore-tmp";
+            if (fs.writefile(tmp, bk_data) != null) {
+                fs.rename(tmp, cfg);
+                system("chmod 0600 " + cfg + " 2>/dev/null");
+            }
+        }
+    }
+    fs.unlink(backup);
+}
 if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
     system("rm -rf /usr/lib/lua/luci/i18n/forkop.* /www/luci-static/resources/i18n/forkop.* /usr/share/luci/menu.d/luci-app-forkop.json /usr/share/rpcd/acl.d/luci-app-forkop.json /etc/uci-defaults/50_luci-forkop 2>/dev/null || true");
+    let is_legacy_migration = false;
     if (system("test -f /etc/config/forkop") == 0) {
         system("mv /etc/config/forkop /etc/config/tachyon");
+        is_legacy_migration = true;
     } else if (system("test -f /etc/config/forkop_plus") == 0) {
         system("mv /etc/config/forkop_plus /etc/config/tachyon");
+        is_legacy_migration = true;
     } else if (system("test -f /etc/config/podkop") == 0) {
         system("mv /etc/config/podkop /etc/config/tachyon");
         system("TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate-podkop");
@@ -581,6 +654,8 @@ if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
         system("TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate-podkop");
         exit(system("/usr/bin/tachyon package_postinst"));
     }
+    if (!is_legacy_migration)
+        restore_cfg_from_backup();
     exit(system("TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate && /usr/bin/tachyon package_postinst"));
 }
 exit(0);

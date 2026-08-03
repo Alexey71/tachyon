@@ -17,6 +17,10 @@ const SMART_DETECT_SEEN_FILE = "/etc/tachyon/smart_detect_seen.json";
 let as_string = common.as_string;
 let shell_quote = common.shell_quote;
 
+let proxy_restart_count = 0;
+let proxy_restart_window_start = time();
+const PROXY_RESTART_LOCK = "/var/run/tachyon_proxy_restart.lock";
+
 let command_from_args = common.command_from_args;
 let command_status = common.command_status;
 let command_success_from_args = common.command_success_from_args;
@@ -311,7 +315,7 @@ function handle_singbox_stop_event(reason) {
     if (tcfg.notify_crash != "0") {
         send_telegram_notification("⚠️ *Watchdog:* sing-box остановлен. Перезапускаю службы Tachyon...");
     }
-    system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
+    safe_proxy_restart("singbox_stopped");
 }
 
 function check_singbox_process() {
@@ -427,6 +431,26 @@ function is_reload_in_progress() {
         || check_tachyon_cli_running();
 }
 
+function safe_proxy_restart(reason) {
+    let now = time();
+    if (now - proxy_restart_window_start > 600) {
+        proxy_restart_count = 0;
+        proxy_restart_window_start = now;
+    }
+    if (proxy_restart_count >= 3) {
+        log_message("Proxy restart rate limit: " + as_string(proxy_restart_count) + " in 10 min, skipping (" + reason + ")", "warn");
+        return false;
+    }
+    if (fs.stat(PROXY_RESTART_LOCK) != null) {
+        log_message("Proxy restart lock exists, skipping (" + reason + ")", "warn");
+        return false;
+    }
+    try { fs.writefile(PROXY_RESTART_LOCK, as_string(now)); } catch(e) {}
+    proxy_restart_count++;
+    system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+    return true;
+}
+
 function ai_heal_nftables() {
     let cfg = settings();
     let routing_mode = cfg.routing_mode || "nftables";
@@ -480,24 +504,19 @@ function ai_heal_dns() {
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
 
     let dns_ok = command_success_from_args([
-        "nslookup", "-port=53", "check.tachyon", "127.0.0.1"
+        "nslookup", "check.tachyon", "127.0.0.1"
     ]);
     if (!dns_ok) {
-        let sb_dns_ok = command_success_from_args([
-            "nslookup", "-port=5353", "check.tachyon", "127.0.0.1"
-        ]);
-        if (sb_dns_ok) {
-            ai_heal_report(
-                "dns",
-                "Сбой перенаправления DNS в dnsmasq (порт 53 ➔ 5353)",
-                "Восстановлена конфигурация dnsmasq и перезапущена служба dhcp",
-                "fixed"
-            );
-            system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
-            system("/sbin/uci commit dhcp >/dev/null 2>&1");
-            system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
-            return false;
-        }
+        ai_heal_report(
+            "dns",
+            "DNS resolution failed on sing-box (port 53)",
+            "Восстановлена конфигурация dnsmasq и перезапущена служба dhcp",
+            "fixed"
+        );
+        system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
+        system("/sbin/uci commit dhcp >/dev/null 2>&1");
+        system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
+        return false;
     }
     return true;
 }
@@ -545,7 +564,7 @@ function ai_heal_proxy_connectivity() {
                 "fixed"
             );
             remove_file("/tmp/sing-box/cache.db");
-            system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+            safe_proxy_restart("proxy_connectivity");
             return false;
         }
     }
@@ -708,8 +727,8 @@ function ai_heal_wan_interface() {
     if (now - last_wan_heal_time < 300) return;
     if (is_reload_in_progress()) return;
 
-    let proto = uci_core.get(CONFIG_NAME, "network", "wan", "proto") || "pppoe";
-    let device = trim(uci_core.get(CONFIG_NAME, "network", "wan", "device") || "eth0");
+    let proto = uci_core.get("network", "wan", "proto") || "pppoe";
+    let device = trim(uci_core.get("network", "wan", "device") || "eth0");
 
     let iface_to_check = device;
     if (proto == "pppoe") {
@@ -767,9 +786,18 @@ function ai_heal_uci_config() {
         }
         let backup = fs.readfile("/etc/backup/tachyon_config");
         if (backup != null && backup != "") {
-            fs.unlink("/etc/config/tachyon");
-            fs.writefile("/etc/config/tachyon", backup);
-            system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
+            let valid = command_success_from_args([ "uci", "-c", "/etc/config", "valid", CONFIG_NAME ]) ||
+                        command_success_from_args([ "/sbin/uci", "valid", CONFIG_NAME ]);
+            if (!valid) {
+                log_message("Backup config also invalid, skipping restore", "warn");
+                return;
+            }
+            let tmp = "/etc/config/tachyon.restore-tmp";
+            if (fs.writefile(tmp, backup) != null) {
+                fs.rename(tmp, "/etc/config/tachyon");
+                system("chmod 0600 /etc/config/tachyon 2>/dev/null");
+                safe_proxy_restart("uci_config_restore");
+            }
         }
     }
 }
@@ -856,7 +884,7 @@ function ai_heal_proxy_health() {
                 log_message("sing-box config validation failed before proxy restart", "err");
                 return;
             }
-            system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+            safe_proxy_restart("proxy_health");
             proxy_consecutive_fails = 0;
         }
     } else {
@@ -874,7 +902,7 @@ function ai_heal_dns_continuous() {
 
     let start_time = time();
     let dns_ok = command_success_from_args([
-        "nslookup", "-port=53", "check.tachyon", "127.0.0.1"
+        "nslookup", "check.tachyon", "127.0.0.1"
     ]);
     let elapsed = (time() - start_time) * 1000;
 
@@ -889,21 +917,16 @@ function ai_heal_dns_continuous() {
     if (!dns_ok) {
         dns_consecutive_fails++;
         if (dns_consecutive_fails >= 3) {
-            let sb_dns_ok = command_success_from_args([
-                "nslookup", "-port=5353", "check.tachyon", "127.0.0.1"
-            ]);
-            if (sb_dns_ok) {
-                ai_heal_report(
-                    "dns_continuous",
-                    "DNS on port 53 failed 3 times, port 5353 works (dnsmasq redirect issue)",
-                    "Restoring dnsmasq config and reloading",
-                    "fixed"
-                );
-                system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
-                system("/sbin/uci commit dhcp >/dev/null 2>&1");
-                system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
-                dns_consecutive_fails = 0;
-            }
+            ai_heal_report(
+                "dns_continuous",
+                "DNS resolution failed 3 times consecutively",
+                "Restoring dnsmasq config and reloading",
+                "fixed"
+            );
+            system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
+            system("/sbin/uci commit dhcp >/dev/null 2>&1");
+            system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
+            dns_consecutive_fails = 0;
         }
     } else {
         dns_consecutive_fails = 0;
@@ -959,9 +982,8 @@ let DNS_RECOVERY_STATE_FILE = "/var/run/tachyon/dns-detour-recovery.json";
 let dns_recovery_active = false;
 
 function is_dns_dead() {
-    let port53 = command_success_from_args(["nslookup", "-port=53", "check.tachyon", "127.0.0.1"]);
-    let port5353 = command_success_from_args(["nslookup", "-port=5353", "check.tachyon", "127.0.0.1"]);
-    return !port53 && !port5353;
+    let port53 = command_success_from_args(["nslookup", "check.tachyon", "127.0.0.1"]);
+    return !port53;
 }
 
 function read_dns_recovery_state() {
@@ -999,12 +1021,12 @@ function ai_heal_dns_loop() {
         if (recovery.phase == "detour_disabled") {
             // DNS is working now without detour — subscriptions might be restored
             // Try re-enabling detour
-            let test_dns = command_success_from_args(["nslookup", "-port=53", "check.tachyon", "127.0.0.1"]);
+            let test_dns = command_success_from_args(["nslookup", "check.tachyon", "127.0.0.1"]);
             if (test_dns) {
                 log_message("DNS loop recovery: DNS works, re-enabling DNS detour section", "info");
                 system("/sbin/uci set tachyon.settings.dns_detour_enabled='1' >/dev/null 2>&1");
                 system("/sbin/uci commit tachyon >/dev/null 2>&1");
-                system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+                safe_proxy_restart("dns_loop_recovery");
                 remove_dns_recovery_state();
                 ai_heal_report(
                     "dns_loop_recovery",
@@ -1042,7 +1064,7 @@ function ai_heal_dns_loop() {
     log_message("DNS loop detected: DNS detour section '" + detour_section + "' is empty, disabling DNS detour to recover", "warn");
     system("/sbin/uci set tachyon.settings.dns_detour_enabled='0' >/dev/null 2>&1");
     system("/sbin/uci commit tachyon >/dev/null 2>&1");
-    system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+    safe_proxy_restart("dns_loop_disable");
     write_dns_recovery_state({ phase: "detour_disabled", section: detour_section, ts: now });
 
     // Trigger subscription update for the empty section

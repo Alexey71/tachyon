@@ -2220,7 +2220,34 @@ install_backend_package() {
         fi
     done
 
+    # Protect user configuration from being overwritten by apk.
+    # apk add --allow-untrusted may not respect conffiles_static on all
+    # OpenWrt builds, silently replacing /etc/config/tachyon with defaults.
+    local cfg_backup="/etc/.tachyon/.cfg-backup.pre-install"
+    local cfg_hash_before=""
+    mkdir -p /etc/.tachyon 2>/dev/null || true
+    if [ -r /etc/config/tachyon ]; then
+        cp -a /etc/config/tachyon "$cfg_backup" 2>/dev/null ||
+            warn "Failed to back up Tachyon configuration before package install"
+        local _sha_out
+        _sha_out="$(sha256sum /etc/config/tachyon 2>/dev/null)"
+        cfg_hash_before="${_sha_out%% *}"
+    fi
+
     pkg_install_files "$TACHYON_BACKEND_FILE" || fail "tachyon installation failed"
+
+    # Restore if apk overwrote the config with defaults
+    if [ -n "$cfg_hash_before" ] && [ -r /etc/config/tachyon ] && [ -r "$cfg_backup" ] && [ -s "$cfg_backup" ]; then
+        local cfg_hash_after _sha_out2
+        _sha_out2="$(sha256sum /etc/config/tachyon 2>/dev/null)"
+        cfg_hash_after="${_sha_out2%% *}"
+        if [ "$cfg_hash_before" != "$cfg_hash_after" ]; then
+            warn "Package manager overwrote /etc/config/tachyon; restoring user configuration"
+            cp -a "$cfg_backup" /etc/config/tachyon
+            chmod 0600 /etc/config/tachyon
+        fi
+    fi
+    rm -f "$cfg_backup" 2>/dev/null
 }
 
 migrate_legacy_configuration() {

@@ -110,9 +110,10 @@ function parse_hosts_file(path) {
 function write_hosts_cache(entries, source_urls) {
     mkdir_p(HOSTS_CACHE_DIR);
 
-    let fh = fs.open(HOSTS_CACHE_FILE, "w");
+    let tmp_path = HOSTS_CACHE_FILE + ".tmp." + as_string(getpid());
+    let fh = fs.open(tmp_path, "w");
     if (fh == null) {
-        log("Failed to open " + HOSTS_CACHE_FILE + " for writing", "error");
+        log("Failed to open " + tmp_path + " for writing", "error");
         return false;
     }
 
@@ -128,6 +129,7 @@ function write_hosts_cache(entries, source_urls) {
         fh.write(entry.ip + " " + entry.domain + "\n");
 
     fh.close();
+    run("mv " + shell_quote(tmp_path) + " " + shell_quote(HOSTS_CACHE_FILE));
     log("Wrote " + length(entries) + " hosts entries to " + HOSTS_CACHE_FILE);
     return true;
 }
@@ -201,11 +203,11 @@ function hosts_list_update(target_url) {
 
 function hosts_list_status() {
     let urls = get_hosts_urls();
-    let cache_exists = fs.stat(HOSTS_CACHE_FILE) != null;
+    let st = fs.stat(HOSTS_CACHE_FILE);
+    let cache_exists = st != null;
     let entry_count = 0;
 
     if (cache_exists) {
-        let st = fs.stat(HOSTS_CACHE_FILE);
         entry_count = int(st.size);
     }
 

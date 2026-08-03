@@ -961,7 +961,9 @@ function backup_archive_safe(members) {
 function backup_extract_dir() {
     let ts = time();
     let rand = sprintf("%04x", int(Math.random() * 65536));
-    return "/tmp/tachyon_restore_" + as_string(ts) + "_" + rand;
+    let dir = "/etc/.tachyon/restore_" + as_string(ts) + "_" + rand;
+    system("mkdir -p " + shell_quote(dir) + " 2>/dev/null");
+    return dir;
 }
 
 function config_sane_preview(path) {
@@ -972,9 +974,11 @@ function config_sane_preview(path) {
 }
 
 function restore_config_from_backup(backup_path) {
-    system(command_from_args([ "rm", "-f", "/etc/config/tachyon" ]) + " >/dev/null 2>&1");
-    if (backup_path && fs.stat(backup_path))
-        system(command_from_args([ "cp", "-a", backup_path, "/etc/config/tachyon" ]) + " >/dev/null 2>&1");
+    if (backup_path && fs.stat(backup_path)) {
+        let tmp = "/etc/config/tachyon.restore-tmp";
+        system(command_from_args([ "cp", "-a", backup_path, tmp ]) + " >/dev/null 2>&1");
+        system(command_from_args([ "mv", "-f", tmp, "/etc/config/tachyon" ]) + " >/dev/null 2>&1");
+    }
 }
 
 function apply_backup_restore(token, chat_id, dl_path) {
@@ -1022,7 +1026,7 @@ function apply_backup_restore(token, chat_id, dl_path) {
     }
 
     // Snapshot live targets so a failed reload can be rolled back
-    let cfg_backup = "/tmp/tachyon_restore_cfg_backup." + as_string(time());
+    let cfg_backup = "/etc/.tachyon/restore_cfg_backup." + as_string(time());
     if (fs.stat("/etc/config/tachyon")) {
         if (command_status(command_from_args([ "cp", "-a", "/etc/config/tachyon", cfg_backup ])) != 0) {
             command_status(command_from_args([ "rm", "-rf", stage ]));
@@ -1030,7 +1034,7 @@ function apply_backup_restore(token, chat_id, dl_path) {
             return;
         }
     }
-    let data_backup = "/tmp/tachyon_restore_data_backup." + as_string(time());
+    let data_backup = "/etc/.tachyon/restore_data_backup." + as_string(time());
     if (fs.stat("/etc/tachyon")) {
         if (command_status(command_from_args([ "cp", "-a", "/etc/tachyon", data_backup ])) != 0) {
             command_status(command_from_args([ "rm", "-f", cfg_backup ]));
@@ -1084,7 +1088,7 @@ function apply_backup_restore(token, chat_id, dl_path) {
 
 function exec_backup(token, chat_id) {
     send_message(token, chat_id, "⏳ <b>Собираю бэкап...</b>", "HTML");
-    let file_path = "/tmp/tachyon_backup.tar.gz";
+    let file_path = "/etc/.tachyon/backup.tar.gz";
     command_status(command_from_args([ "tar", "-czf", file_path, "-C", "/etc", "config/tachyon", "tachyon" ]) + " 2>/dev/null");
 
     if (fs.stat(file_path)) {
@@ -1097,10 +1101,10 @@ function exec_backup(token, chat_id) {
 
 function exec_support_bundle(token, chat_id) {
     send_message(token, chat_id, "⏳ <b>Формирую Support Bundle...</b>", "HTML");
-    system(command_from_args([ "ip", "route" ]) + " > /tmp/tachyon_ip_route.txt");
-    system(command_from_args([ "logread" ]) + " > /tmp/tachyon_logread.txt");
-    let file_path = "/tmp/support_bundle.tar.gz";
-    command_status(command_from_args([ "tar", "-czf", file_path, "/etc/config/tachyon", "/var/etc/tachyon", "/etc/config/network", "/etc/config/firewall", "/tmp/dhcp.leases", "/tmp/tachyon_ip_route.txt", "/tmp/tachyon_logread.txt" ]) + " 2>/dev/null");
+    system(command_from_args([ "ip", "route" ]) + " > /etc/.tachyon/ip_route.txt");
+    system(command_from_args([ "logread" ]) + " > /etc/.tachyon/logread.txt");
+    let file_path = "/etc/.tachyon/support_bundle.tar.gz";
+    command_status(command_from_args([ "tar", "-czf", file_path, "/etc/config/tachyon", "/var/etc/tachyon", "/etc/config/network", "/etc/config/firewall", "/tmp/dhcp.leases", "/etc/.tachyon/ip_route.txt", "/etc/.tachyon/logread.txt" ]) + " 2>/dev/null");
     
     if (fs.stat(file_path)) {
         send_document(token, chat_id, file_path);
