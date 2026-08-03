@@ -719,6 +719,10 @@ function ensure_custom_ruleset(config, reference) {
     if (substr(reference, 0, 1) == "/") {
         if (extension != "srs" && extension != "json")
             ctx.runtime_generate_unsupported("local rule_set extension is not supported by sing-box config generation");
+        // Skip broken local ruleset files — nonexistent or suspiciously small
+        let st = fs.stat(reference);
+        if (st == null || int(st.size || 0) < 100)
+            return null;
         push(config.route.rule_set, {
             type: "local",
             tag: tag_name,
@@ -1014,7 +1018,7 @@ function add_dns_action_rules_for_section(config, section) {
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
-        if (ensured.kind == "domains")
+        if (ensured != null && ensured.kind == "domains")
             push(rule_set_tags, ensured.tag);
     }
     add_domain_ip_list_ruleset(
@@ -1215,12 +1219,16 @@ function add_combined_route_for_section(config, section) {
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
+        if (ensured == null)
+            continue;
         push(rule_set_tags, ensured.tag);
         if (ensured.kind == "domains")
             push(dns_rule_set_tags, ensured.tag);
     }
     for (let reference in connections.rule_sets_with_subnets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
+        if (ensured == null)
+            continue;
         push(rule_set_tags, ensured.tag);
         if (ensured.kind == "domains")
             push(dns_rule_set_tags, ensured.tag);

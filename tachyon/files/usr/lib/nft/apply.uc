@@ -1778,7 +1778,7 @@ function nft_populate_runtime_set_for_section(section, deferred_sections, table,
             ];
             for (let path in cached_paths) {
                 let st = fs.stat(path);
-                if (st != null && int(st.size) > 0) {
+                if (st != null && int(st.size) > 50) {
                     nft_add_file_chunks_to_family_sets(path, table, sets.subnets, sets.subnets6, "ips", "", "5000");
                     break;
                 }
