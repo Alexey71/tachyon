@@ -24,7 +24,6 @@ let telegram_msg_count = 0;
 let telegram_msg_window = time();
 // FD-cascade prevention: track logread pipe FD to close it in background spawns
 let logread_pipe_fd = -1;
-let last_oom_time = 0;
 let syslog_start_time = 0;
 
 let command_from_args = common.command_from_args;
@@ -473,10 +472,6 @@ function safe_proxy_restart(reason) {
     proxy_restart_count++;
     bg_system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
     return true;
-}
-
-function safe_reload_firewall() {
-    bg_system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
 }
 
 function ai_heal_nftables() {
