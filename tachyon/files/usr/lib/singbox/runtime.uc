@@ -675,8 +675,22 @@ function last_nonblank_line(path) {
     return result;
 }
 
+function first_error_line(path) {
+    let data = as_string(fs.readfile(path) || "");
+    for (let line in split(data, "\n")) {
+        let text = as_string(line);
+        if (trim(text) == "")
+            continue;
+        if (match(text, /error|fail|invalid|unexpected|near here/i) != null)
+            return text;
+    }
+    return "";
+}
+
 function generator_failure_reason(path, status) {
-    let reason = last_nonblank_line(path);
+    let reason = first_error_line(path);
+    if (reason == "")
+        reason = last_nonblank_line(path);
     return reason != "" ? reason : "exit status " + status;
 }
 
@@ -843,6 +857,7 @@ function init_config(populate_nft, caches_prepared, no_refresh) {
     if (generate_status != 0) {
         let reason = generator_failure_reason(runtime_log, generate_status);
         log_message("Failed to generate sing-box configuration: " + reason, "fatal");
+        log_file_lines(runtime_log, "debug", "sing-box config generator output: ");
         remove_files([ temp_config, runtime_log ]);
         exit(1);
     }

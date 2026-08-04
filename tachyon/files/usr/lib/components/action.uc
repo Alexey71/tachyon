@@ -27,6 +27,14 @@ function as_string(value) {
     return value == null ? "" : "" + value;
 }
 
+function str_startswith(value, prefix) {
+    value = as_string(value);
+    prefix = as_string(prefix);
+    if (length(prefix) == 0)
+        return true;
+    return length(value) >= length(prefix) && substr(value, 0, length(prefix)) == prefix;
+}
+
 function shell_quote(value) {
     return "'" + replace(as_string(value), /'/g, "'\\''") + "'";
 }
@@ -2141,7 +2149,10 @@ function check_tachyon() {
 
     if (status == "latest" && release_json != "" && TACHYON_COMMIT_SHA != "" && TACHYON_COMMIT_SHA != "unknown") {
         let remote_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
-        if (remote_sha != "" && remote_sha != TACHYON_COMMIT_SHA) {
+        let local_sha = TACHYON_COMMIT_SHA;
+        let same_sha = remote_sha != "" && local_sha != "" &&
+                       (str_startswith(remote_sha, local_sha) || str_startswith(local_sha, remote_sha));
+        if (remote_sha != "" && !same_sha) {
             updates_log("Tachyon same release update found: " + TACHYON_COMMIT_SHA + " -> " + remote_sha);
             action_success("tachyon", "check_update", "Update is available for current release", TACHYON_VERSION, latest_version, 0, "outdated_same_release", release_url);
         }
