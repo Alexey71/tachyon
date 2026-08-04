@@ -363,6 +363,23 @@ export namespace Tachyon {
     smart_detect_section?: string;
     smart_detect_sections?: string | string[];
     dns_turbo_cache?: '0' | '1';
+    // AI Watchdog settings (introduced in AI Watchdog feature)
+    ai_proxy_health_enabled?: '0' | '1';
+    ai_proxy_health_interval?: string;
+    ai_proxy_health_fail_threshold?: string;
+    ai_proxy_health_url?: string;
+    ai_dns_continuous_enabled?: '0' | '1';
+    ai_dns_interval?: string;
+    ai_reload_dedup_enabled?: '0' | '1';
+    ai_metrics_enabled?: '0' | '1';
+    ai_metrics_retention_hours?: string;
+    ai_smart_cooldowns_enabled?: '0' | '1';
+    ai_config_validation_enabled?: '0' | '1';
+    ai_graceful_degradation_enabled?: '0' | '1';
+    ai_persistent_smart_detect?: '0' | '1';
+    ai_adaptive_intervals_enabled?: '0' | '1';
+    ai_anomaly_detection_enabled?: '0' | '1';
+    ai_anomaly_reconnect_threshold?: string;
   }
 
   export interface MethodSuccessResponse<T> {
@@ -593,7 +610,11 @@ export namespace Tachyon {
     latest_version: string;
     release_url?: string;
     changed: boolean;
-    status?: 'latest' | 'outdated' | 'dev' | '';
+    status?: 'latest' | 'outdated' | 'dev' | 'outdated_same_release' | '';
+    /** Short commit SHA of the currently installed build (tachyon only) */
+    current_sha?: string;
+    /** Short commit SHA of the latest available build (tachyon only) */
+    latest_sha?: string;
     pid?: string | null;
     started_at?: number;
     updated_at?: number | null;

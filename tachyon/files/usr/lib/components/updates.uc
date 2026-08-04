@@ -1424,6 +1424,11 @@ function cache_component_update_check_result(value, notify_update) {
         status: as_string(value.status),
         updated_at: now_seconds()
     };
+    // Preserve commit SHA info so UI can display "installed: abc1234, available: def5678"
+    if (as_string(value.current_sha) != "")
+        cached.current_sha = as_string(value.current_sha);
+    if (as_string(value.latest_sha) != "")
+        cached.latest_sha = as_string(value.latest_sha);
     if (!write_state_file(path, cached))
         return false;
 

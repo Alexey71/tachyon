@@ -236,9 +236,11 @@ export interface StoreType {
   updatesChecks: Record<
     Tachyon.ComponentName,
     {
-      status: 'latest' | 'outdated' | 'dev' | null;
+      status: 'latest' | 'outdated' | 'dev' | 'outdated_same_release' | null;
       latest_version: string;
       release_url: string;
+      current_sha?: string;
+      latest_sha?: string;
     }
   >;
 }

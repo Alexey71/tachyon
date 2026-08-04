@@ -13675,7 +13675,7 @@ function isNotInstalled(version) {
 }
 function shouldShowInstallAfterCheck(component) {
   const status = getVisibleCheckResult(component)?.status;
-  return status === "outdated" || status === "dev" || status === "outdated_same_release";
+  return status === "outdated" || status === "dev";
 }
 function getVisibleCheckResult(component) {
   if (!shouldExposeCheckResults({
@@ -13726,7 +13726,7 @@ function beginComponentAction(button) {
   setActionLoading(button.key, true, true);
   return true;
 }
-function setCheckResult(component, status, latestVersion, releaseUrl = "") {
+function setCheckResult(component, status, latestVersion, releaseUrl = "", currentSha = "", latestSha = "") {
   const updatesChecks = store.get().updatesChecks;
   store.set({
     updatesChecks: {
@@ -13734,7 +13734,9 @@ function setCheckResult(component, status, latestVersion, releaseUrl = "") {
       [component]: {
         status,
         latest_version: latestVersion,
-        release_url: releaseUrl
+        release_url: releaseUrl,
+        ...currentSha ? { current_sha: currentSha } : {},
+        ...latestSha ? { latest_sha: latestSha } : {}
       }
     }
   });
@@ -13750,7 +13752,9 @@ function applyCachedCheckResults(results) {
         result.component,
         status,
         result.latest_version || "",
-        result.release_url || ""
+        result.release_url || "",
+        result.current_sha || "",
+        result.latest_sha || ""
       );
     }
   });
@@ -13798,7 +13802,7 @@ function getExpectedLatestVersionForAction(button) {
   return store.get().updatesChecks[button.component].latest_version || void 0;
 }
 function getCheckToastMessage(status) {
-  if (status === "outdated") {
+  if (status === "outdated" || status === "outdated_same_release") {
     return _("Update is available");
   }
   if (status === "dev") {
@@ -13928,12 +13932,14 @@ async function applyCompletedComponentAction({
       preserveCheckResultsOnNextMount = true;
     }
     const status = result.status || null;
-    if (status === "latest" || status === "outdated" || status === "dev") {
+    if (status === "latest" || status === "outdated" || status === "dev" || status === "outdated_same_release") {
       setCheckResult(
         result.component,
         status,
         result.latest_version || "",
-        result.release_url || ""
+        result.release_url || "",
+        result.current_sha || "",
+        result.latest_sha || ""
       );
     }
     if (notify) {
@@ -14327,7 +14333,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : formatSingBoxVersion(systemInfo),
       latestVersion: getLatestVersion("sing_box"),
       releaseUrl: getGitHubReleaseUrl("sing_box"),
-      repoUrl: systemInfo.sing_box_repo_url || COMPONENT_REPO_URLS.sing_box,
+      repoUrl: COMPONENT_REPO_URLS.sing_box,
       actions: singBoxActions
     },
     {
@@ -14419,23 +14425,18 @@ function renderComponentCard(card) {
         latestValueNodes.push(document.createTextNode(versionToShow));
       }
     } else if (checkResult.status === "outdated_same_release") {
-      labelText = _("Update is available for current release:");
-      const versionToShow = checkResult.latest_version || card.latestVersion || card.version;
-      if (checkResult.release_url) {
+      labelText = _("Update is available for current release");
+      const currentSha = checkResult.current_sha ? checkResult.current_sha.substring(0, 8) : "";
+      const latestSha = checkResult.latest_sha ? checkResult.latest_sha.substring(0, 8) : "";
+      if (currentSha || latestSha) {
+        const shaText = currentSha && latestSha ? `${currentSha} \u2192 ${latestSha}` : currentSha || latestSha;
         latestValueNodes.push(
           E(
-            "a",
-            {
-              class: "tachyon_updates-page__component__release-version-link",
-              href: checkResult.release_url,
-              target: "_blank",
-              rel: "noopener noreferrer"
-            },
-            versionToShow || _("Open")
+            "span",
+            { class: "tachyon_updates-page__component__sha-info", title: _("Installed build \u2192 Available build") },
+            shaText
           )
         );
-      } else if (versionToShow) {
-        latestValueNodes.push(document.createTextNode(versionToShow));
       }
     } else if (checkResult.status === "latest") {
       labelText = _("Latest version is installed");
@@ -14834,6 +14835,16 @@ var styles6 = `
 
 .tachyon_updates-page__component__release-version-link:hover {
     color: var(--link-color-dark, #2980b9) !important;
+}
+
+.tachyon_updates-page__component__sha-info {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text-color-medium, #888);
+    background: var(--background-color-low, rgba(0,0,0,0.06));
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.02em;
 }
 
 .tachyon_updates-page__component__actions {

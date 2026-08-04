@@ -179,6 +179,8 @@ function setCheckResult(
   status: UpdateStatus,
   latestVersion: string,
   releaseUrl: string = '',
+  currentSha: string = '',
+  latestSha: string = '',
 ) {
   const updatesChecks = store.get().updatesChecks;
 
@@ -189,6 +191,8 @@ function setCheckResult(
         status,
         latest_version: latestVersion,
         release_url: releaseUrl,
+        ...(currentSha ? { current_sha: currentSha } : {}),
+        ...(latestSha ? { latest_sha: latestSha } : {}),
       },
     },
   });
@@ -202,12 +206,14 @@ function applyCachedCheckResults(results: Tachyon.ComponentActionResult[]) {
   results.forEach((result) => {
     const status = result.status || null;
 
-    if (status === 'latest' || status === 'outdated' || status === 'dev') {
+    if (status === 'latest' || status === 'outdated' || status === 'dev' || status === 'outdated_same_release') {
       setCheckResult(
         result.component,
         status,
         result.latest_version || '',
         result.release_url || '',
+        result.current_sha || '',
+        result.latest_sha || '',
       );
     }
   });
@@ -275,7 +281,7 @@ function getExpectedLatestVersionForAction(button: ComponentActionButton) {
 }
 
 function getCheckToastMessage(status: UpdateStatus) {
-  if (status === 'outdated') {
+  if (status === 'outdated' || status === 'outdated_same_release') {
     return _('Update is available');
   }
 
@@ -449,12 +455,14 @@ async function applyCompletedComponentAction({
 
     const status = result.status || null;
 
-    if (status === 'latest' || status === 'outdated' || status === 'dev') {
+    if (status === 'latest' || status === 'outdated' || status === 'dev' || status === 'outdated_same_release') {
       setCheckResult(
         result.component,
         status,
         result.latest_version || '',
         result.release_url || '',
+        result.current_sha || '',
+        result.latest_sha || '',
       );
     }
 
@@ -1075,6 +1083,23 @@ function renderComponentCard(card: ComponentCard) {
         );
       } else if (versionToShow) {
         latestValueNodes.push(document.createTextNode(versionToShow));
+      }
+    } else if (checkResult.status === 'outdated_same_release') {
+      labelText = _('Update is available for current release');
+      // Show short commit SHAs so user understands it's the same version, different build
+      const currentSha = checkResult.current_sha ? checkResult.current_sha.substring(0, 8) : '';
+      const latestSha = checkResult.latest_sha ? checkResult.latest_sha.substring(0, 8) : '';
+      if (currentSha || latestSha) {
+        const shaText = currentSha && latestSha
+          ? `${currentSha} → ${latestSha}`
+          : (currentSha || latestSha);
+        latestValueNodes.push(
+          E(
+            'span',
+            { class: 'tachyon_updates-page__component__sha-info', title: _('Installed build → Available build') },
+            shaText,
+          ),
+        );
       }
     } else if (checkResult.status === 'latest') {
       labelText = _('Latest version is installed');

@@ -280,8 +280,8 @@ function cleanup_action() {
     release_component_lock();
 }
 
-function updates_response(success, component, action, message, current_version, latest_version, changed, status, release_url) {
-    write_json({
+function updates_response(success, component, action, message, current_version, latest_version, changed, status, release_url, extra) {
+    let obj = {
         success: !!success,
         kind: "component",
         component: as_string(component),
@@ -292,7 +292,13 @@ function updates_response(success, component, action, message, current_version, 
         changed: int(changed || 0),
         status: as_string(status),
         release_url: as_string(release_url)
-    });
+    };
+    // Merge optional extra fields (e.g. current_sha, latest_sha) without breaking existing callers
+    if (type(extra) == "object") {
+        for (let k, v in extra)
+            obj[k] = v;
+    }
+    write_json(obj);
 }
 
 function restart_tachyon_after_failed_sing_box_change() {
@@ -303,8 +309,8 @@ function restart_tachyon_after_failed_sing_box_change() {
         command_success_from_args([ SERVICE_INIT, "restart" ]);
 }
 
-function action_success(component, action, message, current_version, latest_version, changed, status, release_url) {
-    updates_response(true, component, action, message, current_version, latest_version, changed || 0, status || "", release_url || "");
+function action_success(component, action, message, current_version, latest_version, changed, status, release_url, extra) {
+    updates_response(true, component, action, message, current_version, latest_version, changed || 0, status || "", release_url || "", extra || null);
     cleanup_action();
     exit(0);
 }
@@ -847,6 +853,11 @@ function restart_tachyon_after_successful_change() {
         prepare_sing_box_service_disabled();
         return;
     }
+    // Kill orphaned logread -f processes before restart to prevent FD cascade.
+    // action.uc runs as a child of the old watchdog and inherits its logread pipe FD.
+    // Without this, the old logread process may keep the pipe alive across the restart,
+    // causing the new watchdog's config generator to inherit stale FDs and hit the 1024 limit.
+    command_success_from_args([ "killall", "logread" ]);
     run_logged("Restarting Tachyon after successful component change", command_from_args([ SERVICE_INIT, "restart" ]));
 }
 
@@ -2147,27 +2158,33 @@ function check_tachyon() {
     if (status == "")
         action_fail("tachyon", "check_update", "Failed to compare Tachyon versions", TACHYON_VERSION, latest_version);
 
-    if (status == "latest" && release_json != "" && TACHYON_COMMIT_SHA != "" && TACHYON_COMMIT_SHA != "unknown") {
-        let remote_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
-        let local_sha = TACHYON_COMMIT_SHA;
-        let same_sha = remote_sha != "" && local_sha != "" &&
+    // Fetch remote commit SHA for same-version-different-build detection
+    let remote_sha = "";
+    let local_sha = TACHYON_COMMIT_SHA != "" && TACHYON_COMMIT_SHA != "unknown" ? TACHYON_COMMIT_SHA : "";
+    if (status == "latest" && release_json != "" && local_sha != "") {
+        remote_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
+        let same_sha = remote_sha != "" &&
                        (str_startswith(remote_sha, local_sha) || str_startswith(local_sha, remote_sha));
         if (remote_sha != "" && !same_sha) {
-            updates_log("Tachyon same release update found: " + TACHYON_COMMIT_SHA + " -> " + remote_sha);
-            action_success("tachyon", "check_update", "Update is available for current release", TACHYON_VERSION, latest_version, 0, "outdated_same_release", release_url);
+            updates_log("Tachyon same release update found: " + local_sha + " -> " + remote_sha);
+            action_success("tachyon", "check_update", "Update is available for current release",
+                TACHYON_VERSION, latest_version, 0, "outdated_same_release", release_url,
+                { current_sha: local_sha, latest_sha: remote_sha });
         }
     }
 
+    let sha_extra = local_sha != "" ? { current_sha: local_sha, latest_sha: remote_sha } : null;
+
     if (status == "latest") {
         updates_log("Tachyon is already up to date (" + TACHYON_VERSION + ")");
-        action_success("tachyon", "check_update", "Latest version is installed", TACHYON_VERSION, latest_version, 0, status, release_url);
+        action_success("tachyon", "check_update", "Latest version is installed", TACHYON_VERSION, latest_version, 0, status, release_url, sha_extra);
     }
     if (status == "outdated") {
         updates_log("Tachyon update found: " + TACHYON_VERSION + " -> " + latest_version);
-        action_success("tachyon", "check_update", "Update is available", TACHYON_VERSION, latest_version, 0, status, release_url);
+        action_success("tachyon", "check_update", "Update is available", TACHYON_VERSION, latest_version, 0, status, release_url, sha_extra);
     }
     updates_log("Tachyon installed version is newer than upstream release: " + TACHYON_VERSION + " -> " + latest_version);
-    action_success("tachyon", "check_update", "Installed version is newer than release", TACHYON_VERSION, latest_version, 0, status, release_url);
+    action_success("tachyon", "check_update", "Installed version is newer than release", TACHYON_VERSION, latest_version, 0, status, release_url, sha_extra);
 }
 
 function resolve_tachyon_release(latest_version) {

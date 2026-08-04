@@ -139,6 +139,16 @@ export const styles = `
     color: var(--link-color-dark, #2980b9) !important;
 }
 
+.tachyon_updates-page__component__sha-info {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text-color-medium, #888);
+    background: var(--background-color-low, rgba(0,0,0,0.06));
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.02em;
+}
+
 .tachyon_updates-page__component__actions {
     display: flex;
     flex-direction: column;
