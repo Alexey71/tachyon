@@ -1689,7 +1689,7 @@ function handle_qos_toggle(token, chat_id, msg_id) {
     let new_val = (cfg.qos_priority_engine == "0") ? "1" : "0";
     c.set(CONFIG_NAME, "settings", "qos_priority_engine", new_val);
     c.commit(CONFIG_NAME);
-    system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+    system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
     view_qos(token, chat_id, msg_id);
 }
 

@@ -573,6 +573,10 @@ function stop_service(owner_pid) {
     }
 
     let status = command_status_from_args([ BIN_PATH, "stop" ]);
+    // Clean up orphaned logread -f processes left by watchdog instances.
+    // These survive tachyon stop because background subprocesses (reload_firewall,
+    // restart) inherit the logread pipe read-end, preventing SIGPIPE delivery.
+    system("killall logread 2>/dev/null; true");
     return stop_finish(job_id, status);
 }
 

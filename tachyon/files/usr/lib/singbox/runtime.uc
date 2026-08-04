@@ -183,7 +183,7 @@ function ensure_parent_dir(path) {
 }
 
 function temp_path() {
-    return trim(command_output_from_args([ "mktemp" ]));
+    return trim(command_output_from_args([ "mktemp", "/tmp/tachyon-XXXXXX" ]));
 }
 
 function md5_file(path) {

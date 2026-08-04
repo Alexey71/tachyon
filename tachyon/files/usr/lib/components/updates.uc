@@ -332,7 +332,7 @@ function ensure_parent_dir(path) {
 }
 
 function temp_path() {
-    return trim(command_output_from_args([ "mktemp" ]));
+    return trim(command_output_from_args([ "mktemp", "/tmp/tachyon-XXXXXX" ]));
 }
 
 function remove_files(paths) {
@@ -2309,7 +2309,7 @@ function import_builtin_subnets_from_rule(section, settings) {
             write_file(cached_file, join("\n", combined_lines) + "\n");
             ensure_dir("/etc/tachyon/rulesets");
             write_file(persistent_file, join("\n", combined_lines) + "\n");
-            system("/etc/init.d/tachyon reload &");
+            system("/etc/init.d/tachyon reload </dev/null >/dev/null 2>&1 &");
         }
     }
 

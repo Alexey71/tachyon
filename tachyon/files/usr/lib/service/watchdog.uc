@@ -22,6 +22,8 @@ let proxy_restart_window_start = time();
 const PROXY_RESTART_LOCK = "/var/run/tachyon_proxy_restart.lock";
 let telegram_msg_count = 0;
 let telegram_msg_window = time();
+// FD-cascade prevention: track logread pipe FD to close it in background spawns
+let logread_pipe_fd = -1;
 
 let command_from_args = common.command_from_args;
 let command_status = common.command_status;
@@ -45,6 +47,17 @@ function command_output(command) {
 
 function command_output_from_args(args) {
     return command_output(command_from_args(args) + " 2>/dev/null");
+}
+
+// Run a command in background, explicitly closing the logread pipe FD to
+// prevent FD-cascade: each restart/reload inherits read-end of logread pipe,
+// keeping orphaned logread -f processes alive across watchdog generations.
+function bg_system(cmd) {
+    if (logread_pipe_fd >= 0) {
+        system(sprintf("%d<&- ", logread_pipe_fd) + cmd);
+    } else {
+        system(cmd);
+    }
 }
 
 function settings() {
@@ -456,7 +469,7 @@ function safe_proxy_restart(reason) {
     }
     try { fs.writefile(PROXY_RESTART_LOCK, as_string(now)); } catch(e) {}
     proxy_restart_count++;
-    system("/etc/init.d/tachyon restart >/dev/null 2>&1 &");
+    bg_system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
     return true;
 }
 
@@ -664,7 +677,7 @@ function ai_heal_community_subnet_sets() {
             "Восстановлены nftables sets из persistent кеша (/etc/tachyon/rulesets/)",
             "fixed"
         );
-        system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
+        bg_system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
         return false;
     }
     return true;
@@ -758,7 +771,7 @@ function ai_heal_wan_and_gateway() {
     if (tcfg.notify_crash != "0") {
         send_telegram_notification("⚠️ *Watchdog:* WAN/Gateway проблема. Перезапуск wan...");
     }
-    system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
+    bg_system("/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1 &");
 }
 
 function ai_heal_subscriptions() {
@@ -818,7 +831,7 @@ function safe_reload_firewall() {
     let min_interval = 120;
     if (ai_enabled("ai_reload_dedup_enabled", "1") && elapsed < min_interval) return;
     last_reload_time = now;
-    system("/usr/bin/tachyon reload_firewall >/dev/null 2>&1 &");
+    bg_system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
 }
 
 // ─── Config validation: sing-box check ────────────────────────────────────────
@@ -965,7 +978,7 @@ function ai_heal_empty_sections() {
 
         // Section with subscriptions but 0 usable outbounds — trigger async reload
         log_message("Empty proxy section '" + name + "' — triggering subscription update", "warn");
-        system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(name) + " >/dev/null 2>&1 1000<&- &");
+        bg_system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(name) + " </dev/null >/dev/null 2>&1 1000<&- &");
         push(recovered, name);
     }
 
@@ -1046,7 +1059,7 @@ function ai_heal_dns_loop() {
     if (recovery.phase == "detour_disabled") {
         // Already in recovery — just wait and retry
         log_message("DNS loop recovery: DNS still dead, retrying subscription update", "info");
-        system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(detour_section) + " >/dev/null 2>&1 1000<&- &");
+        bg_system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(detour_section) + " </dev/null >/dev/null 2>&1 1000<&- &");
         return;
     }
 
@@ -1070,7 +1083,7 @@ function ai_heal_dns_loop() {
     write_dns_recovery_state({ phase: "detour_disabled", section: detour_section, ts: now });
 
     // Trigger subscription update for the empty section
-    system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(detour_section) + " >/dev/null 2>&1 1000<&- &");
+    bg_system("/usr/bin/tachyon subscription_update_async " + common.shell_quote(detour_section) + " </dev/null >/dev/null 2>&1 1000<&- &");
 
     ai_heal_report(
         "dns_loop_detected",
@@ -1434,8 +1447,15 @@ function setup_honeypot_listener() {
 
 function setup_syslog_listener() {
     if (!uloop) return null;
+    // Kill orphaned logread -f processes from previous watchdog instances.
+    // Without this, every restart cascades: new watchdog inherits old watchdog's
+    // logread pipe read-end, keeping old logread alive. Over N restarts,
+    // watchdog accumulates N inherited FDs → hits 1024 limit → config generator fails.
+    system("killall logread 2>/dev/null; true");
     let log_pipe = fs.popen("logread -f 2>/dev/null", "r");
     if (!log_pipe) return null;
+    // Track the FD so bg_system() can close it before spawning background processes
+    logread_pipe_fd = log_pipe.fileno();
 
     try {
         uloop.handle(log_pipe.fileno(), function(events) {

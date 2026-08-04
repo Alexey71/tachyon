@@ -794,6 +794,11 @@ function start_main() {
 }
 
 function start_impl() {
+    // Clean up orphaned /tmp/tachyon-* temp files from processes killed mid-operation
+    // (e.g. config generator killed during restart). 30-min threshold is safe since
+    // all tachyon temp files are created and deleted within seconds under normal operation.
+    command_status("find /tmp -maxdepth 1 -name 'tachyon-*' -mmin +30 -delete 2>/dev/null; true");
+
     // Start Watchdog & Telegram Bot early so they remain active even if proxy configuration fails
     let wd_status = module_status(WATCHDOG_UC, [ "start-runtime" ]);
     if (wd_status != 0)
@@ -1180,7 +1185,7 @@ function reload(reason) {
     if (status != 0)
         return status;
 
-    let current_reload_state_file = trim(command_output_from_args([ "mktemp" ]));
+    let current_reload_state_file = trim(command_output_from_args([ "mktemp", "/tmp/tachyon-XXXXXX" ]));
     if (current_reload_state_file == "")
         return abort_reload(1, false);
 
