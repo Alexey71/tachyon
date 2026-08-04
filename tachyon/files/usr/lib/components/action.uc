@@ -965,13 +965,13 @@ function resolve_zapret_release(arch) {
 }
 
 function resolve_zapret2_release(arch) {
-    let tag = fetch_github_release_tag_fallback("1andrevich", "zapret2-openwrt");
+    let tag = fetch_github_release_tag_fallback("Dushnilin", "zapret2-openwrt");
     if (tag == "")
         return { fetch_failed: true };
     
     let asset_ext = is_apk() ? "apk" : "ipk";
-    let base_dl = "https://github.com/1andrevich/zapret2-openwrt/releases/download/" + tag + "/";
-    let release_url = "https://github.com/1andrevich/zapret2-openwrt/releases/tag/" + tag;
+let base_dl = "https://github.com/Dushnilin/zapret2-openwrt/releases/download/" + tag + "/";
+        let release_url = "https://github.com/Dushnilin/zapret2-openwrt/releases/tag/" + tag;
     let version = replace(tag, /^v/, "");
 
     let candidate_list = split(arch.candidates, " ");

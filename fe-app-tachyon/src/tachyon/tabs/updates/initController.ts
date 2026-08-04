@@ -824,7 +824,7 @@ const COMPONENT_REPO_URLS: Record<Tachyon.ComponentName, string> = {
   tachyon: 'https://github.com/Dushnilin/tachyon',
   sing_box: 'https://github.com/SagerNet/sing-box',
   zapret: 'https://github.com/remittor/zapret-openwrt',
-  zapret2: 'https://github.com/1andrevich/zapret2-openwrt',
+  zapret2: 'https://github.com/Dushnilin/zapret2-openwrt',
   byedpi: 'https://github.com/DPITrickster/ByeDPI-OpenWrt',
 };
 
