@@ -53,7 +53,7 @@ function process_running_by_pidfile(pidfile) {
 }
 
 function get_clash_proxies_data() {
-    let args = [ "curl", "-s", get_clash_url("proxies") ];
+    let args = [ "curl", "-s", "-m", "5", "--connect-timeout", "3", get_clash_url("proxies") ];
     let res = command_capture(command_from_args(args));
     if (res && res.status == 0 && res.output != "") {
         try {
@@ -154,7 +154,7 @@ function clash_request(method, endpoint, payload) {
     let payload_path = "/tmp/clash_payload_" + method + "_" + time() + "_" + sprintf("%04x", int(Math.random() * 65536)) + ".json";
     let res = null;
     try {
-        let args = [ "curl", "-s", "-X", method ];
+        let args = [ "curl", "-s", "-m", "5", "--connect-timeout", "3", "-X", method ];
         if (payload) {
             fs.writefile(payload_path, sprintf("%J", payload));
             push(args, "-H", "Content-Type: application/json", "-d", "@" + payload_path);
@@ -186,7 +186,7 @@ function clash_request(method, endpoint, payload) {
 }
 
 function get_clash_connections() {
-    let args = [ "curl", "-s", get_clash_url("connections") ];
+    let args = [ "curl", "-s", "-m", "5", "--connect-timeout", "3", get_clash_url("connections") ];
     let res = command_capture(command_from_args(args));
     if (res && res.status == 0 && res.output != "") {
         try {
@@ -197,24 +197,24 @@ function get_clash_connections() {
 }
 
 function check_connection() {
-    let res_direct = command_capture("curl -I -s --connect-timeout 5 https://www.google.com");
-    let direct_ok = (res_direct.status == 0) ? true : false;
+    let res_direct = command_capture("curl -I -s -m 8 --connect-timeout 4 https://www.google.com");
+    let direct_ok = (res_direct && res_direct.status == 0) ? true : false;
     
-    let res_proxy = command_capture("curl -I -s --connect-timeout 5 --proxy http://127.0.0.1:4534 https://www.google.com");
-    let proxy_ok = (res_proxy.status == 0) ? true : false;
+    let res_proxy = command_capture("curl -I -s -m 8 --connect-timeout 4 --proxy http://127.0.0.1:4534 https://www.google.com");
+    let proxy_ok = (res_proxy && res_proxy.status == 0) ? true : false;
     
     return { direct: direct_ok, proxy: proxy_ok };
 }
 
 function run_speedtest() {
     // Direct speedtest
-    let res_direct = command_capture("curl -s -w '%{speed_download}' -o /dev/null --connect-timeout 8 https://speed.cloudflare.com/__down?bytes=5242880");
-    let direct_speed = double(res_direct.output || 0);
+    let res_direct = command_capture("curl -s -m 15 --connect-timeout 6 -w '%{speed_download}' -o /dev/null https://speed.cloudflare.com/__down?bytes=5242880");
+    let direct_speed = double(res_direct ? res_direct.output || 0 : 0);
     let direct_mbps = (direct_speed * 8) / 1000000;
     
     // Proxy speedtest
-    let res_proxy = command_capture("curl -s -w '%{speed_download}' -o /dev/null --connect-timeout 8 --proxy http://127.0.0.1:4534 https://speed.cloudflare.com/__down?bytes=5242880");
-    let proxy_speed = double(res_proxy.output || 0);
+    let res_proxy = command_capture("curl -s -m 15 --connect-timeout 6 --proxy http://127.0.0.1:4534 -w '%{speed_download}' -o /dev/null https://speed.cloudflare.com/__down?bytes=5242880");
+    let proxy_speed = double(res_proxy ? res_proxy.output || 0 : 0);
     let proxy_mbps = (proxy_speed * 8) / 1000000;
     
     return { direct_mbps: direct_mbps, proxy_mbps: proxy_mbps };

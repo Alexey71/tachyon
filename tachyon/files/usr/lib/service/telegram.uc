@@ -48,7 +48,7 @@ function tg_request(token, method, payload) {
     let res = null;
     try {
         fs.writefile(payload_path, sprintf("%J", payload));
-        let args = [ "curl", "-s", "-X", "POST", "-H", "Content-Type: application/json", "-d", "@" + payload_path ];
+        let args = [ "curl", "-s", "-m", "35", "--connect-timeout", "10", "-X", "POST", "-H", "Content-Type: application/json", "-d", "@" + payload_path ];
         let proxy = get_proxy_args();
         for (let p in proxy) push(args, p);
         push(args, url);
@@ -64,6 +64,8 @@ function tg_request(token, method, payload) {
 }
 
 function send_message(token, chat_id, text, parse_mode, keyboard) {
+    text = as_string(text);
+    if (length(text) > 3900) text = substr(text, 0, 3900) + "\n... (сообщение сокращено)";
     let payload = { chat_id: int(chat_id), text: text };
     if (parse_mode) payload.parse_mode = parse_mode;
     if (keyboard) payload.reply_markup = { inline_keyboard: keyboard };
@@ -71,6 +73,8 @@ function send_message(token, chat_id, text, parse_mode, keyboard) {
 }
 
 function edit_message(token, chat_id, message_id, text, parse_mode, keyboard) {
+    text = as_string(text);
+    if (length(text) > 3900) text = substr(text, 0, 3900) + "\n... (сообщение сокращено)";
     let payload = { chat_id: int(chat_id), message_id: int(message_id), text: text };
     if (parse_mode) payload.parse_mode = parse_mode;
     if (keyboard) payload.reply_markup = { inline_keyboard: keyboard };
@@ -80,7 +84,7 @@ function edit_message(token, chat_id, message_id, text, parse_mode, keyboard) {
 function send_document(token, chat_id, file_path) {
     if (!token) return null;
     let url = "https://api.telegram.org/bot" + token + "/sendDocument";
-    let args = [ "curl", "-s", "-X", "POST", "-F", "chat_id=" + chat_id, "-F", "document=@" + file_path ];
+    let args = [ "curl", "-s", "-m", "60", "--connect-timeout", "10", "-X", "POST", "-F", "chat_id=" + chat_id, "-F", "document=@" + file_path ];
     let proxy = get_proxy_args();
     for (let p in proxy) push(args, p);
     push(args, url);
@@ -913,8 +917,9 @@ function handle_sec_clear(token, chat_id, msg_id, sec_name, list_type) {
 
 function exec_doctor(token, chat_id) {
     send_message(token, chat_id, "⏳ <b>Запуск диагностики и авто-исправления...</b>", "HTML");
-    let res = command_capture("/usr/bin/tachyon doctor");
-    let report = res.output || "Нет вывода диагностики.";
+    let res = command_capture(command_from_args([ "/usr/bin/tachyon", "doctor" ]));
+    let report = res ? (res.output || "Нет вывода диагностики.") : "Ошибка запуска диагностики.";
+    if (length(report) > 3500) report = substr(report, 0, 3500) + "\n... (отчёт сокращён)";
     send_message(token, chat_id, "🩺 <b>Результаты Tachyon Doctor:</b>\n\n<pre>" + escape_html(report) + "</pre>", "HTML", [[{text:"⬅️ Назад", callback_data:"/menu"}]]);
 }
 
@@ -1655,8 +1660,9 @@ function exec_ai_heal(token, chat_id, msg_id) {
 
 function exec_ai_status_full(token, chat_id, msg_id) {
     send_message(token, chat_id, "🔍 <b>Сбор полного AI Watchdog статуса...</b>", "HTML");
-    let res = command_capture("/usr/bin/tachyon ai_status_full");
-    let data = res.output || "Нет данных.";
+    let res = command_capture(command_from_args([ "/usr/bin/tachyon", "ai_status_full" ]));
+    let data = res ? (res.output || "Нет данных.") : "Ошибка получения статуса.";
+    if (length(data) > 3500) data = substr(data, 0, 3500) + "\n... (данные сокращены)";
     let text = "🤖 <b>AI Watchdog — Полный статус:</b>\n\n<pre>" + escape_html(data) + "</pre>";
     let keyboard = [[{ text: "⬅️ Назад", callback_data: "/watchdog" }]];
     if (msg_id) edit_message(token, chat_id, msg_id, text, "HTML", keyboard);
@@ -2059,7 +2065,11 @@ function process_updates(token, admin_ids) {
                 tg_request(token, "answerCallbackQuery", { callback_query_id: cb.id, text: "Access Denied" });
                 continue;
             }
-            dispatch_command(token, chat_id, cb.data, cb.message ? cb.message.message_id : null);
+            try {
+                dispatch_command(token, chat_id, cb.data, cb.message ? cb.message.message_id : null);
+            } catch (e) {
+                send_message(token, chat_id, "❌ Ошибка выполнения команды: " + escape_html(as_string(e)), "HTML");
+            }
             tg_request(token, "answerCallbackQuery", { callback_query_id: cb.id });
             continue;
         }
@@ -2321,22 +2331,26 @@ function worker() {
     let last_update_check = 0;
 
     while (true) {
-        cfg = settings();
-        if (cfg.enabled != "1") break;
-        process_updates(cfg.bot_token, cfg.admin_ids);
-        
-        let now = time();
-        let tm = clock(now); // [year, mon, day, hour, min, sec]
-        let daily_hour = int(cfg.daily_report_hour || "8");
-        
-        if (cfg.daily_report_enabled == "1" && tm[3] == daily_hour && tm[2] != last_report_day) {
-            last_report_day = tm[2];
-            send_daily_digest(cfg.bot_token, cfg.admin_ids);
-        }
-        
-        if (now - last_update_check > 3600) { // check every hour
-            check_notified_updates(cfg.bot_token, cfg.admin_ids);
-            last_update_check = now;
+        try {
+            cfg = settings();
+            if (cfg.enabled != "1") break;
+            process_updates(cfg.bot_token, cfg.admin_ids);
+            
+            let now = time();
+            let tm = clock(now); // [year, mon, day, hour, min, sec]
+            let daily_hour = int(cfg.daily_report_hour || "8");
+            
+            if (cfg.daily_report_enabled == "1" && tm[3] == daily_hour && tm[2] != last_report_day) {
+                last_report_day = tm[2];
+                send_daily_digest(cfg.bot_token, cfg.admin_ids);
+            }
+            
+            if (now - last_update_check > 3600) { // check every hour
+                check_notified_updates(cfg.bot_token, cfg.admin_ids);
+                last_update_check = now;
+            }
+        } catch (e) {
+            command_success_from_args(["logger", "-t", "tachyon-telegram", "[err] Worker loop error: " + as_string(e)]);
         }
         
         sleep(poll_interval * 1000);

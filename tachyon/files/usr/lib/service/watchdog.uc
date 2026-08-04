@@ -473,6 +473,10 @@ function safe_proxy_restart(reason) {
     return true;
 }
 
+function safe_reload_firewall() {
+    bg_system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
+}
+
 function ai_heal_nftables() {
     let cfg = settings();
     let routing_mode = cfg.routing_mode || "nftables";
