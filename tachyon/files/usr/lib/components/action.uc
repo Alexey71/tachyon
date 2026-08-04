@@ -1104,7 +1104,7 @@ function install_zapret_like(component, action, runtime_module, resolve_fn, labe
     let current_version = provider_package_version(runtime_module);
     if (action == "check_update") {
         if (!installed)
-            action_fail(component, action, label + " is not installed", current_version, release.version, "", release.release_url || "");
+            action_success(component, action, label + " is not installed", current_version, release.version, 0, "", release.release_url || "");
         check_success_compared(component, current_version, release.version, normalize_zapret_version(current_version), normalize_zapret_version(release.version), release.release_url || "");
     }
 
@@ -1157,7 +1157,7 @@ function install_zapret2(action) {
     let current_version = provider_package_version(runtime_module);
     if (action == "check_update") {
         if (!installed)
-            action_fail(component, action, label + " is not installed", current_version, release.version, "", release.release_url || "");
+            action_success(component, action, label + " is not installed", current_version, release.version, 0, "", release.release_url || "");
         check_success_compared(component, current_version, release.version, normalize_zapret_version(current_version), normalize_zapret_version(release.version), release.release_url || "");
     }
 
@@ -1195,7 +1195,7 @@ function install_byedpi(action) {
     let current_version = provider_package_version(runtime_module);
     if (action == "check_update") {
         if (!installed)
-            action_fail("byedpi", action, "ByeDPI is not installed", current_version, release.version);
+            action_success("byedpi", action, "ByeDPI is not installed", current_version, release.version, 0, "", release.release_url || "");
         check_success("byedpi", current_version, release.version, release.release_url || "");
     }
 
