@@ -1132,20 +1132,30 @@ function exec_check_updates(token, chat_id, msg_id) {
     if (out && out != "") {
         try {
             let data = json(out);
+            let results = data.results || [];
             let has_updates = false;
-            for (let name in data) {
-                let comp = data[name];
-                let title = (name == "sing_box") ? "sing-box" : name;
-                text += "• <b>" + title + "</b>: " + comp.installed_version;
-                if (comp.status == "outdated") {
-                    text += " ➡️ <code>" + comp.latest_version + "</code> ⚠️\n";
-                    push(keyboard, [{text: "🔄 Обновить " + title, callback_data: "/update_component " + name}]);
-                    has_updates = true;
-                } else {
-                    text += " (Актуально)\n";
+            if (!data.enabled) {
+                text += "ℹ️ Проверка обновлений отключена в настройках.";
+            } else if (length(results) == 0) {
+                text += "ℹ️ Кэш пуст. Зайдите позже — проверка обновлений запускается автоматически.";
+            } else {
+                for (let comp in results) {
+                    let name = comp.component || "";
+                    let title = (name == "sing_box") ? "sing-box" : name;
+                    let cur = comp.current_version || "?";
+                    let lat = comp.latest_version || "?";
+                    if (!comp.success) {
+                        text += "• <b>" + title + "</b>: ❌ Ошибка проверки\n";
+                    } else if (comp.status == "outdated") {
+                        text += "• <b>" + title + "</b>: <code>" + cur + "</code> ➡️ <code>" + lat + "</code> ⚠️\n";
+                        push(keyboard, [{text: "🔄 Обновить " + title, callback_data: "/update_component " + name}]);
+                        has_updates = true;
+                    } else {
+                        text += "• <b>" + title + "</b>: <code>" + cur + "</code> ✅\n";
+                    }
                 }
+                if (!has_updates) text += "\n✅ Все компоненты актуальны.";
             }
-            if (!has_updates) text += "\n✅ Все компоненты актуальны.";
         } catch(e) {
             text += "❌ Ошибка парсинга кэша: " + e;
         }
