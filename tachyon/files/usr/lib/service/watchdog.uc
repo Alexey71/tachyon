@@ -24,6 +24,8 @@ let telegram_msg_count = 0;
 let telegram_msg_window = time();
 // FD-cascade prevention: track logread pipe FD to close it in background spawns
 let logread_pipe_fd = -1;
+let last_oom_time = 0;
+let syslog_start_time = 0;
 
 let command_from_args = common.command_from_args;
 let command_status = common.command_status;
@@ -1356,10 +1358,18 @@ function handle_log_line(line) {
     }
     let line_lower = lc(line);
 
-    // 1. OOM Detection
-    if (index(line_lower, "out of memory") >= 0 || index(line_lower, "oom-killer") >= 0) {
+    // 1. OOM Detection (Kernel OOM-killer or sing-box process OOM crash only)
+    let is_oom = (index(line_lower, "oom-killer") >= 0 ||
+                  index(line_lower, "out of memory: kill process") >= 0 ||
+                  (index(line_lower, "kernel:") >= 0 && index(line_lower, "out of memory") >= 0) ||
+                  (index(line_lower, "sing-box") >= 0 && index(line_lower, "out of memory") >= 0) ||
+                  index(line_lower, "fatal error: out of memory") >= 0);
+    let is_netlink_warning = (index(line_lower, "netlink") >= 0 || index(line_lower, "nlbwmon") >= 0);
+
+    if (is_oom && !is_netlink_warning) {
         let now = time();
-        if (now - last_oom_time > 30) {
+        // Ignore replay of old historical log buffer dumped when logread -f starts
+        if (syslog_start_time > 0 && (now - syslog_start_time > 3) && (now - last_oom_time > 60)) {
             last_oom_time = now;
             log_message("OOM event detected from syslog! Reducing GOMEMLIMIT scaling...", "err");
             send_telegram_notification("🚨 *Watchdog:* Обнаружено событие OOM (Out Of Memory)! Уменьшаю GOMEMLIMIT и перезапускаю службы...");
@@ -1451,6 +1461,7 @@ function setup_honeypot_listener() {
 
 function setup_syslog_listener() {
     if (!uloop) return null;
+    syslog_start_time = time();
     // Kill orphaned logread -f processes from previous watchdog instances.
     // Without this, every restart cascades: new watchdog inherits old watchdog's
     // logread pipe read-end, keeping old logread alive. Over N restarts,
