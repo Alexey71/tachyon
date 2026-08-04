@@ -13675,7 +13675,7 @@ function isNotInstalled(version) {
 }
 function shouldShowInstallAfterCheck(component) {
   const status = getVisibleCheckResult(component)?.status;
-  return status === "outdated" || status === "dev";
+  return status === "outdated" || status === "dev" || status === "outdated_same_release";
 }
 function getVisibleCheckResult(component) {
   if (!shouldExposeCheckResults({

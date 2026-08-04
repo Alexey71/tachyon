@@ -474,6 +474,15 @@ function safe_proxy_restart(reason) {
     return true;
 }
 
+// ─── Reload dedup: prevent multiple reload_firewall per cycle ─────────────────
+function safe_reload_firewall() {
+    let now = time();
+    let min_interval = 120;
+    if (now - last_reload_time < min_interval) return;
+    last_reload_time = now;
+    bg_system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
+}
+
 function ai_heal_nftables() {
     let cfg = settings();
     let routing_mode = cfg.routing_mode || "nftables";
@@ -490,10 +499,10 @@ function ai_heal_nftables() {
                 "nftables",
                 "Таблица правил nftables очищена или повреждена",
                 "Выполнена быстрая регенерация правил TachyonTable и цепочки TPROXY",
-            "fixed"
-        );
-        safe_reload_firewall();
-        return false;
+                "fixed"
+            );
+            safe_reload_firewall();
+            return false;
         }
     }
     return true;
@@ -823,16 +832,6 @@ function ai_setting(key, default_val) {
 }
 function ai_enabled(key, default_val) {
     return ai_setting(key, default_val) == "1";
-}
-
-// ─── Reload dedup: prevent multiple reload_firewall per cycle ─────────────────
-function safe_reload_firewall() {
-    let now = time();
-    let elapsed = now - last_reload_time;
-    let min_interval = 120;
-    if (ai_enabled("ai_reload_dedup_enabled", "1") && elapsed < min_interval) return;
-    last_reload_time = now;
-    bg_system("/usr/bin/tachyon reload_firewall </dev/null >/dev/null 2>&1 &");
 }
 
 // ─── Config validation: sing-box check ────────────────────────────────────────
@@ -1191,9 +1190,53 @@ function safe_call(fn, name) {
     }
 }
 
+// ─── rpcd FD leak watchdog ────────────────────────────────────────────────────
+// rpcd accumulates file descriptors over time from LuCI API calls.
+// When FD count approaches the process limit (~1024), it can no longer
+// fork to execute /usr/bin/tachyon → LuCI shows everything as "stopped".
+// Threshold 512 = 50% of limit, safe to restart without user impact.
+const RPCD_FD_THRESHOLD = 512;
+
+function ai_heal_rpcd() {
+    // Find rpcd PID via /proc scan (avoid shell fork for pidof)
+    let rpcd_pid = null;
+    let proc_dir = fs.opendir("/proc");
+    if (!proc_dir) return true;
+    let entry;
+    while ((entry = proc_dir.read()) != null) {
+        if (!match(entry, /^[0-9]+$/)) continue;
+        let comm = trim(fs.readfile("/proc/" + entry + "/comm") || "");
+        if (comm == "rpcd") { rpcd_pid = entry; break; }
+    }
+    proc_dir.close();
+    if (!rpcd_pid) return true;
+
+    // Count open file descriptors
+    let fd_dir = fs.opendir("/proc/" + rpcd_pid + "/fd");
+    if (!fd_dir) return true;
+    let fd_count = 0;
+    while ((entry = fd_dir.read()) != null) {
+        if (match(entry, /^[0-9]+$/)) fd_count++;
+    }
+    fd_dir.close();
+
+    if (fd_count > RPCD_FD_THRESHOLD) {
+        ai_heal_report(
+            "rpcd_fd_leak",
+            sprintf("rpcd накопил %d открытых FD (порог %d/1024) — LuCI не может запускать команды", fd_count, RPCD_FD_THRESHOLD),
+            "Выполнен перезапуск rpcd для освобождения файловых дескрипторов",
+            "fixed"
+        );
+        system("/etc/init.d/rpcd restart </dev/null >/dev/null 2>&1");
+        return false;
+    }
+    return true;
+}
+
 // ─── Full health audit ────────────────────────────────────────────────────────
 function ai_full_health_audit() {
     safe_call(check_memory, "check_memory");
+    safe_call(ai_heal_rpcd, "ai_heal_rpcd");
     safe_call(ai_heal_nftables, "ai_heal_nftables");
     safe_call(ai_heal_qos, "ai_heal_qos");
     safe_call(ai_heal_dns, "ai_heal_dns");

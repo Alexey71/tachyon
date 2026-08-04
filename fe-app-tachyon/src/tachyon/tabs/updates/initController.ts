@@ -96,7 +96,7 @@ function isNotInstalled(version: string | undefined) {
 function shouldShowInstallAfterCheck(component: Tachyon.ComponentName) {
   const status = getVisibleCheckResult(component)?.status;
 
-  return status === 'outdated' || status === 'dev';
+  return status === 'outdated' || status === 'dev' || status === 'outdated_same_release';
 }
 
 function getVisibleCheckResult(component: Tachyon.ComponentName) {
