@@ -368,6 +368,57 @@ log_line() {
     printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '----------------')" "$1" >>"$LOG_FILE" 2>/dev/null || true
 }
 
+run_logged() {
+    _tag="$1"
+    shift
+
+    log_line "EXEC  [$_tag] $*"
+    local _tmp_out
+    _tmp_out="$(mktemp)" 2>/dev/null || _tmp_out="/tmp/.cmd-out-$$.log"
+
+    "$@" >"$_tmp_out" 2>&1
+    local _rc=$?
+
+    if [ -s "$_tmp_out" ]; then
+        while IFS= read -r _line; do
+            log_line "  [$_tag] $_line"
+        done <"$_tmp_out"
+    fi
+
+    if [ $_rc -ne 0 ]; then
+        cat "$_tmp_out" >&2 2>/dev/null || true
+    fi
+
+    rm -f "$_tmp_out" 2>/dev/null || true
+    return "$_rc"
+}
+
+run_logged_timeout() {
+    _tag="$1"
+    _secs="$2"
+    shift 2
+
+    log_line "EXEC  [$_tag] (timeout ${_secs}s) $*"
+    local _tmp_out
+    _tmp_out="$(mktemp)" 2>/dev/null || _tmp_out="/tmp/.cmd-out-$$.log"
+
+    pkg_run_timeout "$_secs" "$@" >"$_tmp_out" 2>&1
+    local _rc=$?
+
+    if [ -s "$_tmp_out" ]; then
+        while IFS= read -r _line; do
+            log_line "  [$_tag] $_line"
+        done <"$_tmp_out"
+    fi
+
+    if [ $_rc -ne 0 ]; then
+        cat "$_tmp_out" >&2 2>/dev/null || true
+    fi
+
+    rm -f "$_tmp_out" 2>/dev/null || true
+    return "$_rc"
+}
+
 msg() {
     log_line "INFO  $1"
     [ "$QUIET" -eq 1 ] && return 0
@@ -1640,27 +1691,19 @@ pkg_list_update() {
         return 0
     fi
 
-    local _err_log
-    _err_log="$(mktemp)" 2>/dev/null || _err_log="/tmp/.pkg-update-err-$$.log"
-
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        pkg_run_timeout 120 apk update >"$_err_log" 2>&1
+        run_logged_timeout "apk" 120 apk update
     else
-        pkg_run_timeout 120 opkg update >"$_err_log" 2>&1
+        run_logged_timeout "opkg" 120 opkg update
     fi
     local rc=$?
 
     if [ $rc -ne 0 ]; then
-        log_line "FAIL  package update failed (exit $rc):"
-        tail -n 10 <"$_err_log" >>"$LOG_FILE" 2>/dev/null || true
-        printf '%s%s--- package manager error (last 10 lines) ---%s\n' "$_c_red" "" "$_c_reset" >&2
-        tail -n 10 <"$_err_log" >&2 2>/dev/null || true
-        printf '%s%s--- end ---%s\n' "$_c_red" "" "$_c_reset" >&2
-        rm -f "$_err_log" 2>/dev/null || true
+        log_line "FAIL  package update failed (exit $rc)"
+        printf '%s%s--- package manager error ---%s\n' "$_c_red" "" "$_c_reset" >&2
         return 1
     fi
 
-    rm -f "$_err_log" 2>/dev/null || true
     return 0
 }
 
@@ -1672,27 +1715,19 @@ pkg_install_name() {
         return 0
     fi
 
-    local _err_log
-    _err_log="$(mktemp)" 2>/dev/null || _err_log="/tmp/.pkg-install-err-$$.log"
-
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        pkg_run_timeout 120 apk add "$pkg_name" >"$_err_log" 2>&1
+        run_logged_timeout "apk" 120 apk add "$pkg_name"
     else
-        pkg_run_timeout 120 opkg install "$pkg_name" >"$_err_log" 2>&1
+        run_logged_timeout "opkg" 120 opkg install "$pkg_name"
     fi
     local rc=$?
 
     if [ $rc -ne 0 ]; then
-        log_line "FAIL  package install failed for $pkg_name (exit $rc):"
-        tail -n 10 <"$_err_log" >>"$LOG_FILE" 2>/dev/null || true
-        printf '%s%s--- package install error for %s (last 10 lines) ---%s\n' "$_c_red" "" "$pkg_name" "$_c_reset" >&2
-        tail -n 10 <"$_err_log" >&2 2>/dev/null || true
-        printf '%s%s--- end ---%s\n' "$_c_red" "" "$_c_reset" >&2
-        rm -f "$_err_log" 2>/dev/null || true
+        log_line "FAIL  package install failed for $pkg_name (exit $rc)"
+        printf '%s%s--- package install error for %s ---%s\n' "$_c_red" "" "$pkg_name" "$_c_reset" >&2
         return 1
     fi
 
-    rm -f "$_err_log" 2>/dev/null || true
     return 0
 }
 
@@ -1703,9 +1738,7 @@ pkg_install_files() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        local _apk_log
-        _apk_log="$(mktemp)" 2>/dev/null || _apk_log="/tmp/.apk-install-$$.log"
-        pkg_run_timeout 120 apk add --allow-untrusted "$@" >"$_apk_log" 2>&1
+        run_logged_timeout "apk" 120 apk add --allow-untrusted "$@"
         local rc=$?
         if [ $rc -ne 0 ]; then
             # apk may report warnings as errors even though the package installed successfully
@@ -1717,36 +1750,19 @@ pkg_install_files() {
                 pkg_name="$(basename "$pkg_file" | sed 's/\.[^.]*$//; s/_[0-9].*$//')"
                 if pkg_is_installed "$pkg_name"; then
                     warn "Package manager reported non-critical errors during installation (package is installed OK)"
-                    rm -f "$_apk_log" 2>/dev/null
                     return 0
                 fi
             done
-            log_line "FAIL  apk install output:"
-            while IFS= read -r _line; do
-                log_line "  $_line"
-            done <"$_apk_log"
-            printf '%s%s%s\n' "${_c_red}" "apk output:" "${_c_reset}" >&2
-            tail -n 5 <"$_apk_log" >&2 2>/dev/null || true
-            rm -f "$_apk_log" 2>/dev/null
+            log_line "FAIL  apk install output reported error (exit $rc)"
             return $rc
         fi
-        rm -f "$_apk_log" 2>/dev/null
     else
-        local _opkg_log
-        _opkg_log="$(mktemp)" 2>/dev/null || _opkg_log="/tmp/.opkg-install-$$.log"
-        pkg_run_timeout 120 opkg install --force-overwrite --force-downgrade "$@" >"$_opkg_log" 2>&1
+        run_logged_timeout "opkg" 120 opkg install --force-overwrite --force-downgrade "$@"
         local rc=$?
         if [ $rc -ne 0 ]; then
-            log_line "FAIL  opkg install output:"
-            while IFS= read -r _line; do
-                log_line "  $_line"
-            done <"$_opkg_log"
-            printf '%s%s%s\n' "${_c_red}" "opkg output:" "${_c_reset}" >&2
-            tail -n 10 <"$_opkg_log" >&2 2>/dev/null || true
-            rm -f "$_opkg_log" 2>/dev/null
+            log_line "FAIL  opkg install failed (exit $rc)"
             return $rc
         fi
-        rm -f "$_opkg_log" 2>/dev/null
     fi
 }
 
@@ -1809,6 +1825,19 @@ check_root() {
     fi
 }
 
+log_system_audit() {
+    log_line "================================================================================"
+    log_line "Tachyon Installer v${INSTALLER_VERSION} Audit Log Started"
+    log_line "Timestamp       : $(date 2>/dev/null || echo '----------------')"
+    log_line "Kernel          : $(uname -a 2>/dev/null || echo 'N/A')"
+    log_line "Router Model    : $(cat /tmp/sysinfo/model 2>/dev/null || echo 'N/A')"
+    log_line "OpenWrt Release : $(read_openwrt_release_value "DISTRIB_RELEASE" 2>/dev/null || echo 'N/A') ($(read_openwrt_release_value "DISTRIB_TARGET" 2>/dev/null || echo 'N/A'))"
+    log_line "Package Manager : $([ "$PKG_IS_APK" -eq 1 ] && echo 'apk' || echo 'opkg')"
+    log_line "Free Overlay    : $(df -h /overlay 2>/dev/null | awk 'NR==2 {print $4}' || df -h / 2>/dev/null | awk 'NR==2 {print $4}')"
+    log_line "LuCI Main Lang  : $(get_luci_main_lang 2>/dev/null || echo 'auto')"
+    log_line "================================================================================"
+}
+
 check_system() {
     release=""
     major=""
@@ -1816,6 +1845,8 @@ check_system() {
     available_space=""
 
     [ -f /etc/openwrt_release ] || fail "This installer supports OpenWrt only"
+
+    log_system_audit
 
     model="$(cat /tmp/sysinfo/model 2>/dev/null || true)"
     [ -n "$model" ] && msg "$(installer_text router_model): $model"
@@ -2179,8 +2210,7 @@ install_selected_sing_box() {
 
     [ -x /usr/bin/tachyon ] || fail "tachyon backend must be installed before sing-box component action"
     msg "$(installer_text installing_singbox_backend)"
-    if ! /usr/bin/tachyon component_action sing_box "$action" >"$output_file" 2>&1; then
-        cat "$output_file" >&2 2>/dev/null || true
+    if ! run_logged "sing-box" /usr/bin/tachyon component_action sing_box "$action"; then
         fail "Failed to install selected sing-box variant"
     fi
 }
@@ -2392,7 +2422,7 @@ migrate_legacy_configuration() {
 
         if ! TACHYON_CONFIG_NAME="tachyon" \
             TACHYON_LIB="/usr/lib/tachyon" \
-            ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc "$migration_mode"; then
+            run_logged "migration" ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc "$migration_mode"; then
             cp "$LEGACY_CONFIG_BACKUP" /etc/config/tachyon 2>/dev/null || true
             fail "Legacy configuration migration failed; the original configuration was restored"
         fi
