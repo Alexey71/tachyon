@@ -1614,6 +1614,16 @@ download_with_retry() {
     return 1
 }
 
+pkg_run_timeout() {
+    _secs="$1"
+    shift
+    if command_exists timeout; then
+        timeout "$_secs" "$@"
+    else
+        run_with_deadline "$_secs" "$@"
+    fi
+}
+
 pkg_is_installed() {
     pkg_name="$1"
 
@@ -1634,9 +1644,9 @@ pkg_list_update() {
     _err_log="$(mktemp)" 2>/dev/null || _err_log="/tmp/.pkg-update-err-$$.log"
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        timeout 120 apk update >"$_err_log" 2>&1
+        pkg_run_timeout 120 apk update >"$_err_log" 2>&1
     else
-        timeout 120 opkg update >"$_err_log" 2>&1
+        pkg_run_timeout 120 opkg update >"$_err_log" 2>&1
     fi
     local rc=$?
 
@@ -1666,9 +1676,9 @@ pkg_install_name() {
     _err_log="$(mktemp)" 2>/dev/null || _err_log="/tmp/.pkg-install-err-$$.log"
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        timeout 120 apk add "$pkg_name" >"$_err_log" 2>&1
+        pkg_run_timeout 120 apk add "$pkg_name" >"$_err_log" 2>&1
     else
-        timeout 120 opkg install "$pkg_name" >"$_err_log" 2>&1
+        pkg_run_timeout 120 opkg install "$pkg_name" >"$_err_log" 2>&1
     fi
     local rc=$?
 
@@ -1695,7 +1705,7 @@ pkg_install_files() {
     if [ "$PKG_IS_APK" -eq 1 ]; then
         local _apk_log
         _apk_log="$(mktemp)" 2>/dev/null || _apk_log="/tmp/.apk-install-$$.log"
-        timeout 120 apk add --allow-untrusted "$@" >"$_apk_log" 2>&1
+        pkg_run_timeout 120 apk add --allow-untrusted "$@" >"$_apk_log" 2>&1
         local rc=$?
         if [ $rc -ne 0 ]; then
             # apk may report warnings as errors even though the package installed successfully
@@ -1724,7 +1734,7 @@ pkg_install_files() {
     else
         local _opkg_log
         _opkg_log="$(mktemp)" 2>/dev/null || _opkg_log="/tmp/.opkg-install-$$.log"
-        timeout 120 opkg install --force-overwrite --force-downgrade "$@" >"$_opkg_log" 2>&1
+        pkg_run_timeout 120 opkg install --force-overwrite --force-downgrade "$@" >"$_opkg_log" 2>&1
         local rc=$?
         if [ $rc -ne 0 ]; then
             log_line "FAIL  opkg install output:"
