@@ -1232,63 +1232,144 @@ function createSettingsContent(section, capabilities) {
   );
   hostsListUrlsOpt.placeholder = "https://raw.githubusercontent.com/.../hosts";
 
-  const hostsListDisabledOpt = section.option(
-    form.DynamicList,
-    "hosts_list_disabled",
-  );
-  hostsListDisabledOpt.anonymous = true;
-  hostsListDisabledOpt.hidden = true;
+  hostsListUrlsOpt.renderWidget = function (section_id, _option_index, _cfgvalue) {
+    const pkg = UCI_PACKAGE;
 
-  const _origHostsListRenderWidget = hostsListUrlsOpt.renderWidget;
-  hostsListUrlsOpt.renderWidget = function (section_id, option_index, cfgvalue) {
-    const node = _origHostsListRenderWidget.call(this, section_id, option_index, cfgvalue);
-    const disabledValues = uci.get(UCI_PACKAGE, "settings", "hosts_list_disabled") || [];
-
-    function syncToggles() {
-      const container = node.querySelector(".cbi-dynlist") || node;
-      const items = container.querySelectorAll(".cbi-dynlist-item, .item");
-      items.forEach((item) => {
-        if (item.querySelector(".hosts-toggle")) return;
-        const valueEl = item.querySelector(".cbi-dynlist-item-value, input");
-        if (!valueEl) return;
-        const url = (valueEl.textContent || valueEl.value || "").trim();
-        if (!url) return;
-
-        const isDisabled = disabledValues.includes(url);
-        const toggle = E("label", {
-          class: "hosts-toggle",
-          style: "display:inline-flex;align-items:center;cursor:pointer;margin-right:6px;flex-shrink:0;",
-        }, [
-          E("input", {
-            type: "checkbox",
-            checked: !isDisabled,
-            style: "margin-right:4px;",
-            change: function () {
-              const enabled = this.checked;
-              let currentDisabled = uci.get(UCI_PACKAGE, "settings", "hosts_list_disabled") || [];
-              if (!Array.isArray(currentDisabled)) currentDisabled = [currentDisabled];
-              if (enabled) {
-                currentDisabled = currentDisabled.filter((d) => d !== url);
-              } else {
-                if (!currentDisabled.includes(url)) currentDisabled.push(url);
-              }
-              uci.set(UCI_PACKAGE, "settings", "hosts_list_disabled", currentDisabled.length ? currentDisabled : null);
-              uci.save();
-            },
-          }),
-          E("span", {
-            style: "font-size:0.8rem;color:" + (isDisabled ? "var(--text-color-danger,#e53935)" : "var(--text-color-success,#43a047)"),
-          }, isDisabled ? "OFF" : "ON"),
-        ]);
-        item.prepend(toggle);
-      });
+    function getUrls() {
+      let v = uci.get(pkg, "settings", "hosts_list_urls") || [];
+      if (!Array.isArray(v)) v = v ? [v] : [];
+      return v;
     }
 
-    const observer = new MutationObserver(syncToggles);
-    observer.observe(node, { childList: true, subtree: true });
-    setTimeout(syncToggles, 100);
+    function getDisabled() {
+      let v = uci.get(pkg, "settings", "hosts_list_disabled") || [];
+      if (!Array.isArray(v)) v = v ? [v] : [];
+      return v;
+    }
 
-    return node;
+    function setUrls(urls) {
+      uci.set(pkg, "settings", "hosts_list_urls", urls.length ? urls : null);
+    }
+
+    function setDisabled(disabled) {
+      uci.set(pkg, "settings", "hosts_list_disabled", disabled.length ? disabled : null);
+    }
+
+    function shortenUrl(url) {
+      return url.length > 70 ? url.substring(0, 67) + "..." : url;
+    }
+
+    const container = E("div", { style: "display:flex;flex-direction:column;gap:6px;" });
+
+    function render() {
+      container.innerHTML = "";
+      const urls = getUrls();
+      const disabled = getDisabled();
+
+      if (urls.length === 0) {
+        container.appendChild(E("div", {
+          style: "color:var(--text-color-medium,#999);font-style:italic;padding:8px 0;",
+        }, _("No remote hosts lists configured.")));
+      }
+
+      urls.forEach(function (url, idx) {
+        const isOff = disabled.includes(url);
+        const row = E("div", {
+          style: "display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border-color-medium,#ddd);border-radius:6px;background:" + (isOff ? "var(--background-color-error,#fef2f2)" : "var(--background-color-success,#f0fdf4)") + ";",
+        });
+
+        const checkbox = E("input", {
+          type: "checkbox",
+          checked: !isOff,
+          style: "cursor:pointer;flex-shrink:0;width:16px;height:16px;",
+          change: function () {
+            const nowEnabled = this.checked;
+            let d = getDisabled();
+            if (nowEnabled) {
+              d = d.filter(function (x) { return x !== url; });
+            } else {
+              if (!d.includes(url)) d.push(url);
+            }
+            setDisabled(d);
+            uci.save();
+            render();
+          },
+        });
+
+        const label = E("span", {
+          style: "flex:1;font-family:monospace;font-size:0.82rem;word-break:break-all;color:" + (isOff ? "var(--text-color-danger,#e53935)" : "var(--text-color-default,#333)") + ";text-decoration:" + (isOff ? "line-through" : "none") + ";",
+        }, shortenUrl(url));
+
+        const statusBadge = E("span", {
+          style: "font-size:0.75rem;font-weight:600;flex-shrink:0;padding:2px 6px;border-radius:4px;" + (isOff
+            ? "color:#e53935;background:#fdecea;"
+            : "color:#2e7d32;background:#e8f5e9;"),
+        }, isOff ? "OFF" : "ON");
+
+        const delBtn = E("button", {
+          class: "cbi-button cbi-button-negative",
+          type: "button",
+          style: "flex-shrink:0;padding:2px 8px;font-size:0.75rem;",
+          click: function () {
+            let u = getUrls();
+            let d = getDisabled();
+            u.splice(idx, 1);
+            d = d.filter(function (x) { return x !== url; });
+            setUrls(u);
+            setDisabled(d);
+            uci.save();
+            render();
+          },
+        }, "\u2715");
+
+        row.appendChild(checkbox);
+        row.appendChild(label);
+        row.appendChild(statusBadge);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+      });
+
+      const addRow = E("div", {
+        style: "display:flex;gap:6px;margin-top:4px;",
+      });
+
+      const input = E("input", {
+        type: "text",
+        placeholder: "https://raw.githubusercontent.com/.../hosts",
+        style: "flex:1;padding:6px 10px;border:1px solid var(--border-color-medium,#ddd);border-radius:6px;font-size:0.85rem;",
+      });
+
+      const addBtn = E("button", {
+        class: "cbi-button cbi-button-action",
+        type: "button",
+        style: "flex-shrink:0;",
+        click: function () {
+          const val = (input.value || "").trim();
+          if (!val) return;
+          let u = getUrls();
+          if (u.includes(val)) {
+            input.value = "";
+            return;
+          }
+          u.push(val);
+          setUrls(u);
+          uci.save();
+          input.value = "";
+          render();
+        },
+      }, "+");
+
+      input.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") addBtn.click();
+      });
+
+      addRow.appendChild(input);
+      addRow.appendChild(addBtn);
+      container.appendChild(addRow);
+    }
+
+    render();
+    return container;
   };
 
   o = section.option(
