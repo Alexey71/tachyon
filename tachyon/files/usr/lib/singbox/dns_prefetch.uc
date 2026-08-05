@@ -118,12 +118,22 @@ function list_to_array(value) {
 
 function parse_text_domains(text) {
     let result = [];
-    for (let line in split(common.as_string(text), /[\n\r,\s]+/)) {
+    for (let line in split(common.as_string(text), /[\n\r]+/)) {
+        // Strip full-line comments (# or // style)
         line = trim(line);
-        // Strip leading dots (domain_suffix style) and wildcards
-        line = replace(line, /^\*?\./, "");
-        if (line != "" && substr(line, 0, 1) != "#")
-            push(result, line);
+        if (line == "" || substr(line, 0, 1) == "#" || substr(line, 0, 2) == "//")
+            continue;
+        // Strip inline comments
+        line = replace(line, /[ \t]+\/\/.*$/, "");
+        line = replace(line, /[ \t]+#.*$/, "");
+        // Split by comma or whitespace for multi-domain lines
+        for (let token in split(line, /[,\s]+/)) {
+            token = trim(token);
+            // Strip leading dots (domain_suffix style) and wildcards
+            token = replace(token, /^\*?\./, "");
+            if (token != "" && substr(token, 0, 1) != "#" && substr(token, 0, 2) != "//")
+                push(result, token);
+        }
     }
     return result;
 }

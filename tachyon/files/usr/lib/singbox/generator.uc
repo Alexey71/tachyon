@@ -408,7 +408,8 @@ function base_config(settings, service_address, runtime_context) {
         runtime_generate_unsupported(dns_config.unsupported);
 
     let dns_rules = [];
-    
+    let dns_hosts_predefined = [];
+
     let raw_dns_hosts = settings["dns_hosts"];
     let dns_hosts_entries = [];
     if (raw_dns_hosts != null && raw_dns_hosts != "") {
@@ -429,7 +430,7 @@ function base_config(settings, service_address, runtime_context) {
                 for (let i = 1; i < length(parts); i++) {
                     let d = parts[i];
                     if (d != "" && substr(d, 0, 1) != "#") {
-                        push(dns_rules, {
+                        push(dns_hosts_predefined, {
                             action: "predefined",
                             domain: [d],
                             answer: [d + ". 60 IN " + rr_type + " " + ip]
@@ -440,7 +441,7 @@ function base_config(settings, service_address, runtime_context) {
                 let domain = p1;
                 let ip = p2;
                 let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
-                push(dns_rules, {
+                push(dns_hosts_predefined, {
                     action: "predefined",
                     domain: [domain],
                     answer: [domain + ". 60 IN " + rr_type + " " + ip]
@@ -471,7 +472,7 @@ function base_config(settings, service_address, runtime_context) {
                             for (let i = 1; i < length(parts); i++) {
                                 let d = parts[i];
                                 if (d != "" && substr(d, 0, 1) != "#" && index(d, ":") == -1) {
-                                    push(dns_rules, {
+                                    push(dns_hosts_predefined, {
                                         action: "predefined",
                                         domain: [d],
                                         answer: [d + ". 60 IN " + rr_type + " " + ip]
@@ -483,7 +484,7 @@ function base_config(settings, service_address, runtime_context) {
                             let ip = p2;
                             if (index(domain, ":") == -1) {
                                 let rr_type = index(ip, ":") != -1 ? "AAAA" : "A";
-                                push(dns_rules, {
+                                push(dns_hosts_predefined, {
                                     action: "predefined",
                                     domain: [domain],
                                     answer: [domain + ". 60 IN " + rr_type + " " + ip]
@@ -498,7 +499,7 @@ function base_config(settings, service_address, runtime_context) {
         }
         if (fh) fh.close();
     }
-    
+
     for (let rule in dns_config.rules)
         push(dns_rules, rule);
     for (let rule in [
@@ -569,7 +570,8 @@ function base_config(settings, service_address, runtime_context) {
                 store_fakeip: true
             },
             clash_api: clash_api_config(settings, service_address)
-        }
+        },
+        __dns_hosts_predefined: dns_hosts_predefined
     };
 }
 
@@ -714,6 +716,17 @@ function generate_config(output_path, service_address, mwan3_active, supports_xh
     for (let section in sections)
         add_route_for_section(config, section);
     add_server_routes(config, servers, sections);
+
+    // Append dns_hosts predefined rules AFTER section DNS rules so that
+    // FakeIP/section-level DNS routing takes precedence over hardcoded IPs
+    // from dns_hosts or hosts cache. This prevents third-party hosts entries
+    // (e.g. from "Unlock AI" projects) from short-circuiting FakeIP for
+    // domains that are already routed through proxy via section rules.
+    if (type(config.__dns_hosts_predefined) == "array") {
+        for (let rule in config.__dns_hosts_predefined)
+            push(config.dns.rules, rule);
+    }
+
     add_service_mixed_proxy(config, settings, sections);
     for (let section in sections)
         add_mixed_proxy_for_section(config, section, service_address);
