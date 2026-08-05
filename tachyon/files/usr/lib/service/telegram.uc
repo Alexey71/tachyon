@@ -122,7 +122,7 @@ function get_tg_state(chat_id) {
 function set_tg_state(chat_id, state_obj) {
     let f = tg_state_path(chat_id);
     if (!f) return;
-    if (state_obj == null) fs.unlink(f);
+    if (state_obj == null) { try { fs.unlink(f); } catch(e) {} }
     else fs.writefile(f, sprintf("%J", state_obj));
 }
 
@@ -260,6 +260,25 @@ function escape_html(text) {
     text = replace(text, />/g, "&gt;");
     text = replace(text, /"/g, "&quot;");
     return text;
+}
+
+function ipv4_to_int(addr) {
+    let parts = split(addr, ".");
+    if (length(parts) != 4) return 0;
+    return (int(parts[0]) << 24) | (int(parts[1]) << 16) | (int(parts[2]) << 8) | int(parts[3]);
+}
+
+function cidr_match_v4(target, cidr) {
+    let slash = index(cidr, "/");
+    if (slash < 0) return target == cidr;
+    let cidr_ip = substr(cidr, 0, slash);
+    let prefix = int(substr(cidr, slash + 1));
+    if (prefix < 0 || prefix > 32) return false;
+    let target_int = ipv4_to_int(target);
+    let cidr_int = ipv4_to_int(cidr_ip);
+    if (target_int == 0 || cidr_int == 0) return false;
+    let mask = prefix == 0 ? 0 : (~0 << (32 - prefix));
+    return (target_int & mask) == (cidr_int & mask);
 }
 
 // ─── Views & Handlers ────────────────────────────────────────────────────────
@@ -1117,12 +1136,15 @@ function exec_support_bundle(token, chat_id) {
     } else {
         send_message(token, chat_id, "❌ <b>Ошибка генерации Bundle.</b>", "HTML");
     }
-    try { fs.unlink("/tmp/tachyon_ip_route.txt"); fs.unlink("/tmp/tachyon_logread.txt"); } catch(e) {}
+    try { fs.unlink("/etc/.tachyon/ip_route.txt"); fs.unlink("/etc/.tachyon/logread.txt"); } catch(e) {}
 }
 
 function exec_close_connections(token, chat_id) {
     let out = command_capture(command_from_args(["curl", "-s", "-X", "DELETE", "http://127.0.0.1:4534/connections"]));
-    send_message(token, chat_id, "✅ <b>Все активные соединения сброшены.</b>\nОни будут переустановлены по новым маршрутам.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+    if (out && out.status == 0)
+        send_message(token, chat_id, "✅ <b>Все активные соединения сброшены.</b>\nОни будут переустановлены по новым маршрутам.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
+    else
+        send_message(token, chat_id, "❌ <b>Ошибка сброса соединений.</b>\nsing-box Clash API недоступен.", "HTML", [[{text:"⬅️ Меню", callback_data:"/menu"}]]);
 }
 
 function exec_check_updates(token, chat_id, msg_id) {
@@ -1382,6 +1404,7 @@ function view_system_info(token, chat_id, msg_id) {
 
 function view_connections(token, chat_id, msg_id, page) {
     page = int(page || 0);
+    if (page < 0) page = 0;
     let data = api.get_clash_connections();
     let text = "🔗 <b>Активные подключения</b>\n\n";
 
@@ -1539,7 +1562,7 @@ function view_test_rule(token, chat_id, msg_id, target) {
             }
         }
         for (let ip in ip_cidr) {
-            if (match(target, /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) && match(ip, /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/)) {
+            if (match(target, /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) && cidr_match_v4(target, ip)) {
                 text += "✅ Совпадение: <code>" + escape_html(sec[".name"]) + "</code> (ip_cidr)\n";
                 text += "   Действие: <code>" + as_string(sec.action || "proxy") + "</code>\n\n";
                 matched = true;
@@ -1643,7 +1666,7 @@ function view_watchdog(token, chat_id, msg_id) {
 function exec_ai_heal(token, chat_id, msg_id) {
     send_message(token, chat_id, "🤖 <b>ИИ-Автомеханик выполняет диагностику и самолечение...</b>", "HTML");
 
-    command_status("/usr/bin/tachyon ai_heal");
+    command_status(command_from_args(["/usr/bin/tachyon", "ai_heal"]));
 
     let status_data = fs.readfile("/tmp/tachyon_ai_status.json");
     let text = "🤖 <b>[ИИ-Автомеханик Tachyon]</b>\n\n";
@@ -1728,6 +1751,7 @@ function dispatch_command(token, chat_id, text, msg_id) {
     let cmd = trim(as_string(text));
     let state = get_tg_state(chat_id);
     
+    if (cmd == "/noop") return;
     if (cmd == "/start" || cmd == "/menu") return view_menu(token, chat_id, msg_id);
     if (cmd == "/status") return view_status(token, chat_id, msg_id);
     if (cmd == "/runtime") return view_runtime(token, chat_id, msg_id);
@@ -1842,11 +1866,11 @@ function dispatch_command(token, chat_id, text, msg_id) {
     }
     
     if (cmd == "/wd_start") {
-        command_status("/usr/bin/tachyon watchdog_start");
+        command_status(command_from_args(["/usr/bin/tachyon", "watchdog_start"]));
         return view_watchdog(token, chat_id, msg_id);
     }
     if (cmd == "/wd_stop") {
-        command_status("/usr/bin/tachyon watchdog_stop");
+        command_status(command_from_args(["/usr/bin/tachyon", "watchdog_stop"]));
         return view_watchdog(token, chat_id, msg_id);
     }
     
@@ -1989,7 +2013,7 @@ function dispatch_command(token, chat_id, text, msg_id) {
         return;
     }
     if (match(cmd, /^\/dns_apply /)) {
-        let idx = int(trim(substr(cmd, 12)));
+        let idx = int(trim(substr(cmd, 11)));
         let c = uci_core.cursor(); c.load(CONFIG_NAME);
         let s = c.get_all(CONFIG_NAME, "settings");
         let dns_type = option(s, "dns_type", "doh");
@@ -2133,7 +2157,7 @@ function process_updates(token, admin_ids) {
             if (msg.text) {
                 if (match(msg.text, /^> /)) {
                     let exec_cmd = trim(substr(msg.text, 2));
-                    send_message(token, chat_id, "⏳ Выполняю из разрешённого набора (whitelist):\n`" + escape_html(exec_cmd) + "`", "HTML");
+                    send_message(token, chat_id, "⏳ Выполняю из разрешённого набора (whitelist):\n<code>" + escape_html(exec_cmd) + "</code>", "HTML");
                     let out = safe_execute(exec_cmd);
                     let result_text = "<b>Выполнено (код " + out.status + "):</b>\n<pre>" + escape_html(out.output || "Нет вывода") + "</pre>";
                     if (length(result_text) > 4000) result_text = substr(result_text, 0, 4000) + "...</pre>";
@@ -2285,8 +2309,10 @@ function check_notified_updates(token, admin_ids) {
         if (ndata) { try { notified = json(ndata); } catch(e){} }
         
         let changed = false;
-        for (let name in data) {
-            let comp = data[name];
+        let results = data.results || [];
+        for (let comp in results) {
+            let name = comp.component || "";
+            if (name == "") continue;
             if (comp.status == "outdated") {
                 let latest = comp.latest_version;
                 if (notified[name] != latest) {
