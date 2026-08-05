@@ -1255,33 +1255,25 @@ function createSettingsContent(section, capabilities) {
       uci.set(pkg, "settings", "hosts_list_disabled", disabled.length ? disabled : null);
     }
 
-    function shortenUrl(url) {
-      return url.length > 70 ? url.substring(0, 67) + "..." : url;
-    }
-
-    const container = E("div", { style: "display:flex;flex-direction:column;gap:6px;" });
+    const container = E("div", { class: "cbi-section-node" });
 
     function render() {
       container.innerHTML = "";
       const urls = getUrls();
       const disabled = getDisabled();
 
-      if (urls.length === 0) {
-        container.appendChild(E("div", {
-          style: "color:var(--text-color-medium,#999);font-style:italic;padding:8px 0;",
-        }, _("No remote hosts lists configured.")));
-      }
+      const table = E("table", { class: "cbi-section-table", style: "width:100%;" });
+      const tbody = E("tbody");
 
       urls.forEach(function (url, idx) {
         const isOff = disabled.includes(url);
-        const row = E("div", {
-          style: "display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border-color-medium,#ddd);border-radius:6px;background:" + (isOff ? "var(--background-color-error,#fef2f2)" : "var(--background-color-success,#f0fdf4)") + ";",
-        });
+        const tr = E("tr", { class: "cbi-section-table-row" });
 
-        const checkbox = E("input", {
+        const tdCheck = E("td", { class: "cbi-section-table-cell", style: "width:30px;text-align:center;" });
+        const cb = E("input", {
           type: "checkbox",
+          class: "cbi-input-checkbox",
           checked: !isOff,
-          style: "cursor:pointer;flex-shrink:0;width:16px;height:16px;",
           change: function () {
             const nowEnabled = this.checked;
             let d = getDisabled();
@@ -1295,21 +1287,27 @@ function createSettingsContent(section, capabilities) {
             render();
           },
         });
+        tdCheck.appendChild(cb);
+        tr.appendChild(tdCheck);
 
-        const label = E("span", {
-          style: "flex:1;font-family:monospace;font-size:0.82rem;word-break:break-all;color:" + (isOff ? "var(--text-color-danger,#e53935)" : "var(--text-color-default,#333)") + ";text-decoration:" + (isOff ? "line-through" : "none") + ";",
-        }, shortenUrl(url));
+        const tdUrl = E("td", { class: "cbi-section-table-cell" });
+        const urlSpan = E("span", {
+          style: isOff ? "text-decoration:line-through;opacity:0.6;" : "",
+        }, url);
+        tdUrl.appendChild(urlSpan);
+        tr.appendChild(tdUrl);
 
-        const statusBadge = E("span", {
-          style: "font-size:0.75rem;font-weight:600;flex-shrink:0;padding:2px 6px;border-radius:4px;" + (isOff
-            ? "color:#e53935;background:#fdecea;"
-            : "color:#2e7d32;background:#e8f5e9;"),
-        }, isOff ? "OFF" : "ON");
+        const tdStatus = E("td", { class: "cbi-section-table-cell", style: "width:60px;text-align:center;white-space:nowrap;" });
+        tdStatus.appendChild(E("span", {
+          style: isOff ? "color:#e53935;" : "color:#2e7d32;",
+        }, isOff ? "OFF" : "ON"));
+        tr.appendChild(tdStatus);
 
+        const tdDel = E("td", { class: "cbi-section-table-cell", style: "width:40px;text-align:center;" });
         const delBtn = E("button", {
-          class: "cbi-button cbi-button-negative",
+          class: "btn cbi-button cbi-button-remove",
           type: "button",
-          style: "flex-shrink:0;padding:2px 8px;font-size:0.75rem;",
+          title: _("Remove"),
           click: function () {
             let u = getUrls();
             let d = getDisabled();
@@ -1321,36 +1319,32 @@ function createSettingsContent(section, capabilities) {
             render();
           },
         }, "\u2715");
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
 
-        row.appendChild(checkbox);
-        row.appendChild(label);
-        row.appendChild(statusBadge);
-        row.appendChild(delBtn);
-        container.appendChild(row);
+        tbody.appendChild(tr);
       });
 
-      const addRow = E("div", {
-        style: "display:flex;gap:6px;margin-top:4px;",
-      });
+      table.appendChild(tbody);
+      container.appendChild(table);
+
+      const addRow = E("div", { class: "cbi-section-create", style: "margin-top:8px;display:flex;gap:4px;align-items:center;" });
 
       const input = E("input", {
         type: "text",
+        class: "cbi-input-text",
         placeholder: "https://raw.githubusercontent.com/.../hosts",
-        style: "flex:1;padding:6px 10px;border:1px solid var(--border-color-medium,#ddd);border-radius:6px;font-size:0.85rem;",
+        style: "flex:1;",
       });
 
       const addBtn = E("button", {
-        class: "cbi-button cbi-button-action",
+        class: "btn cbi-button cbi-button-action",
         type: "button",
-        style: "flex-shrink:0;",
         click: function () {
           const val = (input.value || "").trim();
           if (!val) return;
           let u = getUrls();
-          if (u.includes(val)) {
-            input.value = "";
-            return;
-          }
+          if (u.includes(val)) { input.value = ""; return; }
           u.push(val);
           setUrls(u);
           uci.save();
