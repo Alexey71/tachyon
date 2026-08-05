@@ -190,15 +190,12 @@ function dnsmasq_configure_default_instance() {
     }
 
     backup_dnsmasq_config_option("addn_hosts", "tachyon_addn_hosts");
+    uci_delete("dhcp.@dnsmasq[0].addn_hosts");
 
     uci_delete("dhcp.@dnsmasq[0].server");
     uci_add_list("dhcp.@dnsmasq[0].server", SB_DNS_INBOUND_ADDRESS);
     uci_set("dhcp.@dnsmasq[0].noresolv", "1");
     uci_set("dhcp.@dnsmasq[0].cachesize", "0");
-
-    if (fs.stat(HOSTS_CACHE_FILE) != null) {
-        uci_set("dhcp.@dnsmasq[0].addn_hosts", HOSTS_CACHE_FILE);
-    }
 }
 
 function dnsmasq_restore_default_instance() {

@@ -545,12 +545,18 @@ run_with_deadline() {
 
     "$@" &
     tachyon_deadline_command_pid=$!
+
+    # kill entire process group (all children of the command)
+    _deadline_kill_group() {
+        kill -- -"$tachyon_deadline_command_pid" 2>/dev/null || kill "$tachyon_deadline_command_pid" 2>/dev/null || true
+    }
+
     (
         trap 'kill "$tachyon_deadline_sleep_pid" 2>/dev/null || true; exit 0' TERM INT
         sleep "$tachyon_deadline_seconds" &
         tachyon_deadline_sleep_pid=$!
         wait "$tachyon_deadline_sleep_pid"
-        kill "$tachyon_deadline_command_pid" 2>/dev/null || true
+        _deadline_kill_group
     ) &
     tachyon_deadline_watchdog_pid=$!
 
@@ -965,7 +971,7 @@ function remove_legacy_named_children(root) {
 }
 
 function restart_dnsmasq() {
-    return run("[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart");
+    return run("[ -x /etc/init.d/dnsmasq ] && timeout 10 /etc/init.d/dnsmasq restart");
 }
 
 function installer_package_manager() {
@@ -1000,7 +1006,7 @@ function installer_package_installed(name) {
         return false;
 
     if (installer_package_manager() == "apk")
-        return run_args([ "apk", "info", "-e", name ]);
+        return run_args([ "timeout", "30", "apk", "info", "-e", name ]);
 
     for (let installed in installer_installed_package_names())
         if (installed == name)
@@ -1014,8 +1020,8 @@ function installer_remove_package(name) {
         return true;
 
     if (installer_package_manager() == "apk")
-        return run_args([ "apk", "del", name ]);
-    return run_args([ "opkg", "remove", "--force-depends", name ]);
+        return run_args([ "timeout", "120", "apk", "del", name ]);
+    return run_args([ "timeout", "120", "opkg", "remove", "--force-depends", name ]);
 }
 
 function installer_remove_package_prefix(prefix) {
@@ -1061,22 +1067,22 @@ function installer_confirm_remove_https_dns_proxy() {
 }
 
 function installer_service_enabled(init_script) {
-    return path_executable(init_script) && run_args([ init_script, "enabled" ]);
+    return path_executable(init_script) && run_args([ "timeout", "10", init_script, "enabled" ]);
 }
 
 function installer_service_running(init_script) {
     if (!path_executable(init_script))
         return false;
 
-    if (trim(command_output([ init_script, "status" ])) == "running")
+    if (trim(command_output([ "timeout", "10", init_script, "status" ])) == "running")
         return true;
-    return run_args([ init_script, "running" ]);
+    return run_args([ "timeout", "10", init_script, "running" ]);
 }
 
 function installer_backend_status_running(bin_path) {
     if (!path_executable(bin_path))
         return false;
-    return index(command_output([ bin_path, "get_status" ]), "\"running\":1") >= 0;
+    return index(command_output([ "timeout", "10", bin_path, "get_status" ]), "\"running\":1") >= 0;
 }
 
 function select_dns_owner(legacy) {
@@ -1104,17 +1110,19 @@ function installer_restore_dnsmasq(bin_path, legacy) {
 
 function installer_deactivate_legacy_base() {
     if (!path_executable(INSTALLER_LEGACY_BASE_INIT))
-        return;
+        return false;
 
     if (installer_service_running(INSTALLER_LEGACY_BASE_INIT)) {
         warn("Detected a running legacy service. Stopping it before installing Tachyon.\n");
-        run_args([ INSTALLER_LEGACY_BASE_INIT, "stop" ]);
+        run_args([ "timeout", "10", INSTALLER_LEGACY_BASE_INIT, "stop" ]);
     }
 
     if (installer_service_enabled(INSTALLER_LEGACY_BASE_INIT)) {
         warn("Detected an enabled legacy autostart. Disabling it before installing Tachyon.\n");
-        run_args([ INSTALLER_LEGACY_BASE_INIT, "disable" ]);
+        run_args([ "timeout", "10", INSTALLER_LEGACY_BASE_INIT, "disable" ]);
     }
+
+    return true;
 }
 
 function installer_cleanup_legacy() {
@@ -1132,15 +1140,15 @@ function installer_cleanup_legacy() {
         installer_deactivate_legacy_base();
 
     if (path_executable(active_init)) {
-        run_args([ active_init, "stop" ]);
+        run_args([ "timeout", "10", active_init, "stop" ]);
         installer_restore_dnsmasq(active_bin, legacy_installed);
-        run_args([ active_init, "disable" ]);
+        run_args([ "timeout", "10", active_init, "disable" ]);
     }
 
     if (path_executable("/etc/init.d/netshift")) {
         if (installer_service_running("/etc/init.d/netshift"))
-            run_args([ "/etc/init.d/netshift", "stop" ]);
-        run_args([ "/etc/init.d/netshift", "disable" ]);
+            run_args([ "timeout", "10", "/etc/init.d/netshift", "stop" ]);
+        run_args([ "timeout", "10", "/etc/init.d/netshift", "disable" ]);
     }
 
     let packages_removed = true;
@@ -1186,7 +1194,8 @@ function installer_cleanup_legacy() {
         packages_removed = false;
 
     if (!packages_removed) {
-        warn("Warning: Failed to remove one or more conflicting or legacy packages. Continuing installation anyway...\n");
+        warn("Failed to remove one or more conflicting or legacy packages.\n");
+        return false;
     }
 
     if (legacy_installed) {
@@ -1321,14 +1330,14 @@ function installer_post_install() {
         remove_path(path);
 
     if (path_executable(INSTALLER_RPCD_INIT))
-        run_args([ INSTALLER_RPCD_INIT, "reload" ]);
+        run_args([ "timeout", "10", INSTALLER_RPCD_INIT, "reload" ]);
 
     if (env("TACHYON_WAS_ENABLED", "0") == "1" && path_executable(INSTALLER_TACHYON_INIT))
-        run_args([ INSTALLER_TACHYON_INIT, "enable" ]);
+        run_args([ "timeout", "10", INSTALLER_TACHYON_INIT, "enable" ]);
 
     if (env("TACHYON_WAS_RUNNING", "0") == "1" && path_executable(INSTALLER_TACHYON_INIT)) {
-        if (!run_args([ INSTALLER_TACHYON_INIT, "start" ]) &&
-            !run_args([ INSTALLER_TACHYON_INIT, "restart" ]))
+        if (!run_args([ "timeout", "30", INSTALLER_TACHYON_INIT, "start" ]) &&
+            !run_args([ "timeout", "30", INSTALLER_TACHYON_INIT, "restart" ]))
             warn("Failed to start Tachyon after upgrade.\n");
     }
 
@@ -1622,9 +1631,9 @@ pkg_list_update() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk update >/dev/null 2>&1
+        timeout 120 apk update >/dev/null 2>&1
     else
-        opkg update >/dev/null 2>&1
+        timeout 120 opkg update >/dev/null 2>&1
     fi
 }
 
@@ -1637,9 +1646,9 @@ pkg_install_name() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk add "$pkg_name" >/dev/null 2>&1
+        timeout 120 apk add "$pkg_name" >/dev/null 2>&1
     else
-        opkg install "$pkg_name" >/dev/null 2>&1
+        timeout 120 opkg install "$pkg_name" >/dev/null 2>&1
     fi
 }
 
@@ -1652,7 +1661,7 @@ pkg_install_files() {
     if [ "$PKG_IS_APK" -eq 1 ]; then
         local _apk_log
         _apk_log="$(mktemp)" 2>/dev/null || _apk_log="/tmp/.apk-install-$$.log"
-        apk add --allow-untrusted "$@" >"$_apk_log" 2>&1
+        timeout 120 apk add --allow-untrusted "$@" >"$_apk_log" 2>&1
         local rc=$?
         if [ $rc -ne 0 ]; then
             # apk may report warnings as errors even though the package installed successfully
@@ -1679,7 +1688,7 @@ pkg_install_files() {
         fi
         rm -f "$_apk_log" 2>/dev/null
     else
-        opkg install --force-overwrite --force-downgrade "$@" >/dev/null 2>&1
+        timeout 120 opkg install --force-overwrite --force-downgrade "$@" >/dev/null 2>&1
     fi
 }
 
