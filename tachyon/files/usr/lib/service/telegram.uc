@@ -21,6 +21,18 @@ let command_from_args = common.command_from_args;
 let command_capture = common.command_capture;
 let command_output_from_args = common.command_output_from_args;
 
+// ─── Callback Data Helpers ────────────────────────────────────────────────────
+
+function cb_data(args) {
+    let s = join(" ", args);
+    if (length(s) <= 64) return s;
+    let h = 0;
+    for (let i = 0; i < length(s); i++)
+        h = ((h << 5) - h + ord(s, i)) | 0;
+    let prefix = substr(s, 0, 40);
+    return prefix + " " + sprintf("%08x", h & 0xFFFFFFFF);
+}
+
 // ─── Settings & Config ────────────────────────────────────────────────────────
 
 function settings() {
@@ -506,7 +518,7 @@ function view_set_arr(token, chat_id, msg_id, stype, sname, key) {
     for (let i = 0; i < length(items); i++) {
         text += "• <code>" + escape_html(items[i]) + "</code>\n";
         if (i < 20) {
-            push(keyboard, [{ text: "❌ Удалить " + items[i], callback_data: "/set_arr_del " + stype + " " + sname + " " + key + " " + items[i] }]);
+            push(keyboard, [{ text: "❌ Удалить " + items[i], callback_data: cb_data(["/set_arr_del", stype, sname, key, items[i]]) }]);
         }
     }
     
@@ -877,7 +889,7 @@ function view_sec_list(token, chat_id, msg_id, sec_name, list_type) {
             text += "• <code>" + escape_html(it.val) + "</code> (" + it.type + ")\n";
             // Add individual delete buttons (up to 20 for UI limits)
             if (i < 20) {
-                push(keyboard, [{ text: "❌ Удалить " + it.val, callback_data: "/sec_del_it " + sec_name + " " + it.type + " " + it.val }]);
+                push(keyboard, [{ text: "❌ Удалить " + it.val, callback_data: cb_data(["/sec_del_it", sec_name, it.type, it.val]) }]);
             }
         }
         if (length(items) > 20) text += "\n<i>(Показаны не все элементы для удаления)</i>\n";
@@ -1548,7 +1560,7 @@ function view_test_rule(token, chat_id, msg_id, target) {
         let ip_cidr = common.list_option(sec, "ip_cidr");
 
         for (let d in domain_suffix) {
-            if (match(target, escape_html(d) + "$") || target == d) {
+            if (target == d || (length(target) > length(d) + 1 && substr(target, length(target) - length(d) - 1) == "." + d)) {
                 text += "✅ Совпадение: <code>" + escape_html(sec[".name"]) + "</code> (domain_suffix)\n";
                 text += "   Действие: <code>" + as_string(sec.action || "proxy") + "</code>\n\n";
                 matched = true;
@@ -2185,7 +2197,6 @@ function process_updates(token, admin_ids) {
                     continue;
                 }
 
-                set_tg_state(chat_id, null);
                 let c = uci_core.cursor();
                 c.load(CONFIG_NAME);
 
@@ -2193,6 +2204,7 @@ function process_updates(token, admin_ids) {
                     let val = trim(msg.text);
                     c.set(CONFIG_NAME, state.sname, state.key, val);
                     c.commit(CONFIG_NAME);
+                    set_tg_state(chat_id, null);
                     send_message(token, chat_id, "✅ Значение <code>" + state.key + "</code> сохранено.", "HTML");
                     view_set_cat(token, chat_id, null, state.stype, state.sname, 0);
                 }
@@ -2205,7 +2217,10 @@ function process_updates(token, admin_ids) {
                         for (let x in valid) push(cur, x);
                         c.set(CONFIG_NAME, state.sname, state.key, cur);
                         c.commit(CONFIG_NAME);
+                        set_tg_state(chat_id, null);
                         send_message(token, chat_id, "✅ Добавлено элементов: " + length(valid));
+                    } else {
+                        set_tg_state(chat_id, null);
                     }
                     view_set_arr(token, chat_id, null, state.stype, state.sname, state.key);
                 }
@@ -2217,9 +2232,11 @@ function process_updates(token, admin_ids) {
                         c.set(CONFIG_NAME, new_sec, "enabled", "1");
                         c.set(CONFIG_NAME, new_sec, "label", new_sec);
                         c.commit(CONFIG_NAME);
+                        set_tg_state(chat_id, null);
                         send_message(token, chat_id, "✅ Секция создана!");
                         view_section_editor(token, chat_id, null, new_sec);
                     } else {
+                        set_tg_state(chat_id, state);
                         send_message(token, chat_id, "❌ Неверное имя. Разрешены только буквы, цифры и подчеркивания.");
                     }
                 }
@@ -2227,6 +2244,7 @@ function process_updates(token, admin_ids) {
                     let new_label = trim(msg.text);
                     c.set(CONFIG_NAME, state.sec, "label", new_label);
                     c.commit(CONFIG_NAME);
+                    set_tg_state(chat_id, null);
                     send_message(token, chat_id, "✅ Имя изменено.");
                     view_section_editor(token, chat_id, null, state.sec);
                 }
@@ -2234,6 +2252,7 @@ function process_updates(token, admin_ids) {
                     let new_target = trim(msg.text);
                     c.set(CONFIG_NAME, state.sec, "target", new_target);
                     c.commit(CONFIG_NAME);
+                    set_tg_state(chat_id, null);
                     send_message(token, chat_id, "✅ Цель изменена.");
                     view_section_editor(token, chat_id, null, state.sec);
                 }
@@ -2252,8 +2271,10 @@ function process_updates(token, admin_ids) {
                         for (let x in valid_items) push(current, x);
                         c.set(CONFIG_NAME, state.sec, field, current);
                         c.commit(CONFIG_NAME);
+                        set_tg_state(chat_id, null);
                         send_message(token, chat_id, "✅ Добавлено " + length(valid_items) + " элементов.");
                     } else {
+                        set_tg_state(chat_id, null);
                         send_message(token, chat_id, "❌ Ничего не добавлено.");
                     }
                     view_sec_list(token, chat_id, null, state.sec, state.list);
