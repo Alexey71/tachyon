@@ -139,15 +139,15 @@ function apk_version(package_name) {
     if (version != "")
         return version;
 
+    version = apk_info_version(package_name, command_output([ "apk", "info", "-v", package_name ]));
+    if (version != "")
+        return version;
+
     version = apk_manifest_version(package_name, command_output([ "apk", "list", "--installed", "--manifest", package_name ]));
     if (version != "")
         return version;
 
-    version = apk_manifest_version(package_name, command_output([ "apk", "list", "--installed", "--manifest" ]));
-    if (version != "")
-        return version;
-
-    return apk_info_version(package_name, command_output([ "apk", "info", "-v", package_name ]));
+    return apk_manifest_version(package_name, command_output([ "apk", "list", "--installed", "--manifest" ]));
 }
 
 function apk_available_version(package_name) {

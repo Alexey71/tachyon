@@ -146,6 +146,7 @@ function stop_runtime() {
     }
     remove_file("/var/run/tachyon_honeypot_listener.pid");
     remove_file("/tmp/tachyon_honeypot.fifo");
+    remove_file(PROXY_RESTART_LOCK);
 
     return 0;
 }
@@ -279,6 +280,7 @@ try { uloop = require("uloop"); } catch (e) {}
 try { ubus = require("ubus"); } catch (e) {}
 
 let last_oom_time = 0;
+let last_oom_recovery_time = 0;
 let last_restart_time = 0;
 let last_urltest_check = 0;
 let pending_smart_domains = {};
@@ -290,6 +292,7 @@ let last_reload_time = 0;
 let proxy_consecutive_fails = 0;
 let dns_consecutive_fails = 0;
 let ai_healthy_streak = 0;
+let cached_proxy_port = null;
 let proxy_latency_history = [];
 let dns_latency_history = [];
 let last_anomaly_check = 0;
@@ -465,12 +468,20 @@ function safe_proxy_restart(reason) {
         return false;
     }
     if (fs.stat(PROXY_RESTART_LOCK) != null) {
-        log_message("Proxy restart lock exists, skipping (" + reason + ")", "warn");
-        return false;
+        let lock_content = trim(fs.readfile(PROXY_RESTART_LOCK) || "0");
+        let lock_age = now - int(lock_content);
+        if (lock_age < 300) {
+            log_message("Proxy restart lock exists (age " + as_string(lock_age) + "s), skipping (" + reason + ")", "warn");
+            return false;
+        }
+        log_message("Proxy restart lock stale (age " + as_string(lock_age) + "s), removing", "warn");
+        remove_file(PROXY_RESTART_LOCK);
     }
     try { fs.writefile(PROXY_RESTART_LOCK, as_string(now)); } catch(e) {}
     proxy_restart_count++;
-    bg_system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 &");
+    cached_proxy_port = null;
+    let lock_path = shell_quote(PROXY_RESTART_LOCK);
+    bg_system("/etc/init.d/tachyon restart </dev/null >/dev/null 2>&1 & rm -f " + lock_path + " &");
     return true;
 }
 
@@ -562,19 +573,24 @@ function ai_heal_proxy_connectivity() {
 
     let now = time();
     let proxy_addr = "127.0.0.1:4534";
-    let sb_cfg_data = fs.readfile("/etc/sing-box/config.json");
-    if (sb_cfg_data) {
-        try {
-            let sb_cfg = json(sb_cfg_data);
-            if (sb_cfg.inbounds) {
-                for (let inb in sb_cfg.inbounds) {
-                    if (inb.type == "http" || inb.type == "mixed") {
-                        proxy_addr = "127.0.0.1:" + as_string(inb.listen_port || 4534);
-                        break;
+    if (cached_proxy_port !== null) {
+        proxy_addr = "127.0.0.1:" + as_string(cached_proxy_port);
+    } else {
+        let sb_cfg_data = fs.readfile("/etc/sing-box/config.json");
+        if (sb_cfg_data) {
+            try {
+                let sb_cfg = json(sb_cfg_data);
+                if (sb_cfg.inbounds) {
+                    for (let inb in sb_cfg.inbounds) {
+                        if (inb.type == "http" || inb.type == "mixed") {
+                            cached_proxy_port = inb.listen_port || 4534;
+                            proxy_addr = "127.0.0.1:" + as_string(cached_proxy_port);
+                            break;
+                        }
                     }
                 }
-            }
-        } catch(e) {}
+            } catch(e) {}
+        }
     }
 
     let proxy_ok = command_success_from_args([
@@ -1497,6 +1513,27 @@ function setup_honeypot_listener() {
     }
 }
 
+function recover_oom_scale() {
+    let now = time();
+    if (now - last_oom_time < 1800) return;
+    if (last_oom_time == 0) return;
+    if (now - last_oom_recovery_time < 600) return;
+    last_oom_recovery_time = now;
+
+    let scale_path = "/etc/tachyon/mem_scale";
+    let scale_data = fs.readfile(scale_path);
+    if (scale_data == null) return;
+    let current_scale = double(trim(as_string(scale_data)));
+    if (current_scale >= 1.0 || current_scale < 0.1) {
+        if (current_scale >= 1.0) try { fs.unlink(scale_path); } catch(e) {}
+        return;
+    }
+    let new_scale = current_scale + 0.05;
+    if (new_scale > 1.0) new_scale = 1.0;
+    log_message("OOM recovery: restoring GOMEMLIMIT scale from " + sprintf("%.2f", current_scale) + " to " + sprintf("%.2f", new_scale), "info");
+    try { fs.writefile(scale_path, sprintf("%.2f", new_scale)); } catch(e) {}
+}
+
 function setup_syslog_listener() {
     if (!uloop) return null;
     syslog_start_time = time();
@@ -1504,7 +1541,8 @@ function setup_syslog_listener() {
     // Without this, every restart cascades: new watchdog inherits old watchdog's
     // logread pipe read-end, keeping old logread alive. Over N restarts,
     // watchdog accumulates N inherited FDs → hits 1024 limit → config generator fails.
-    system("killall logread 2>/dev/null; true");
+    // Use pkill to target only logread in follow mode, not one-shot logread calls.
+    system("pkill -f 'logread -f' 2>/dev/null; true");
     let log_pipe = fs.popen("logread -f 2>/dev/null", "r");
     if (!log_pipe) return null;
     // Track the FD so bg_system() can close it before spawning background processes
@@ -1601,6 +1639,7 @@ function worker() {
         safe_call(ai_heal_empty_sections, "ai_heal_empty_sections");
         safe_call(ai_heal_dns_loop, "ai_heal_dns_loop");
         safe_call(analyze_anomalies, "analyze_anomalies");
+        safe_call(recover_oom_scale, "recover_oom_scale");
     }
 
     if (uloop) {
@@ -1632,6 +1671,8 @@ function worker() {
         uloop.run();
     } else {
         log_message("uloop not available. Running Watchdog in legacy fallback loop mode.", "warn");
+        signal("SIGTERM", function(sig) { log_message("SIGTERM received, shutting down", "info"); stop_runtime(); exit(0); });
+        signal("SIGINT", function(sig) { log_message("SIGINT received, shutting down", "info"); stop_runtime(); exit(0); });
         while (true) {
             perform_fast_checks();
             perform_normal_checks();

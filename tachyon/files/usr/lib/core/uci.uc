@@ -155,8 +155,11 @@ function state_set(path, value) {
 }
 
 function state_add_list(path, value) {
+    value = as_string(value);
+    if (match(value, /[ \t\r\n]/) != null)
+        return false;
     let current = state_get(path);
-    return state_set(path, current == "" ? value : current + " " + as_string(value));
+    return state_set(path, current == "" ? value : current + " " + value);
 }
 
 function state_del_list(path, value) {

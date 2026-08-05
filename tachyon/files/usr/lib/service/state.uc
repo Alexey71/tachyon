@@ -337,8 +337,18 @@ function write_reload_state(path, values) {
     if (!ensure_parent_dir(path))
         exit(1);
 
-    if (!fs.writefile(path, reload_state_text(values)))
+    path = as_string(path);
+    let stamp = clock();
+    let tmp_path = sprintf("%s.%d.%d.tmp", path, stamp[0], stamp[1]);
+    let result = fs.writefile(tmp_path, reload_state_text(values));
+    if (result == null || (type(result) == "boolean" && !result)) {
+        try { fs.unlink(tmp_path); } catch(e) {}
         exit(1);
+    }
+    if (!fs.rename(tmp_path, path)) {
+        try { fs.unlink(tmp_path); } catch(e) {}
+        exit(1);
+    }
 }
 
 function copy_file(source, target) {

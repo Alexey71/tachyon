@@ -2095,7 +2095,7 @@ function process_updates(token, admin_ids) {
     let offset = int(trim(fs.readfile(OFFSET_FILE) || "0"));
     let res = tg_request(token, "getUpdates", { offset: offset, timeout: 20 });
     
-    if (!res || !res.ok || !res.result || length(res.result) == 0) return;
+    if (!res || !res.ok || !res.result || length(res.result) == 0) return false;
     
     for (let upd in res.result) {
         let update_id = upd.update_id;
@@ -2292,6 +2292,7 @@ function process_updates(token, admin_ids) {
         }
     }
     fs.writefile(OFFSET_FILE, as_string(offset));
+    return true;
 }
 
 // ─── Entry Point ─────────────────────────────────────────────────────────────
@@ -2386,15 +2387,26 @@ function worker() {
 
     let last_report_day = -1;
     let last_update_check = 0;
+    let consecutive_failures = 0;
 
     while (true) {
         try {
             cfg = settings();
             if (cfg.enabled != "1") break;
-            process_updates(cfg.bot_token, cfg.admin_ids);
+            let res = process_updates(cfg.bot_token, cfg.admin_ids);
             
+            if (res === false) {
+                consecutive_failures++;
+                let backoff = poll_interval * (1 << min(consecutive_failures - 1, 4));
+                if (backoff > 300) backoff = 300;
+                command_success_from_args(["logger", "-t", "tachyon-telegram", "[warn] API failure " + as_string(consecutive_failures) + ", backing off " + as_string(backoff) + "s"]);
+                sleep(backoff * 1000);
+                continue;
+            }
+            consecutive_failures = 0;
+
             let now = time();
-            let tm = clock(now); // [year, mon, day, hour, min, sec]
+            let tm = clock(now);
             let daily_hour = int(cfg.daily_report_hour || "8");
             
             if (cfg.daily_report_enabled == "1" && tm[3] == daily_hour && tm[2] != last_report_day) {
@@ -2402,11 +2414,12 @@ function worker() {
                 send_daily_digest(cfg.bot_token, cfg.admin_ids);
             }
             
-            if (now - last_update_check > 3600) { // check every hour
+            if (now - last_update_check > 3600) {
                 check_notified_updates(cfg.bot_token, cfg.admin_ids);
                 last_update_check = now;
             }
         } catch (e) {
+            consecutive_failures++;
             command_success_from_args(["logger", "-t", "tachyon-telegram", "[err] Worker loop error: " + as_string(e)]);
         }
         
@@ -2418,9 +2431,17 @@ function worker() {
 function stop_runtime() {
     let pid = trim(fs.readfile(PID_FILE) || "");
     if (pid != "" && match(pid, /^[0-9]+$/) != null && command_success_from_args([ "kill", "-0", pid ])) {
-        command_success_from_args([ "kill", "-9", pid ]);
+        command_success_from_args([ "kill", pid ]);
+        let wait_limit = 30;
+        while (wait_limit > 0 && command_success_from_args([ "kill", "-0", pid ])) {
+            sleep(100);
+            wait_limit--;
+        }
+        if (command_success_from_args([ "kill", "-0", pid ])) {
+            command_success_from_args([ "kill", "-9", pid ]);
+        }
     }
-    fs.unlink(PID_FILE);
+    try { fs.unlink(PID_FILE); } catch(e) {}
     return 0;
 }
 

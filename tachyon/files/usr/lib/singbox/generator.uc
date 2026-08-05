@@ -121,18 +121,9 @@ function ensure_parent_dir(path) {
 }
 
 function atomic_write_json_file(path, value) {
-    let stamp = clock();
-    let tmp_path = sprintf("%s.%d.%d.tmp", path, stamp[0], stamp[1]);
-
     if (!ensure_parent_dir(path))
         return false;
-    if (!write_json_file(tmp_path, value))
-        return false;
-    if (!fs.rename(tmp_path, path)) {
-        fs.unlink(tmp_path);
-        return false;
-    }
-    return true;
+    return write_json_file(path, value);
 }
 
 function fixture_section_list(type_name) {

@@ -3,6 +3,7 @@ fe-app-tachyon/.yarn/
 fe-app-tachyon/.env
 .DS_Store
 shellcheck-v0.10.0/
+AGENTS.md
 opencode.json
 
 sandbox/
@@ -12,3 +13,4 @@ build-out/
 scratch/
 tmp_*/
 tmp_test*.uc
+test_out.txt

@@ -62,7 +62,12 @@ function command_output_from_args(args) {
 
 function command_status(command) {
     let status = int(system(command));
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_success_from_args(args) {
@@ -290,8 +295,10 @@ function supervisor_command(port, raw_opt, child_pidfile) {
     for (let word in strategy_words(raw_opt))
         push(args, word);
 
-    return "ulimit -n " + shell_quote(BYEDPI_OPEN_FILES_LIMIT) + " >/dev/null 2>&1 || true; " +
-        command_from_args(args) + " & child=$!; echo $child > " + shell_quote(child_pidfile) + "; wait $child; rc=$?; rm -f " + shell_quote(child_pidfile) + "; exit $rc";
+    let child_pidfile_q = shell_quote(child_pidfile);
+    return "trap 'kill $child 2>/dev/null; rm -f " + child_pidfile_q + "; exit 0' TERM INT; " +
+        "ulimit -n " + shell_quote(BYEDPI_OPEN_FILES_LIMIT) + " >/dev/null 2>&1 || true; " +
+        command_from_args(args) + " & child=$!; echo $child > " + child_pidfile_q + "; wait $child; rc=$?; rm -f " + child_pidfile_q + "; exit $rc";
 }
 
 function supervisor(section, port, raw_opt, child_pidfile) {
@@ -315,7 +322,7 @@ function start_rule(section, index_value) {
     let validation = validator().validate_byedpi_strategy(raw_opt);
     if (!validation.valid) {
         log_message("Invalid ByeDPI strategy for rule '" + name + "': " + validation.message, "fatal");
-        exit(1);
+        return false;
     }
 
     let pidfile = BYEDPI_PID_DIR + "/" + name + ".pid";
@@ -335,19 +342,20 @@ function start_rule(section, index_value) {
     ]) + " >>" + shell_quote(logfile) + " 2>&1 1000>&- & echo $!";
     let pid = trim(command_output("sh -c " + shell_quote(command)));
     if (pid == "" || !fs.writefile(pidfile, pid + "\n")) {
-        log_message("ciadpi failed to start for rule '" + name + "'. Check " + logfile + ". Aborted.", "fatal");
-        exit(1);
+        log_message("ciadpi failed to start for rule '" + name + "'. Check " + logfile + ".", "fatal");
+        return false;
     }
 
     command_success_from_args([ "sleep", "1" ]);
     if (!runtime_pid_running(pid)) {
-        log_message("ciadpi failed to start for rule '" + name + "'. Check " + logfile + ". Aborted.", "fatal");
-        exit(1);
+        log_message("ciadpi failed to start for rule '" + name + "'. Check " + logfile + ".", "fatal");
+        return false;
     }
 
     let child_pid = file_first_line(child_pidfile);
     if (child_pid == "" || !runtime_pid_running(child_pid))
         log_message("ciadpi supervisor started for rule '" + name + "', but ciadpi is not running yet. Check " + logfile + ".", "warn");
+    return true;
 }
 
 function start_runtime() {
@@ -375,9 +383,21 @@ function start_runtime() {
         exit(1);
     }
 
+    let started_sections = [];
     let index_value = 1;
     for (let section in sections) {
-        start_rule(section, index_value);
+        if (!start_rule(section, index_value)) {
+            log_message("Rolling back " + as_string(length(started_sections)) + " started ciadpi rules.", "warn");
+            for (let started in started_sections) {
+                let name = section_name(started);
+                let pidfile = BYEDPI_PID_DIR + "/" + name + ".pid";
+                let child_pidfile = BYEDPI_CHILD_PID_DIR + "/" + name + ".pid";
+                kill_pidfile_process(pidfile, "9");
+                kill_pidfile_process(child_pidfile, "9");
+            }
+            exit(1);
+        }
+        push(started_sections, section);
         index_value++;
     }
 }

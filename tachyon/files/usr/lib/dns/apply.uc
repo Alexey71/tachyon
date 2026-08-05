@@ -244,6 +244,14 @@ function dnsmasq_configure(force) {
         log("Previous Tachyon shutdown was unclean and dnsmasq is not ready; applying Tachyon DNS settings", "info");
     }
 
+    if (as_string(force) != "force") {
+        let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+        if (sb_pid == "" || !run("kill -0 " + shell_quote(sb_pid) + " 2>/dev/null")) {
+            log("sing-box is not running; dnsmasq will forward to system DNS until sing-box starts", "warn");
+            return true;
+        }
+    }
+
     log("Configuring dnsmasq to forward DNS to sing-box", "info");
     dnsmasq_cleanup_legacy_instance();
     dnsmasq_configure_default_instance();

@@ -45,7 +45,12 @@ function command_output_from_args(args) {
 
 function command_status(command) {
     let status = int(system(command));
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_success_from_args(args) {
@@ -436,8 +441,16 @@ function process_running(pid) {
 
 function stop_runtime() {
     let pid = file_first_line(PRIORITY_PID_FILE);
-    if (process_running(pid))
+    if (process_running(pid)) {
         command_success_from_args([ "kill", pid ]);
+        let wait_limit = 30;
+        while (wait_limit > 0 && process_running(pid)) {
+            sleep(100);
+            wait_limit--;
+        }
+        if (process_running(pid))
+            command_success_from_args([ "kill", "-9", pid ]);
+    }
     remove_file(PRIORITY_PID_FILE);
     return 0;
 }

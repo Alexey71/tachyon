@@ -64,7 +64,19 @@ function csv_to_json_array(value) {
 }
 
 function write_json_file(path, value) {
-    return fs.writefile(path, sprintf("%J\n", value));
+    path = as_string(path);
+    let stamp = clock();
+    let tmp_path = sprintf("%s.%d.%d.tmp", path, stamp[0], stamp[1]);
+    let result = fs.writefile(tmp_path, sprintf("%J\n", value));
+    if (result == null || (type(result) == "boolean" && !result)) {
+        try { fs.unlink(tmp_path); } catch(e) {}
+        return false;
+    }
+    if (!fs.rename(tmp_path, path)) {
+        try { fs.unlink(tmp_path); } catch(e) {}
+        return false;
+    }
+    return true;
 }
 
 function strip_internal_fields(value) {
@@ -147,7 +159,12 @@ function command_from_args(args) {
 
 function command_status(command) {
     let status = int(system(command));
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_success(command) {
@@ -163,7 +180,15 @@ function command_capture(command) {
     if (!p) return null;
     let output = as_string(p.read("all") || "");
     let status = p.close();
-    status = status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        status = 255;
+    else {
+        let signal = status & 127;
+        if (signal != 0)
+            status = 128 + signal;
+        else
+            status = (status >> 8) & 255;
+    }
     return { status: status, output: output };
 }
 

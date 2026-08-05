@@ -49,7 +49,12 @@ function command_from_args(args) {
 
 function normalize_status(status) {
     status = int(status);
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_status(command) {
@@ -576,7 +581,8 @@ function stop_service(owner_pid) {
     // Clean up orphaned logread -f processes left by watchdog instances.
     // These survive tachyon stop because background subprocesses (reload_firewall,
     // restart) inherit the logread pipe read-end, preventing SIGPIPE delivery.
-    system("killall logread 2>/dev/null; true");
+    // Use pkill to target only logread in follow mode, not one-shot logread calls.
+    system("pkill -f 'logread -f' 2>/dev/null; true");
     return stop_finish(job_id, status);
 }
 

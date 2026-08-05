@@ -52,7 +52,12 @@ function command_output_from_args(args) {
 
 function command_status(command) {
     let status = int(system(command));
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_success(command) {
@@ -373,6 +378,13 @@ function validate_strategy_or_exit(cfg, section_name_value, raw_opt) {
     exit(1);
 }
 
+function validate_strategy(cfg, section_name_value, raw_opt) {
+    let result = cfg.validator().validate_strategy(cfg.validator_kind, raw_opt, cfg.legacy_default_strategy);
+    if (!result.valid)
+        log_message("Invalid " + cfg.binary_name + " strategy for rule '" + section_name_value + "': " + result.message, "fatal");
+    return result.valid;
+}
+
 function supervisor_command(cfg, queue, raw_opt, child_pidfile) {
     let args = [ cfg.binary, "--qnum=" + as_string(queue) ];
     for (let arg in base_args(cfg))
@@ -380,7 +392,9 @@ function supervisor_command(cfg, queue, raw_opt, child_pidfile) {
     for (let word in strategy_words(raw_opt))
         push(args, word);
 
-    return command_from_args(args) + " & child=$!; echo $child > " + shell_quote(child_pidfile) + "; wait $child; rc=$?; rm -f " + shell_quote(child_pidfile) + "; exit $rc";
+    let child_pidfile_q = shell_quote(child_pidfile);
+    return "trap 'kill $child 2>/dev/null; rm -f " + child_pidfile_q + "; exit 0' TERM INT; " +
+        command_from_args(args) + " & child=$!; echo $child > " + child_pidfile_q + "; wait $child; rc=$?; rm -f " + child_pidfile_q + "; exit $rc";
 }
 
 function supervisor(cfg, section, queue, raw_opt, child_pidfile) {
@@ -423,7 +437,8 @@ function start_rule(cfg, section, index_value) {
     let queue = queue_number(cfg, index_value);
     let mark = route_mark_hex(cfg, index_value);
     let raw_opt = expand_strategy(cfg, raw_strategy(cfg, section));
-    validate_strategy_or_exit(cfg, name, raw_opt);
+    if (!validate_strategy(cfg, name, raw_opt))
+        return false;
 
     let pidfile = cfg.pid_dir + "/" + name + ".pid";
     let child_pidfile = cfg.child_pid_dir + "/" + name + ".pid";
@@ -442,19 +457,20 @@ function start_rule(cfg, section, index_value) {
     ]) + " >>" + shell_quote(logfile) + " 2>&1 1000>&- & echo $!";
     let pid = trim(command_output("sh -c " + shell_quote(command)));
     if (pid == "" || fs.writefile(pidfile, pid + "\n") == null) {
-        log_message(cfg.binary_name + " failed to start for rule '" + name + "'. Check " + logfile + ". Aborted.", "fatal");
-        exit(1);
+        log_message(cfg.binary_name + " failed to start for rule '" + name + "'. Check " + logfile + ".", "fatal");
+        return false;
     }
 
     command_success_from_args([ "sleep", "1" ]);
     if (!runtime_pid_running(pid)) {
-        log_message(cfg.binary_name + " failed to start for rule '" + name + "'. Check " + logfile + ". Aborted.", "fatal");
-        exit(1);
+        log_message(cfg.binary_name + " failed to start for rule '" + name + "'. Check " + logfile + ".", "fatal");
+        return false;
     }
 
     let child_pid = file_first_line(child_pidfile);
     if (child_pid == "" || !runtime_pid_running(child_pid))
         log_message(cfg.binary_name + " supervisor started for rule '" + name + "', but " + cfg.binary_name + " is not running yet. Check " + logfile + ".", "warn");
+    return true;
 }
 
 function start_runtime(cfg) {
@@ -470,9 +486,21 @@ function start_runtime(cfg) {
         exit(1);
     }
 
+    let started_sections = [];
     let index_value = 1;
     for (let section in sections) {
-        start_rule(cfg, section, index_value);
+        if (!start_rule(cfg, section, index_value)) {
+            log_message("Rolling back " + as_string(length(started_sections)) + " started " + cfg.binary_name + " rules.", "warn");
+            for (let started in started_sections) {
+                let name = section_name(started);
+                let pidfile = cfg.pid_dir + "/" + name + ".pid";
+                let child_pidfile = cfg.child_pid_dir + "/" + name + ".pid";
+                kill_pidfile_process(pidfile, "9");
+                kill_pidfile_process(child_pidfile, "9");
+            }
+            exit(1);
+        }
+        push(started_sections, section);
         index_value++;
     }
 }
@@ -654,6 +682,8 @@ function create_nft_rules(cfg) {
     let sections = enabled_sections(cfg);
     if (length(sections) == 0 || !provider_available(cfg))
         return;
+
+    command_success_from_args([ "nft", "flush", "chain", "inet", NFT_TABLE_NAME, "mangle_output" ]);
 
     command_success_from_args([ "nft", "add", "rule", "inet", NFT_TABLE_NAME, "mangle_output", "meta", "mark", "&", cfg.desync_mark, "==", cfg.desync_mark, "return" ]);
     command_success_from_args([ "nft", "add", "rule", "inet", NFT_TABLE_NAME, "mangle_output", "meta", "mark", "&", cfg.desync_mark_postnat, "==", cfg.desync_mark_postnat, "return" ]);

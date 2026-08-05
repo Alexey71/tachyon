@@ -30,8 +30,10 @@ sync_service_triggers_payload() {
 }
 
 start_service() {
+    trap 'exit 1' INT TERM
     initd_ucode start-service "$1" "$$"
     TACHYON_LAST_START_STATUS="$?"
+    trap - INT TERM
     return "$TACHYON_LAST_START_STATUS"
 }
 
@@ -40,7 +42,9 @@ service_started() {
 }
 
 stop_service() {
+    trap 'exit 1' INT TERM
     initd_ucode stop-service "$$"
+    trap - INT TERM
 }
 
 reload_service() {

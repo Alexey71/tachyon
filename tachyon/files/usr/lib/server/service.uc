@@ -996,10 +996,31 @@ function prepare_server_defaults(section) {
     server_prepare_tls_defaults(section, protocol, security);
 }
 
+function cleanup_orphaned_server_certs() {
+    let cert_dir = "/etc/tachyon/server-certs";
+    try {
+        let entries = fs.readdir(cert_dir);
+        if (entries == null) return;
+        let active_names = {};
+        for (let section in uci_sections("server")) {
+            let name = safe_filename_string(section);
+            active_names[name + ".crt"] = true;
+            active_names[name + ".key"] = true;
+        }
+        for (let entry in entries) {
+            if (substr(entry, 0, 1) == ".") continue;
+            if (active_names[entry]) continue;
+            let path = cert_dir + "/" + entry;
+            try { fs.unlink(path); } catch(e) {}
+        }
+    } catch(e) {}
+}
+
 function prepare_all_server_defaults() {
     SERVER_DEFAULTS_CHANGED = false;
     for (let section in uci_sections("server"))
         prepare_server_defaults(section);
+    cleanup_orphaned_server_certs();
     if (SERVER_DEFAULTS_CHANGED)
         uci_commit(CONFIG_NAME);
 }

@@ -136,7 +136,12 @@ function command_from_args(args) {
 
 function normalize_status(status) {
     status = int(status);
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_status(command) {
@@ -852,16 +857,21 @@ function stop_main() {
     let status = 0;
 
     log_message("Stopping Tachyon", "info");
-    module_success(DNS_FAILOVER_UC, [ "stop-runtime" ]);
-    module_success(PRIORITY_UC, [ "stop-runtime" ]);
+    if (!module_success(DNS_FAILOVER_UC, [ "stop-runtime" ]))
+        log_message("DNS failover stop failed (non-fatal)", "warn");
+    if (!module_success(PRIORITY_UC, [ "stop-runtime" ]))
+        log_message("Priority daemon stop failed (non-fatal)", "warn");
     module_success(SUBSCRIPTION_CACHE_UC, [ "stop-deferred-bootstrap-worker" ]);
     module_success(UPDATES_UC, [ "stop-list-update" ]);
     remove_cron_jobs();
     command_success_from_args([ "find", TMP_RULESET_FOLDER, "-mindepth", "1", "-maxdepth", "1", "-type", "f", "-delete" ]);
 
-    module_success(ZAPRET_UC, [ "stop-runtime" ]);
-    module_success(ZAPRET2_UC, [ "stop-runtime" ]);
-    module_success(BYEDPI_UC, [ "stop-runtime" ]);
+    if (!module_success(ZAPRET_UC, [ "stop-runtime" ]))
+        log_message("Zapret stop failed (non-fatal)", "warn");
+    if (!module_success(ZAPRET2_UC, [ "stop-runtime" ]))
+        log_message("Zapret2 stop failed (non-fatal)", "warn");
+    if (!module_success(BYEDPI_UC, [ "stop-runtime" ]))
+        log_message("ByeDPI stop failed (non-fatal)", "warn");
 
     if (command_success_from_args([ "nft", "list", "table", "inet", NFT_TABLE_NAME ])) {
         if (!command_success_from_args([ "nft", "delete", "table", "inet", NFT_TABLE_NAME ]))

@@ -79,7 +79,12 @@ function command_output_from_args(args) {
 
 function command_status(command) {
     let status = int(system(command));
-    return status > 255 ? int(status / 256) : status;
+    if (status == -1)
+        return 255;
+    let signal = status & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (status >> 8) & 255;
 }
 
 function command_success_from_args(args) {
