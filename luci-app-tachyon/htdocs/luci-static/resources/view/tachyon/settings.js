@@ -1232,6 +1232,65 @@ function createSettingsContent(section, capabilities) {
   );
   hostsListUrlsOpt.placeholder = "https://raw.githubusercontent.com/.../hosts";
 
+  const hostsListDisabledOpt = section.option(
+    form.DynamicList,
+    "hosts_list_disabled",
+  );
+  hostsListDisabledOpt.anonymous = true;
+  hostsListDisabledOpt.hidden = true;
+
+  const _origHostsListRenderWidget = hostsListUrlsOpt.renderWidget;
+  hostsListUrlsOpt.renderWidget = function (section_id, option_index, cfgvalue) {
+    const node = _origHostsListRenderWidget.call(this, section_id, option_index, cfgvalue);
+    const disabledValues = uci.get(UCI_PACKAGE, "settings", "hosts_list_disabled") || [];
+
+    function syncToggles() {
+      const container = node.querySelector(".cbi-dynlist") || node;
+      const items = container.querySelectorAll(".cbi-dynlist-item, .item");
+      items.forEach((item) => {
+        if (item.querySelector(".hosts-toggle")) return;
+        const valueEl = item.querySelector(".cbi-dynlist-item-value, input");
+        if (!valueEl) return;
+        const url = (valueEl.textContent || valueEl.value || "").trim();
+        if (!url) return;
+
+        const isDisabled = disabledValues.includes(url);
+        const toggle = E("label", {
+          class: "hosts-toggle",
+          style: "display:inline-flex;align-items:center;cursor:pointer;margin-right:6px;flex-shrink:0;",
+        }, [
+          E("input", {
+            type: "checkbox",
+            checked: !isDisabled,
+            style: "margin-right:4px;",
+            change: function () {
+              const enabled = this.checked;
+              let currentDisabled = uci.get(UCI_PACKAGE, "settings", "hosts_list_disabled") || [];
+              if (!Array.isArray(currentDisabled)) currentDisabled = [currentDisabled];
+              if (enabled) {
+                currentDisabled = currentDisabled.filter((d) => d !== url);
+              } else {
+                if (!currentDisabled.includes(url)) currentDisabled.push(url);
+              }
+              uci.set(UCI_PACKAGE, "settings", "hosts_list_disabled", currentDisabled.length ? currentDisabled : null);
+              uci.save();
+            },
+          }),
+          E("span", {
+            style: "font-size:0.8rem;color:" + (isDisabled ? "var(--text-color-danger,#e53935)" : "var(--text-color-success,#43a047)"),
+          }, isDisabled ? "OFF" : "ON"),
+        ]);
+        item.prepend(toggle);
+      });
+    }
+
+    const observer = new MutationObserver(syncToggles);
+    observer.observe(node, { childList: true, subtree: true });
+    setTimeout(syncToggles, 100);
+
+    return node;
+  };
+
   o = section.option(
     form.Flag,
     "hosts_list_auto_update",

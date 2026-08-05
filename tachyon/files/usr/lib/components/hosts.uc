@@ -145,15 +145,32 @@ function get_hosts_urls() {
     if (uci_urls == "")
         return urls;
 
+    let disabled = [];
+    let uci_disabled = uci.get(CONFIG_NAME + ".settings.hosts_list_disabled");
+    if (type(uci_disabled) == "array") {
+        for (let d in uci_disabled) {
+            let s = trim(d);
+            if (s != "") push(disabled, s);
+        }
+    } else if (uci_disabled != null && uci_disabled != "") {
+        push(disabled, trim(uci_disabled));
+    }
+
+    let is_disabled = function(url) {
+        for (let d in disabled)
+            if (d == url) return true;
+        return false;
+    };
+
     if (type(uci_urls) == "array") {
         for (let url in uci_urls) {
             let s = trim(url);
-            if (s != "")
+            if (s != "" && !is_disabled(s))
                 push(urls, s);
         }
     } else {
         let s = trim(uci_urls);
-        if (s != "")
+        if (s != "" && !is_disabled(s))
             push(urls, s);
     }
     return urls;
@@ -208,6 +225,17 @@ function hosts_list_update(target_url) {
 
 function hosts_list_status() {
     let urls = get_hosts_urls();
+    let all_urls = [];
+    let uci_urls = uci.get(CONFIG_NAME + ".settings.hosts_list_urls");
+    if (type(uci_urls) == "array") {
+        for (let url in uci_urls) {
+            let s = trim(url);
+            if (s != "") push(all_urls, s);
+        }
+    } else if (uci_urls != null && uci_urls != "") {
+        push(all_urls, trim(uci_urls));
+    }
+    let disabled_count = length(all_urls) - length(urls);
     let st = fs.stat(HOSTS_CACHE_FILE);
     let cache_exists = st != null;
     let entry_count = 0;
@@ -216,7 +244,7 @@ function hosts_list_status() {
         entry_count = int(st.size);
     }
 
-    print('{"urls":' + length(urls) + ',"cache_exists":' + (cache_exists ? 'true' : 'false') + ',"cache_size":' + entry_count + '}');
+    print('{"urls":' + length(urls) + ',"total":' + length(all_urls) + ',"disabled":' + disabled_count + ',"cache_exists":' + (cache_exists ? 'true' : 'false') + ',"cache_size":' + entry_count + '}');
 }
 
 let command = ARGV[0] || "";
