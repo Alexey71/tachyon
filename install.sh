@@ -1650,7 +1650,9 @@ pkg_install_files() {
     fi
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk add --allow-untrusted "$@" >/dev/null 2>&1
+        local _apk_log
+        _apk_log="$(mktemp)" 2>/dev/null || _apk_log="/tmp/.apk-install-$$.log"
+        apk add --allow-untrusted "$@" >"$_apk_log" 2>&1
         local rc=$?
         if [ $rc -ne 0 ]; then
             # apk may report warnings as errors even though the package installed successfully
@@ -1659,14 +1661,23 @@ pkg_install_files() {
             local pkg_file
             for pkg_file in "$@"; do
                 local pkg_name
-                pkg_name="$(basename "$pkg_file" | sed 's/\.[^.]*$//')"
+                pkg_name="$(basename "$pkg_file" | sed 's/\.[^.]*$//; s/_[0-9].*$//')"
                 if pkg_is_installed "$pkg_name"; then
                     warn "Package manager reported non-critical errors during installation (package is installed OK)"
+                    rm -f "$_apk_log" 2>/dev/null
                     return 0
                 fi
             done
+            log_line "FAIL  apk install output:"
+            while IFS= read -r _line; do
+                log_line "  $_line"
+            done <"$_apk_log"
+            printf '%s%s%s\n' "${_c_red}" "apk output:" "${_c_reset}" >&2
+            tail -n 5 <"$_apk_log" >&2 2>/dev/null || true
+            rm -f "$_apk_log" 2>/dev/null
             return $rc
         fi
+        rm -f "$_apk_log" 2>/dev/null
     else
         opkg install --force-overwrite --force-downgrade "$@" >/dev/null 2>&1
     fi
@@ -2234,7 +2245,13 @@ install_backend_package() {
         cfg_hash_before="${_sha_out%% *}"
     fi
 
-    pkg_install_files "$TACHYON_BACKEND_FILE" || fail "tachyon installation failed"
+    if ! pkg_install_files "$TACHYON_BACKEND_FILE"; then
+        if pkg_is_installed "tachyon"; then
+            warn "Package manager reported errors during installation, but tachyon is installed — continuing"
+        else
+            fail "tachyon installation failed"
+        fi
+    fi
 
     # Restore if apk overwrote the config with defaults
     if [ -n "$cfg_hash_before" ] && [ -r /etc/config/tachyon ] && [ -r "$cfg_backup" ] && [ -s "$cfg_backup" ]; then
@@ -2285,10 +2302,22 @@ migrate_legacy_configuration() {
 }
 
 install_ui_packages() {
-    pkg_install_files "$TACHYON_APP_FILE" || fail "luci-app-tachyon installation failed"
+    if ! pkg_install_files "$TACHYON_APP_FILE"; then
+        if pkg_is_installed "luci-app-tachyon"; then
+            warn "Package manager reported errors during luci-app-tachyon installation, but the package is installed — continuing"
+        else
+            fail "luci-app-tachyon installation failed"
+        fi
+    fi
 
     if [ -n "$TACHYON_I18N_FILE" ]; then
-        pkg_install_files "$TACHYON_I18N_FILE" || fail "luci-i18n-tachyon-ru installation failed"
+        if ! pkg_install_files "$TACHYON_I18N_FILE"; then
+            if pkg_is_installed "luci-i18n-tachyon-ru"; then
+                warn "Package manager reported errors during luci-i18n-tachyon-ru installation, but the package is installed — continuing"
+            else
+                fail "luci-i18n-tachyon-ru installation failed"
+            fi
+        fi
     fi
 }
 
