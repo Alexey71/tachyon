@@ -1758,7 +1758,7 @@ ensure_bootstrap_tool() {
         return 0
     fi
 
-    msg "Installing bootstrap dependency: $package_name"
+    msg "$(installer_text bootstrap_dep): $package_name"
     pkg_install_name "$package_name" || fail "Failed to install $package_name"
 }
 
@@ -1769,7 +1769,7 @@ ensure_bootstrap_package() {
         return 0
     fi
 
-    msg "Installing bootstrap dependency: $package_name"
+    msg "$(installer_text bootstrap_dep): $package_name"
     pkg_install_name "$package_name" || fail "Failed to install $package_name"
 }
 
@@ -1818,7 +1818,7 @@ check_system() {
     [ -f /etc/openwrt_release ] || fail "This installer supports OpenWrt only"
 
     model="$(cat /tmp/sysinfo/model 2>/dev/null || true)"
-    [ -n "$model" ] && msg "Router model: $model"
+    [ -n "$model" ] && msg "$(installer_text router_model): $model"
 
     release="$(read_openwrt_release_value "DISTRIB_RELEASE")"
     major="$(printf '%s' "$release" | sed 's/[^0-9].*$//' | cut -d. -f1)"
@@ -1848,6 +1848,8 @@ installer_text() {
             no) printf '%s\n' "Нет" ;;
             select) printf '%s\n' "Выберите номер" ;;
             invalid_choice) printf '%s\n' "Введите номер из списка." ;;
+            router_model) printf '%s\n' "Модель роутера" ;;
+            bootstrap_dep) printf '%s\n' "Установка базовой зависимости" ;;
             i18n_installed) printf '%s\n' "Русский пакет интерфейса уже установлен и будет обновлен." ;;
             i18n_prompt) printf '%s\n' "Установить русский пакет интерфейса?" ;;
             i18n_skip) printf '%s\n' "Продолжаю без русского пакета интерфейса." ;;
@@ -1859,6 +1861,7 @@ installer_text() {
             sing_box_tiny) printf '%s\n' "singbox tiny (минимум функций)" ;;
             sing_box_lx) printf '%s\n' "singbox Leadaxe (lx)" ;;
             sing_box_skip_msg) printf '%s\n' "Пропускаю установку sing-box." ;;
+            installing_singbox_backend) printf '%s\n' "Установка выбранного варианта sing-box..." ;;
             install_start) printf '%s\n' "=== Начало установки Tachyon ===" ;;
             pkg_list_update) printf '%s\n' "Обновление списков пакетов..." ;;
             resolving_release) printf '%s\n' "Определение последней версии релиза Tachyon..." ;;
@@ -1866,9 +1869,22 @@ installer_text() {
             cleaning_legacy) printf '%s\n' "Удаление старых или конфликтующих пакетов..." ;;
             installing_backend) printf '%s\n' "Установка основного пакета Tachyon..." ;;
             migrating_config) printf '%s\n' "Перенос существующей конфигурации..." ;;
+            migrating_config_detail) printf '%s\n' "Перенос конфигурации предыдущей версии в Tachyon..." ;;
             installing_ui) printf '%s\n' "Установка пакетов интерфейса LuCI..." ;;
             installing_singbox) printf '%s\n' "Установка выбранной версии sing-box..." ;;
             running_postinstall) printf '%s\n' "Применение финальных настроек (post-install)..." ;;
+            step_done) printf '%s\n' "Завершено" ;;
+            dry_run_warn) printf '%s\n' "Тестовый запуск: изменения в пакеты, файлы и конфигурацию вноситься не будут." ;;
+            legacy_detected) printf '%s\n' "Обнаружена предыдущая версия; старые пакеты будут удалены, а конфигурация обновлена." ;;
+            verifying_checksums) printf '%s\n' "Проверка контрольных сумм пакетов..." ;;
+            checksums_ok) printf '%s\n' "Контрольные суммы успешно проверены." ;;
+            kmod_check) printf '%s\n' "Проверка и установка необходимых модулей ядра..." ;;
+            summary_dry_run) printf '%s\n' "Тестовый запуск завершён за %ss — изменения не вносились." ;;
+            summary_success) printf '%s\n' "Tachyon %s успешно установлен (%ss)" ;;
+            summary_release) printf '%s\n' "Релиз" ;;
+            summary_legacy_removed) printf '%s\n' "Предыдущая версия перенесена и удалена." ;;
+            summary_log) printf '%s\n' "Лог" ;;
+            summary_luci_notice) printf '%s\n' "Откройте LuCI и проверьте правила перед включением Tachyon" ;;
             *) printf '%s\n' "$key" ;;
         esac
         return 0
@@ -1879,6 +1895,8 @@ installer_text() {
         no) printf '%s\n' "No" ;;
         select) printf '%s\n' "Select a number" ;;
         invalid_choice) printf '%s\n' "Enter a number from the list." ;;
+        router_model) printf '%s\n' "Router model" ;;
+        bootstrap_dep) printf '%s\n' "Installing bootstrap dependency" ;;
         i18n_installed) printf '%s\n' "The Russian interface package is already installed and will be updated." ;;
         i18n_prompt) printf '%s\n' "Install the Russian interface language package?" ;;
         i18n_skip) printf '%s\n' "Continuing without the Russian interface language package." ;;
@@ -1890,6 +1908,7 @@ installer_text() {
         sing_box_tiny) printf '%s\n' "singbox tiny (minimal features)" ;;
         sing_box_lx) printf '%s\n' "singbox Leadaxe (lx)" ;;
         sing_box_skip_msg) printf '%s\n' "Skipping sing-box installation." ;;
+        installing_singbox_backend) printf '%s\n' "Installing selected sing-box variant..." ;;
         install_start) printf '%s\n' "=== Starting Tachyon Installation ===" ;;
         pkg_list_update) printf '%s\n' "Updating package lists..." ;;
         resolving_release) printf '%s\n' "Resolving latest Tachyon release version..." ;;
@@ -1897,9 +1916,22 @@ installer_text() {
         cleaning_legacy) printf '%s\n' "Cleaning up legacy or conflicting packages..." ;;
         installing_backend) printf '%s\n' "Installing Tachyon backend package..." ;;
         migrating_config) printf '%s\n' "Migrating legacy configuration..." ;;
+        migrating_config_detail) printf '%s\n' "Migrating legacy configuration to Tachyon..." ;;
         installing_ui) printf '%s\n' "Installing Tachyon LuCI web interface packages..." ;;
         installing_singbox) printf '%s\n' "Installing selected sing-box variant..." ;;
         running_postinstall) printf '%s\n' "Running post-install configuration..." ;;
+        step_done) printf '%s\n' "Done" ;;
+        dry_run_warn) printf '%s\n' "Dry-run mode: no packages, files, or configuration will be changed." ;;
+        legacy_detected) printf '%s\n' "Legacy installation detected; its packages will be removed and its configuration will be upgraded" ;;
+        verifying_checksums) printf '%s\n' "Verifying package checksums..." ;;
+        checksums_ok) printf '%s\n' "Checksums verified successfully." ;;
+        kmod_check) printf '%s\n' "Ensuring optional kernel module dependencies (best effort)..." ;;
+        summary_dry_run) printf '%s\n' "Dry run complete in %ss — no changes were made." ;;
+        summary_success) printf '%s\n' "Tachyon %s installed successfully (%ss)" ;;
+        summary_release) printf '%s\n' "Release" ;;
+        summary_legacy_removed) printf '%s\n' "Legacy installation migrated and removed." ;;
+        summary_log) printf '%s\n' "Log" ;;
+        summary_luci_notice) printf '%s\n' "Open LuCI and review your rules before enabling Tachyon" ;;
         *) printf '%s\n' "$key" ;;
     esac
 }
@@ -1954,6 +1986,10 @@ confirm_prompt() {
 }
 
 get_luci_main_lang() {
+    if [ -r /etc/config/luci ]; then
+        _cfg_lang="$(sed -n "s/.*option lang ['\"]\?\([a-zA-Z_]\+\)['\"]\?/\1/p" /etc/config/luci 2>/dev/null | head -n 1)"
+        [ -n "$_cfg_lang" ] && [ "$_cfg_lang" != "auto" ] && printf '%s\n' "$_cfg_lang" && return 0
+    fi
     command_exists ucode || return 0
     ucode -e 'require("fs"); require("uci");' >/dev/null 2>&1 || return 0
     install_json_ucode uci-get luci.main.lang 2>/dev/null || true
@@ -2142,7 +2178,7 @@ install_selected_sing_box() {
     fi
 
     [ -x /usr/bin/tachyon ] || fail "tachyon backend must be installed before sing-box component action"
-    msg "Installing selected sing-box variant through Tachyon ucode backend"
+    msg "$(installer_text installing_singbox_backend)"
     if ! /usr/bin/tachyon component_action sing_box "$action" >"$output_file" 2>&1; then
         cat "$output_file" >&2 2>/dev/null || true
         fail "Failed to install selected sing-box variant"
@@ -2213,7 +2249,7 @@ detect_legacy_installation() {
     fi
 
     if [ "$TACHYON_LEGACY_DETECTED" -eq 1 ]; then
-        msg "Legacy installation detected; its packages will be removed and its configuration will be upgraded"
+        msg "$(installer_text legacy_detected)"
     fi
 }
 
@@ -2277,7 +2313,7 @@ download_tachyon_packages() {
         download_with_retry "$TACHYON_I18N_URL" "$TACHYON_I18N_FILE" "$TACHYON_I18N_NAME" 4 "$_total" || fail "Failed to download $TACHYON_I18N_NAME"
     fi
 
-    msg "Verifying package checksums..."
+    msg "$(installer_text verifying_checksums)"
     (
         cd "$TMP_DIR" || fail "Failed to change directory to temporary path"
         local pattern
@@ -2287,11 +2323,11 @@ download_tachyon_packages() {
         fi
         grep -E "$pattern" sha256sums.txt | sha256sum -c - || fail "Checksum verification failed! The downloaded packages may be corrupted."
     )
-    msg "Checksums verified successfully."
+    msg "$(installer_text checksums_ok)"
 }
 
 install_backend_package() {
-    msg "Ensuring optional kernel module dependencies (best effort)..."
+    msg "$(installer_text kmod_check)"
     for kmod in kmod-inet-diag kmod-netlink-diag kmod-tun kmod-nft-tproxy kmod-nft-nat; do
         if ! pkg_is_installed "$kmod"; then
             pkg_install_name "$kmod" || warn "Could not install $kmod (this is normal if built-in or using custom firmware)"
@@ -2348,7 +2384,7 @@ migrate_legacy_configuration() {
         chmod 0644 /etc/config/tachyon ||
             fail "Failed to set permissions on the Tachyon configuration"
 
-        msg "Migrating the legacy configuration to Tachyon"
+        msg "$(installer_text migrating_config_detail)"
         local migration_mode="migrate-podkop"
         if [ "$TACHYON_FORKOP_MIGRATION" -eq 1 ] || [ "$TACHYON_NETSHIFT_MIGRATION" -eq 1 ]; then
             migration_mode="migrate"
@@ -2413,6 +2449,7 @@ main() {
     check_root
     init_tmp_dir
     detect_fetcher
+    detect_installer_language
     check_system
 
     # Print TUI banner
@@ -2421,15 +2458,14 @@ main() {
     fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
-        warn "Dry-run mode: no packages, files, or configuration will be changed."
+        warn "$(installer_text dry_run_warn)"
     fi
 
-    step 1 "$TOTAL_STEPS" "Updating package lists"
+    step 1 "$TOTAL_STEPS" "$(installer_text pkg_list_update)"
     pkg_list_update || fail "Failed to update package lists"
     ensure_bootstrap_ucode_runtime
 
     sync_time
-    detect_installer_language
     detect_legacy_installation
     decide_i18n_installation
     select_sing_box_installation
@@ -2461,7 +2497,7 @@ main() {
     step 9 "$TOTAL_STEPS" "$(installer_text running_postinstall)"
     post_install
 
-    step 10 "$TOTAL_STEPS" "Done"
+    step 10 "$TOTAL_STEPS" "$(installer_text step_done)"
     print_summary
 }
 
@@ -2473,31 +2509,31 @@ print_summary() {
     if command -v tui_box_start >/dev/null 2>&1; then
         tui_box_start
         if [ "$DRY_RUN" -eq 1 ]; then
-            tui_box_line "Dry run complete in ${elapsed}s — no changes were made."
+            tui_box_line "$(printf "$(installer_text summary_dry_run)" "$elapsed")"
         else
-            tui_box_line_color "Tachyon $TACHYON_PACKAGE_VERSION installed successfully (${elapsed}s)" "$_c_green"
+            tui_box_line_color "$(printf "$(installer_text summary_success)" "$TACHYON_PACKAGE_VERSION" "$elapsed")" "$_c_green"
         fi
-        tui_box_line "Release: ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
-        [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && tui_box_line "Legacy installation migrated and removed."
-        tui_box_line "Log: $LOG_FILE"
+        tui_box_line "$(installer_text summary_release): ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
+        [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && tui_box_line "$(installer_text summary_legacy_removed)"
+        tui_box_line "$(installer_text summary_log): $LOG_FILE"
         if command -v tui_box_divider >/dev/null 2>&1; then
             tui_box_divider
         else
             tui_divider
         fi
-        tui_box_line_color "Open LuCI and review your rules before enabling Tachyon" "$_c_yellow"
+        tui_box_line_color "$(installer_text summary_luci_notice)" "$_c_yellow"
         tui_box_end
     else
         printf '\n'
         if [ "$DRY_RUN" -eq 1 ]; then
-            msg "Dry run complete in ${elapsed}s — no changes were made."
+            msg "$(printf "$(installer_text summary_dry_run)" "$elapsed")"
         else
-            msg "Tachyon $TACHYON_PACKAGE_VERSION has been installed successfully (${elapsed}s)"
+            msg "$(printf "$(installer_text summary_success)" "$TACHYON_PACKAGE_VERSION" "$elapsed")"
         fi
-        msg "Source release: ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
-        [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && msg "Legacy installation migrated and removed."
-        msg "Full log: $LOG_FILE"
-        warn "Open LuCI and review your rules before enabling Tachyon"
+        msg "$(installer_text summary_release): ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
+        [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && msg "$(installer_text summary_legacy_removed)"
+        msg "$(installer_text summary_log): $LOG_FILE"
+        warn "$(installer_text summary_luci_notice)"
     fi
 }
 
