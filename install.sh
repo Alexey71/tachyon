@@ -1630,11 +1630,28 @@ pkg_list_update() {
         return 0
     fi
 
+    local _err_log
+    _err_log="$(mktemp)" 2>/dev/null || _err_log="/tmp/.pkg-update-err-$$.log"
+
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        timeout 120 apk update >/dev/null 2>&1
+        timeout 120 apk update >"$_err_log" 2>&1
     else
-        timeout 120 opkg update >/dev/null 2>&1
+        timeout 120 opkg update >"$_err_log" 2>&1
     fi
+    local rc=$?
+
+    if [ $rc -ne 0 ]; then
+        log_line "FAIL  package update failed (exit $rc):"
+        tail -n 10 <"$_err_log" >>"$LOG_FILE" 2>/dev/null || true
+        printf '%s%s--- package manager error (last 10 lines) ---%s\n' "$_c_red" "" "$_c_reset" >&2
+        tail -n 10 <"$_err_log" >&2 2>/dev/null || true
+        printf '%s%s--- end ---%s\n' "$_c_red" "" "$_c_reset" >&2
+        rm -f "$_err_log" 2>/dev/null || true
+        return 1
+    fi
+
+    rm -f "$_err_log" 2>/dev/null || true
+    return 0
 }
 
 pkg_install_name() {
@@ -1645,11 +1662,28 @@ pkg_install_name() {
         return 0
     fi
 
+    local _err_log
+    _err_log="$(mktemp)" 2>/dev/null || _err_log="/tmp/.pkg-install-err-$$.log"
+
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        timeout 120 apk add "$pkg_name" >/dev/null 2>&1
+        timeout 120 apk add "$pkg_name" >"$_err_log" 2>&1
     else
-        timeout 120 opkg install "$pkg_name" >/dev/null 2>&1
+        timeout 120 opkg install "$pkg_name" >"$_err_log" 2>&1
     fi
+    local rc=$?
+
+    if [ $rc -ne 0 ]; then
+        log_line "FAIL  package install failed for $pkg_name (exit $rc):"
+        tail -n 10 <"$_err_log" >>"$LOG_FILE" 2>/dev/null || true
+        printf '%s%s--- package install error for %s (last 10 lines) ---%s\n' "$_c_red" "" "$pkg_name" "$_c_reset" >&2
+        tail -n 10 <"$_err_log" >&2 2>/dev/null || true
+        printf '%s%s--- end ---%s\n' "$_c_red" "" "$_c_reset" >&2
+        rm -f "$_err_log" 2>/dev/null || true
+        return 1
+    fi
+
+    rm -f "$_err_log" 2>/dev/null || true
+    return 0
 }
 
 pkg_install_files() {
@@ -1688,7 +1722,21 @@ pkg_install_files() {
         fi
         rm -f "$_apk_log" 2>/dev/null
     else
-        timeout 120 opkg install --force-overwrite --force-downgrade "$@" >/dev/null 2>&1
+        local _opkg_log
+        _opkg_log="$(mktemp)" 2>/dev/null || _opkg_log="/tmp/.opkg-install-$$.log"
+        timeout 120 opkg install --force-overwrite --force-downgrade "$@" >"$_opkg_log" 2>&1
+        local rc=$?
+        if [ $rc -ne 0 ]; then
+            log_line "FAIL  opkg install output:"
+            while IFS= read -r _line; do
+                log_line "  $_line"
+            done <"$_opkg_log"
+            printf '%s%s%s\n' "${_c_red}" "opkg output:" "${_c_reset}" >&2
+            tail -n 10 <"$_opkg_log" >&2 2>/dev/null || true
+            rm -f "$_opkg_log" 2>/dev/null
+            return $rc
+        fi
+        rm -f "$_opkg_log" 2>/dev/null
     fi
 }
 
