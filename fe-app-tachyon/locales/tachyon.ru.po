@@ -1217,6 +1217,9 @@ msgstr "Проверка верхних DNS"
 msgid "Host"
 msgstr "Хост"
 
+msgid "Hosts"
+msgstr "Хосты"
+
 msgid "Hosts Lists Update Interval"
 msgstr "Интервал обновления списков хостов"
 
@@ -1797,7 +1800,7 @@ msgid "Network interface settings"
 msgstr "Настройки сетевого интерфейса"
 
 msgid "New domains:"
-msgstr ""
+msgstr "Новых доменов:"
 
 msgid "New version %s is available for %s"
 msgstr "Доступна новая версия %s для %s"
@@ -2019,7 +2022,7 @@ msgid "Padding"
 msgstr "Padding"
 
 msgid "Parsed records:"
-msgstr ""
+msgstr "Распознано записей:"
 
 msgid "Password"
 msgstr "Пароль"
@@ -2598,10 +2601,10 @@ msgid "Skip TLS certificate verification (not recommended)"
 msgstr ""
 
 msgid "Skipped comments/invalid:"
-msgstr ""
+msgstr "Пропущено комментариев/невалидных:"
 
 msgid "Skipped loopback:"
-msgstr ""
+msgstr "Пропущено loopback:"
 
 msgid "Smart Detect"
 msgstr "Smart Detect"
@@ -2931,7 +2934,7 @@ msgid "Top level has the highest priority; lower levels are used as fallback"
 msgstr "Верхний уровень имеет наивысший приоритет; нижние уровни используются как резерв"
 
 msgid "Total lines:"
-msgstr ""
+msgstr "Всего строк:"
 
 msgid "Trace"
 msgstr "Проверить"
@@ -3096,7 +3099,7 @@ msgid "Update this subscription automatically"
 msgstr "Автоматически обновлять эту подписку"
 
 msgid "Updated/duplicates:"
-msgstr ""
+msgstr "Обновлено/дубликатов:"
 
 msgid "Uplink"
 msgstr "Исходящий"

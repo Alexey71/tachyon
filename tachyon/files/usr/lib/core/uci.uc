@@ -254,8 +254,17 @@ function state_get_all(package_name, section_name) {
             continue;
 
         let option = substr(key, length(prefix));
-        if (option != "")
-            result[option] = substr(line, equals + 1);
+        if (option != "") {
+            let val = substr(line, equals + 1);
+            if (result[option] != null) {
+                if (type(result[option]) == "array")
+                    push(result[option], val);
+                else
+                    result[option] = [ result[option], val ];
+            } else {
+                result[option] = val;
+            }
+        }
     }
 
     return length(keys(result)) > 0 ? result : null;

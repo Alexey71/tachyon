@@ -9240,8 +9240,6 @@ function createSectionContent(section) {
       });
     },
   });
-  dependsOnRoutingAction(domainConditionOption);
-  domainConditionOption.depends("action", "dns");
 
   const userDomainsConditionOption = addTextConditionField(section, {
     key: "user_domains",
@@ -9253,8 +9251,6 @@ function createSectionContent(section) {
     ),
     textAnalyze: analyzeDomainSuffixText,
   });
-  dependsOnRoutingAction(userDomainsConditionOption);
-  userDomainsConditionOption.depends("action", "dns");
 
   const ipConditionOption = addTextConditionField(section, {
     key: "ip_cidr",

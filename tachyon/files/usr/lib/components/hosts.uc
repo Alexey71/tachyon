@@ -55,12 +55,15 @@ function bool_opt(section, key, default_value) {
 function enabled_hosts_sections() {
     let result = [];
     let cursor = uci.cursor();
-    cursor.foreach(CONFIG_NAME, "section", function(section) {
-        if (opt(section, ".type", "") != "section") return;
-        if (opt(section, "action", "") != "hosts") return;
-        if (!bool_opt(section, "enabled", true)) return;
-        push(result, section);
-    });
+    if (!cursor) return result;
+    try {
+        cursor.foreach(CONFIG_NAME, "section", function(section) {
+            if (opt(section, ".type", "") != "section") return;
+            if (opt(section, "action", "") != "hosts") return;
+            if (!bool_opt(section, "enabled", true)) return;
+            push(result, section);
+        });
+    } catch(e) {}
     return result;
 }
 

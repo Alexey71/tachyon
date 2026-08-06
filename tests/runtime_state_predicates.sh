@@ -1438,6 +1438,7 @@ zapret2_queue_signature=$(state_ucode zapret2-queue-signature-fixture "$WORK_DIR
 zapret2_runtime_signature=$(state_ucode zapret2-runtime-signature-fixture "$WORK_DIR/reload-state-signatures.json")
 byedpi_runtime_signature=$(state_ucode byedpi-runtime-signature-fixture "$WORK_DIR/reload-state-signatures.json")
 list_signature=$(state_ucode list-update-signature-fixture "$WORK_DIR/reload-state-signatures.json")
+hosts_list_signature=$(state_ucode hosts-list-signature-fixture "$WORK_DIR/reload-state-signatures.json")
 cron_signature=$(state_ucode cron-signature-fixture "$WORK_DIR/reload-state-signatures.json")
 urltest_enabled_sections=list_proxy urltest_custom
 dont_touch_dhcp=$(state_ucode dont-touch-dhcp-fixture "$WORK_DIR/reload-state-signatures.json")
