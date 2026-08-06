@@ -232,6 +232,7 @@ function dnsmasq_restore_default_instance() {
     restore_dnsmasq_config_option("addn_hosts", "tachyon_addn_hosts", "");
 }
 
+// Resolves sing-box multi-fallback PID detection across pidfiles, ubus procd, and pidof
 function sing_box_running_pid() {
     for (let path in [ "/var/run/sing-box.pid", "/var/run/sing-box/sing-box.pid" ]) {
         let pid = trim(fs.readfile(path) || "");
