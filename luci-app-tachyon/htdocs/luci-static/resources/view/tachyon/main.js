@@ -10117,6 +10117,31 @@ async function runSectionsCheck() {
           latency: _("Not responding")
         };
       }
+      if (section.serviceStatus) {
+        const s = section.serviceStatus;
+        if (s.ready) {
+          return {
+            state: "success",
+            latency: _("Running")
+          };
+        }
+        if (s.conflict) {
+          return {
+            state: "error",
+            latency: _("Conflict")
+          };
+        }
+        if (s.configured) {
+          return {
+            state: "warning",
+            latency: _("Stopped")
+          };
+        }
+        return {
+          state: "error",
+          latency: _("Not configured")
+        };
+      }
       const selectedOutbound = section.outbounds[0];
       const latencyProxy = await TachyonShellMethods.getClashApiProxyLatency(
         section.code,
