@@ -8223,6 +8223,10 @@ function createSectionContent(section) {
         if (iface.I3)                   setVal("awg_i3",   stripBin(iface.I3));
         if (iface.I4)                   setVal("awg_i4",   stripBin(iface.I4));
         if (iface.I5)                   setVal("awg_i5",   stripBin(iface.I5));
+        if (iface.J1)                   setVal("awg_j1",   stripBin(iface.J1));
+        if (iface.J2)                   setVal("awg_j2",   stripBin(iface.J2));
+        if (iface.J3)                   setVal("awg_j3",   stripBin(iface.J3));
+        if (iface.Itime !== undefined)  setVal("awg_itime", iface.Itime);
 
         // --- [Peer] ---
         if (peer.PublicKey)             setVal("awg_peer_public_key", peer.PublicKey);
