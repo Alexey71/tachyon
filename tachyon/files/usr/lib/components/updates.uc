@@ -590,6 +590,8 @@ function rule_has_list_update_source(section) {
         return false;
     if (option(section, "action", "") == "dns")
         return list_has_remote_references(option(section, "domain_ip_lists", ""));
+    if (option(section, "action", "") == "hosts")
+        return false;
 
     return (
         rule_config.has_community_subnet_list(connections.community_lists_value(section)) ||
@@ -2088,7 +2090,7 @@ function import_domain_ip_list_file_into_rulesets(filepath, section) {
 
     let ruleset_filepath = domain_ip_list_ruleset_path(section);
     let ok = nft_module_success([ "split-domain-subnet-file", filepath, domains_tmpfile, subnets_tmpfile ]);
-    let domains_only = option(section, "action", "") == "dns";
+    let domains_only = option(section, "action", "") == "dns" || option(section, "action", "") == "hosts";
     if (ok)
         ok = ruleset_module_success([ "import-plain-list", domains_tmpfile, ruleset_filepath, "domain_suffix", "domains", "5000" ]);
     if (ok && !domains_only)
@@ -2251,7 +2253,7 @@ function import_all_preset_lists(settings) {
 function import_builtin_subnets_from_rule(section, settings) {
     if (!bool_option(section, "enabled", true))
         return true;
-    if (option(section, "action", "") == "dns")
+    if (option(section, "action", "") == "dns" || option(section, "action", "") == "hosts")
         return true;
 
     let ok = true;
@@ -2391,7 +2393,7 @@ function import_custom_ruleset_subnets_from_remote(url, format, section, label, 
 function import_rule_sets_with_subnets_from_rule(section, settings) {
     if (!bool_option(section, "enabled", true))
         return true;
-    if (option(section, "action", "") == "dns")
+    if (option(section, "action", "") == "dns" || option(section, "action", "") == "hosts")
         return true;
 
     let references = connections.rule_sets_with_subnets(section);

@@ -372,6 +372,12 @@ function isConnectionAction(action?: string) {
   );
 }
 
+function isServiceAction(action?: string) {
+  return Boolean(
+    action && ['zapret', 'zapret2', 'byedpi'].includes(action),
+  );
+}
+
 function hasSubscriptionSources(section: Tachyon.ConfigSection) {
   return getSubscriptionSourceCount(section) > 0;
 }
@@ -1384,7 +1390,9 @@ export async function getDashboardSections(
     configSections
       .filter(
         (section) =>
-          section.enabled !== '0' && isConnectionAction(section.action),
+          section.enabled !== '0' &&
+          (isConnectionAction(section.action) ||
+            isServiceAction(section.action)),
       )
       .map(async (section) => {
         const displayName = getDisplayName(section);
@@ -1490,6 +1498,98 @@ export async function getDashboardSections(
                   '',
                 latency: outbound?.value?.history?.[0]?.delay || 0,
                 type: outbound?.value?.type || '',
+                selected: true,
+                canCopyLink: false,
+              },
+            ],
+          };
+        }
+
+        if (isServiceAction(sectionAction)) {
+          const serviceType = sectionAction as
+            | 'zapret'
+            | 'zapret2'
+            | 'byedpi';
+
+          let serviceStatus: Tachyon.ServiceStatus | undefined;
+
+          try {
+            if (serviceType === 'zapret') {
+              const result = await TachyonShellMethods.getZapretStatus();
+              if (result.success) {
+                const s = result.data;
+                serviceStatus = {
+                  serviceType: 'zapret',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: s.restart_count,
+                  unstable: Boolean(s.runtime_unstable),
+                  statusMessage: s.status_message,
+                };
+              }
+            } else if (serviceType === 'zapret2') {
+              const result = await TachyonShellMethods.getZapret2Status();
+              if (result.success) {
+                const s = result.data;
+                serviceStatus = {
+                  serviceType: 'zapret2',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: 0,
+                  unstable: false,
+                  statusMessage: s.status_message,
+                };
+              }
+            } else if (serviceType === 'byedpi') {
+              const result = await TachyonShellMethods.getByedpiStatus();
+              if (result.success) {
+                const s = result.data;
+                serviceStatus = {
+                  serviceType: 'byedpi',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: s.restart_count,
+                  unstable: Boolean(s.runtime_unstable),
+                  statusMessage: s.status_message,
+                };
+              }
+            }
+          } catch (_error) {
+            // Status fetch failed — show section without status
+          }
+
+          const statusLabel = serviceStatus
+            ? serviceStatus.ready
+              ? _('Running')
+              : serviceStatus.conflict
+                ? _('Conflict')
+                : serviceStatus.configured
+                  ? _('Stopped')
+                  : _('Not configured')
+            : _('Unknown');
+
+          return {
+            withTagSelect: false,
+            code: sectionName,
+            sectionName,
+            displayName,
+            action: sectionAction,
+            serviceStatus,
+            outbounds: [
+              {
+                code: sectionName,
+                displayName: statusLabel,
+                latency: 0,
+                type: serviceType.toUpperCase(),
                 selected: true,
                 canCopyLink: false,
               },

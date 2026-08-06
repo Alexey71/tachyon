@@ -270,6 +270,9 @@ function renderDefaultState({
   const isConnectionNode = ['vpn', 'awg', 'warp'].includes(
     section.action || '',
   );
+  const isServiceNode = ['zapret', 'zapret2', 'byedpi'].includes(
+    section.action || '',
+  );
 
   function testLatency() {
     if (section.withTagSelect) {
@@ -561,6 +564,139 @@ function renderDefaultState({
           },
           [...section.outbounds.map((outbound) => renderOutbound(outbound))],
         ),
+      ],
+    );
+  }
+
+  if (isServiceNode && section.serviceStatus) {
+    const ss = section.serviceStatus;
+    const statusColor = ss.ready
+      ? 'var(--success-color-medium, green)'
+      : ss.conflict
+        ? 'var(--error-color-medium, red)'
+        : ss.configured
+          ? 'var(--warn-color-medium, orange)'
+          : 'var(--primary-color-low, lightgray)';
+    const statusText = ss.ready
+      ? _('Running')
+      : ss.conflict
+        ? _('Conflict')
+        : ss.configured
+          ? _('Stopped')
+          : _('Not configured');
+    const typeLabel =
+      ss.serviceType === 'zapret'
+        ? 'Zapret'
+        : ss.serviceType === 'zapret2'
+          ? 'Zapret2'
+          : 'ByeDPI';
+
+    return E(
+      'div',
+      { class: 'tachyon_dashboard-page__outbound-section' },
+      [
+        E(
+          'div',
+          {
+            class: 'tachyon_dashboard-page__outbound-section__title-section',
+            style: 'cursor: default;',
+          },
+          [
+            E(
+              'div',
+              {
+                class:
+                  'tachyon_dashboard-page__outbound-section__title-section__title',
+                style: 'display: flex; align-items: center; gap: 8px;',
+              },
+              [
+                E('span', {}, section.displayName),
+                E(
+                  'span',
+                  {
+                    style:
+                      'font-size: 12px; opacity: 0.6; font-weight: normal;',
+                  },
+                  typeLabel,
+                ),
+              ],
+            ),
+          ],
+        ),
+        E(
+          'div',
+          {
+            style:
+              'display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 16px 12px;',
+          },
+          [
+            E(
+              'div',
+              { style: 'display: flex; align-items: center; gap: 6px;' },
+              [
+                E(
+                  'span',
+                  { style: 'opacity: 0.7; font-size: 13px;' },
+                  _('Status') + ':',
+                ),
+                E(
+                  'span',
+                  {
+                    style: `font-size: 13px; font-weight: 500; color: ${statusColor};`,
+                  },
+                  statusText,
+                ),
+              ],
+            ),
+            ss.restartCount > 0
+              ? E(
+                  'div',
+                  { style: 'display: flex; align-items: center; gap: 6px;' },
+                  [
+                    E(
+                      'span',
+                      { style: 'opacity: 0.7; font-size: 13px;' },
+                      _('Restarts') + ':',
+                    ),
+                    E(
+                      'span',
+                      {
+                        style:
+                          'font-size: 13px; font-weight: 500; color: var(--warn-color-medium, orange);',
+                      },
+                      `${ss.restartCount}`,
+                    ),
+                  ],
+                )
+              : '',
+            ss.unstable
+              ? E(
+                  'div',
+                  { style: 'display: flex; align-items: center; gap: 6px;' },
+                  [
+                    E(
+                      'span',
+                      {
+                        style:
+                          'font-size: 13px; font-weight: 500; color: var(--error-color-medium, red);',
+                      },
+                      _('Unstable'),
+                    ),
+                  ],
+                )
+              : '',
+          ],
+        ),
+        ss.statusMessage
+          ? E(
+              'div',
+              {
+                style:
+                  'padding: 0 16px 8px; font-size: 12px; opacity: 0.6; word-break: break-word;',
+              },
+              ss.statusMessage,
+            )
+          : '',
       ],
     );
   }

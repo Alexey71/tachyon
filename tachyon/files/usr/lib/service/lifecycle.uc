@@ -103,6 +103,7 @@ const PRIORITY_UC = LIB_DIR + "/singbox/priority.uc";
 const DNS_FAILOVER_UC = LIB_DIR + "/singbox/dns_failover.uc";
 const SUBSCRIPTION_CACHE_UC = LIB_DIR + "/subscription/cache.uc";
 const UPDATES_UC = LIB_DIR + "/components/updates.uc";
+const HOSTS_UC = LIB_DIR + "/components/hosts.uc";
 const STATE_UC = LIB_DIR + "/service/state.uc";
 const RELOAD_UC = LIB_DIR + "/service/reload.uc";
 const UI_UC = LIB_DIR + "/service/ui.uc";
@@ -747,6 +748,8 @@ function start_main() {
     if (status != 0)
         return status;
 
+    module_background(HOSTS_UC, [ "list-update" ]);
+
     status = module_status(SINGBOX_UC, [ "configure-service" ]);
     if (status != 0)
         return status;
@@ -1048,6 +1051,7 @@ function parse_reload_plan(output) {
         changed_byedpi_runtime: 0,
         changed_cron: 0,
         changed_list: 0,
+        changed_hosts_list: 0,
         needs_sing_box_reload: 0,
         needs_nft_rebuild: 0,
         needs_zapret_restart: 0,
@@ -1057,6 +1061,7 @@ function parse_reload_plan(output) {
         needs_dnsmasq_restore: 0,
         needs_cron_refresh: 0,
         needs_list_update: 0,
+        needs_hosts_update: 0,
         has_work: 0
     };
 
@@ -1091,6 +1096,7 @@ function reload_actions_summary(plan) {
     actions = append_reload_action(actions, plan.needs_dnsmasq_configure || plan.needs_dnsmasq_restore, "dnsmasq");
     actions = append_reload_action(actions, plan.needs_cron_refresh, "scheduled jobs");
     actions = append_reload_action(actions, plan.needs_list_update, "remote lists");
+    actions = append_reload_action(actions, plan.needs_hosts_update, "hosts lists");
     return actions;
 }
 
@@ -1269,6 +1275,9 @@ function reload(reason) {
         module_success(ZAPRET2_UC, [ "stop-runtime" ]);
     if (plan.needs_byedpi_restart == 1)
         module_success(BYEDPI_UC, [ "stop-runtime" ]);
+
+    if (plan.needs_hosts_update == 1)
+        module_success(HOSTS_UC, [ "list-update" ]);
 
     if (plan.needs_nft_rebuild == 1) {
         log_message("Rebuilding nftables rules", "info");

@@ -59,6 +59,8 @@ function target(section, outbound_tag_name) {
         return { action: "route", outbound: runtime_constants.BYPASS_OUTBOUND_TAG };
     if (action == "block")
         return { action: "reject" };
+    if (action == "hosts" || action == "dns")
+        return { action: "route", outbound: runtime_constants.DIRECT_OUTBOUND_TAG };
     return { unsupported: "unsupported action " + action };
 }
 

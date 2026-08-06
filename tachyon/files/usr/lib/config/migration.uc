@@ -1308,11 +1308,73 @@ function migrate_dns_hosts_to_option(ctx) {
     set_option(ctx, ctx.model.settings, "dns_hosts", join("\n", entries));
 }
 
+function migrate_global_hosts_to_section(ctx) {
+    let settings = object_or_empty(ctx.model.settings);
+    let has_urls = option_exists(settings, "hosts_list_urls");
+    let has_disabled = option_exists(settings, "hosts_list_disabled");
+    let has_auto_update = option_exists(settings, "hosts_list_auto_update");
+    let has_update_interval = option_exists(settings, "hosts_list_update_interval");
+    let has_dns_hosts = option_exists(settings, "dns_hosts");
+
+    if (!has_urls && !has_disabled && !has_auto_update && !has_update_interval && !has_dns_hosts)
+        return;
+
+    let already_migrated = false;
+    for (let section in ctx.model.sections) {
+        if (option(section, "action", "") == "hosts") {
+            already_migrated = true;
+            break;
+        }
+    }
+    if (already_migrated) {
+        delete_option(ctx, ctx.model.settings, "hosts_list_urls");
+        delete_option(ctx, ctx.model.settings, "hosts_list_disabled");
+        delete_option(ctx, ctx.model.settings, "hosts_list_auto_update");
+        delete_option(ctx, ctx.model.settings, "hosts_list_update_interval");
+        return;
+    }
+
+    let hosts_section_name = "hosts";
+    let hosts_section = { ".name": hosts_section_name, ".type": "section" };
+
+    record_operation(ctx, { op: "create", section: hosts_section_name, type: "section", anonymous: false });
+
+    set_option(ctx, hosts_section, "label", "Hosts");
+    set_option(ctx, hosts_section, "enabled", "1");
+    set_option(ctx, hosts_section, "action", "hosts");
+
+    if (has_urls) {
+        let urls = list_option(settings, "hosts_list_urls");
+        if (length(urls) > 0)
+            set_list_option(ctx, hosts_section, "hosts_list_urls", urls);
+        delete_option(ctx, ctx.model.settings, "hosts_list_urls");
+    }
+    if (has_disabled) {
+        let disabled = list_option(settings, "hosts_list_disabled");
+        if (length(disabled) > 0)
+            set_list_option(ctx, hosts_section, "hosts_list_disabled", disabled);
+        delete_option(ctx, ctx.model.settings, "hosts_list_disabled");
+    }
+    if (has_auto_update) {
+        set_option(ctx, hosts_section, "hosts_list_auto_update", option(settings, "hosts_list_auto_update", "0"));
+        delete_option(ctx, ctx.model.settings, "hosts_list_auto_update");
+    }
+    if (has_update_interval) {
+        set_option(ctx, hosts_section, "hosts_list_update_interval", option(settings, "hosts_list_update_interval", "24h"));
+        delete_option(ctx, ctx.model.settings, "hosts_list_update_interval");
+    }
+    if (has_dns_hosts) {
+        set_option(ctx, hosts_section, "dns_hosts", option(settings, "dns_hosts", ""));
+        delete_option(ctx, ctx.model.settings, "dns_hosts");
+    }
+}
+
 const MIGRATIONS = [
     { id: "interface_sections", run: migrate_interface_sections },
     { id: "enable_component_checks", run: migrate_enable_component_checks },
     { id: "http_connection_urls", run: migrate_http_connection_urls },
-    { id: "dns_hosts_to_option", run: migrate_dns_hosts_to_option }
+    { id: "dns_hosts_to_option", run: migrate_dns_hosts_to_option },
+    { id: "global_hosts_to_section", run: migrate_global_hosts_to_section }
 ];
 
 function apply_migrations(ctx) {

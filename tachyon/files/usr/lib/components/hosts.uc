@@ -40,6 +40,30 @@ function remove_file(path) {
     run("rm -f " + shell_quote(path));
 }
 
+function opt(section, key, default_value) {
+    let v = section[key];
+    if (v == null) return default_value;
+    return v;
+}
+
+function bool_opt(section, key, default_value) {
+    let v = section[key];
+    if (v == null) return default_value;
+    return v == "1" || v == "true";
+}
+
+function enabled_hosts_sections() {
+    let result = [];
+    let cursor = uci.cursor();
+    cursor.foreach(CONFIG_NAME, "section", function(section) {
+        if (opt(section, ".type", "") != "section") return;
+        if (opt(section, "action", "") != "hosts") return;
+        if (!bool_opt(section, "enabled", true)) return;
+        push(result, section);
+    });
+    return result;
+}
+
 function http_get_to_file(url, output_path) {
     run("mkdir -p " + shell_quote(HOSTS_TMP_DIR));
     let cmd = "wget -q -O " + shell_quote(output_path) + " --timeout=" + CONNECT_TIMEOUT + " " + shell_quote(url) + " 2>&1";
@@ -141,19 +165,27 @@ function write_hosts_cache(entries, source_urls) {
 
 function get_hosts_urls() {
     let urls = [];
-    let uci_urls = uci.get(CONFIG_NAME + ".settings.hosts_list_urls");
-    if (uci_urls == "")
-        return urls;
-
     let disabled = [];
-    let uci_disabled = uci.get(CONFIG_NAME + ".settings.hosts_list_disabled");
-    if (type(uci_disabled) == "array") {
-        for (let d in uci_disabled) {
-            let s = trim(d);
-            if (s != "") push(disabled, s);
+    for (let section in enabled_hosts_sections()) {
+        let section_urls = opt(section, "hosts_list_urls", "");
+        if (type(section_urls) == "array") {
+            for (let url in section_urls) {
+                let s = trim(url);
+                if (s != "") push(urls, s);
+            }
+        } else if (section_urls != null && section_urls != "") {
+            push(urls, trim(section_urls));
         }
-    } else if (uci_disabled != null && uci_disabled != "") {
-        push(disabled, trim(uci_disabled));
+
+        let section_disabled = opt(section, "hosts_list_disabled", "");
+        if (type(section_disabled) == "array") {
+            for (let d in section_disabled) {
+                let s = trim(d);
+                if (s != "") push(disabled, s);
+            }
+        } else if (section_disabled != null && section_disabled != "") {
+            push(disabled, trim(section_disabled));
+        }
     }
 
     let is_disabled = function(url) {
@@ -162,18 +194,12 @@ function get_hosts_urls() {
         return false;
     };
 
-    if (type(uci_urls) == "array") {
-        for (let url in uci_urls) {
-            let s = trim(url);
-            if (s != "" && !is_disabled(s))
-                push(urls, s);
-        }
-    } else {
-        let s = trim(uci_urls);
-        if (s != "" && !is_disabled(s))
-            push(urls, s);
+    let result = [];
+    for (let url in urls) {
+        if (!is_disabled(url))
+            push(result, url);
     }
-    return urls;
+    return result;
 }
 
 function hosts_list_update(target_url) {
@@ -224,18 +250,20 @@ function hosts_list_update(target_url) {
 }
 
 function hosts_list_status() {
-    let urls = get_hosts_urls();
+    let active_urls = get_hosts_urls();
     let all_urls = [];
-    let uci_urls = uci.get(CONFIG_NAME + ".settings.hosts_list_urls");
-    if (type(uci_urls) == "array") {
-        for (let url in uci_urls) {
-            let s = trim(url);
-            if (s != "") push(all_urls, s);
+    for (let section in enabled_hosts_sections()) {
+        let section_urls = opt(section, "hosts_list_urls", "");
+        if (type(section_urls) == "array") {
+            for (let url in section_urls) {
+                let s = trim(url);
+                if (s != "") push(all_urls, s);
+            }
+        } else if (section_urls != null && section_urls != "") {
+            push(all_urls, trim(section_urls));
         }
-    } else if (uci_urls != null && uci_urls != "") {
-        push(all_urls, trim(uci_urls));
     }
-    let disabled_count = length(all_urls) - length(urls);
+    let disabled_count = length(all_urls) - length(active_urls);
     let st = fs.stat(HOSTS_CACHE_FILE);
     let cache_exists = st != null;
     let entry_count = 0;
@@ -244,7 +272,7 @@ function hosts_list_status() {
         entry_count = int(st.size);
     }
 
-    print('{"urls":' + length(urls) + ',"total":' + length(all_urls) + ',"disabled":' + disabled_count + ',"cache_exists":' + (cache_exists ? 'true' : 'false') + ',"cache_size":' + entry_count + '}');
+    print('{"urls":' + length(active_urls) + ',"total":' + length(all_urls) + ',"disabled":' + disabled_count + ',"cache_exists":' + (cache_exists ? 'true' : 'false') + ',"cache_size":' + entry_count + '}');
 }
 
 let command = ARGV[0] || "";

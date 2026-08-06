@@ -995,7 +995,7 @@ describe('getDashboardSections', () => {
     });
   });
 
-  it('does not expose ByeDPI sections on the dashboard', async () => {
+  it('exposes ByeDPI sections on the dashboard as service cards', async () => {
     mocks.getConfigSections.mockResolvedValue([
       proxySection(),
       {
@@ -1021,7 +1021,10 @@ describe('getDashboardSections', () => {
     const result = await getDashboardSections();
 
     expect(result.success).toBe(true);
-    expect(result.data.map((section) => section.sectionName)).toEqual(['main']);
+    expect(result.data.map((section) => section.sectionName)).toEqual([
+      'main',
+      'dpi',
+    ]);
   });
 
   it('fetches Clash API proxies directly in the browser to avoid rpcd output limits', async () => {

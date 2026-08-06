@@ -1755,6 +1755,9 @@ msgstr ""
 msgid "Host"
 msgstr ""
 
+msgid "Hosts"
+msgstr ""
+
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1247
 msgid "Hosts Lists Update Interval"
 msgstr ""

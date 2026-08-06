@@ -1388,6 +1388,9 @@ function add_outbound_for_section(config, section, taken, sections) {
     else if (action == "dns") {
         add_dns_server_for_section(config, section);
     }
+    else if (action == "hosts") {
+        /* hosts-only action — no outbound or route needed */
+    }
     else {
         ctx.runtime_generate_unsupported("unsupported action " + action);
     }
@@ -1413,8 +1416,12 @@ function reserve_section_outbound_tags(sections, taken) {
 }
 
 function add_route_for_section(config, section) {
-    if (option(section, "action", "") == "dns")
+    let action = option(section, "action", "");
+    if (action == "dns")
         add_dns_action_rules_for_section(config, section);
+    else if (action == "hosts") {
+        /* hosts-only action — entries are consumed globally via combined cache */
+    }
     else
         add_combined_route_for_section(config, section);
 }

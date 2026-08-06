@@ -4212,6 +4212,8 @@ function getActionOptionLabel(action) {
       return "MASQUE";
     case "openvpn":
       return "OpenVPN";
+    case "hosts":
+      return _("Hosts");
     case "outbound":
       return _("JSON outbound");
     case "proxy":
@@ -4301,6 +4303,7 @@ function populateActionOptionValues(option) {
   if (isByedpiInstalledForUi()) {
     option.value("byedpi", getActionOptionLabel("byedpi"));
   }
+  option.value("hosts", getActionOptionLabel("hosts"));
 
 }
 
@@ -7416,6 +7419,537 @@ function createSectionContent(section) {
   configureTextareaOption(o, analyzeByedpiStrategy);
 
 
+  // ─── Hosts Import Helpers ──────────────────────────────────────────────
+
+  function parseHostsFile(text, options) {
+    options = options || {};
+    const skipLoopback = options.skipLoopback !== false;
+    const lines = (text || "").split(/\r?\n/);
+    const entries = [];
+    let skippedComments = 0;
+    let skippedLoopback = 0;
+    let skippedInvalid = 0;
+
+    const loopbackIPs = new Set([
+      "127.0.0.1", "0.0.0.0", "::1",
+      "0:0:0:0:0:0:0:1", "0000:0000:0000:0000:0000:0000:0000:0001",
+    ]);
+    const loopbackHosts = new Set([
+      "localhost", "localhost.localdomain", "local", "broadcasthost",
+    ]);
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
+      if (!line) continue;
+
+      const hashIdx = line.indexOf("#");
+      if (hashIdx !== -1) {
+        if (hashIdx === 0) { skippedComments++; continue; }
+        line = line.substring(0, hashIdx).trim();
+        if (!line) { skippedComments++; continue; }
+      }
+
+      const parts = line.split(/\s+/);
+      if (parts.length < 2) { skippedInvalid++; continue; }
+
+      const ip = parts[0].trim();
+      const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+      const isIPv6 = ip.indexOf(":") !== -1 && /^[0-9a-fA-F:]+$/.test(ip);
+      if (!isIPv4 && !isIPv6) { skippedInvalid++; continue; }
+
+      const isIpLoopback = loopbackIPs.has(ip);
+      for (let j = 1; j < parts.length; j++) {
+        const domain = parts[j].toLowerCase().trim();
+        if (!domain) continue;
+        if (skipLoopback && (isIpLoopback || loopbackHosts.has(domain))) {
+          skippedLoopback++; continue;
+        }
+        if (domain.length > 253 || /^[^a-z0-9_.-]/i.test(domain)) {
+          skippedInvalid++; continue;
+        }
+        entries.push({ domain: domain, ip: ip });
+      }
+    }
+
+    return { entries, skippedComments, skippedLoopback, skippedInvalid, totalLines: lines.length };
+  }
+
+  function showImportHostsModal(section_id, dnsHostsOptRef) {
+    const fileInput = E("input", { type: "file", accept: ".txt,.hosts,hosts,*", style: "display:none" });
+
+    const fileSelectBtn = E("button", {
+      class: "cbi-button cbi-button-neutral", type: "button",
+      click: function () { fileInput.click(); },
+    }, _("Choose Hosts File..."));
+
+    const loadCurrentBtn = E("button", {
+      class: "cbi-button cbi-button-action", type: "button",
+      click: function () {
+        let existingEntries = [];
+        const uiEl = dnsHostsOptRef ? dnsHostsOptRef.getUIElement(section_id) : null;
+        if (uiEl && typeof uiEl.getValue === "function") {
+          const v = uiEl.getValue();
+          if (typeof v === "string" && v) existingEntries = v.split("\n").map(l => l.trim()).filter(l => l);
+        }
+        if (!existingEntries.length) {
+          const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+          existingEntries = Array.isArray(uciVal) ? uciVal : uciVal ? [uciVal] : [];
+        }
+        textArea.value = existingEntries.join("\n");
+        fileStatus.textContent = _("Loaded %d current record(s)").format(existingEntries.length);
+        updatePreview();
+      },
+    }, _("Load Current Records"));
+
+    const fileStatus = E("span", {
+      style: "margin-left:10px;font-size:0.85rem;color:var(--text-color-medium,#888);",
+    }, _("No file selected"));
+
+    const textArea = E("textarea", {
+      class: "cbi-input-textarea", rows: 8,
+      style: "width:100%;font-family:monospace;font-size:0.85rem;margin-top:8px;resize:vertical;",
+      placeholder: "127.0.0.1 localhost\n192.168.1.100 server.local\n10.0.0.5 example.com alias.com",
+    });
+
+    const skipLoopbackCb = E("input", {
+      type: "checkbox", id: "hosts-skip-loopback", checked: true,
+      style: "margin-right:6px;vertical-align:middle;",
+    });
+    const overwriteCb = E("input", {
+      type: "checkbox", id: "hosts-overwrite", checked: false,
+      style: "margin-right:6px;vertical-align:middle;",
+    });
+
+    const previewBox = E("div", {
+      style: "margin-top:12px;padding:10px 14px;background:var(--background-color-secondary,#f8f9fa);border:1px solid var(--border-color-medium,#e0e0e0);border-radius:4px;font-size:0.85rem;line-height:1.5;",
+    }, [E("em", {}, _("Paste content or upload a file to preview imported DNS records."))]);
+
+    const importBtn = E("button", {
+      class: "cbi-button cbi-button-action", type: "button", disabled: true,
+    }, _("Import"));
+
+    let currentParsedResult = null;
+
+    function updatePreview() {
+      const text = textArea.value;
+      const skipLoopback = skipLoopbackCb.checked;
+      const overwrite = overwriteCb.checked;
+
+      if (!text.trim()) {
+        previewBox.innerHTML = "";
+        previewBox.appendChild(E("em", {}, _("Paste content or upload a file to preview imported DNS records.")));
+        importBtn.disabled = true;
+        importBtn.textContent = _("Import");
+        currentParsedResult = null;
+        return;
+      }
+
+      const result = parseHostsFile(text, { skipLoopback: skipLoopback });
+      currentParsedResult = result;
+
+      let existingEntries = [];
+      const uiEl = dnsHostsOptRef ? dnsHostsOptRef.getUIElement(section_id) : null;
+      if (uiEl && typeof uiEl.getValue === "function") {
+        const v = uiEl.getValue();
+        if (typeof v === "string" && v) existingEntries = v.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#"));
+      }
+      if (!existingEntries.length) {
+        const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+        existingEntries = Array.isArray(uciVal) ? uciVal : uciVal ? [uciVal] : [];
+      }
+
+      const domainMap = new Map();
+      if (!overwrite) {
+        for (const entry of existingEntries) {
+          const parts = `${entry}`.trim().split(/\s+/);
+          if (parts.length >= 2) domainMap.set(parts[0].toLowerCase(), parts[1]);
+        }
+      }
+
+      let newCount = 0, updatedCount = 0;
+      for (const item of result.entries) {
+        if (domainMap.has(item.domain.toLowerCase())) updatedCount++; else newCount++;
+        domainMap.set(item.domain.toLowerCase(), item.ip);
+      }
+
+      previewBox.innerHTML = "";
+      previewBox.appendChild(E("div", {
+        style: "display:grid;grid-template-columns:1fr 1fr;gap:6px;row-gap:4px;",
+      }, [
+        E("div", {}, [E("strong", {}, _("Total lines: ")), `${result.totalLines}`]),
+        E("div", {}, [E("strong", {}, _("Parsed records: ")), `${result.entries.length}`]),
+        E("div", {}, [E("strong", {}, _("Skipped loopback: ")), `${result.skippedLoopback}`]),
+        E("div", {}, [E("strong", {}, _("Skipped comments/invalid: ")), `${result.skippedComments + result.skippedInvalid}`]),
+        E("div", {}, [E("strong", {}, _("New domains: ")), `${newCount}`]),
+        E("div", {}, [E("strong", {}, _("Updated/duplicates: ")), `${updatedCount}`]),
+      ]));
+
+      if (result.entries.length > 0) {
+        importBtn.disabled = false;
+        importBtn.textContent = _("Import (%d records)").format(result.entries.length);
+      } else {
+        importBtn.disabled = true;
+        importBtn.textContent = _("Import");
+      }
+    }
+
+    fileInput.addEventListener("change", function (ev) {
+      const file = ev.target.files[0];
+      if (!file) return;
+      fileStatus.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      const reader = new FileReader();
+      reader.onload = function (e) { textArea.value = e.target.result || ""; updatePreview(); };
+      reader.readAsText(file);
+    });
+
+    textArea.addEventListener("input", updatePreview);
+    skipLoopbackCb.addEventListener("change", updatePreview);
+    overwriteCb.addEventListener("change", updatePreview);
+
+    importBtn.addEventListener("click", function () {
+      if (!currentParsedResult || !currentParsedResult.entries.length) return;
+
+      const overwrite = overwriteCb.checked;
+      const uiEl = dnsHostsOptRef ? dnsHostsOptRef.getUIElement(section_id) : null;
+      let existingEntries = [];
+      if (uiEl && typeof uiEl.getValue === "function") {
+        const v = uiEl.getValue();
+        if (typeof v === "string" && v) existingEntries = v.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#"));
+      }
+      if (!existingEntries.length) {
+        const uciVal = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+        existingEntries = Array.isArray(uciVal) ? uciVal : uciVal ? [uciVal] : [];
+      }
+
+      const domainMap = new Map();
+      if (!overwrite) {
+        for (const entry of existingEntries) {
+          const parts = `${entry}`.trim().split(/\s+/);
+          if (parts.length >= 2) domainMap.set(parts[0].toLowerCase(), parts[1]);
+        }
+      }
+      for (const item of currentParsedResult.entries) domainMap.set(item.domain.toLowerCase(), item.ip);
+
+      const finalEntries = [];
+      for (const [domain, ip] of domainMap.entries()) finalEntries.push(`${domain} ${ip}`);
+
+      uci.set(UCI_PACKAGE, section_id, "dns_hosts", finalEntries.join("\n"));
+      if (uiEl && typeof uiEl.setValue === "function") uiEl.setValue(finalEntries.join("\n"));
+
+      ui.hideModal();
+      ui.addNotification(null, _("Successfully imported %d DNS record(s)").format(finalEntries.length), "info");
+    });
+
+    ui.showModal(_("Import Hosts File"), [
+      E("div", { class: "cbi-map" }, [
+        E("div", { style: "margin-bottom:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;" }, [
+          fileInput, fileSelectBtn, loadCurrentBtn, fileStatus,
+        ]),
+        E("label", { style: "display:block;margin-bottom:4px;font-weight:bold;" }, _("Or paste hosts file content:")),
+        textArea,
+        E("div", { style: "margin-top:10px;" }, [
+          E("label", { style: "display:flex;align-items:center;cursor:pointer;margin-bottom:6px;" }, [
+            skipLoopbackCb,
+            E("span", {}, _("Skip loopback & local entries (127.0.0.1, ::1, 0.0.0.0, localhost)")),
+          ]),
+          E("label", { style: "display:flex;align-items:center;cursor:pointer;" }, [
+            overwriteCb,
+            E("span", {}, _("Overwrite existing records (if unchecked, merge with existing records)")),
+          ]),
+        ]),
+        previewBox,
+      ]),
+      E("div", { class: "button-row", style: "margin-top:16px;" }, [
+        importBtn,
+        E("button", { class: "btn cbi-button cbi-button-neutral", click: ui.createHandlerFn(this, function () { ui.hideModal(); }) }, _("Cancel")),
+      ]),
+    ]);
+  }
+
+
+  // ─── Hosts Section Options ──────────────────────────────────────────────
+
+  o = section.taboption("settings", form.TextValue, "dns_hosts", _("Custom DNS Records (Hosts)"),
+    _("One record per line: <code>example.com 192.168.1.100</code> or <code>192.168.1.100 example.com</code>. Lines starting with <code>#</code> are ignored."));
+  o.depends("action", "hosts");
+  o.rows = 8;
+  o.wrap = "soft";
+  o.textarea = true;
+  o.modalonly = true;
+  o.cfgvalue = function (section_id) {
+    const val = uci.get(UCI_PACKAGE, section_id, "dns_hosts");
+    if (!val) return "";
+    if (Array.isArray(val)) return val.join("\n");
+    return String(val || "");
+  };
+  o.write = function (section_id, value) {
+    const lines = String(value || "").split("\n")
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith("#"));
+    if (lines.length === 0) {
+      uci.unset(UCI_PACKAGE, section_id, "dns_hosts");
+    } else {
+      uci.set(UCI_PACKAGE, section_id, "dns_hosts", lines.join("\n"));
+    }
+  };
+  o.remove = function (section_id) {
+    uci.unset(UCI_PACKAGE, section_id, "dns_hosts");
+  };
+  o.validate = function (_section_id, value) {
+    if (!value) return true;
+    const lines = value.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const parts = trimmed.split(/\s+/);
+      if (parts.length < 2) {
+        return _('Invalid line: "%s". Use: domain ip or ip domain').format(
+          trimmed.length > 40 ? trimmed.substring(0, 40) + "\u2026" : trimmed,
+        );
+      }
+    }
+    return true;
+  };
+  const _origDnsHostsRenderWidget = o.renderWidget;
+  o.renderWidget = function (section_id, option_index, cfgvalue) {
+    const node = _origDnsHostsRenderWidget.call(this, section_id, option_index, cfgvalue);
+    const ta = node.tagName === "TEXTAREA" ? node : node.querySelector("textarea");
+    if (ta) {
+      ta.style.fontFamily = "monospace";
+      ta.style.fontSize = "0.85rem";
+      ta.style.lineHeight = "1.4";
+      ta.style.resize = "vertical";
+    }
+
+    const countBadge = E("span", {
+      style: "font-weight:600;font-size:0.85rem;margin-left:auto;color:var(--text-color-medium,#666);",
+    });
+
+    function updateCount() {
+      const text = ta ? ta.value : "";
+      const validLines = text.split("\n").filter(l => l.trim() && !l.trim().startsWith("#"));
+      countBadge.textContent = _("Records: %d").format(validLines.length);
+    }
+
+    if (ta) {
+      ta.addEventListener("input", updateCount);
+      setTimeout(updateCount, 50);
+    }
+
+    const sortBtn = E("button", {
+      class: "cbi-button cbi-button-neutral",
+      type: "button",
+      style: "margin-left:6px;",
+      click: function () {
+        if (!ta) return;
+        const lines = ta.value.split("\n")
+          .map(l => l.trim())
+          .filter(Boolean);
+        const comments = lines.filter(l => l.startsWith("#"));
+        const records = lines.filter(l => !l.startsWith("#")).sort();
+        ta.value = [...comments, ...records].join("\n");
+        updateCount();
+      },
+    }, _("Sort Alphabetically"));
+
+    const cleanBtn = E("button", {
+      class: "cbi-button cbi-button-neutral",
+      type: "button",
+      style: "margin-left:6px;",
+      click: function () {
+        if (!ta) return;
+        const lines = ta.value.split("\n")
+          .map(l => l.trim())
+          .filter(l => l && !l.startsWith("#"));
+        ta.value = lines.join("\n");
+        updateCount();
+      },
+    }, _("Clean Comments"));
+
+    const importHostsBtn = E("button", {
+      class: "cbi-button cbi-button-action",
+      type: "button",
+      style: "margin-left:6px;",
+      click: function () {
+        showImportHostsModal(section_id, o);
+      },
+    }, _("Import Hosts File"));
+
+    return E("div", {}, [
+      node,
+      E("div", { style: "display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;" }, [
+        sortBtn,
+        cleanBtn,
+        importHostsBtn,
+        countBadge,
+      ]),
+    ]);
+  };
+
+
+  o = section.taboption("settings", form.DynamicList, "hosts_list_urls", _("Remote Hosts Lists"),
+    _("URLs of remote hosts files to download and apply. Supports standard hosts format: <code>IP domain</code>."));
+  o.depends("action", "hosts");
+  o.placeholder = "https://raw.githubusercontent.com/.../hosts";
+  o.modalonly = true;
+  o.renderWidget = function (section_id, _option_index, _cfgvalue) {
+    const pkg = UCI_PACKAGE;
+
+    function getUrls() {
+      let v = uci.get(pkg, section_id, "hosts_list_urls") || [];
+      if (!Array.isArray(v)) v = v ? [v] : [];
+      return v;
+    }
+
+    function getDisabled() {
+      let v = uci.get(pkg, section_id, "hosts_list_disabled") || [];
+      if (!Array.isArray(v)) v = v ? [v] : [];
+      return v;
+    }
+
+    function setUrls(urls) {
+      uci.set(pkg, section_id, "hosts_list_urls", urls.length ? urls : null);
+    }
+
+    function setDisabled(disabled) {
+      uci.set(pkg, section_id, "hosts_list_disabled", disabled.length ? disabled : null);
+    }
+
+    const container = E("div", { class: "cbi-section-node" });
+
+    function render() {
+      container.innerHTML = "";
+      const urls = getUrls();
+      const disabled = getDisabled();
+
+      const table = E("table", { class: "cbi-section-table", style: "width:100%;" });
+      const tbody = E("tbody");
+
+      urls.forEach(function (url, idx) {
+        const isOff = disabled.includes(url);
+        const tr = E("tr", { class: "cbi-section-table-row" });
+
+        const tdCheck = E("td", { class: "cbi-section-table-cell", style: "width:30px;text-align:center;" });
+        const cb = E("input", {
+          type: "checkbox",
+          class: "cbi-input-checkbox",
+          checked: !isOff,
+          change: function () {
+            const nowEnabled = this.checked;
+            let d = getDisabled();
+            if (nowEnabled) {
+              d = d.filter(function (x) { return x !== url; });
+            } else {
+              if (!d.includes(url)) d.push(url);
+            }
+            setDisabled(d);
+            uci.save();
+            render();
+          },
+        });
+        tdCheck.appendChild(cb);
+        tr.appendChild(tdCheck);
+
+        const tdUrl = E("td", { class: "cbi-section-table-cell" });
+        const urlSpan = E("span", {
+          style: isOff ? "text-decoration:line-through;opacity:0.6;" : "",
+        }, url);
+        tdUrl.appendChild(urlSpan);
+        tr.appendChild(tdUrl);
+
+        const tdStatus = E("td", { class: "cbi-section-table-cell", style: "width:60px;text-align:center;white-space:nowrap;" });
+        tdStatus.appendChild(E("span", {
+          style: isOff ? "color:#e53935;" : "color:#2e7d32;",
+        }, isOff ? "OFF" : "ON"));
+        tr.appendChild(tdStatus);
+
+        const tdDel = E("td", { class: "cbi-section-table-cell", style: "width:40px;text-align:center;" });
+        const delBtn = E("button", {
+          class: "btn cbi-button cbi-button-remove",
+          type: "button",
+          title: _("Remove"),
+          click: function () {
+            let u = getUrls();
+            let d = getDisabled();
+            u.splice(idx, 1);
+            d = d.filter(function (x) { return x !== url; });
+            setUrls(u);
+            setDisabled(d);
+            uci.save();
+            render();
+          },
+        }, "\u2715");
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+
+      const addRow = E("div", { class: "cbi-section-create", style: "margin-top:8px;display:flex;gap:4px;align-items:center;" });
+
+      const input = E("input", {
+        type: "text",
+        class: "cbi-input-text",
+        placeholder: "https://raw.githubusercontent.com/.../hosts",
+        style: "flex:1;",
+      });
+
+      const addBtn = E("button", {
+        class: "btn cbi-button cbi-button-action",
+        type: "button",
+        click: function () {
+          const val = (input.value || "").trim();
+          if (!val) return;
+          let u = getUrls();
+          if (u.includes(val)) { input.value = ""; return; }
+          u.push(val);
+          setUrls(u);
+          uci.save();
+          input.value = "";
+          render();
+        },
+      }, "+");
+
+      input.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") addBtn.click();
+      });
+
+      addRow.appendChild(input);
+      addRow.appendChild(addBtn);
+      container.appendChild(addRow);
+    }
+
+    render();
+    return container;
+  };
+
+
+  o = section.taboption("settings", form.Flag, "hosts_list_auto_update", _("Auto-update Hosts Lists"),
+    _("Automatically update remote hosts lists on schedule"));
+  o.depends("action", "hosts");
+  o.default = "0";
+  o.rmempty = false;
+  o.modalonly = true;
+
+  o = section.taboption("settings", form.Value, "hosts_list_update_interval", _("Hosts Lists Update Interval"),
+    _("Use sing-box duration format like 1d, 12h or 6h"));
+  o.depends("action", "hosts");
+  o.depends({ action: "hosts", hosts_list_auto_update: "1" });
+  o.placeholder = "24h";
+  o.default = "24h";
+  o.rmempty = false;
+  o.modalonly = true;
+  o.validate = function (_section_id, value) {
+    if (!value) return true;
+    return /^(?=.*[1-9])([0-9]+(?:\.[0-9]+)?(?:ns|us|ms|s|m|h|d))+$/.test(value)
+      ? true
+      : _("Use sing-box duration format like 1d, 12h or 6h");
+  };
+
+
   o = section.taboption(
     "settings",
     form.Button,
@@ -8678,7 +9212,7 @@ function createSectionContent(section) {
     "sudoku", "masque", "openvpn", "zapret", "zapret2", "byedpi"
   ].forEach((act) => o.depends("action", act));
 
-  addTextConditionField(section, {
+  const domainConditionOption = addTextConditionField(section, {
     key: "domain_suffix",
     optionName: "domain",
     legacyTextOptionName: "domain_suffix_text",
@@ -8706,8 +9240,10 @@ function createSectionContent(section) {
       });
     },
   });
+  dependsOnRoutingAction(domainConditionOption);
+  domainConditionOption.depends("action", "dns");
 
-  addTextConditionField(section, {
+  const userDomainsConditionOption = addTextConditionField(section, {
     key: "user_domains",
     optionName: "user_domains",
     legacyTextOptionName: "user_domains_text",
@@ -8717,6 +9253,8 @@ function createSectionContent(section) {
     ),
     textAnalyze: analyzeDomainSuffixText,
   });
+  dependsOnRoutingAction(userDomainsConditionOption);
+  userDomainsConditionOption.depends("action", "dns");
 
   const ipConditionOption = addTextConditionField(section, {
     key: "ip_cidr",
@@ -8737,6 +9275,8 @@ function createSectionContent(section) {
   );
   builtInRulesetOption.modalonly = true;
   builtInRulesetOption.placeholder = _("Service list");
+  dependsOnRoutingAction(builtInRulesetOption);
+  builtInRulesetOption.depends("action", "dns");
   builtInRulesetOption.load = function (section_id) {
     loadRulesetValues(this);
     return getBuiltInRulesetReferences(section_id);

@@ -65,6 +65,7 @@ function emit_reload_plan(previous, current, context) {
         zapret2_runtime: current.zapret2_runtime != previous.zapret2_runtime,
         byedpi_runtime: current.byedpi_runtime != previous.byedpi_runtime,
         list: current.list != previous.list,
+        hosts_list: current.hosts_list != previous.hosts_list,
         cron: current.cron != previous.cron
     };
 
@@ -77,7 +78,8 @@ function emit_reload_plan(previous, current, context) {
         dnsmasq_configure: false,
         dnsmasq_restore: false,
         cron_refresh: false,
-        list_update: false
+        list_update: false,
+        hosts_update: false
     };
 
     if (changed.sing_box)
@@ -120,6 +122,11 @@ function emit_reload_plan(previous, current, context) {
     if (changed.list && context.has_list_update_sources)
         needs.list_update = true;
 
+    if (changed.hosts_list) {
+        needs.hosts_update = true;
+        needs.sing_box_reload = true;
+    }
+
     if (needs.nft_rebuild && context.has_nft_list_update_sources)
         needs.list_update = true;
 
@@ -147,7 +154,8 @@ function emit_reload_plan(previous, current, context) {
         needs.dnsmasq_configure ||
         needs.dnsmasq_restore ||
         needs.cron_refresh ||
-        needs.list_update;
+        needs.list_update ||
+        needs.hosts_update;
 
     emit("urltest_new_enabled_sections", new_urltest_enabled_sections(
         previous.urltest_sections,
@@ -166,6 +174,7 @@ function emit_reload_plan(previous, current, context) {
     emit_bool("changed_byedpi_runtime", changed.byedpi_runtime);
     emit_bool("changed_cron", changed.cron);
     emit_bool("changed_list", changed.list);
+    emit_bool("changed_hosts_list", changed.hosts_list);
 
     emit_bool("needs_sing_box_reload", needs.sing_box_reload);
     emit_bool("needs_nft_rebuild", needs.nft_rebuild);
@@ -176,6 +185,7 @@ function emit_reload_plan(previous, current, context) {
     emit_bool("needs_dnsmasq_restore", needs.dnsmasq_restore);
     emit_bool("needs_cron_refresh", needs.cron_refresh);
     emit_bool("needs_list_update", needs.list_update);
+    emit_bool("needs_hosts_update", needs.hosts_update);
     emit_bool("has_work", has_work);
 }
 

@@ -4,6 +4,7 @@ config settings 'settings'
         list applied_migrations 'enable_component_checks'
         list applied_migrations 'http_connection_urls'
         list applied_migrations 'dns_hosts_to_option'
+        list applied_migrations 'global_hosts_to_section'
         option dns_type 'udp'
         list dns_server '77.88.8.8'
         list bootstrap_dns_server '77.88.8.8'
@@ -66,11 +67,6 @@ config settings 'settings'
         option ai_adaptive_intervals_enabled '1'
         option ai_anomaly_detection_enabled '1'
         option ai_anomaly_reconnect_threshold '10'
-
-        # ─── Hosts Lists ────────────────────────────────────────────────────────
-        # list hosts_list_urls 'https://raw.githubusercontent.com/.../hosts'
-        option hosts_list_auto_update '0'
-        option hosts_list_update_interval '24h'
 
 
 #config section 'subscription_example'

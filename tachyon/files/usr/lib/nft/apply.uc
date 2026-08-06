@@ -1598,7 +1598,7 @@ function nft_rule_signature_body(body, section) {
 
     let action = option(section, "action", "");
     body = signature_add_value(body, "rule." + section_name + ".action", action);
-    if (action == "dns")
+    if (action == "dns" || action == "hosts")
         return body;
     body = signature_add_value(body, "rule." + section_name + ".ip_cidr", section_rule_condition_csv(section, "ip_cidr", "subnets"));
     body = signature_add_value(body, "rule." + section_name + ".source_ip_cidr", section_rule_condition_csv(section, "source_ip_cidr", "subnets"));
@@ -1747,7 +1747,7 @@ function nft_add_section_source_matchers(section, table, chunk_size_text) {
 function nft_populate_runtime_set_for_section(section, deferred_sections, table, common_set, port_set, ip_port_set, interface_set, localv4_set, mark, mangle_chain_context, inserted_fully_routed_ips, common6_set, ip_port6_set, localv6_set) {
     if (!bool_option(section, "enabled", true))
         return true;
-    if (section_action(section) == "dns")
+    if (section_action(section) == "dns" || section_action(section) == "hosts")
         return true;
 
     let ports = section_rule_ports_csv(section);

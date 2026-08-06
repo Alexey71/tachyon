@@ -163,6 +163,18 @@ export namespace Tachyon {
     outbounds: PriorityMember[];
   }
 
+  export interface ServiceStatus {
+    serviceType: 'zapret' | 'zapret2' | 'byedpi';
+    configured: boolean;
+    ready: boolean;
+    conflict: boolean;
+    runningProcesses: number;
+    expectedProcesses: number;
+    restartCount: number;
+    unstable: boolean;
+    statusMessage: string;
+  }
+
   export interface OutboundGroup {
     withTagSelect: boolean;
     code: string;
@@ -175,6 +187,7 @@ export namespace Tachyon {
     proxyConfigType?: ProxyConfigType;
     subscriptionSourceCount?: number;
     subscriptionMetadata?: SubscriptionMetadata[];
+    serviceStatus?: ServiceStatus;
     outbounds: Outbound[];
   }
 
@@ -219,7 +232,9 @@ export namespace Tachyon {
     | 'zapret2'
     | 'byedpi'
     | 'awg'
-    | 'warp';
+    | 'warp'
+    | 'dns'
+    | 'hosts';
   type LegacyConnectionType = 'proxy' | 'vpn' | 'block' | 'exclusion';
   type ProxyConfigType =
     | 'urltest'

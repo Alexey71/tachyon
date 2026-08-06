@@ -167,6 +167,7 @@ const RELOAD_STATE_FIELDS = [
     "zapret2_runtime_signature",
     "byedpi_runtime_signature",
     "list_signature",
+    "hosts_list_signature",
     "cron_signature",
     "urltest_enabled_sections",
     "dont_touch_dhcp"
@@ -715,6 +716,8 @@ function rule_has_list_update_source(enabled, action, community_lists, remote_do
         return false;
     if (as_string(action) == "dns")
         return list_has_remote_references(domain_ip_lists);
+    if (as_string(action) == "hosts")
+        return false;
 
     return (
         has_community_subnet_list(community_lists) ||
@@ -726,7 +729,7 @@ function rule_has_list_update_source(enabled, action, community_lists, remote_do
 }
 
 function rule_has_nft_list_update_source(enabled, action, community_lists, remote_subnet_lists, rule_set_with_subnets, domain_ip_lists) {
-    if (!arg_bool(enabled) || as_string(action) == "dns")
+    if (!arg_bool(enabled) || as_string(action) == "dns" || as_string(action) == "hosts")
         return false;
 
     return (
@@ -917,7 +920,7 @@ function nft_runtime_signature_body(settings, sections) {
 
         let action = option(section, "action", "");
         body = signature_add_value(body, "rule." + name + ".action", action);
-        if (action == "dns")
+        if (action == "dns" || action == "hosts")
             continue;
         body = signature_add_value(body, "rule." + name + ".ip_cidr", section_rule_condition_csv(section, "ip_cidr", "subnets"));
         body = signature_add_value(body, "rule." + name + ".source_ip_cidr", section_rule_condition_csv(section, "source_ip_cidr", "subnets"));
@@ -1130,6 +1133,14 @@ function append_list_update_signature_body(body, section) {
         body = signature_add_value(body, "lists." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
         return body;
     }
+    if (action == "hosts") {
+        body = signature_add_value(body, "lists." + name + ".hosts_list_urls", option(section, "hosts_list_urls", ""));
+        body = signature_add_value(body, "lists." + name + ".hosts_list_disabled", option(section, "hosts_list_disabled", ""));
+        body = signature_add_value(body, "lists." + name + ".dns_hosts", option(section, "dns_hosts", ""));
+        body = signature_add_value(body, "lists." + name + ".hosts_list_auto_update", option(section, "hosts_list_auto_update", ""));
+        body = signature_add_value(body, "lists." + name + ".hosts_list_update_interval", option(section, "hosts_list_update_interval", ""));
+        return body;
+    }
 
     body = signature_add_value(body, "lists." + name + ".ports", section_rule_ports_csv(section));
     body = signature_add_value(body, "lists." + name + ".community_subnet_lists", rule_config.filter_community_subnet_lists_value(connections.community_lists_value(section)));
@@ -1150,6 +1161,24 @@ function list_update_signature_body(sections) {
     return body;
 }
 
+function hosts_list_signature_body(sections) {
+    let body = "";
+    for (let section in sections) {
+        section = object_or_empty(section);
+        if (option(section, "action", "") != "hosts")
+            continue;
+        if (!bool_option(section, "enabled", true))
+            continue;
+        let name = section_name(section);
+        body = signature_add_value(body, "hosts." + name + ".hosts_list_urls", option(section, "hosts_list_urls", ""));
+        body = signature_add_value(body, "hosts." + name + ".hosts_list_disabled", option(section, "hosts_list_disabled", ""));
+        body = signature_add_value(body, "hosts." + name + ".dns_hosts", option(section, "dns_hosts", ""));
+        body = signature_add_value(body, "hosts." + name + ".hosts_list_auto_update", option(section, "hosts_list_auto_update", "0"));
+        body = signature_add_value(body, "hosts." + name + ".hosts_list_update_interval", option(section, "hosts_list_update_interval", ""));
+    }
+    return body;
+}
+
 function cron_signature_body(settings, sections) {
     let body = signature_add_value("", "settings.update_interval", settings_update_interval(settings));
     body = signature_add_value(body, "settings.component_update_check_interval", settings_component_update_check_interval(settings));
@@ -1165,6 +1194,17 @@ function cron_signature_body(settings, sections) {
         let name = section_name(section);
         body = signature_add_value(body, "subscription." + name + ".subscription_urls", subscription_urls_signature(section));
         body = signature_add_value(body, "subscription." + name + ".subscription_update_interval", section_subscription_update_interval(section));
+    }
+
+    for (let section in sections) {
+        section = object_or_empty(section);
+        if (option(section, "action", "") != "hosts")
+            continue;
+        if (!bool_option(section, "enabled", true))
+            continue;
+        let name = section_name(section);
+        body = signature_add_value(body, "hosts." + name + ".hosts_list_auto_update", option(section, "hosts_list_auto_update", "0"));
+        body = signature_add_value(body, "hosts." + name + ".hosts_list_update_interval", option(section, "hosts_list_update_interval", ""));
     }
 
     return body;
@@ -1304,6 +1344,11 @@ function append_sing_box_rule_signature_body(body, section, sections) {
         body = signature_add_value(body, prefix + ".dns_detour_enabled", bool_option_value(section, "dns_detour_enabled", false));
         if (bool_option(section, "dns_detour_enabled", false))
             body = signature_add_value(body, prefix + ".dns_detour_section", option(section, "dns_detour_section", ""));
+    }
+    else if (action == "hosts") {
+        body = signature_add_value(body, prefix + ".hosts_list_urls", option(section, "hosts_list_urls", ""));
+        body = signature_add_value(body, prefix + ".hosts_list_disabled", option(section, "hosts_list_disabled", ""));
+        body = signature_add_value(body, prefix + ".dns_hosts", option(section, "dns_hosts", ""));
     }
 
     body = signature_add_value(body, prefix + ".domain", section_rule_condition_csv(section, "domain", "domains"));
@@ -1599,6 +1644,7 @@ function reload_state_values_from_sources(format, settings, sections, servers, d
         zapret2_runtime_signature: signature_hash(zapret2_runtime_signature_body(sections)),
         byedpi_runtime_signature: signature_hash(byedpi_runtime_signature_body(sections)),
         list_signature: signature_hash(list_update_signature_body(sections)),
+        hosts_list_signature: signature_hash(hosts_list_signature_body(sections)),
         cron_signature: signature_hash(cron_signature_body(settings, sections)),
         urltest_enabled_sections: urltest_enabled_sections_value(sections),
         dont_touch_dhcp: dont_touch_dhcp_value(settings)
@@ -2017,6 +2063,12 @@ else if (mode == "list-update-signature")
 else if (mode == "list-update-signature-fixture") {
     let data = fixture_data(ARGV[1]);
     exit(print_signature_hash(list_update_signature_body(fixture_section_list(data))) ? 0 : 1);
+}
+else if (mode == "hosts-list-signature")
+    exit(print_signature_hash(hosts_list_signature_body(uci_sections("section"))) ? 0 : 1);
+else if (mode == "hosts-list-signature-fixture") {
+    let data = fixture_data(ARGV[1]);
+    exit(print_signature_hash(hosts_list_signature_body(fixture_section_list(data))) ? 0 : 1);
 }
 else if (mode == "cron-signature")
     exit(print_signature_hash(cron_signature_body(uci_settings(), uci_sections("section"))) ? 0 : 1);
