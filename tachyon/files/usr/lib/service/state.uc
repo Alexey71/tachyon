@@ -431,16 +431,6 @@ function sing_box_service_pid() {
         print(pid, "\n");
 }
 
-function sing_box_service_pid_runtime() {
-    let data = command_output_from_args([ "ubus", "call", "service", "list", "{\"name\":\"sing-box\"}" ]);
-    try {
-        return sing_box_service_pid_from_value(json(data));
-    }
-    catch (e) {
-        return 0;
-    }
-}
-
 function path_basename(path) {
     path = as_string(path);
     let slash = rindex(path, "/");
@@ -453,6 +443,31 @@ function pid_is_sing_box(pid) {
         return false;
 
     return path_basename(command_trimmed_output_from_args([ "readlink", "/proc/" + pid + "/exe" ])) == "sing-box";
+}
+
+function sing_box_service_pid_runtime() {
+    let data = command_output_from_args([ "ubus", "call", "service", "list", "{\"name\":\"sing-box\"}" ]);
+    try {
+        let pid = sing_box_service_pid_from_value(json(data));
+        if (pid > 0 && pid_is_sing_box(pid))
+            return pid;
+    }
+    catch (e) {}
+
+    for (let path in [ "/var/run/sing-box.pid", "/var/run/sing-box/sing-box.pid" ]) {
+        let pid = int(trim(fs.readfile(path) || "0"));
+        if (pid > 0 && pid_is_sing_box(pid))
+            return pid;
+    }
+
+    let pids = split(trim(command_trimmed_output_from_args([ "pidof", "sing-box" ])), /[ \t\r\n]+/);
+    for (let p in pids) {
+        let pid = int(p);
+        if (pid > 0 && pid_is_sing_box(pid))
+            return pid;
+    }
+
+    return 0;
 }
 
 function hup_sing_box_runtime() {

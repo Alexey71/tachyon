@@ -344,6 +344,33 @@ function handle_singbox_stop_event(reason) {
     safe_proxy_restart("singbox_stopped");
 }
 
+function get_sing_box_pid() {
+    for (let path in [ "/var/run/sing-box.pid", "/var/run/sing-box/sing-box.pid" ]) {
+        let pid = trim(fs.readfile(path) || "");
+        if (pid != "" && process_running(pid, "sing-box")) return pid;
+    }
+
+    let ubus_res = command_capture("ubus call service list '{\"name\":\"sing-box\"}' 2>/dev/null");
+    if (ubus_res.status == 0 && ubus_res.output != "") {
+        let matched = match(ubus_res.output, /"pid":\s*([0-9]+)/);
+        if (matched && matched[1] != "") {
+            let pid = matched[1];
+            if (process_running(pid, "sing-box")) return pid;
+        }
+    }
+
+    let pidof_res = command_capture("pidof sing-box 2>/dev/null");
+    if (pidof_res.status == 0 && pidof_res.output != "") {
+        let fields = split(trim(pidof_res.output), /[ \t]+/);
+        if (length(fields) > 0 && fields[0] != "") {
+            let pid = fields[0];
+            if (process_running(pid, "sing-box")) return pid;
+        }
+    }
+
+    return "";
+}
+
 function check_singbox_process() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return;
@@ -353,8 +380,8 @@ function check_singbox_process() {
     let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
     if (process_running(list_update_pid, "ucode")) return;
 
-    // Fast-path check: verify if sing-box PID file exists and process is active
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    // Fast-path check: verify if sing-box process is active
+    let sb_pid = get_sing_box_pid();
     if (sb_pid != "" && process_running(sb_pid, "sing-box")) {
         return;
     }
@@ -543,7 +570,7 @@ function ai_heal_dns() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return true;
 
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
 
     let dns_ok = command_success_from_args([
@@ -568,7 +595,7 @@ function ai_heal_proxy_connectivity() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return true;
 
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
 
     let now = time();
@@ -668,7 +695,7 @@ function ai_heal_community_subnet_sets() {
     let list_update_pid = trim(fs.readfile("/var/run/tachyon_list_update.pid") || "");
     if (process_running(list_update_pid, "ucode")) return true;
 
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
 
     let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
@@ -715,7 +742,7 @@ function ai_heal_tproxy_port() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return true;
 
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
     if (is_reload_in_progress()) return true;
 
@@ -861,7 +888,7 @@ function ai_heal_proxy_health() {
     if (!ai_enabled("ai_proxy_health_enabled", "1")) return;
     if (is_reload_in_progress()) return;
 
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return;
 
     let proxy_port = "4534";
@@ -925,7 +952,7 @@ function ai_heal_dns_continuous() {
     if (!ai_enabled("ai_dns_continuous_enabled", "1")) return;
     if (is_reload_in_progress()) return;
 
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return;
 
     let start_time = time();
@@ -1711,7 +1738,7 @@ function print_ai_status_full() {
     let dns_ok = dns_consecutive_fails == 0;
 
     let sb_uptime = 0;
-    let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
+    let sb_pid = get_sing_box_pid();
     if (sb_pid != "" && process_running(sb_pid, "sing-box")) {
         try {
             let stat_data = fs.readfile("/proc/" + sb_pid + "/stat");

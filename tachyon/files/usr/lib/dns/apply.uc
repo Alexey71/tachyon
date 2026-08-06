@@ -232,6 +232,44 @@ function dnsmasq_restore_default_instance() {
     restore_dnsmasq_config_option("addn_hosts", "tachyon_addn_hosts", "");
 }
 
+function sing_box_running_pid() {
+    for (let path in [ "/var/run/sing-box.pid", "/var/run/sing-box/sing-box.pid" ]) {
+        let pid = trim(fs.readfile(path) || "");
+        if (pid != "" && run("kill -0 " + shell_quote(pid) + " 2>/dev/null"))
+            return pid;
+    }
+
+    let p = fs.popen("ubus call service list '{\"name\":\"sing-box\"}' 2>/dev/null", "r");
+    if (p) {
+        let out = p.read("all");
+        p.close();
+        if (out != null && out != "") {
+            let matched = match(out, /"pid":\s*([0-9]+)/);
+            if (matched && matched[1] != "") {
+                let pid = matched[1];
+                if (run("kill -0 " + shell_quote(pid) + " 2>/dev/null"))
+                    return pid;
+            }
+        }
+    }
+
+    let p2 = fs.popen("pidof sing-box 2>/dev/null", "r");
+    if (p2) {
+        let out2 = p2.read("all");
+        p2.close();
+        if (out2 != null && out2 != "") {
+            let fields = split(trim(out2), /[ \t\r\n]+/);
+            if (length(fields) > 0 && fields[0] != "") {
+                let pid = fields[0];
+                if (run("kill -0 " + shell_quote(pid) + " 2>/dev/null"))
+                    return pid;
+            }
+        }
+    }
+
+    return "";
+}
+
 function dnsmasq_configure(force) {
     if (!uci_available())
         return true;
@@ -245,8 +283,8 @@ function dnsmasq_configure(force) {
     }
 
     if (as_string(force) != "force") {
-        let sb_pid = trim(fs.readfile("/var/run/sing-box.pid") || "");
-        if (sb_pid == "" || !run("kill -0 " + shell_quote(sb_pid) + " 2>/dev/null")) {
+        let sb_pid = sing_box_running_pid();
+        if (sb_pid == "") {
             log("sing-box is not running; dnsmasq will forward to system DNS until sing-box starts", "warn");
             return true;
         }
