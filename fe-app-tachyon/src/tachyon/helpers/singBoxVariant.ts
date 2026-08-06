@@ -5,6 +5,7 @@ type SingBoxVariantFields = {
   sing_box_compressed?: number;
   sing_box_lx?: number;
   sing_box_tailscale?: number;
+  sing_box_repo_url?: string;
 };
 
 export function isExtendedSingBoxVersion(version?: string) {

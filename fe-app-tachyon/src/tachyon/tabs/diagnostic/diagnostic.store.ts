@@ -86,6 +86,7 @@ export const initialDiagnosticStore: Pick<
     sing_box_compressed: 0,
     sing_box_lx: 0,
     sing_box_tailscale: 1,
+    sing_box_repo_url: '',
     zapret_version: 'loading',
     zapret_installed: 0,
     zapret2_version: 'loading',

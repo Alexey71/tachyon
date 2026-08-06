@@ -972,7 +972,13 @@ function getComponentCards(): ComponentCard[] {
         : formatSingBoxVersion(systemInfo),
       latestVersion: getLatestVersion('sing_box'),
       releaseUrl: getGitHubReleaseUrl('sing_box'),
-      repoUrl: COMPONENT_REPO_URLS.sing_box,
+      repoUrl:
+        systemInfo.sing_box_repo_url ||
+        (singBoxLx
+          ? 'https://github.com/Leadaxe/sing-box-lx'
+          : singBoxExtended || singBoxExtendedCompressed
+            ? 'https://github.com/shtorm-7/sing-box-extended'
+            : COMPONENT_REPO_URLS.sing_box),
       actions: singBoxActions,
     },
     {

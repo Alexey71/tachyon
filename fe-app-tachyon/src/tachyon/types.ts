@@ -517,7 +517,9 @@ export namespace Tachyon {
     sing_box_extended: 0 | 1;
     sing_box_tiny: 0 | 1;
     sing_box_compressed: 0 | 1;
+    sing_box_lx?: 0 | 1;
     sing_box_tailscale: 0 | 1;
+    sing_box_repo_url?: string;
     zapret_version: string;
     zapret_installed: 0 | 1;
     zapret2_version: string;

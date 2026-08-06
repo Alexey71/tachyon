@@ -5005,6 +5005,7 @@ var initialDiagnosticStore = {
     sing_box_compressed: 0,
     sing_box_lx: 0,
     sing_box_tailscale: 1,
+    sing_box_repo_url: "",
     zapret_version: "loading",
     zapret_installed: 0,
     zapret2_version: "loading",
@@ -9182,6 +9183,7 @@ var UNKNOWN_SYSTEM_INFO = {
   sing_box_compressed: 0,
   sing_box_lx: 0,
   sing_box_tailscale: 1,
+  sing_box_repo_url: "",
   zapret_version: _("unknown"),
   zapret_installed: 0,
   zapret2_version: _("unknown"),
@@ -14543,7 +14545,7 @@ function getComponentCards() {
       version: systemInfoLoading ? _("Loading...") : formatSingBoxVersion(systemInfo),
       latestVersion: getLatestVersion("sing_box"),
       releaseUrl: getGitHubReleaseUrl("sing_box"),
-      repoUrl: COMPONENT_REPO_URLS.sing_box,
+      repoUrl: systemInfo.sing_box_repo_url || (singBoxLx ? "https://github.com/Leadaxe/sing-box-lx" : singBoxExtended || singBoxExtendedCompressed ? "https://github.com/shtorm-7/sing-box-extended" : COMPONENT_REPO_URLS.sing_box),
       actions: singBoxActions
     },
     {

@@ -202,6 +202,7 @@ export interface StoreType {
     sing_box_compressed: number;
     sing_box_lx: number;
     sing_box_tailscale: number;
+    sing_box_repo_url?: string;
     zapret_version: string;
     zapret_installed: number;
     zapret2_version: string;
