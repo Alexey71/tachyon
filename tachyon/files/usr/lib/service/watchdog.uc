@@ -590,46 +590,52 @@ function ai_heal_qos() {
     return true;
 }
 
+let dns_fail_streak = 0;
+
 function is_dns_working() {
-    return command_success_from_args([ "nslookup", "google.com", "127.0.0.1" ]) ||
-           command_success_from_args([ "nslookup", "example.com", "127.0.0.1" ]);
+    return command_success_from_args([ "nslookup", "-timeout=2", "yandex.ru", "127.0.0.1" ]) ||
+           command_success_from_args([ "nslookup", "-timeout=2", "connectivitycheck.gstatic.com", "127.0.0.1" ]) ||
+           command_success_from_args([ "nslookup", "-timeout=2", "google.com", "127.0.0.1" ]);
 }
 
 function ai_heal_dns() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return true;
 
-    let sb_pid = get_sing_box_pid();
-    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
-
-    let dns_ok = is_dns_working();
-    if (!dns_ok) {
-        // Stage 1: Attempt soft sing-box restart without tearing down nftables or network
-        command_success_from_args([ "/etc/init.d/sing-box", "restart" ]);
-        sleep(2000);
-        if (is_dns_working()) {
-            ai_heal_report(
-                "dns",
-                "DNS resolution stalled on sing-box (port 53)",
-                "Выполнен быстрейший soft-restart службы sing-box (DNS успешно восстановлен)",
-                "fixed"
-            );
-            return true;
-        }
-
-        // Stage 2: Fallback if sing-box soft restart did not restore DNS
-        ai_heal_report(
-            "dns",
-            "DNS resolution failed on sing-box (port 53)",
-            "Восстановлена конфигурация dnsmasq и перезапущена служба dhcp",
-            "fixed"
-        );
-        system("/sbin/uci set dhcp.@dnsmasq[0].noresolv='1' >/dev/null 2>&1");
-        system("/sbin/uci commit dhcp >/dev/null 2>&1");
-        system("/etc/init.d/dnsmasq reload >/dev/null 2>&1");
-        return false;
+    if (is_reload_in_progress()) {
+        dns_fail_streak = 0;
+        return true;
     }
-    return true;
+
+    let sb_pid = get_sing_box_pid();
+    if (sb_pid == "" || !process_running(sb_pid, "sing-box")) {
+        dns_fail_streak = 0;
+        return true;
+    }
+
+    if (is_dns_working()) {
+        dns_fail_streak = 0;
+        return true;
+    }
+
+    dns_fail_streak++;
+    log_message("Watchdog: DNS check failed (" + as_string(dns_fail_streak) + "/3 failures)", "warn");
+
+    if (dns_fail_streak < 3) {
+        return true;
+    }
+
+    dns_fail_streak = 0;
+
+    log_message("Watchdog: DNS stalled after 3 attempts, soft-reloading proxy runtime", "warn");
+    safe_proxy_restart("dns_stalled");
+    ai_heal_report(
+        "dns",
+        "DNS resolution stalled on sing-box (port 53)",
+        "Soft-reloaded proxy runtime safely without breaking active TCP/RDP connections",
+        "fixed"
+    );
+    return false;
 }
 
 function ai_heal_proxy_connectivity() {
