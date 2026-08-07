@@ -9698,12 +9698,11 @@ function detectQueryType(query) {
 
 async function readRulesetFile(path) {
   try {
+    // fs.read is the LuCI RPC file-read — requires ACL entry for /tmp/sing-box/rulesets/*
     let content = await fs.read(path).catch(() => null);
     if (!content) {
-      content = await fs.readfile(path).catch(() => null);
-    }
-    if (!content) {
-      let res = await fs.exec("/bin/cat", [path]).catch(() => null);
+      // Fallback: read via exec cat (runs as root, always has access)
+      const res = await fs.exec("/bin/cat", [path]).catch(() => null);
       if (res && res.code === 0 && res.stdout) {
         content = res.stdout;
       }
@@ -9820,6 +9819,7 @@ async function performTrace(query) {
       const listsRuleset = await readRulesetFile(`/tmp/sing-box/rulesets/${secName}-lists-ruleset.json`);
       const matchedListIp = matchIpInRuleset(queryForMatching, listsRuleset);
       if (matchedListIp) {
+        const domainIpLists = normalizeOptionValues(uci.get(UCI_PACKAGE, secName, "domain_ip_lists"));
         return {
           matched: true,
           sectionName: secName,
@@ -9827,6 +9827,7 @@ async function performTrace(query) {
           action: action,
           ruleType: "IP/Subnet List (community/plain)",
           pattern: matchedListIp,
+          sourceUrls: domainIpLists,
           priority: i + 1,
           totalSections: totalSections
         };
@@ -9835,6 +9836,7 @@ async function performTrace(query) {
       const remoteSubnetRuleset = await readRulesetFile(`/tmp/sing-box/rulesets/${secName}-remote-subnet-ruleset.json`);
       const matchedRemoteIp = matchIpInRuleset(queryForMatching, remoteSubnetRuleset);
       if (matchedRemoteIp) {
+        const domainIpLists = normalizeOptionValues(uci.get(UCI_PACKAGE, secName, "domain_ip_lists"));
         return {
           matched: true,
           sectionName: secName,
@@ -9842,6 +9844,7 @@ async function performTrace(query) {
           action: action,
           ruleType: "Remote Subnet List",
           pattern: matchedRemoteIp,
+          sourceUrls: domainIpLists,
           priority: i + 1,
           totalSections: totalSections
         };
@@ -9891,6 +9894,7 @@ async function performTrace(query) {
       if (listsRuleset) {
         const matchedListDomain = matchDomainInRuleset(queryForMatching, listsRuleset);
         if (matchedListDomain) {
+          const domainIpLists = normalizeOptionValues(uci.get(UCI_PACKAGE, secName, "domain_ip_lists"));
           return {
             matched: true,
             sectionName: secName,
@@ -9898,6 +9902,7 @@ async function performTrace(query) {
             action: action,
             ruleType: "Domain List (community/plain)",
             pattern: matchedListDomain,
+            sourceUrls: domainIpLists,
             priority: i + 1,
             totalSections: totalSections
           };
@@ -9908,6 +9913,7 @@ async function performTrace(query) {
       if (remoteDomainRuleset) {
         const matchedRemoteDomain = matchDomainInRuleset(queryForMatching, remoteDomainRuleset);
         if (matchedRemoteDomain) {
+          const domainIpLists = normalizeOptionValues(uci.get(UCI_PACKAGE, secName, "domain_ip_lists"));
           return {
             matched: true,
             sectionName: secName,
@@ -9915,6 +9921,7 @@ async function performTrace(query) {
             action: action,
             ruleType: "Remote Domain List",
             pattern: matchedRemoteDomain,
+            sourceUrls: domainIpLists,
             priority: i + 1,
             totalSections: totalSections
           };
@@ -10020,6 +10027,29 @@ function createTracerSearchWidget(sectionRef) {
               E("code", {}, result.ruleType || ""),
               ` (${result.pattern || ""})`
             ]),
+            ...(result.sourceUrls && result.sourceUrls.length > 0 ? [
+              E("span", { style: "color: var(--text-color-medium, #666);" }, "|"),
+              E("span", {}, [
+                E("strong", {}, _("Source") + ": "),
+                ...result.sourceUrls.map((url, idx) => {
+                  let short = url;
+                  try {
+                    const u = new URL(url);
+                    const parts = u.pathname.split("/").filter(Boolean);
+                    short = parts.length > 0 ? parts[parts.length - 1] : u.hostname;
+                  } catch (e) {}
+                  return E("span", {}, [
+                    idx > 0 ? ", " : "",
+                    E("a", {
+                      href: url,
+                      target: "_blank",
+                      rel: "noopener",
+                      style: "font-family: monospace; font-size: 85%; word-break: break-all;"
+                    }, short)
+                  ]);
+                })
+              ])
+            ] : []),
             E("span", { style: "color: var(--text-color-medium, #666);" }, "|"),
             E("span", {}, [
               E("strong", {}, _("Priority") + ": "),

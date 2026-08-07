@@ -35,6 +35,15 @@
         ],
         "/usr/sbin/sing-box": [
           "exec"
+        ],
+        "/tmp/sing-box/rulesets/*": [
+          "read"
+        ],
+        "/etc/tachyon/rulesets/*": [
+          "read"
+        ],
+        "/bin/cat": [
+          "exec"
         ]
       },
       "ubus": {
