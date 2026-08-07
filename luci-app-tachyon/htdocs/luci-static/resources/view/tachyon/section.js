@@ -1532,14 +1532,18 @@ function configureLiveDynamicListChoices(option, getChoices) {
     node.addEventListener("focusin", refreshBeforeOpening, true);
     node.addEventListener("pointerdown", refreshBeforeOpening, true);
 
-    const targetSectionId = parentSectionIdForItem(section_id) || section_id || "Main";
-    [section_id, targetSectionId, "Main"].forEach((id) => {
-      if (!id) return;
-      if (!dashboardFilterChoiceRefreshers.has(id)) {
-        dashboardFilterChoiceRefreshers.set(id, new Set());
+    if (!dashboardFilterChoiceRefreshers.has(section_id)) {
+      dashboardFilterChoiceRefreshers.set(section_id, new Set());
+    }
+    dashboardFilterChoiceRefreshers.get(section_id).add(refreshChoices);
+
+    const targetSectionId = parentSectionIdForItem(section_id) || "Main";
+    if (targetSectionId && targetSectionId !== section_id) {
+      if (!dashboardFilterChoiceRefreshers.has(targetSectionId)) {
+        dashboardFilterChoiceRefreshers.set(targetSectionId, new Set());
       }
-      dashboardFilterChoiceRefreshers.get(id).add(refreshChoices);
-    });
+      dashboardFilterChoiceRefreshers.get(targetSectionId).add(refreshChoices);
+    }
     perRuleDnsWidgets.set(section_id, widget);
 
     return node;
