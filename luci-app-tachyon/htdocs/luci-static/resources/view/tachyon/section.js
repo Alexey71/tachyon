@@ -682,15 +682,16 @@ function readOutboundMetadataFromSectionCache(section_id) {
 }
 
 function loadOutboundNameChoices(section_id) {
-  if (outboundNameChoicesCache.has(section_id)) {
-    return Promise.resolve(outboundNameChoicesCache.get(section_id));
+  const targetId = section_id || "Main";
+  if (outboundNameChoicesCache.has(targetId)) {
+    return Promise.resolve(outboundNameChoicesCache.get(targetId));
   }
 
-  if (outboundNameChoicesInflight.has(section_id)) {
-    return outboundNameChoicesInflight.get(section_id);
+  if (outboundNameChoicesInflight.has(targetId)) {
+    return outboundNameChoicesInflight.get(targetId);
   }
 
-  const task = readOutboundMetadataFromSectionCache(section_id)
+  const task = readOutboundMetadataFromSectionCache(targetId)
     .then((metadata) => {
       const names = Object.values(plainObject(metadata.names));
 
@@ -699,16 +700,22 @@ function loadOutboundNameChoices(section_id) {
         .filter((name, index, values) => values.indexOf(name) === index)
         .sort((a, b) => `${a}`.localeCompare(`${b}`));
 
-      outboundNameChoicesCache.set(section_id, choices);
+      outboundNameChoicesCache.set(targetId, choices);
+      if (targetId !== "Main") {
+        outboundNameChoicesCache.set("Main", choices);
+      }
+
+      refreshDashboardFilterChoiceWidgets(targetId);
+      refreshDashboardFilterChoiceWidgets("Main");
 
       return choices;
     })
     .catch(() => [])
     .finally(() => {
-      outboundNameChoicesInflight.delete(section_id);
+      outboundNameChoicesInflight.delete(targetId);
     });
 
-  outboundNameChoicesInflight.set(section_id, task);
+  outboundNameChoicesInflight.set(targetId, task);
 
   return task;
 }
@@ -1518,18 +1525,21 @@ function configureLiveDynamicListChoices(option, getChoices) {
       );
       return true;
     };
-    const refreshBeforeOpening = (event) => {
-      if (event.target && event.target.closest(".add-item")) {
-        refreshChoices();
-      }
+    const refreshBeforeOpening = () => {
+      refreshChoices();
     };
     node.addEventListener("mousedown", refreshBeforeOpening, true);
     node.addEventListener("focusin", refreshBeforeOpening, true);
+    node.addEventListener("pointerdown", refreshBeforeOpening, true);
 
-    if (!dashboardFilterChoiceRefreshers.has(section_id)) {
-      dashboardFilterChoiceRefreshers.set(section_id, new Set());
-    }
-    dashboardFilterChoiceRefreshers.get(section_id).add(refreshChoices);
+    const targetSectionId = parentSectionIdForItem(section_id) || section_id || "Main";
+    [section_id, targetSectionId, "Main"].forEach((id) => {
+      if (!id) return;
+      if (!dashboardFilterChoiceRefreshers.has(id)) {
+        dashboardFilterChoiceRefreshers.set(id, new Set());
+      }
+      dashboardFilterChoiceRefreshers.get(id).add(refreshChoices);
+    });
     perRuleDnsWidgets.set(section_id, widget);
 
     return node;
