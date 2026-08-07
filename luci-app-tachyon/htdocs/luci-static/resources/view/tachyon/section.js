@@ -9696,18 +9696,24 @@ function detectQueryType(query) {
   return 'domain';
 }
 
-function readRulesetFile(path) {
-  return fs.readfile(path)
-    .then((content) => {
-      if (!content) return null;
-      try {
-        return JSON.parse(content);
-      } catch (e) {
-        console.warn("Failed to parse ruleset file JSON:", path, e);
-        return null;
+async function readRulesetFile(path) {
+  try {
+    let content = await fs.read(path).catch(() => null);
+    if (!content) {
+      content = await fs.readfile(path).catch(() => null);
+    }
+    if (!content) {
+      let res = await fs.exec("/bin/cat", [path]).catch(() => null);
+      if (res && res.code === 0 && res.stdout) {
+        content = res.stdout;
       }
-    })
-    .catch(() => null);
+    }
+    if (!content) return null;
+    return JSON.parse(content);
+  } catch (e) {
+    console.warn("Failed to parse ruleset file JSON:", path, e);
+    return null;
+  }
 }
 
 async function findCachedSrsFile(secName, community) {
@@ -9750,10 +9756,18 @@ async function matchCommunityList(secName, community, query, type) {
 
 
 async function performTrace(query) {
+  query = (query || "").trim();
+  if (!query) return { matched: false };
+
+  // Strip protocol and port if user pasted a URL or domain:port
+  if (query.match(/^https?:\/\//i)) {
+    query = query.replace(/^https?:\/\//i, "").split("/")[0].split(":")[0];
+  }
+
   const type = detectQueryType(query);
   const sections = uci.sections(UCI_PACKAGE, "section") || [];
   const totalSections = sections.length;
-  
+
   let queryForMatching = query;
   if (type === 'ip' && query.indexOf('/') !== -1) {
     queryForMatching = query.split('/')[0];
