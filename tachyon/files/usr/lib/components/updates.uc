@@ -1974,8 +1974,13 @@ function download_to_file(url, filepath, proxy_address) {
 
             if (command_exists("curl")) {
                 let curl_args = [ "curl", "--connect-timeout", "5", "-m", "10", "-fsSL" ];
-                if (as_string(proxy_address) != "")
+                if (as_string(proxy_address) != "") {
                     push(curl_args, "-x", "http://" + as_string(proxy_address));
+                } else {
+                    // Bootstrap DNS: use public resolvers in case Tachyon DNS isn't active yet
+                    // (e.g., during startup before sing-box is running)
+                    push(curl_args, "--dns-servers", "8.8.8.8,1.1.1.1");
+                }
                 push(curl_args, candidate);
                 push(curl_args, "-o");
                 push(curl_args, filepath);
