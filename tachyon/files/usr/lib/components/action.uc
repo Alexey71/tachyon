@@ -2168,6 +2168,10 @@ function check_tachyon() {
     let local_sha = TACHYON_COMMIT_SHA != "" && TACHYON_COMMIT_SHA != "unknown" ? TACHYON_COMMIT_SHA : "";
     if (status == "latest" && release_json != "" && local_sha != "") {
         remote_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
+        // Ensure remote_sha is a valid hex SHA (7..40 chars)
+        if (remote_sha != "" && match(remote_sha, /^[0-9a-fA-F]{7,40}$/) == null)
+            remote_sha = "";
+
         let same_sha = remote_sha != "" &&
                        (str_startswith(remote_sha, local_sha) || str_startswith(local_sha, remote_sha));
         if (remote_sha != "" && !same_sha) {
