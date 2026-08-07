@@ -2163,23 +2163,13 @@ function check_tachyon() {
     if (status == "")
         action_fail("tachyon", "check_update", "Failed to compare Tachyon versions", TACHYON_VERSION, latest_version);
 
-    // Fetch remote commit SHA for same-version-different-build detection
+    // Fetch remote commit SHA for information display
     let remote_sha = "";
     let local_sha = TACHYON_COMMIT_SHA != "" && TACHYON_COMMIT_SHA != "unknown" ? TACHYON_COMMIT_SHA : "";
-    if (status == "latest" && release_json != "" && local_sha != "") {
+    if (release_json != "") {
         remote_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
-        // Ensure remote_sha is a valid hex SHA (7..40 chars)
         if (remote_sha != "" && match(remote_sha, /^[0-9a-fA-F]{7,40}$/) == null)
             remote_sha = "";
-
-        let same_sha = remote_sha != "" &&
-                       (str_startswith(remote_sha, local_sha) || str_startswith(local_sha, remote_sha));
-        if (remote_sha != "" && !same_sha) {
-            updates_log("Tachyon same release update found: " + local_sha + " -> " + remote_sha);
-            action_success("tachyon", "check_update", "Update is available for current release",
-                TACHYON_VERSION, latest_version, 0, "outdated_same_release", release_url,
-                { current_sha: local_sha, latest_sha: remote_sha });
-        }
     }
 
     let sha_extra = local_sha != "" ? { current_sha: local_sha, latest_sha: remote_sha } : null;
