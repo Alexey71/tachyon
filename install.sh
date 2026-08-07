@@ -1245,8 +1245,7 @@ function installer_cleanup_legacy() {
         packages_removed = false;
 
     if (!packages_removed) {
-        warn("Failed to remove one or more conflicting or legacy packages.\n");
-        return false;
+        warn("Notice: some legacy or target packages could not be uninstalled prior to upgrade; proceeding with package overwrite.\n");
     }
 
     if (legacy_installed) {
