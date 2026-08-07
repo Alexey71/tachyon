@@ -558,7 +558,8 @@ function base_config(settings, service_address, runtime_context) {
             cache_file: {
                 enabled: true,
                 path: cache_path,
-                store_fakeip: true
+                store_fakeip: true,
+                store_rdrc: true
             },
             clash_api: clash_api_config(settings, service_address)
         },

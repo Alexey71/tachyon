@@ -374,6 +374,31 @@ function mark_pending_reload_if_config_changed(initial_fingerprint, reason) {
     return false;
 }
 
+function file_md5(path) {
+    path = as_string(path);
+    if (path == "" || fs.stat(path) == null)
+        return "";
+
+    let output = command_output("md5sum " + shell_quote(path) + " 2>/dev/null");
+    let fields = split(trim(output), /[ \t\r\n]+/);
+    return length(fields) > 0 ? as_string(fields[0]) : "";
+}
+
+function current_config_hash() {
+    return file_md5(CONFIG_FILE);
+}
+
+function last_completed_reload_hash() {
+    let data = fs.readfile(RELOAD_HASH_FILE);
+    return data == null ? "" : trim(as_string(data));
+}
+
+function save_completed_reload_hash() {
+    let hash = current_config_hash();
+    if (hash != "")
+        write_file(RELOAD_HASH_FILE, hash + "\n");
+}
+
 function finish_reload_status(status, initial_fingerprint) {
     status = int(status || 0);
     if (status == 0) {
@@ -478,30 +503,6 @@ function config_set(path, value) {
     return uci_core.set(path, value);
 }
 
-function file_md5(path) {
-    path = as_string(path);
-    if (path == "" || fs.stat(path) == null)
-        return "";
-
-    let output = command_output("md5sum " + shell_quote(path) + " 2>/dev/null");
-    let fields = split(trim(output), /[ \t\r\n]+/);
-    return length(fields) > 0 ? as_string(fields[0]) : "";
-}
-
-function current_config_hash() {
-    return file_md5(CONFIG_FILE);
-}
-
-function last_completed_reload_hash() {
-    let data = fs.readfile(RELOAD_HASH_FILE);
-    return data == null ? "" : trim(as_string(data));
-}
-
-function save_completed_reload_hash() {
-    let hash = current_config_hash();
-    if (hash != "")
-        write_file(RELOAD_HASH_FILE, hash + "\n");
-}
 
 function mark_internal_config_guard() {
     let hash = current_config_hash();

@@ -604,6 +604,20 @@ function ai_heal_dns() {
 
     let dns_ok = is_dns_working();
     if (!dns_ok) {
+        // Stage 1: Attempt soft sing-box restart without tearing down nftables or network
+        command_success_from_args([ "/etc/init.d/sing-box", "restart" ]);
+        sleep(2000);
+        if (is_dns_working()) {
+            ai_heal_report(
+                "dns",
+                "DNS resolution stalled on sing-box (port 53)",
+                "Выполнен быстрейший soft-restart службы sing-box (DNS успешно восстановлен)",
+                "fixed"
+            );
+            return true;
+        }
+
+        // Stage 2: Fallback if sing-box soft restart did not restore DNS
         ai_heal_report(
             "dns",
             "DNS resolution failed on sing-box (port 53)",

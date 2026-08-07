@@ -9697,7 +9697,7 @@ function detectQueryType(query) {
 }
 
 function readRulesetFile(path) {
-  return fs.read(path)
+  return fs.readfile(path)
     .then((content) => {
       if (!content) return null;
       try {
