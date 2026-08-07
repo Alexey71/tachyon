@@ -1174,6 +1174,21 @@ function ai_heal_dns_loop() {
     );
 }
 
+// ─── Metrics helpers ──────────────────────────────────────────────────────────
+// Defined before export_metrics to ensure forward-reference safety in ucode
+// closure/timer contexts (see issue #14).
+function average_latency(history) {
+    let sum = 0;
+    let count = 0;
+    for (let entry in history) {
+        if (entry.ok) {
+            sum += entry.ms;
+            count++;
+        }
+    }
+    return count > 0 ? int(sum / count) : -1;
+}
+
 // ─── Metrics export (normal tier) ─────────────────────────────────────────────
 function export_metrics() {
     if (!ai_enabled("ai_metrics_enabled", "1")) return;
@@ -1208,18 +1223,6 @@ function export_metrics() {
         data.hours = slice(data.hours, 1);
 
     fs.writefile(metrics_path, sprintf("%J\n", data));
-}
-
-function average_latency(history) {
-    let sum = 0;
-    let count = 0;
-    for (let entry in history) {
-        if (entry.ok) {
-            sum += entry.ms;
-            count++;
-        }
-    }
-    return count > 0 ? int(sum / count) : -1;
 }
 
 // ─── Anomaly Detection (slow tier) ────────────────────────────────────────────
