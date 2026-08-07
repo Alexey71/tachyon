@@ -566,6 +566,11 @@ function ai_heal_qos() {
     return true;
 }
 
+function is_dns_working() {
+    return command_success_from_args([ "nslookup", "google.com", "127.0.0.1" ]) ||
+           command_success_from_args([ "nslookup", "example.com", "127.0.0.1" ]);
+}
+
 function ai_heal_dns() {
     let cfg = settings();
     if (cfg.recovery_bypass == "1") return true;
@@ -573,9 +578,7 @@ function ai_heal_dns() {
     let sb_pid = get_sing_box_pid();
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return true;
 
-    let dns_ok = command_success_from_args([
-        "nslookup", "check.tachyon", "127.0.0.1"
-    ]);
+    let dns_ok = is_dns_working();
     if (!dns_ok) {
         ai_heal_report(
             "dns",
@@ -956,9 +959,7 @@ function ai_heal_dns_continuous() {
     if (sb_pid == "" || !process_running(sb_pid, "sing-box")) return;
 
     let start_time = time();
-    let dns_ok = command_success_from_args([
-        "nslookup", "check.tachyon", "127.0.0.1"
-    ]);
+    let dns_ok = is_dns_working();
     let elapsed = (time() - start_time) * 1000;
 
     push(dns_latency_history, { ok: dns_ok, ms: elapsed, ts: time() });
@@ -1040,8 +1041,7 @@ let DNS_RECOVERY_STATE_FILE = "/var/run/tachyon/dns-detour-recovery.json";
 let dns_recovery_active = false;
 
 function is_dns_dead() {
-    let port53 = command_success_from_args(["nslookup", "check.tachyon", "127.0.0.1"]);
-    return !port53;
+    return !is_dns_working();
 }
 
 function read_dns_recovery_state() {
@@ -1079,7 +1079,7 @@ function ai_heal_dns_loop() {
         if (recovery.phase == "detour_disabled") {
             let reenable_cooldown = recovery.ts ? (now - int(recovery.ts)) : 0;
             if (reenable_cooldown < 300) return;
-            let test_dns = command_success_from_args(["nslookup", "check.tachyon", "127.0.0.1"]);
+            let test_dns = is_dns_working();
             if (test_dns) {
                 log_message("DNS loop recovery: DNS works, re-enabling DNS detour section", "info");
                 system("/sbin/uci set tachyon.settings.dns_detour_enabled='1' >/dev/null 2>&1");
