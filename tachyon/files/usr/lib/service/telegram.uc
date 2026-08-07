@@ -23,14 +23,55 @@ let command_output_from_args = common.command_output_from_args;
 
 // ─── Callback Data Helpers ────────────────────────────────────────────────────
 
+// Telegram limits callback_data to 64 *bytes*. ucode strings are byte based, so
+// length() already reports bytes. Payloads longer than that used to be truncated,
+// which silently broke deletion of long entries (and could split a UTF-8 sequence
+// mid-character, making Telegram reject the whole keyboard). Instead we now store
+// the full payload in a small on-disk map and send a short opaque token.
+const CB_MAP_FILE = "/tmp/tg_cb_map.json";
+const CB_MAP_MAX = 300;
+
+function cb_map_load() {
+    let data = fs.readfile(CB_MAP_FILE);
+    if (data) {
+        try {
+            let obj = json(data);
+            if (type(obj) == "object") return obj;
+        } catch (e) {}
+    }
+    return {};
+}
+
+function cb_map_store(token, value) {
+    let map = cb_map_load();
+    let ks = keys(map);
+    if (length(ks) >= CB_MAP_MAX) {
+        // Drop the oldest half so long-lived keyboards keep working for a while
+        let pruned = {};
+        for (let i = int(length(ks) / 2); i < length(ks); i++)
+            pruned[ks[i]] = map[ks[i]];
+        map = pruned;
+    }
+    map[token] = value;
+    try { fs.writefile(CB_MAP_FILE, sprintf("%J", map)); } catch (e) {}
+}
+
+function cb_map_get(token) {
+    let map = cb_map_load();
+    let val = map[as_string(token)];
+    return (type(val) == "string") ? val : null;
+}
+
 function cb_data(args) {
     let s = join(" ", args);
     if (length(s) <= 64) return s;
     let h = 0;
     for (let i = 0; i < length(s); i++)
         h = ((h << 5) - h + ord(s, i)) | 0;
-    let prefix = substr(s, 0, 40);
-    return prefix + " " + sprintf("%08x", h & 0xFFFFFFFF);
+    // Mix the length into the token to make accidental collisions far less likely
+    let token = sprintf("%08x%02x", h & 0xFFFFFFFF, length(s) & 0xFF);
+    cb_map_store(token, s);
+    return "/cb " + token;
 }
 
 // ─── Settings & Config ────────────────────────────────────────────────────────
@@ -159,9 +200,9 @@ let safe_exec_patterns = {
     logread: {
         bin: "/sbin/logread",
         min_args: 0,
-        max_args: 0,
+        max_args: 1,
         extra_pattern: /^-t$/,
-        usage: "logread (без параметров)"
+        usage: "logread [-t]"
     },
     ubus: {
         bin: "/bin/ubus",
@@ -249,11 +290,13 @@ function safe_execute(exec_text) {
         if (length(rest) != length(policy.args)) return { status: 1, output: "Аргументы не совпадают с разрешённым шаблоном" };
         for (let i = 0; i < length(rest); i++)
             if (rest[i] != policy.args[i]) return { status: 1, output: "Аргументы не совпадают с разрешённым шаблоном" };
-    } else if (policy.args) {
-        for (let arg in rest)
-            if (!match(arg, safe_exec_patterns[base].extra_pattern)) return { status: 1, output: "Аргумент не разрешён: " + arg };
     } else {
         if (length(rest) < policy.min_args || length(rest) > policy.max_args) return { status: 1, output: "Неверное число аргументов" };
+        // Commands that accept optional flags validate each one against extra_pattern
+        if (policy.extra_pattern) {
+            for (let arg in rest)
+                if (!match(arg, policy.extra_pattern)) return { status: 1, output: "Аргумент не разрешён: " + arg };
+        }
         // For tachyon: allow only read-only subcommand verbs
         if (base == "tachyon" && length(rest) == 1) {
             let allowed_sub = { get_status: 1, doctor: 1, show_version: 1, show_sing_box_version: 1, show_config: 1, get_system_info: 1 };
@@ -340,6 +383,12 @@ let setting_schema = {
         notify_subscription: "Статус подписок",
         notify_cert: "Сертификаты",
         notify_dns_leak: "Утечки DNS",
+        daily_report_enabled: "Ежедневный отчет",
+        daily_report_hour: "Время отчета (час)",
+        quiet_hours_enabled: "Тихие часы",
+        quiet_hours_start: "Начало тихих часов",
+        quiet_hours_end: "Конец тихих часов",
+        fallback_socks: "Резервный SOCKS5",
         language: "Язык"
     },
     subscription_url: {
@@ -360,9 +409,6 @@ let setting_schema = {
     },
     server: {
         label: "Название",
-        daily_report_enabled: "Ежедневный отчет",
-        daily_report_hour: "Время отчета (час)",
-        fallback_socks: "Резервный SOCKS5",
         enabled: "Включен",
         protocol: "Протокол",
         routing_mode: "Режим"
@@ -382,7 +428,8 @@ function is_boolean_key(key) {
              "enable_yacd", "disable_quic", "list_update_enabled", "component_update_check_enabled",
              "download_lists_via_proxy", "download_components_via_proxy", "dont_touch_dhcp",
              "isolate_p2p", "exclude_ntp", "shutdown_correctly", "smart_detect",
-             "notify_crash", "notify_restart", "notify_server_switch", "notify_subscription", "notify_cert", "notify_dns_leak"];
+             "notify_crash", "notify_restart", "notify_server_switch", "notify_subscription", "notify_cert", "notify_dns_leak",
+             "daily_report_enabled", "quiet_hours_enabled"];
     for (let x in b) if (x == key) return true;
     return false;
 }
@@ -442,11 +489,12 @@ function view_set_cat(token, chat_id, msg_id, stype, sname, page) {
     let keyboard = [];
     
     let keys = [];
-    // Collect known keys first to keep them at top, then unknowns
+    // Collect known keys first to keep them at top, then unknowns.
+    // Schema keys are listed even when still unset in UCI, otherwise options like
+    // daily_report_enabled could never be switched on from the bot.
     if (setting_schema[stype]) {
-        for (let k in setting_schema[stype]) {
-            if (s[k] != null) push(keys, k);
-        }
+        for (let k in setting_schema[stype])
+            push(keys, k);
     }
     for (let k in s) {
         if (match(k, /^\./)) continue; // ignore .name, .type, .anonymous
@@ -751,6 +799,17 @@ function view_outbounds(token, chat_id, msg_id, group_name) {
 
 function handle_switch(token, chat_id, msg_id, group_name, server_name) {
     api.clash_request("PUT", "proxies/" + group_name, { name: server_name });
+    // A successful switch answers 204 with an empty body, which clash_request()
+    // cannot distinguish from a failure — so verify by reading the state back.
+    let data = api.get_clash_proxies_data();
+    let grp = (data && data.proxies) ? data.proxies[group_name] : null;
+    if (!grp || grp.now != server_name) {
+        send_message(token, chat_id,
+            "⚠️ <b>Не удалось переключить сервер</b>\n" +
+            "Группа: <code>" + escape_html(group_name) + "</code>\n" +
+            "Сервер: <code>" + escape_html(server_name) + "</code>\n\n" +
+            "Проверьте, запущен ли sing-box и доступен ли Clash API.", "HTML");
+    }
     view_outbounds(token, chat_id, msg_id, group_name);
 }
 
@@ -996,7 +1055,9 @@ function backup_archive_safe(members) {
 
 function backup_extract_dir() {
     let ts = time();
-    let rand = sprintf("%04x", int(Math.random() * 65536));
+    // ucode has no Math global; clock()[1] (microseconds) is what the rest of the
+    // codebase uses to make temp paths unique.
+    let rand = sprintf("%04x", clock()[1] & 0xFFFF);
     let dir = "/etc/.tachyon/restore_" + as_string(ts) + "_" + rand;
     system("mkdir -p " + shell_quote(dir) + " 2>/dev/null");
     return dir;
@@ -1180,10 +1241,12 @@ function exec_check_updates(token, chat_id, msg_id) {
                     let lat = comp.latest_version || "?";
                     if (!comp.success) {
                         text += "• <b>" + title + "</b>: ❌ Ошибка проверки\n";
-                    } else if (comp.status == "outdated") {
+                    } else if (comp.status == "outdated" || comp.status == "outdated_same_release") {
                         text += "• <b>" + title + "</b>: <code>" + cur + "</code> ➡️ <code>" + lat + "</code> ⚠️\n";
                         push(keyboard, [{text: "🔄 Обновить " + title, callback_data: "/update_component " + name}]);
                         has_updates = true;
+                    } else if (comp.status == "dev") {
+                        text += "• <b>" + title + "</b>: <code>" + cur + "</code> 🧪 dev-сборка\n";
                     } else {
                         text += "• <b>" + title + "</b>: <code>" + cur + "</code> ✅\n";
                     }
@@ -1251,8 +1314,17 @@ function exec_speedtest(token, chat_id, msg_id) {
     let result = api.run_speedtest();
     let text = "⚡ <b>Результат Speedtest</b>\n\n";
     if (result) {
-        text += "📥 Прямое соединение: <code>" + sprintf("%.1f", result.direct_mbps || 0) + " Mbps</code>\n";
-        text += "📤 Через прокси: <code>" + sprintf("%.1f", result.proxy_mbps || 0) + " Mbps</code>\n";
+        // A failed transfer yields 0 bytes/s; report that as an error instead of "0.0 Mbps"
+        text += "📥 Прямое соединение: " +
+            (result.direct_mbps > 0
+                ? "<code>" + sprintf("%.1f", result.direct_mbps) + " Mbps</code>\n"
+                : "❌ не удалось измерить\n");
+        text += "📤 Через прокси: " +
+            (result.proxy_mbps > 0
+                ? "<code>" + sprintf("%.1f", result.proxy_mbps) + " Mbps</code>\n"
+                : "❌ не удалось измерить\n");
+        if (result.direct_mbps <= 0 && result.proxy_mbps <= 0)
+            text += "\n<i>Проверьте доступ в интернет и работу sing-box.</i>\n";
     } else {
         text += "❌ Не удалось выполнить тест. Проверьте, запущен ли sing-box.\n";
     }
@@ -1490,7 +1562,7 @@ function view_help(token, chat_id, msg_id) {
         "/info — Информация о системе\n" +
         "/connections — Активные подключения\n\n" +
         "<b>Управление:</b>\n" +
-        "/restart — Перезапуск роутера\n" +
+        "/restart — Перезапуск служб Tachyon\n" +
         "/backup — Бэкап конфига\n" +
         "/close_connections — Закрыть все соединения\n" +
         "/check_updates — Проверить обновления\n\n" +
@@ -1550,8 +1622,10 @@ function view_test_rule(token, chat_id, msg_id, target) {
     let sections = api.get_sections();
     let matched = false;
 
-    for (let s in sections) {
-        let sec = sections[s];
+    // api.get_sections() returns an ARRAY of section objects. In ucode, iterating
+    // an array with for..in yields the elements themselves, not indices.
+    for (let sec in sections) {
+        if (!sec) continue;
         if (sec[".type"] == "settings" || sec[".type"] == "telegram") continue;
         if (sec.enabled == "0") continue;
 
@@ -1607,6 +1681,72 @@ function exec_export_config(token, chat_id, msg_id) {
     } else {
         send_message(token, chat_id, "❌ Не удалось экспортировать конфиг.", "HTML", [[{ text: "⬅️ Меню", callback_data: "/menu" }]]);
     }
+}
+
+// ─── Device blocking (real firewall rules) ──────────────────────────────────
+//
+// view_devices() reports a device as blocked when a firewall REJECT rule carries
+// its src_mac, so the toggle has to create/remove exactly such a rule. The old
+// implementation wrote tachyon.settings.blocked_macs, which nothing ever read.
+
+function normalize_mac(mac) {
+    mac = uc(trim(as_string(mac)));
+    if (!match(mac, /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/)) return null;
+    return mac;
+}
+
+function find_mac_block_rules(c, mac) {
+    let found = [];
+    c.foreach("firewall", "rule", function(r) {
+        if (r.target == "REJECT" && r.src_mac && uc(as_string(r.src_mac)) == mac)
+            push(found, r[".name"]);
+    });
+    return found;
+}
+
+function handle_toggle_mac(token, chat_id, mac_raw) {
+    let mac = normalize_mac(mac_raw);
+    if (!mac) {
+        send_message(token, chat_id, "❌ Некорректный MAC-адрес.", "HTML");
+        return view_devices(token, chat_id, null);
+    }
+
+    let c = uci_core.cursor();
+    if (!c) {
+        return send_message(token, chat_id, "❌ Не удалось открыть конфигурацию firewall.", "HTML",
+            [[{ text: "⬅️ Меню", callback_data: "/menu" }]]);
+    }
+    c.load("firewall");
+
+    let existing = find_mac_block_rules(c, mac);
+    let blocked_now;
+    if (length(existing) > 0) {
+        for (let name in existing)
+            c.delete("firewall", name);
+        blocked_now = false;
+    } else {
+        let sec = c.add("firewall", "rule");
+        if (!sec) {
+            return send_message(token, chat_id, "❌ Не удалось создать правило блокировки.", "HTML",
+                [[{ text: "⬅️ Меню", callback_data: "/menu" }]]);
+        }
+        c.set("firewall", sec, "name", "Tachyon block " + mac);
+        c.set("firewall", sec, "src", "lan");
+        c.set("firewall", sec, "dest", "*");
+        c.set("firewall", sec, "proto", "all");
+        c.set("firewall", sec, "src_mac", mac);
+        c.set("firewall", sec, "target", "REJECT");
+        blocked_now = true;
+    }
+    c.commit("firewall");
+    // Reload in the background so the poll loop is not blocked by fw4
+    system("/etc/init.d/firewall reload </dev/null >/dev/null 2>&1 &");
+
+    send_message(token, chat_id,
+        (blocked_now ? "🚫 Устройство <code>" : "🔓 Устройство <code>") + mac +
+        (blocked_now ? "</code> заблокировано." : "</code> разблокировано.") +
+        "\n\n<i>Правила firewall применяются в фоне (несколько секунд).</i>", "HTML");
+    return view_devices(token, chat_id, null);
 }
 
 function view_devices(token, chat_id, msg_id) {
@@ -1761,6 +1901,19 @@ function valid_updatable_component(name) {
 
 function dispatch_command(token, chat_id, text, msg_id) {
     let cmd = trim(as_string(text));
+
+    // Resolve tokenized callbacks produced by cb_data() for oversized payloads
+    if (match(cmd, /^\/cb /)) {
+        let cb_tok = trim(substr(cmd, 4));
+        let full = cb_map_get(cb_tok);
+        if (full == null || full == "") {
+            return send_message(token, chat_id,
+                "⚠️ Кнопка устарела — откройте список заново.", "HTML",
+                [[{ text: "⬅️ Меню", callback_data: "/menu" }]]);
+        }
+        cmd = trim(full);
+    }
+
     let state = get_tg_state(chat_id);
     
     if (cmd == "/noop") return;
@@ -1793,6 +1946,13 @@ function dispatch_command(token, chat_id, text, msg_id) {
     if (cmd == "/export_config") return exec_export_config(token, chat_id, msg_id);
     if (cmd == "/qh") return view_quiet_hours(token, chat_id, msg_id);
     if (cmd == "/qh_toggle") return handle_qh_toggle(token, chat_id, msg_id);
+    if (cmd == "/qh_start" || cmd == "/qh_end") {
+        let which = (cmd == "/qh_start") ? "start" : "end";
+        set_tg_state(chat_id, { action: "qh_hour", which: which });
+        return send_message(token, chat_id,
+            "⏰ Введите час " + (which == "start" ? "начала" : "окончания") +
+            " тихих часов (0–23):\n\n<i>Отправьте /cancel для отмены</i>", "HTML");
+    }
     
     if (cmd == "/outbounds") return view_outbounds(token, chat_id, msg_id);
     if (match(cmd, /^\/outbounds /)) {
@@ -1804,27 +1964,7 @@ function dispatch_command(token, chat_id, text, msg_id) {
     if (cmd == "/devices") return view_devices(token, chat_id, msg_id);
     if (match(cmd, /^\/toggle_mac /)) {
         let mac = trim(substr(cmd, 12));
-        let c = uci_core.cursor();
-        c.load(CONFIG_NAME);
-        let blocked = {};
-        c.foreach(CONFIG_NAME, "section", function(s) {
-            if (s[".type"] == "settings") {
-                let bl = s.blocked_macs;
-                if (type(bl) == "array") {
-                    for (let m in bl) blocked[trim(as_string(m))] = true;
-                } else if (bl) {
-                    blocked[trim(as_string(bl))] = true;
-                }
-            }
-        });
-        if (blocked[mac]) {
-            c.delete_list(CONFIG_NAME, "settings", "blocked_macs", mac);
-        } else {
-            c.add_list(CONFIG_NAME, "settings", "blocked_macs", mac);
-        }
-        c.commit(CONFIG_NAME);
-        command_status(command_from_args(["/usr/bin/tachyon", "reload"]));
-        return view_devices(token, chat_id, null);
+        return handle_toggle_mac(token, chat_id, mac);
     }
     if (cmd == "/watchdog") return view_watchdog(token, chat_id, msg_id);
     if (cmd == "/doctor") return exec_doctor(token, chat_id);
@@ -2283,6 +2423,20 @@ function process_updates(token, admin_ids) {
                 else if (state.action == "test_rule") {
                     view_test_rule(token, chat_id, null, trim(msg.text));
                 }
+                else if (state.action == "qh_hour") {
+                    let val = trim(msg.text);
+                    if (!match(val, /^([0-9]|1[0-9]|2[0-3])$/)) {
+                        set_tg_state(chat_id, state);
+                        send_message(token, chat_id, "❌ Введите целое число от 0 до 23.", "HTML");
+                    } else {
+                        let key = (state.which == "start") ? "quiet_hours_start" : "quiet_hours_end";
+                        c.set(CONFIG_NAME, "telegram", key, val);
+                        c.commit(CONFIG_NAME);
+                        set_tg_state(chat_id, null);
+                        send_message(token, chat_id, "✅ Сохранено.", "HTML");
+                        view_quiet_hours(token, chat_id, null);
+                    }
+                }
                 continue;
             }
 
@@ -2336,11 +2490,13 @@ function check_notified_updates(token, admin_ids) {
         for (let comp in results) {
             let name = comp.component || "";
             if (name == "") continue;
+            if (comp.success !== true) continue;
             if (comp.status == "outdated") {
                 let latest = comp.latest_version;
                 if (notified[name] != latest) {
                     let title = (name == "sing_box") ? "sing-box" : name;
-                    let msg = "📦 <b>Доступно обновление компонента!</b>\n" + title + ": <code>" + comp.installed_version + "</code> ➡️ <code>" + latest + "</code>";
+                    let cur = comp.current_version || "?";
+                    let msg = "📦 <b>Доступно обновление компонента!</b>\n" + title + ": <code>" + escape_html(cur) + "</code> ➡️ <code>" + escape_html(as_string(latest)) + "</code>";
                     let kb = [[{text: "🔄 Обновить " + title, callback_data: "/update_component " + name}]];
                     
                     let admins = split(admin_ids, /,/);
@@ -2379,7 +2535,7 @@ function worker() {
         { command: "check_updates", description: "Проверить обновления" },
         { command: "close_connections", description: "Закрыть все соединения" },
         { command: "doctor",    description: "Диагностика" },
-        { command: "restart",   description: "Перезапуск роутера" }
+        { command: "restart",   description: "Перезапуск служб Tachyon" }
     ];
     tg_request(cfg.bot_token, "setMyCommands", { commands: commands });
 
@@ -2407,11 +2563,13 @@ function worker() {
             consecutive_failures = 0;
 
             let now = time();
-            let tm = clock(now);
+            // localtime() yields { sec, min, hour, mday, mon, year, ... }.
+            // clock() returns [seconds, microseconds] and has no calendar fields.
+            let tm = localtime(now);
             let daily_hour = int(cfg.daily_report_hour || "8");
-            
-            if (cfg.daily_report_enabled == "1" && tm[3] == daily_hour && tm[2] != last_report_day) {
-                last_report_day = tm[2];
+
+            if (cfg.daily_report_enabled == "1" && tm && tm.hour == daily_hour && tm.mday != last_report_day) {
+                last_report_day = tm.mday;
                 send_daily_digest(cfg.bot_token, cfg.admin_ids);
             }
             
@@ -2470,7 +2628,10 @@ function in_quiet_hours(cfg) {
     if (cfg.quiet_hours_enabled != "1") return false;
     let start = int(cfg.quiet_hours_start || "23");
     let end = int(cfg.quiet_hours_end || "7");
-    let hr = clock()[3];
+    if (start == end) return false;
+    let tm = localtime(time());
+    if (!tm) return false;
+    let hr = int(tm.hour);
     if (start <= end) {
         return hr >= start && hr < end;
     } else {

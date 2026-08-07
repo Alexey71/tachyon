@@ -1,4 +1,10 @@
 #!/bin/sh
 
 /usr/bin/tachyon luci_postinst >/dev/null 2>&1 || true
+
+# Restart rpcd so that the luci-app-tachyon ACL (which grants read access
+# to /var/run/tachyon/section-cache/*) takes effect for new sessions
+# without requiring manual logout/login in LuCI.
+/etc/init.d/rpcd restart >/dev/null 2>&1 || true
+
 exit 0

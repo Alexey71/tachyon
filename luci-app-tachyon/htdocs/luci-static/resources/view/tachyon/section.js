@@ -1523,6 +1523,19 @@ function configureLiveDynamicListChoices(option, getChoices) {
         currentChoices.map((choice) => choice.value),
         currentLabels,
       );
+
+      const cboxElem = node.querySelector(".cbi-dropdown");
+      if (cboxElem && typeof dom !== "undefined" && typeof dom.callClassMethod === "function") {
+        try {
+          dom.callClassMethod(cboxElem, "clearChoices");
+          dom.callClassMethod(
+            cboxElem,
+            "addChoices",
+            currentChoices.map((choice) => choice.value),
+            currentLabels,
+          );
+        } catch (_err) {}
+      }
       return true;
     };
     const refreshBeforeOpening = () => {
@@ -1545,6 +1558,10 @@ function configureLiveDynamicListChoices(option, getChoices) {
       dashboardFilterChoiceRefreshers.get(targetSectionId).add(refreshChoices);
     }
     perRuleDnsWidgets.set(section_id, widget);
+
+    loadOutboundNameChoices(targetSectionId).then(() => {
+      refreshChoices();
+    });
 
     return node;
   };
@@ -3538,7 +3555,7 @@ function renderStackedJsonSettingsModal(title, map, onSave) {
     return Promise.resolve();
   }
 
-  return map.render().then((nodes) => {
+  return map.load().then(() => map.render()).then((nodes) => {
     const titleNode = E("span", title ? ` » ${title}` : "");
     const originalButtonClass = buttonRow.getAttribute("class") || "";
     const originalButtonNodes = Array.from(buttonRow.childNodes);
@@ -3767,36 +3784,45 @@ function showUrlTestSettingsModal(
   itemNode,
   context = {},
 ) {
-  return showChildItemSettingsModal(_section_id, itemValue, option, {
-    typeName: "urltest",
-    valueOption: "name",
-    keys: urlTestSettingsKeys(),
-    defaults: defaultUrlTestSettings,
-    addOptions: addUrlTestItemOptions,
-    title: (name) => {
-      const normalized = `${name || ""}`.trim();
-      return !normalized || /^urltest-[a-z0-9]+-\d+$/.test(normalized)
-        ? _("URLTest settings")
-        : `${_("URLTest settings")}: ${normalized}`;
-    },
-    afterSave: (itemId, inputValue, settings, existing) => {
-      const displayName = `${settings.name || inputValue || ""}`.trim();
+  const sectionId = _section_id || "Main";
+  // Pre-warm the cache BEFORE opening the modal.
+  // CBINamedSection.render() calls renderUCISection() directly without
+  // calling section.load() first, so list.load() (which would populate
+  // the outbound name cache) is never awaited before renderWidget().
+  // By loading the cache here the dropdown has choices on first render.
+  loadOutboundNameChoices(sectionId).then(() => {
+    showChildItemSettingsModal(_section_id, itemValue, option, {
+      typeName: "urltest",
+      valueOption: "name",
+      keys: urlTestSettingsKeys(),
+      defaults: defaultUrlTestSettings,
+      addOptions: addUrlTestItemOptions,
+      title: (name) => {
+        const normalized = `${name || ""}`.trim();
+        return !normalized || /^urltest-[a-z0-9]+-\d+$/.test(normalized)
+          ? _("URLTest settings")
+          : `${_("URLTest settings")}: ${normalized}`;
+      },
+      afterSave: (itemId, inputValue, settings, existing) => {
+        const displayName = `${settings.name || inputValue || ""}`.trim();
 
-      if (existing) {
-        uci.unset(UCI_PACKAGE, itemId, "id");
-        uci.unset(UCI_PACKAGE, itemId, "display_name");
-        updateDynamicListItemLabel(itemNode, displayName);
-        return;
-      }
+        if (existing) {
+          uci.unset(UCI_PACKAGE, itemId, "id");
+          uci.unset(UCI_PACKAGE, itemId, "display_name");
+          updateDynamicListItemLabel(itemNode, displayName);
+          return;
+        }
 
-      if (context.adding) {
-        addDynamicListItem(widget, displayName, displayName);
-      } else {
-        updateDynamicListItemLabel(itemNode, displayName);
-      }
-    },
+        if (context.adding) {
+          addDynamicListItem(widget, displayName, displayName);
+        } else {
+          updateDynamicListItemLabel(itemNode, displayName);
+        }
+      },
+    });
   });
 }
+
 
 function showPriorityLevelSettingsModal(
   groupId,
@@ -3806,38 +3832,45 @@ function showPriorityLevelSettingsModal(
   itemNode,
   context = {},
 ) {
-  return showChildItemSettingsModal(groupId, itemValue, option, {
-    typeName: "priority_level",
-    ownerOption: "group",
-    valueOption: "name",
-    keys: priorityLevelSettingsKeys(),
-    defaults: defaultPriorityLevelSettings(),
-    addOptions: (itemSection) =>
-      addPriorityLevelItemOptions(itemSection, {
-        parentSectionId: () => context.parentSectionId || "",
-      }),
-    title: (name) => {
-      const normalized = `${name || ""}`.trim();
-      return normalized
-        ? `${_("Priority level settings")}: ${normalized}`
-        : _("Priority level settings");
-    },
-    afterSave: (itemId, inputValue, settings, existing) => {
-      const displayName = `${settings.name || inputValue || ""}`.trim();
+  const sectionId = context.parentSectionId || groupId || "Main";
+  // Pre-warm the outbound name cache before opening the modal.
+  // CBINamedSection.render() never calls section.load(), so list.load()
+  // is never invoked before renderWidget() — cache would be empty otherwise.
+  loadOutboundNameChoices(sectionId).then(() => {
+    showChildItemSettingsModal(groupId, itemValue, option, {
+      typeName: "priority_level",
+      ownerOption: "group",
+      valueOption: "name",
+      keys: priorityLevelSettingsKeys(),
+      defaults: defaultPriorityLevelSettings(),
+      addOptions: (itemSection) =>
+        addPriorityLevelItemOptions(itemSection, {
+          parentSectionId: () => context.parentSectionId || "",
+        }),
+      title: (name) => {
+        const normalized = `${name || ""}`.trim();
+        return normalized
+          ? `${_("Priority level settings")}: ${normalized}`
+          : _("Priority level settings");
+      },
+      afterSave: (itemId, inputValue, settings, existing) => {
+        const displayName = `${settings.name || inputValue || ""}`.trim();
 
-      if (existing) {
-        updateDynamicListItemLabel(itemNode, displayName);
-        return;
-      }
+        if (existing) {
+          updateDynamicListItemLabel(itemNode, displayName);
+          return;
+        }
 
-      if (context.adding) {
-        addDynamicListItem(widget, displayName, displayName);
-      } else {
-        updateDynamicListItemLabel(itemNode, displayName);
-      }
-    },
+        if (context.adding) {
+          addDynamicListItem(widget, displayName, displayName);
+        } else {
+          updateDynamicListItemLabel(itemNode, displayName);
+        }
+      },
+    });
   });
 }
+
 
 function createPriorityGroupItem(section_id, groupId, settings) {
   const created = uci.add(UCI_PACKAGE, "priority_group", groupId) || groupId;

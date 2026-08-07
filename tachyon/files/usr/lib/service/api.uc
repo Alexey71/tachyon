@@ -151,7 +151,10 @@ function get_system_status() {
 
 function clash_request(method, endpoint, payload) {
     let url = get_clash_url(endpoint);
-    let payload_path = "/tmp/clash_payload_" + method + "_" + time() + "_" + sprintf("%04x", int(Math.random() * 65536)) + ".json";
+    // ucode has no Math global (math is a separate loadable module), so the
+    // microsecond field of clock() supplies the uniqueness suffix, the same way
+    // temp paths are built elsewhere in this codebase.
+    let payload_path = "/tmp/clash_payload_" + method + "_" + time() + "_" + clock()[1] + ".json";
     let res = null;
     try {
         let args = [ "curl", "-s", "-m", "5", "--connect-timeout", "3", "-X", method ];
@@ -196,28 +199,39 @@ function get_clash_connections() {
     return null;
 }
 
+function http_probe(use_proxy) {
+    // curl exits 0 for any completed HTTP exchange, including 4xx/5xx, so the
+    // status code has to be inspected explicitly.
+    let cmd = "curl -I -s -o /dev/null -m 8 --connect-timeout 4 -w '%{http_code}' " +
+              (use_proxy ? "--proxy http://127.0.0.1:4534 " : "") +
+              "https://www.google.com";
+    let res = command_capture(cmd);
+    if (!res || res.status != 0) return false;
+    let code = int(trim(as_string(res.output || "0")));
+    return code >= 200 && code < 400;
+}
+
 function check_connection() {
-    let res_direct = command_capture("curl -I -s -m 8 --connect-timeout 4 https://www.google.com");
-    let direct_ok = (res_direct && res_direct.status == 0) ? true : false;
-    
-    let res_proxy = command_capture("curl -I -s -m 8 --connect-timeout 4 --proxy http://127.0.0.1:4534 https://www.google.com");
-    let proxy_ok = (res_proxy && res_proxy.status == 0) ? true : false;
-    
-    return { direct: direct_ok, proxy: proxy_ok };
+    return { direct: http_probe(false), proxy: http_probe(true) };
 }
 
 function run_speedtest() {
     // Direct speedtest
     let res_direct = command_capture("curl -s -m 15 --connect-timeout 6 -w '%{speed_download}' -o /dev/null https://speed.cloudflare.com/__down?bytes=5242880");
-    let direct_speed = double(res_direct ? res_direct.output || 0 : 0);
+    let direct_speed = (res_direct && res_direct.status == 0) ? double(res_direct.output || 0) : 0;
     let direct_mbps = (direct_speed * 8) / 1000000;
-    
+
     // Proxy speedtest
     let res_proxy = command_capture("curl -s -m 15 --connect-timeout 6 --proxy http://127.0.0.1:4534 -w '%{speed_download}' -o /dev/null https://speed.cloudflare.com/__down?bytes=5242880");
-    let proxy_speed = double(res_proxy ? res_proxy.output || 0 : 0);
+    let proxy_speed = (res_proxy && res_proxy.status == 0) ? double(res_proxy.output || 0) : 0;
     let proxy_mbps = (proxy_speed * 8) / 1000000;
-    
-    return { direct_mbps: direct_mbps, proxy_mbps: proxy_mbps };
+
+    return {
+        direct_mbps,
+        proxy_mbps,
+        direct_ok: direct_speed > 0,
+        proxy_ok: proxy_speed > 0
+    };
 }
 
 function manage_domain_list(action_type, domain, do_delete) {

@@ -207,8 +207,11 @@ function current_epoch() {
 }
 
 function current_year() {
+    // ucode's localtime() already returns the full year (unlike C struct tm,
+    // which stores years since 1900) — adding 1900 here made the NTP sync check
+    // below always see a year far in the future, so it never ran.
     let tm = localtime(time());
-    return tm ? tm.year + 1900 : null;
+    return tm ? int(tm.year) : null;
 }
 
 function time_sync_needed(year) {
