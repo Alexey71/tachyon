@@ -549,7 +549,7 @@ function sha256(path) {
     let data = pipe.read("all");
     let status = pipe.close();
     if (status != 0 || data == null) return "";
-    let parts = ("" + data).split(/\s+/);
+    let parts = split("" + data, /\s+/);
     return parts[0] || "";
 }
 function restore_cfg_from_backup() {
@@ -620,7 +620,7 @@ function sha256(path) {
     let data = pipe.read("all");
     let status = pipe.close();
     if (status != 0 || data == null) return "";
-    let parts = ("" + data).split(/\s+/);
+    let parts = split("" + data, /\s+/);
     return parts[0] || "";
 }
 function restore_cfg_from_backup() {
