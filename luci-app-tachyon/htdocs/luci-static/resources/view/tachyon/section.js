@@ -670,12 +670,13 @@ function filteredOutboundMetadataFromCache(cache) {
 }
 
 function readOutboundMetadataFromSectionCache(section_id) {
-  if (!safeCacheSectionName(section_id)) {
+  const targetId = section_id || "Main";
+  if (!safeCacheSectionName(targetId)) {
     return Promise.resolve({ names: {}, countries: {} });
   }
 
   return fs
-    .read(`${SECTION_CACHE_DIR}/${section_id}.json`)
+    .read(`${SECTION_CACHE_DIR}/${targetId}.json`)
     .then((raw) => filteredOutboundMetadataFromCache(JSON.parse(raw || "{}")))
     .catch(() => ({ names: {}, countries: {} }));
 }
@@ -2787,7 +2788,7 @@ function addUrlTestItemOptions(itemSection, options = {}) {
     }
     if (key.endsWith("_outbounds")) {
       list.load = function (itemId) {
-        const sectionId = parentSectionForItem(itemId);
+        const sectionId = parentSectionForItem(itemId) || "Main";
         const values = normalizeOptionValues(optionMapValue(this, itemId, key));
 
         return loadOutboundNameChoices(sectionId).then(() => {
@@ -2800,7 +2801,7 @@ function addUrlTestItemOptions(itemSection, options = {}) {
       };
       list.placeholder = _("-- Select --");
       configureLiveDynamicListChoices(list, (itemId, values) =>
-        currentOutboundNameChoices(parentSectionForItem(itemId), values),
+        currentOutboundNameChoices(parentSectionForItem(itemId) || "Main", values),
       );
     }
     if (validator) {
@@ -2998,9 +2999,9 @@ function addPriorityLevelItemOptions(itemSection, options = {}) {
       choices.forEach((choice) => list.value(choice.value, choice.label));
       list.placeholder = _("-- Select --");
     }
-    if (key === "server_name" || key === "exclude_outbounds") {
+    if (key === "server_name" || key.endsWith("_outbounds")) {
       list.load = function (itemId) {
-        const sectionId = parentSectionForItem(itemId);
+        const sectionId = parentSectionForItem(itemId) || "Main";
         const values = normalizeOptionValues(optionMapValue(this, itemId, key));
 
         return loadOutboundNameChoices(sectionId).then(() => {
@@ -3013,7 +3014,7 @@ function addPriorityLevelItemOptions(itemSection, options = {}) {
       };
       list.placeholder = _("-- Select --");
       configureLiveDynamicListChoices(list, (itemId, values) =>
-        currentOutboundNameChoices(parentSectionForItem(itemId), values),
+        currentOutboundNameChoices(parentSectionForItem(itemId) || "Main", values),
       );
     }
     if (validator) {
