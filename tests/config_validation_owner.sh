@@ -56,7 +56,10 @@ fi
 grep -Fq 'mark_internal_config_guard();' "$LIFECYCLE" ||
   fail "service/lifecycle.uc must preserve the internal config trigger guard"
 grep -Fq 'VALIDATOR_UC' "$LIFECYCLE" &&
-grep -Fq '"validate-runtime"' "$LIFECYCLE" ||
+grep -Fq 'validate-runtime' "$LIFECYCLE" ||
   fail "service/lifecycle.uc must run runtime validation directly through ucode"
+
+grep -Fq 'mode == "check-requirements-and-validate-runtime"' "$VALIDATOR" ||
+  fail "config validator must own the combined start-path validation mode"
 
 printf 'config validation ownership checks passed\n'

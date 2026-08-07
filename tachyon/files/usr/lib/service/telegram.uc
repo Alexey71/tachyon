@@ -2095,7 +2095,8 @@ function process_updates(token, admin_ids) {
     let offset = int(trim(fs.readfile(OFFSET_FILE) || "0"));
     let res = tg_request(token, "getUpdates", { offset: offset, timeout: 20 });
     
-    if (!res || !res.ok || !res.result || length(res.result) == 0) return false;
+    if (!res || !res.ok || !res.result) return false;
+    if (length(res.result) == 0) return true;
     
     for (let upd in res.result) {
         let update_id = upd.update_id;

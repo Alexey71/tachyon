@@ -526,13 +526,50 @@ function start_plan(reason, owner_pid, settings, bin_ok) {
     shell_assignment("INITD_BADWAN_NETDEV", plan.badwan_netdev);
 }
 
+const BOOT_START_UPTIME_SECONDS = int(getenv("TACHYON_BOOT_START_UPTIME_SECONDS") || "120");
+const BOOT_START_VERIFY_TIMEOUT = getenv("TACHYON_BOOT_START_VERIFY_TIMEOUT") || "45";
+
+// Seconds since boot, or null when /proc/uptime cannot be read.
+function system_uptime_seconds() {
+    let data = fs.readfile("/proc/uptime");
+    if (data == null)
+        return null;
+    let field = split(trim(as_string(data)), /[ \t]+/)[0];
+    if (field == null || match(field, /^[0-9]+(\.[0-9]+)?$/) == null)
+        return null;
+    return int(field);
+}
+
+// Cold boot and WAN-up retries race the network coming up, so sing-box can take far
+// longer to reach a stable state than on a start the user asked for. rc.common calls
+// boot() as a plain argument-less start, so the reason alone cannot tell the two
+// apart: a start early in uptime is treated as cold. Those paths keep the generous
+// verification window, everything else uses the shorter default from lifecycle.uc.
+function start_verify_timeout(reason, uptime_seconds) {
+    if (as_string(reason) == "triggered")
+        return BOOT_START_VERIFY_TIMEOUT;
+
+    if (uptime_seconds == null)
+        uptime_seconds = system_uptime_seconds();
+    if (uptime_seconds == null)
+        return "";
+
+    return int(uptime_seconds) <= BOOT_START_UPTIME_SECONDS ? BOOT_START_VERIFY_TIMEOUT : "";
+}
+
 function start_service(reason, owner_pid) {
     print("Start Tachyon\n");
     let plan = start_plan_value(reason, owner_pid, uci_settings(), null);
     if (!plan.bin_ok)
         return 1;
 
-    let status = command_status_from_args([ BIN_PATH, "start" ]);
+    let verify_timeout = start_verify_timeout(reason, null);
+    let start_command = command_from_args([ BIN_PATH, "start" ]);
+    if (verify_timeout != "")
+        start_command = "TACHYON_SING_BOX_START_VERIFY_TIMEOUT=" +
+            shell_quote(verify_timeout) + " " + start_command;
+
+    let status = command_status(start_command);
     if (status == 0) {
         clear_start_retry(START_RETRY_FILE);
         cancel_scheduled_start_retry(START_RETRY_PID_FILE);
@@ -736,6 +773,8 @@ else if (mode == "start-plan")
     start_plan(ARGV[1], ARGV[2], uci_settings(), null);
 else if (mode == "start-service")
     exit(start_service(ARGV[1], ARGV[2]));
+else if (mode == "start-verify-timeout-fixture")
+    print(start_verify_timeout(ARGV[1], ARGV[2] == null || ARGV[2] == "" ? null : int(ARGV[2])), "\n");
 else if (mode == "start-plan-fixture") {
     let settings = {
         shutdown_correctly: ARGV[2],

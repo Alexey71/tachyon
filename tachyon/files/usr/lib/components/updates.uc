@@ -167,6 +167,10 @@ function command_success_from_args(args) {
     return system(command_from_args(args) + " >/dev/null 2>&1") == 0;
 }
 
+function command_exists(name) {
+    return command_success_from_args([ "command", "-v", name ]);
+}
+
 function now_seconds() {
     return int(clock()[0]);
 }
@@ -1966,12 +1970,25 @@ function download_to_file(url, filepath, proxy_address) {
     for (let candidate in candidates) {
         let attempt = 1;
         while (attempt <= 2) {
-            let command = command_from_args([ "wget", "-q", "-T", "10", "-t", "2", "-O", filepath, candidate ]);
-            if (as_string(proxy_address) != "")
-                command = "http_proxy=" + shell_quote("http://" + as_string(proxy_address)) +
-                    " https_proxy=" + shell_quote("http://" + as_string(proxy_address)) + " " + command;
+            let ok = false;
 
-            if (command_success(command) && file_nonempty(filepath)) {
+            if (command_exists("curl")) {
+                let curl_args = [ "curl", "--connect-timeout", "5", "-m", "10", "-fsSL" ];
+                if (as_string(proxy_address) != "")
+                    push(curl_args, "-x", "http://" + as_string(proxy_address));
+                push(curl_args, candidate);
+                push(curl_args, "-o");
+                push(curl_args, filepath);
+                ok = command_success_from_args(curl_args);
+            } else {
+                let command = command_from_args([ "wget", "-q", "-T", "10", "-O", filepath, candidate ]);
+                if (as_string(proxy_address) != "")
+                    command = "http_proxy=" + shell_quote("http://" + as_string(proxy_address)) +
+                        " https_proxy=" + shell_quote("http://" + as_string(proxy_address)) + " " + command;
+                ok = command_success(command);
+            }
+
+            if (ok && file_nonempty(filepath)) {
                 if (candidate != url)
                     log_message("Successfully downloaded " + as_string(url) + " via mirror " + candidate, "info");
                 return true;

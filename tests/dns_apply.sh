@@ -174,8 +174,12 @@ assert_log_empty() {
   [ ! -s "$LOG" ] || fail "expected empty log"
 }
 
-assert_dnsmasq_restarted() {
-  grep -Fxq 'restart' "$DNSMASQ_LOG" || fail "expected dnsmasq restart"
+# dnsmasq must be told to re-read its config. A reload is preferred (procd
+# regenerates dnsmasq.conf and only bounces the instance when it changed), with a
+# full restart as the fallback, so either action satisfies the requirement.
+assert_dnsmasq_reloaded() {
+  grep -Fxq 'reload' "$DNSMASQ_LOG" || grep -Fxq 'restart' "$DNSMASQ_LOG" ||
+    fail "expected dnsmasq reload or restart"
 }
 
 cat >"$STATE" <<'EOF_STATE'
@@ -195,7 +199,7 @@ assert_value 'dhcp.@dnsmasq[0].tachyon_noresolv' '0'
 assert_value 'dhcp.@dnsmasq[0].cachesize' '0'
 assert_value 'dhcp.@dnsmasq[0].tachyon_cachesize' '150'
 assert_log_contains 'commit dhcp'
-assert_dnsmasq_restarted
+assert_dnsmasq_reloaded
 
 : > "$DNSMASQ_LOG"
 : > "$LOG"
@@ -207,7 +211,7 @@ assert_absent 'dhcp.@dnsmasq[0].tachyon_server'
 assert_absent 'dhcp.@dnsmasq[0].tachyon_noresolv'
 assert_absent 'dhcp.@dnsmasq[0].tachyon_cachesize'
 assert_log_contains 'commit dhcp'
-assert_dnsmasq_restarted
+assert_dnsmasq_reloaded
 
 cat >"$STATE" <<'EOF_STATE'
 dhcp.@dnsmasq[0].server=127.0.0.42
@@ -255,5 +259,29 @@ assert_value 'dhcp.@dnsmasq[0].cachesize' '0'
 assert_absent 'dhcp.@dnsmasq[0].tachyon_noresolv'
 assert_absent 'dhcp.@dnsmasq[0].tachyon_cachesize'
 assert_log_contains 'commit dhcp'
+
+# An init script without a working reload (older or non-procd dnsmasq) must still
+# get its config applied through the full-restart fallback.
+cat >"$WORK_DIR/dnsmasq-init" <<'DNSMASQ'
+#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\n' "$*" >> "${DNSMASQ_LOG:?}"
+[ "${1:-}" != "reload" ] || exit 1
+DNSMASQ
+chmod 0755 "$WORK_DIR/dnsmasq-init"
+
+cat >"$STATE" <<'EOF_STATE'
+dhcp.@dnsmasq[0].server=1.1.1.1 8.8.8.8
+dhcp.@dnsmasq[0].noresolv=0
+dhcp.@dnsmasq[0].cachesize=150
+tachyon.settings.shutdown_correctly=1
+EOF_STATE
+
+: > "$DNSMASQ_LOG"
+: > "$LOG"
+ucode -L "$UCODE_LIB" "$APPLY" configure force
+assert_value 'dhcp.@dnsmasq[0].server' '127.0.0.42'
+grep -Fxq 'reload' "$DNSMASQ_LOG" || fail "fallback: expected a reload attempt first"
+grep -Fxq 'restart' "$DNSMASQ_LOG" || fail "fallback: expected restart after failed reload"
 
 printf 'DNS apply checks passed\n'

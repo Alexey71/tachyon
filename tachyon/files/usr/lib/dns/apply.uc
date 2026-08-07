@@ -78,6 +78,18 @@ function restart_dnsmasq() {
     return run("[ -x " + shell_quote(DNSMASQ_INIT) + " ] && " + shell_quote(DNSMASQ_INIT) + " restart");
 }
 
+// procd regenerates dnsmasq.conf on reload and only bounces the instance when the
+// generated config actually changed, so a reload applies our UCI edits without the
+// unconditional stop/start (and the dropped in-flight queries) of a full restart.
+// Older or non-procd dnsmasq init scripts have no usable reload, so fall back.
+function reload_dnsmasq() {
+    if (run("[ -x " + shell_quote(DNSMASQ_INIT) + " ] && " + shell_quote(DNSMASQ_INIT) + " reload"))
+        return true;
+
+    log("dnsmasq reload failed; falling back to a full restart", "warn");
+    return restart_dnsmasq();
+}
+
 function dnsmasq_legacy_instance_exists() {
     return uci_exists("dhcp.tachyon");
 }
@@ -296,7 +308,7 @@ function dnsmasq_configure(force) {
     dnsmasq_configure_default_instance();
     uci_commit("dhcp");
 
-    return restart_dnsmasq();
+    return reload_dnsmasq();
 }
 
 function dnsmasq_restore(force, quiet) {
@@ -317,7 +329,7 @@ function dnsmasq_restore(force, quiet) {
     dnsmasq_restore_default_instance();
     uci_commit("dhcp");
 
-    return restart_dnsmasq();
+    return reload_dnsmasq();
 }
 
 function failsafe_restore() {

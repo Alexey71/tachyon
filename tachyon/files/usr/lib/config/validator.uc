@@ -2224,6 +2224,14 @@ else if (mode == "check-requirements")
     check_runtime_requirements();
 else if (mode == "validate-runtime")
     validate_runtime_config(context_from_runtime());
+// Both start-path validations in one process: the runtime context is expensive to
+// assemble (it shells out for versions and installed-package markers) and each mode
+// built its own copy. check_runtime_requirements() exits non-zero on failure, so
+// reaching the second call already means the requirements passed.
+else if (mode == "check-requirements-and-validate-runtime") {
+    check_runtime_requirements();
+    validate_runtime_config(context_from_runtime());
+}
 else if (mode == "validate-runtime-fixture") {
     use_fixture_cursor(ARGV[1]);
     validate_runtime_config(context_from_json(ARGV[2], context_from_runtime()));

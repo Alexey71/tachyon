@@ -27,6 +27,7 @@ const RUNTIME_STATE_DIR = getenv("TACHYON_RUNTIME_STATE_DIR") || "/var/run/tachy
 const SYSTEM_INFO_CACHE_FILE = getenv("TACHYON_SYSTEM_INFO_CACHE_FILE") || RUNTIME_STATE_DIR + "/system-info.json";
 const RELOAD_STATE_FILE = getenv("TACHYON_RELOAD_STATE_FILE") || RUNTIME_STATE_DIR + "/reload-state";
 const RELOAD_STATE_SNAPSHOT_FILE = getenv("TACHYON_RELOAD_STATE_SNAPSHOT_FILE") || RUNTIME_STATE_DIR + "/reload-state.snapshot." + clock()[0] + "." + clock()[1];
+const RELOAD_HASH_FILE = getenv("TACHYON_RELOAD_HASH_FILE") || RUNTIME_STATE_DIR + "/reload.hash";
 const PENDING_RELOAD_FILE = getenv("TACHYON_PENDING_RELOAD_FILE") || RUNTIME_STATE_DIR + "/reload.pending";
 const SERVICE_TRIGGER_SYNC_FILE = getenv("TACHYON_SERVICE_TRIGGER_SYNC_FILE") || RUNTIME_STATE_DIR + "/service-triggers.sync";
 const SUBSCRIPTION_UPDATE_STATE_DIR = getenv("TACHYON_SUBSCRIPTION_UPDATE_STATE_DIR") || RUNTIME_STATE_DIR + "/subscription-update";
@@ -52,8 +53,17 @@ const COMPONENT_UPDATE_CHECK_CRON_MARKER = getenv("TACHYON_COMPONENT_UPDATE_CHEC
 const RELOAD_STATE_FORMAT = int(getenv("TACHYON_RELOAD_STATE_FORMAT") || "1");
 const RUNTIME_CACHE_FORMAT = int(getenv("TACHYON_RUNTIME_CACHE_FORMAT") || "8");
 const RUNTIME_STABLE_MIN_AGE = int(getenv("TACHYON_RUNTIME_STABLE_MIN_AGE") || "2");
-const SING_BOX_START_STABLE_MIN_AGE = int(getenv("TACHYON_SING_BOX_START_STABLE_MIN_AGE") || "8");
-const SING_BOX_START_VERIFY_TIMEOUT = int(getenv("TACHYON_SING_BOX_START_VERIFY_TIMEOUT") || "45");
+// The stable-age window is what a successful start actually waits out: the poll
+// loop cannot succeed until sing-box has survived this long. It exists to catch a
+// process that comes up and then dies on a bad config, which happens within the
+// first second or two, so 5s keeps the crash window while cutting 3s off every
+// start, restart and reload. Later failures are the watchdog's job, not this gate.
+const SING_BOX_START_STABLE_MIN_AGE = int(getenv("TACHYON_SING_BOX_START_STABLE_MIN_AGE") || "5");
+// A healthy sing-box reaches the stable age within a couple of seconds; a run that
+// is still unstable at 15s is failing for a reason more time will not fix. Cold
+// boot is the exception: the WAN may still be coming up, so the init script raises
+// this via TACHYON_SING_BOX_START_VERIFY_TIMEOUT for boot and WAN-retry starts.
+const SING_BOX_START_VERIFY_TIMEOUT = int(getenv("TACHYON_SING_BOX_START_VERIFY_TIMEOUT") || "15");
 const NFT_POPULATE_ENABLED_DEFAULT = int(getenv("TACHYON_NFT_POPULATE_ENABLED") || "1");
 
 const TMP_SING_BOX_FOLDER = getenv("TMP_SING_BOX_FOLDER") || constant_value("TMP_SING_BOX_FOLDER", "/tmp/sing-box");
@@ -249,6 +259,12 @@ function remove_file(path) {
     return fs.unlink(as_string(path)) || true;
 }
 
+// Invalidate the last-reload hash so a reload right after a stop/start is never
+// skipped: the hash file reflects a reload from a previous run, not this one.
+function invalidate_reload_hash() {
+    remove_file(RELOAD_HASH_FILE);
+}
+
 function ensure_dir(path) {
     path = as_string(path);
     return path == "" || fs.mkdir(path, 0755) || fs.stat(path) != null;
@@ -360,8 +376,13 @@ function mark_pending_reload_if_config_changed(initial_fingerprint, reason) {
 
 function finish_reload_status(status, initial_fingerprint) {
     status = int(status || 0);
-    if (status == 0)
+    if (status == 0) {
+        // Record the hash the reload acted on so a subsequent no-op reload can be
+        // skipped before it forks anything. Only written on success: a failed or
+        // aborted reload must not suppress the retry of the same config.
+        save_completed_reload_hash();
         mark_pending_reload_if_config_changed(initial_fingerprint, "config_changed_during_reload");
+    }
     return status;
 }
 
@@ -471,6 +492,17 @@ function current_config_hash() {
     return file_md5(CONFIG_FILE);
 }
 
+function last_completed_reload_hash() {
+    let data = fs.readfile(RELOAD_HASH_FILE);
+    return data == null ? "" : trim(as_string(data));
+}
+
+function save_completed_reload_hash() {
+    let hash = current_config_hash();
+    if (hash != "")
+        write_file(RELOAD_HASH_FILE, hash + "\n");
+}
+
 function mark_internal_config_guard() {
     let hash = current_config_hash();
     if (hash == "") {
@@ -572,19 +604,18 @@ function discover_awg_mtu() {
 }
 
 function validate_start_config() {
-    let status = module_status(VALIDATOR_UC, [ "check-requirements" ]);
+    // The two validator checks share the expensive context_from_runtime() assembly
+    // (sing-box version, installed packages, compression markers). Running both in
+    // one ucode process cuts two forks (context_from_runtime twice + one extra
+    // module_status round-trip). check_runtime_requirements exits non-zero on
+    // failure, so validate_runtime_config is only reached when requirements pass.
+    let status = module_status(VALIDATOR_UC, [ "check-requirements-and-validate-runtime" ]);
     if (status != 0)
         return status;
 
     status = module_status(SERVER_UC, [ "prepare-all-defaults" ]);
     if (status != 0)
         return status;
-
-    status = module_status(VALIDATOR_UC, [ "validate-runtime" ]);
-    if (status != 0) {
-        log_message("Runtime config validation failed. Aborted.", "fatal");
-        return status;
-    }
 
     return 0;
 }
@@ -807,13 +838,12 @@ function start_impl() {
     // all tachyon temp files are created and deleted within seconds under normal operation.
     command_status("find /tmp -maxdepth 1 -name 'tachyon-*' -mmin +30 -delete 2>/dev/null; true");
 
-    // Start Watchdog & Telegram Bot early so they remain active even if proxy configuration fails
+    // Watchdog must start early so auto-healing is active even through a failed boot.
+    // Telegram (119 KB) is heavy but non-critical: move to background after the proxy
+    // stack is verified and running, saving one serial ucode fork from the start path.
     let wd_status = module_status(WATCHDOG_UC, [ "start-runtime" ]);
     if (wd_status != 0)
         log_message("Watchdog start-runtime failed (status " + as_string(wd_status) + ")", "warn");
-    let tg_status = module_status(TELEGRAM_UC, [ "start-runtime" ]);
-    if (tg_status != 0)
-        log_message("Telegram start-runtime failed (status " + as_string(tg_status) + ")", "warn");
 
     let status = start_main();
     if (status != 0)
@@ -853,6 +883,7 @@ function start_impl() {
     }
 
     module_background(DIAGNOSTICS_UC, [ "get-system-info" ]);
+    module_background(TELEGRAM_UC, [ "start-runtime" ]);
     return 0;
 }
 
@@ -941,6 +972,7 @@ function abort_reload(status, runtime_changed) {
 function start() {
     let status = start_impl();
     release_start_subscription_update_lock();
+    invalidate_reload_hash();
 
     if (status != 0) {
         cleanup_failed_runtime();
@@ -965,6 +997,7 @@ function start() {
 
 function stop_impl() {
     let status = 0;
+    invalidate_reload_hash();
 
     if (!setting_bool("dont_touch_dhcp", false)) {
         let dns_status = dnsmasq_restore(false);
@@ -1006,6 +1039,7 @@ function restart_runtime_for_reload() {
     let selector_state = capture_selector_state();
 
     log_message("Reload requires a full Tachyon runtime restart", "info");
+    invalidate_reload_hash();
 
     status = stop_main();
     if (status != 0)
@@ -1178,6 +1212,14 @@ function reload(reason) {
     rule_condition_cache_enabled = force_runtime_reload;
 
     log_message("Reloading Tachyon", "info");
+
+    // Skip all work when config fingerprint is unchanged since the last reload.
+    // Applies to user-triggered reloads as well as on_config_change; saves ~4
+    // ucode forks (3 validate + 1 plan) when nothing actually changed.
+    if (current_config_hash() == last_completed_reload_hash()) {
+        log_message("Reload skipped: configuration is unchanged", "info");
+        return 0;
+    }
 
     status = validate_start_config();
     if (status != 0)

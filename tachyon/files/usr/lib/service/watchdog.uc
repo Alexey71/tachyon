@@ -187,6 +187,30 @@ function smart_detect_get_proxy_sections() {
     return secs;
 }
 
+// Extract a candidate domain from a sing-box log line. Returns null when the
+// line carries no usable hostname. Kept separate from log handling so the
+// pattern can be exercised directly by tests.
+function smart_detect_extract_domain(line) {
+    if (line == null) return null;
+    let text = as_string(line);
+    let m = match(text, /"([a-zA-Z0-9][a-zA-Z0-9.-]{1,60}\.[a-zA-Z]{2,})(:[0-9]+)?"/);
+    if (!m) m = match(text, /target[= ]([a-zA-Z0-9][a-zA-Z0-9.-]{1,60}\.[a-zA-Z]{2,})/);
+    if (!m || !m[1]) return null;
+    let domain = m[1];
+    if (length(domain) < 5) return null;
+    if (index(domain, "*") >= 0 || index(domain, "?") >= 0) return null;
+    if (index(domain, "..") >= 0) return null;
+    if (index(domain, "-") == 0 || substr(domain, length(domain) - 1) == "-") return null;
+    return domain;
+}
+
+// A domain that resolves nowhere is a DNS fault, not a block: probing it would
+// fail directly and via proxy alike, so treat it as unresolvable and skip.
+function smart_detect_domain_resolves(domain) {
+    return command_success_from_args([ "nslookup", domain, "127.0.0.1" ]) ||
+           command_success_from_args([ "nslookup", domain ]);
+}
+
 function smart_detect_add_domain(sec_name, domain) {
     let c = uci_core.cursor();
     if (!c) return false;
@@ -1327,7 +1351,7 @@ function smart_detect_process_pending() {
         return;
     }
     let now = time();
-    if (now - smart_detect_last_run < 60) return;
+    if (now - smart_detect_last_run < 30) return;
 
     let domain_list = keys(pending_smart_domains);
     if (length(domain_list) == 0) return;
@@ -1382,23 +1406,37 @@ function smart_detect_process_pending() {
     for (let domain in candidate_domains) {
         try {
         seen[domain] = now;
+
+        // DNS pre-check: skip if domain doesn't resolve at all (not a block, DNS fault)
+        if (!smart_detect_domain_resolves(domain)) {
+            log_message("Smart Detect: " + domain + " does not resolve via DNS, skipping", "debug");
+            continue;
+        }
+
         let direct_ok = command_success_from_args([
             "curl", "-s", "-I", "--connect-timeout", "4", "--max-time", "6",
             "https://" + domain
         ]);
         if (direct_ok) continue;
 
+        // Single probe through the shared http/mixed inbound. This inbound follows
+        // the global routing rules, so it cannot be aimed at one specific section:
+        // the result is the same for every candidate section. Probe once, then hand
+        // the domain to the first section that accepts it (user-defined order).
+        let proxy_ok = command_success_from_args([
+            "curl", "-s", "-I", "--connect-timeout", "5", "--max-time", "8",
+            "--proxy", "http://" + proxy_addr,
+            "https://" + domain
+        ]);
+        if (!proxy_ok) {
+            log_message("Smart Detect: " + domain + " fails directly and via proxy, skipping", "info");
+            continue;
+        }
+
         let added = false;
         for (let sec_name in detect_sections) {
             sec_name = trim(as_string(sec_name));
             if (sec_name == "") continue;
-
-            let proxy_ok = command_success_from_args([
-                "curl", "-s", "-I", "--connect-timeout", "5", "--max-time", "8",
-                "--proxy", "http://" + proxy_addr,
-                "https://" + domain
-            ]);
-            if (!proxy_ok) continue;
 
             log_message("Smart Detect: adding " + domain + " to section " + sec_name, "info");
             if (smart_detect_add_domain(sec_name, domain)) {
@@ -1476,10 +1514,9 @@ function handle_log_line(line) {
     if (cfg.smart_detect == "1") {
         if ((index(line_lower, "direct") >= 0 || index(line_lower, "DIRECT") >= 0) &&
             (index(line_lower, "failed") >= 0 || index(line_lower, "timeout") >= 0 || index(line_lower, "reset") >= 0)) {
-            let m = match(line, /"([a-zA-Z0-9][a-zA-Z0-9.-]{1,60}\.[a-zA-Z]{2,})(:[0-9]+)?"/);
-            if (!m) m = match(line, /target[= ]([a-zA-Z0-9][a-zA-Z0-9.-]{1,60}\.[a-zA-Z]{2,})/);
-            if (m && m[1] && length(m[1]) >= 5) {
-                pending_smart_domains[m[1]] = time();
+            let domain = smart_detect_extract_domain(line);
+            if (domain != null) {
+                pending_smart_domains[domain] = time();
             }
         }
     }
@@ -1812,7 +1849,13 @@ else if (mode == "ai-status-full") {
     print_ai_status_full();
     exit(0);
 }
+else if (mode == "smart-detect-extract-domain") {
+    let extracted = smart_detect_extract_domain(ARGV[1]);
+    if (extracted == null) exit(1);
+    print(extracted + "\n");
+    exit(0);
+}
 else {
-    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status|ai-status-full> ...\n");
+    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status|ai-status-full|smart-detect-extract-domain> ...\n");
     exit(1);
 }
