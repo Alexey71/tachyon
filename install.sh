@@ -2418,7 +2418,7 @@ install_selected_sing_box() {
     fi
 
     [ -x /usr/bin/tachyon ] || fail "tachyon backend must be installed before sing-box component action"
-    for kmod in inet_diag netlink_diag tun nft_tproxy; do
+    for kmod in inet_diag netlink_diag tun nft_tproxy nft_nat; do
         modprobe "$kmod" 2>/dev/null || true
     done
     [ -d /dev/net ] || mkdir -p /dev/net

@@ -521,22 +521,22 @@ function parent_dir(path) {
     return slash >= 0 ? substr(path, 0, slash) : "";
 }
 
-// Read the HTTP/mixed inbound port from the generated sing-box config.
-// Prefers the dedicated internal service mixed inbound (tag: service-mixed-in)
-// or inbounds listening on 127.0.0.1/0.0.0.0.
-// Falls back to 4534 when the config is missing or unparseable.
-function get_mixed_port() {
+function get_mixed_inbound_info() {
     let data = fs.readfile("/etc/sing-box/config.json");
-    if (data == null) return 4534;
+    if (data == null) return null;
     let parsed;
-    try { parsed = json(data); } catch (e) { return 4534; }
-    if (parsed == null || parsed.inbounds == null) return 4534;
+    try { parsed = json(data); } catch (e) { return null; }
+    if (parsed == null || parsed.inbounds == null) return null;
 
     // 1. Explicitly check for the internal service mixed inbound
     for (let inbound in parsed.inbounds) {
         if (inbound.tag == "service-mixed-in" && inbound.listen_port != null) {
             let port = int(inbound.listen_port, 10);
-            if (port > 0) return port;
+            if (port > 0) {
+                let host = as_string(inbound.listen || "127.0.0.1");
+                if (host == "0.0.0.0" || host == "::" || host == "") host = "127.0.0.1";
+                return { host: host, port: port, tag: inbound.tag };
+            }
         }
     }
     // 2. Check for any mixed/http inbound listening on 127.0.0.1, 0.0.0.0, or ::
@@ -545,7 +545,7 @@ function get_mixed_port() {
             let listen = as_string(inbound.listen || "");
             if (listen == "127.0.0.1" || listen == "0.0.0.0" || listen == "::" || listen == "") {
                 let port = int(inbound.listen_port, 10);
-                if (port > 0) return port;
+                if (port > 0) return { host: "127.0.0.1", port: port, tag: inbound.tag };
             }
         }
     }
@@ -553,10 +553,22 @@ function get_mixed_port() {
     for (let inbound in parsed.inbounds) {
         if ((inbound.type == "mixed" || inbound.type == "http") && inbound.listen_port != null) {
             let port = int(inbound.listen_port, 10);
-            if (port > 0) return port;
+            if (port > 0) {
+                let host = as_string(inbound.listen || "127.0.0.1");
+                if (host == "0.0.0.0" || host == "::" || host == "") host = "127.0.0.1";
+                return { host: host, port: port, tag: inbound.tag };
+            }
         }
     }
-    return 4534;
+    return null;
+}
+
+// Prefers the dedicated internal service mixed inbound (tag: service-mixed-in)
+// or inbounds listening on 127.0.0.1/0.0.0.0.
+// Falls back to 4534 when the config is missing or unparseable.
+function get_mixed_port() {
+    let info = get_mixed_inbound_info();
+    return info ? info.port : 4534;
 }
 
 return {
@@ -601,6 +613,7 @@ return {
     write_file,
     file_exists,
     parent_dir,
+    get_mixed_inbound_info,
     get_mixed_port,
     timeout_prefix,
     bounded_command,

@@ -5932,3 +5932,6 @@ msgstr "Конфигурация AmneziaWG %s успешно сгенериро�
 
 msgid "Notice: Cloudflare WARP edge servers only support AmneziaWG 2.0 (standard headers). For Cloudflare WARP, select version 2.0. Versions 3.0 and 3.1 are intended for dedicated AmneziaWG servers."
 msgstr "Обратите внимание: серверы Cloudflare WARP поддерживают только AmneziaWG 2.0 (стандартные заголовки). Для Cloudflare WARP выберите версию 2.0. Версии 3.0 и 3.1 предназначены для выделенных серверов AmneziaWG."
+
+msgid "new build"
+msgstr "новая сборка"

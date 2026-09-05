@@ -233,6 +233,7 @@ function parse_singbox_config() {
 // Reads the http/mixed inbound port from the generated sing-box config.
 // Cached because the config only changes across a reload.
 let cached_proxy_port = null;
+let cached_proxy_host = null;
 let cached_tproxy_port = null;
 function proxy_port() {
     if (cached_proxy_port !== null)
@@ -241,21 +242,58 @@ function proxy_port() {
     // Empty when the generated config has no http/mixed inbound: probing the
     // default port would measure a dead listener and report the proxy broken.
     let port = "";
+    let host = "127.0.0.1";
     let sb_cfg = parse_singbox_config();
     if (sb_cfg && sb_cfg.inbounds) {
+        // 1. Prefer service-mixed-in
         for (let inb in sb_cfg.inbounds) {
-            if (inb.type == "http" || inb.type == "mixed") {
-                port = as_string(inb.listen_port || 4534);
+            if (inb.tag == "service-mixed-in" && inb.listen_port != null) {
+                port = as_string(inb.listen_port);
+                let h = as_string(inb.listen || "127.0.0.1");
+                if (h != "0.0.0.0" && h != "::" && h != "") host = h;
                 break;
+            }
+        }
+        // 2. Localhost listeners
+        if (port == "") {
+            for (let inb in sb_cfg.inbounds) {
+                if ((inb.type == "http" || inb.type == "mixed") && inb.listen_port != null) {
+                    let listen = as_string(inb.listen || "");
+                    if (listen == "127.0.0.1" || listen == "0.0.0.0" || listen == "::" || listen == "") {
+                        port = as_string(inb.listen_port);
+                        host = "127.0.0.1";
+                        break;
+                    }
+                }
+            }
+        }
+        // 3. Any http or mixed inbound
+        if (port == "") {
+            for (let inb in sb_cfg.inbounds) {
+                if ((inb.type == "http" || inb.type == "mixed") && inb.listen_port != null) {
+                    port = as_string(inb.listen_port);
+                    let h = as_string(inb.listen || "127.0.0.1");
+                    if (h != "0.0.0.0" && h != "::" && h != "") host = h;
+                    break;
+                }
             }
         }
     }
     cached_proxy_port = port;
+    cached_proxy_host = host;
     return port;
+}
+
+function proxy_host() {
+    if (cached_proxy_host !== null)
+        return cached_proxy_host;
+    proxy_port();
+    return cached_proxy_host || "127.0.0.1";
 }
 
 function forget_proxy_port() {
     cached_proxy_port = null;
+    cached_proxy_host = null;
     cached_tproxy_port = null;
     sb_config_parse_reported = false;
 }
@@ -516,13 +554,14 @@ function controller(bus, opts) {
         // No http/mixed inbound in the generated config: there is nothing to
         // measure, so the proxy must not be declared broken on a dead port.
         if (port == "") return;
+        let host = proxy_host();
         let check_url = setting("ai_proxy_health_url", "https://cp.cloudflare.com/generate_204");
 
         let started = time();
         let ok = command_success_from_args([
             "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
             "--connect-timeout", "3", "--max-time", "5",
-            "--proxy", "http://127.0.0.1:" + port,
+            "--proxy", "http://" + host + ":" + port,
             check_url
         ]);
         let elapsed = (time() - started) * 1000;
@@ -532,7 +571,7 @@ function controller(bus, opts) {
 
         if (ok) {
             state.proxy_consecutive_fails = 0;
-            bus.emit(EV.PROXY_UP, { port: port, ms: elapsed });
+            bus.emit(EV.PROXY_UP, { host: host, port: port, ms: elapsed });
             return;
         }
 
@@ -549,6 +588,7 @@ function controller(bus, opts) {
         ]);
 
         bus.emit(EV.PROXY_DOWN, {
+            host: host,
             port: port,
             streak: state.proxy_consecutive_fails,
             direct_ok: direct_ok,
@@ -836,6 +876,14 @@ function controller(bus, opts) {
 
             if (def_dev != null)
                 no_gateway = false;
+        }
+
+        if (no_address && def_dev != null) {
+            let addr_out = command_capture("ip addr show " + shell_quote(def_dev) + " 2>/dev/null").output;
+            if (index(addr_out, "inet ") >= 0 || index(addr_out, "inet6 ") >= 0) {
+                no_address = false;
+                iface = def_dev;
+            }
         }
 
         // 3. Final fallback: verify that a default route exists in routing table

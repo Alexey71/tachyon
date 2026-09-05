@@ -675,6 +675,54 @@ function fetch_github_release_by_tag_json(owner, repo, tag) {
     return response;
 }
 
+function fetch_github_tag_commit_sha(owner, repo, tag) {
+    tag = trim(as_string(tag));
+    if (tag == "")
+        return "";
+    let url = "https://api.github.com/repos/" + as_string(owner) + "/" + as_string(repo) + "/commits/" + tag;
+    let response = http_get(url);
+    if (response == "" || !helper_success_input(response, "github-response-ok", [])) {
+        response = http_get("https://gh-proxy.com/" + url);
+        if (response == "" || !helper_success_input(response, "github-response-ok", []))
+            return "";
+    }
+    return trim(helper_output_input(response, "commit-object-sha", []));
+}
+
+function format_fingerprint_human(fp) {
+    fp = as_string(fp);
+    if (str_startswith(fp, "sha:"))
+        return substr(fp, 4, 7);
+    if (!str_startswith(fp, "build:"))
+        return fp != "" ? fp : "unknown";
+    let body = substr(fp, 6);
+    let pairs = split(body, "|");
+    let upd = "";
+    let size = "";
+    for (let p in pairs) {
+        if (str_startswith(p, "upd="))
+            upd = substr(p, 4);
+        else if (str_startswith(p, "pub=") && upd == "")
+            upd = substr(p, 4);
+        else if (str_startswith(p, "size="))
+            size = substr(p, 5);
+    }
+    let parts = [];
+    if (upd != "") {
+        let d = match(upd, /^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2})/);
+        if (d && d[1] && d[2])
+            push(parts, d[1] + " " + d[2] + " UTC");
+        else
+            push(parts, upd);
+    }
+    if (size != "") {
+        let kb = int(int(size) / 1024);
+        if (kb > 0)
+            push(parts, kb + " KB");
+    }
+    return length(parts) > 0 ? ("build (" + join(", ", parts) + ")") : fp;
+}
+
 function fetch_github_releases_json(owner, repo, per_page) {
     let url = "https://api.github.com/repos/" + as_string(owner) + "/" + as_string(repo) + "/releases?per_page=" + as_string(per_page || "10");
     let response = http_get(url, "8");
@@ -875,6 +923,9 @@ function ensure_sing_box_dependencies() {
 
     command_success_from_args([ "modprobe", "tun" ]);
     command_success_from_args([ "modprobe", "inet_diag" ]);
+    command_success_from_args([ "modprobe", "netlink_diag" ]);
+    command_success_from_args([ "modprobe", "nft_tproxy" ]);
+    command_success_from_args([ "modprobe", "nft_nat" ]);
     if (!file_exists("/dev/net/tun")) {
         command_success_from_args([ "mkdir", "-p", "/dev/net" ]);
         command_success_from_args([ "mknod", "/dev/net/tun", "c", "10", "200" ]);
@@ -1710,7 +1761,7 @@ function resolve_sing_box_lx_release(target_tag) {
         if (arch_suffix == "")
             return null;
         let base_dl = "https://github.com/Leadaxe/sing-box-lx/releases/download/" + target_tag + "/";
-        let asset_name = "sing-box-lx_" + tag_clean + "_linux-" + arch_suffix + ".tar.gz";
+        let asset_name = "sing-box-" + tag_clean + "-linux-" + arch_suffix + ".tar.gz";
         return {
             tag: target_tag,
             release_url: "https://github.com/Leadaxe/sing-box-lx/releases/tag/" + target_tag,
@@ -2481,8 +2532,17 @@ function check_tachyon() {
         remote_fingerprint = trim(helper_output_input(release_json, "release-build-fingerprint", []));
     }
 
+    if (remote_sha == "" && latest_version != "unknown" && latest_version != "") {
+        let parts = split(TACHYON_RELEASE_REPO, "/");
+        if (length(parts) == 2) {
+            remote_sha = fetch_github_tag_commit_sha(parts[0], parts[1], latest_version);
+            if (remote_sha != "" && (remote_fingerprint == "" || str_startswith(remote_fingerprint, "build:")))
+                remote_fingerprint = "sha:" + remote_sha;
+        }
+    }
+
     let sha_extra = null;
-    if (local_sha != "" || remote_fingerprint != "" || local_fingerprint != "") {
+    if (local_sha != "" || remote_sha != "" || remote_fingerprint != "" || local_fingerprint != "") {
         sha_extra = { current_sha: local_sha, latest_sha: remote_sha };
         if (local_fingerprint != "")
             sha_extra.current_build = local_fingerprint;
@@ -2495,9 +2555,11 @@ function check_tachyon() {
         // one, otherwise via the fingerprint recorded at install time.
         if (helper_success("tachyon-build-differs", [ local_sha, remote_sha, local_fingerprint, remote_fingerprint ])) {
             status = "outdated_same_release";
+            let short_local = length(local_sha) >= 7 ? substr(local_sha, 0, 7) : local_sha;
+            let short_remote = length(remote_sha) >= 7 ? substr(remote_sha, 0, 7) : remote_sha;
             updates_log("Tachyon build update found for current release (" + TACHYON_VERSION + "): " +
-                (local_sha != "" && remote_sha != "" ? local_sha + " -> " + remote_sha :
-                    local_fingerprint + " -> " + remote_fingerprint));
+                (short_local != "" && short_remote != "" ? short_local + " -> " + short_remote :
+                    format_fingerprint_human(local_fingerprint) + " -> " + format_fingerprint_human(remote_fingerprint)));
             action_success("tachyon", "check_update", "Update is available for current release", TACHYON_VERSION, latest_version, 0, status, release_url, sha_extra);
         } else {
             updates_log("Tachyon is already up to date (" + TACHYON_VERSION + ")");

@@ -848,7 +848,7 @@ function heal_proxy_connectivity(ev) {
     if (int(ev.payload.streak) < 2) return;
     if (suppressed_by_root_cause("heal_proxy_connectivity")) return;
 
-    let proxy_addr = "127.0.0.1:" + as_string(ev.payload.port);
+    let proxy_addr = (ev.payload.host ? ev.payload.host : "127.0.0.1") + ":" + as_string(ev.payload.port);
     let incident = {
         type: "proxy",
         description: "Зависание или неполный отклик прокси-порту sing-box (" + proxy_addr + ")",
@@ -932,9 +932,11 @@ function heal_tproxy_port(ev) {
 
 function heal_wan_and_gateway(ev) {
     if (settings().recovery_bypass == "1") return;
+    if (settings().ai_heal_wan_enabled == "0") return;
+
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.notify_crash != "0") {
-        send_telegram_notification("⚠️ *Watchdog:* WAN/Gateway проблема. Перезапуск wan...", "heal_wan_and_gateway", 600);
+        send_telegram_notification("⚠️ *Watchdog:* WAN/Gateway проблема. Попытка обновления сетевого интерфейса...", "heal_wan_and_gateway", 600);
     }
     // Claimed before the interface goes down, not after: ifdown itself is what
     // makes the proxy and DNS probes fail, and those facts arrive while ifup is
@@ -942,16 +944,10 @@ function heal_wan_and_gateway(ev) {
     wan_repair_until = time() + SUPPRESSION_DEADLINE;
     // The address is still there but the default route vanished: a graceful
     // renew re-applies the routes without dropping the interface (issue #31).
-    // Only when the address itself is gone does the interface get recycled,
-    // and even then only if the renew did not restore the route within 5s.
-    let cmd;
-    if (ev.payload.no_address) {
-        cmd = "/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1";
-    } else {
-        cmd = "/sbin/ubus call network.interface.wan renew >/dev/null 2>&1; sleep 5; " +
-            "ip route 2>/dev/null | grep -q default || " +
-            "(/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1)";
-    }
+    // Always attempt graceful renew first before falling back to ifdown/ifup.
+    let cmd = "/sbin/ubus call network.interface.wan renew >/dev/null 2>&1; sleep 6; " +
+        "(ip -4 route show default 2>/dev/null | grep -q default || " +
+        "(/sbin/ifdown wan >/dev/null 2>&1 && /sbin/ifup wan >/dev/null 2>&1))";
     bg_system(cmd);
 }
 

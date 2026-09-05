@@ -70,9 +70,9 @@ function renderVersionBadgeText(opts: {
         return `${cVer} (${tSha})`;
       }
       if (cSha) {
-        return `${cVer} (${cSha})`;
+        return `${cVer} (${cSha} → ${_('new build')})`;
       }
-      return `${cVer} → ${tVer}`;
+      return `${cVer} (${_('new build')})`;
     }
 
     const currentPart = cVer ? (cSha ? `${cVer} (${cSha})` : cVer) : '';

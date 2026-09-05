@@ -606,7 +606,7 @@ function network_interface_dump_first_private_ipv4() {
 function service_listen_address_value(settings) {
     let configured = option(settings, "service_listen_address", "");
     if (configured != "") {
-        log_message("service_listen_address is set manually; automatic listen-address detection is skipped", "warn");
+        log_message("service_listen_address is set manually; automatic listen-address detection is skipped", "debug");
         return configured;
     }
 

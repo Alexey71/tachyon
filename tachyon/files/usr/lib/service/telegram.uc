@@ -110,19 +110,23 @@ function settings() {
     return object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
 }
 
-function get_mixed_port() {
+function get_mixed_proxy_info() {
     let settings_data = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "settings"));
     let config_path = trim(as_string(settings_data.config_path || "")) || "/etc/sing-box/config.json";
     let data = fs.readfile(config_path);
-    if (data == null) return 4534;
+    if (data == null) return null;
     let parsed;
-    try { parsed = json(data); } catch (e) { return 4534; }
-    if (parsed == null || parsed.inbounds == null) return 4534;
+    try { parsed = json(data); } catch (e) { return null; }
+    if (parsed == null || parsed.inbounds == null) return null;
 
     for (let inbound in parsed.inbounds) {
         if (inbound.tag == "service-mixed-in" && inbound.listen_port != null) {
             let port = int(inbound.listen_port, 10);
-            if (port > 0) return port;
+            if (port > 0) {
+                let host = as_string(inbound.listen || "127.0.0.1");
+                if (host == "0.0.0.0" || host == "::" || host == "") host = "127.0.0.1";
+                return { host: host, port: port, tag: inbound.tag };
+            }
         }
     }
     for (let inbound in parsed.inbounds) {
@@ -130,17 +134,32 @@ function get_mixed_port() {
             let listen = as_string(inbound.listen || "");
             if (listen == "127.0.0.1" || listen == "0.0.0.0" || listen == "::" || listen == "") {
                 let port = int(inbound.listen_port, 10);
-                if (port > 0) return port;
+                if (port > 0) return { host: "127.0.0.1", port: port, tag: inbound.tag };
             }
         }
     }
     for (let inbound in parsed.inbounds) {
-        if (inbound.type == "mixed" && inbound.listen_port != null) {
+        if ((inbound.type == "mixed" || inbound.type == "http") && inbound.listen_port != null) {
             let port = int(inbound.listen_port, 10);
-            if (port > 0) return port;
+            if (port > 0) {
+                let host = as_string(inbound.listen || "127.0.0.1");
+                if (host == "0.0.0.0" || host == "::" || host == "") host = "127.0.0.1";
+                return { host: host, port: port, tag: inbound.tag };
+            }
         }
     }
-    return 4534;
+    return null;
+}
+
+function get_mixed_port() {
+    let info = get_mixed_proxy_info();
+    return info ? info.port : 4534;
+}
+
+function get_mixed_proxy_endpoint() {
+    let info = get_mixed_proxy_info();
+    if (!info) return null;
+    return info.host + ":" + info.port;
 }
 
 // Liveness cache for the mixed proxy port: probing netstat on every poll
@@ -184,11 +203,12 @@ function get_proxy_args() {
         // A running sing-box alone proves nothing: the mixed inbound may have
         // failed to bind while the rest of the core came up. Only route bot
         // traffic through 4534 when something actually listens there.
+        let ep = get_mixed_proxy_endpoint() || ("127.0.0.1:" + get_mixed_port());
         if (!mixed_port_alive()) {
             if (direct_fallback_enabled())
                 return [];
             // Paranoid mode (fallback disabled): keep legacy behavior.
-            return [ "--proxy", "http://127.0.0.1:" + get_mixed_port() ];
+            return [ "--proxy", "http://" + ep ];
         }
         // If a specific section is configured for the bot, force-select it
         // through the Mihomo REST API so the mixed proxy routes bot traffic
@@ -203,7 +223,7 @@ function get_proxy_args() {
                 "http://127.0.0.1:9090/proxies/GLOBAL"
             ]));
         }
-        return [ "--proxy", "http://127.0.0.1:" + get_mixed_port() ];
+        return [ "--proxy", "http://" + ep ];
     }
     if (cfg.fallback_socks && trim(cfg.fallback_socks) != "") {
         return [ "--proxy", "socks5h://" + trim(cfg.fallback_socks) ];
@@ -1470,7 +1490,7 @@ function exec_support_bundle(token, chat_id) {
 }
 
 function exec_close_connections(token, chat_id) {
-    let out = command_capture(command_from_args(["curl", "-s", "-X", "DELETE", "http://127.0.0.1:" + get_mixed_port() + "/connections"]));
+    let out = command_capture(command_from_args(["curl", "-s", "-X", "DELETE", "http://127.0.0.1:9090/connections"]));
     if (out && out.status == 0)
         send_message(token, chat_id, "✅ <b>" + t("conn_closed_msg") + "</b>", "HTML", [[{text:"⬅️ " + t("nav_menu"), callback_data:"/menu"}]]);
     else
@@ -1561,7 +1581,7 @@ function exec_check_updates(token, chat_id, msg_id) {
 }
 
 function view_instances(token, chat_id, msg_id) {
-    let res = command_capture(command_from_args(["curl", "-s", "http://127.0.0.1:" + get_mixed_port() + "/proxies"]));
+    let res = command_capture(command_from_args(["curl", "-s", "http://127.0.0.1:9090/proxies"]));
     let text = "🖧 <b>Live Server Instances</b>\n\n";
     if (res && res.status == 0 && res.output) {
         try {
@@ -2922,7 +2942,7 @@ function send_daily_digest(token, admin_ids) {
     let up = m ? m[1] : t("status_unknown");
     text += "⏱ " + t("daily_uptime") + ": " + up + "\n";
     
-    let res = command_capture(command_from_args(["curl", "-s", "http://127.0.0.1:" + get_mixed_port() + "/traffic"]));
+    let res = command_capture(command_from_args(["curl", "-s", "http://127.0.0.1:9090/traffic"]));
     if (res && res.status == 0 && res.output) {
         try {
             let tr = json(res.output);
@@ -3273,19 +3293,28 @@ function diagnose() {
     push(checks, {
         name: "sing_box",
         ok: sb_running,
-        message: sb_running ? "sing-box is running" : "sing-box is NOT running — bot cannot route through proxy"
+        message: sb_running ? "sing-box is running" : "sing-box is NOT running — proxy routing unavailable"
     });
-    if (!sb_running) ok = false;
 
     // 4. Mixed proxy port
-    let mixed_port = get_mixed_port();
-    let port_check = command_capture("netstat -tlnp 2>/dev/null | grep ':" + mixed_port + " '");
-    let port_ok = port_check && port_check.status === 0 && trim(port_check.output || "") !== "";
-    push(checks, {
-        name: "proxy_port",
-        ok: port_ok,
-        message: port_ok ? "Mixed proxy port " + mixed_port + " is listening" : "Port " + mixed_port + " not listening — proxy may not be available"
-    });
+    let proxy_info = get_mixed_proxy_info();
+    let proxy_ep = proxy_info ? (proxy_info.host + ":" + proxy_info.port) : null;
+    let port_ok = false;
+    if (proxy_info) {
+        let port_check = command_capture("netstat -tlnp 2>/dev/null | grep ':" + proxy_info.port + " '");
+        port_ok = port_check && port_check.status === 0 && trim(port_check.output || "") !== "";
+        push(checks, {
+            name: "proxy_port",
+            ok: port_ok,
+            message: port_ok ? "Mixed proxy port " + proxy_info.port + " is listening (" + proxy_info.host + ")" : "Port " + proxy_info.port + " not listening — proxy may not be available"
+        });
+    } else {
+        push(checks, {
+            name: "proxy_port",
+            ok: true,
+            message: "Mixed proxy is not configured in sing-box — bot will use direct connection"
+        });
+    }
 
     // 5. DNS resolution
     let dns_check = command_capture("nslookup api.telegram.org 2>/dev/null");
@@ -3301,52 +3330,54 @@ function diagnose() {
     });
 
     // 6. Direct API test (IPv4)
+    let d_ok = false;
     if (cfg.bot_token) {
         let direct = command_capture(command_from_args([
             "curl", "-s", "-4", "--connect-timeout", "5", "--max-time", "8",
             "https://api.telegram.org/bot" + cfg.bot_token + "/getMe"
         ]));
         let d_out = (direct && direct.output) || "";
-        let d_ok = direct && direct.status === 0 && index(d_out, '"ok":true') >= 0;
+        d_ok = direct && direct.status === 0 && index(d_out, '"ok":true') >= 0;
         let d_msg = d_ok
             ? "Direct IPv4 to Telegram API works"
             : (index(d_out, '"ok":false') >= 0
                 ? "API returned error — token may be invalid"
                 : "Cannot reach Telegram API directly (IPv4 may be blocked by ISP)");
         push(checks, { name: "direct_api", ok: d_ok, message: d_msg });
-        if (!d_ok) ok = false;
     }
 
     // 7. Proxy API test
-    if (cfg.bot_token && sb_running) {
+    let p_ok = false;
+    if (cfg.bot_token && sb_running && proxy_info && port_ok) {
         let proxied = command_capture(command_from_args([
             "curl", "-s", "-4", "--connect-timeout", "5", "--max-time", "8",
-            "--proxy", "http://127.0.0.1:" + mixed_port,
+            "--proxy", "http://" + proxy_ep,
             "https://api.telegram.org/bot" + cfg.bot_token + "/getMe"
         ]));
         let p_out = (proxied && proxied.output) || "";
-        let p_ok = proxied && proxied.status === 0 && index(p_out, '"ok":true') >= 0;
+        p_ok = proxied && proxied.status === 0 && index(p_out, '"ok":true') >= 0;
         push(checks, {
             name: "proxy_api",
             ok: p_ok,
-            message: p_ok ? "Proxy route to Telegram API works" : "Proxy route failed — check sing-box outbound for Telegram"
+            message: p_ok ? "Proxy route (" + proxy_ep + ") to Telegram API works" : "Proxy route failed — check sing-box outbound for Telegram"
         });
-        if (!p_ok) ok = false;
+    } else if (proxy_info && !port_ok) {
+        push(checks, {
+            name: "proxy_api",
+            ok: false,
+            message: "Proxy route skipped — mixed proxy port " + proxy_info.port + " is not listening"
+        });
     }
+
+    // Route check: at least one connection method must work
+    let route_ok = d_ok || p_ok;
+    if (!route_ok) ok = false;
 
     // 8. Send test message
     if (cfg.bot_token && cfg.admin_ids) {
         let first_admin = trim(split(cfg.admin_ids, /,/)[0] || "");
         if (first_admin !== "") {
-            let send_res = command_capture(command_from_args([
-                "curl", "-s", "-m", "10", "--connect-timeout", "5",
-                "--proxy", "http://127.0.0.1:" + mixed_port,
-                "-X", "POST", "-H", "Content-Type: application/json",
-                "-d", sprintf("%J", { chat_id: int(first_admin), text: "\u2705 Tachyon connection test passed" }),
-                "https://api.telegram.org/bot" + cfg.bot_token + "/sendMessage"
-            ]));
-            let s_out = (send_res && send_res.output) || "";
-            let s_ok = send_res && send_res.status === 0 && index(s_out, '"ok":true') >= 0;
+            let s_ok = send_message(cfg.bot_token, first_admin, "✅ Tachyon connection test passed");
             push(checks, {
                 name: "send_message",
                 ok: s_ok,

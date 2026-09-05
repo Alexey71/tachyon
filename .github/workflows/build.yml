@@ -94,11 +94,14 @@ jobs:
           files: ./filtered-bin/release/*
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          target_commitish: ${{ needs.preparation.outputs.commitish }}
           generate_release_notes: true
           draft: false
           prerelease: false
           make_latest: true
           overwrite_files: true
+          body: |
+            Commit: ${{ needs.preparation.outputs.commitish }}
 
       - name: Release on workflow dispatch
         if: ${{ github.event_name == 'workflow_dispatch' }}

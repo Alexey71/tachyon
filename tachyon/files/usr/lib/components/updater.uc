@@ -270,7 +270,8 @@ function release_commit_sha_value(release) {
         // ucode's regex engine rejects non-capturing groups, so the two spellings
         // are matched separately rather than as one alternation.
         for (let pattern in [ /[Cc]ommit:?[ \t]*([0-9a-fA-F]{7,40})/,
-                              /[Ss][Hh][Aa]:?[ \t]*([0-9a-fA-F]{7,40})/ ]) {
+                              /[Ss][Hh][Aa]:?[ \t]*([0-9a-fA-F]{7,40})/,
+                              /\/commit\/([0-9a-fA-F]{7,40})/ ]) {
             let m = match(body, pattern);
             if (m && m[1])
                 return as_string(m[1]);
@@ -278,6 +279,13 @@ function release_commit_sha_value(release) {
     }
 
     return "";
+}
+
+function commit_object_sha() {
+    let obj = object_or_empty(read_stdin_json());
+    let sha = as_string(obj.sha || "");
+    if (sha != "" && match(sha, /^[0-9a-fA-F]{7,40}$/) != null)
+        print(sha, "\n");
 }
 
 function release_commit_sha() {
@@ -1406,6 +1414,8 @@ else if (mode == "updates-finish-job-state")
     updates_finish_job_state(ARGV[1], ARGV[2], ARGV[3]);
 else if (mode == "updates-fallback-job-state")
     updates_fallback_job_state(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5]);
+else if (mode == "commit-object-sha")
+    commit_object_sha();
 else {
     warn("Usage: components/updater.uc <operation> ...\n");
     exit(1);

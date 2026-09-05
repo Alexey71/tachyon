@@ -1501,8 +1501,10 @@ function render_matching_log_tail(needle, max_lines) {
         }
     }
 
-    if (length(filtered) == 0)
-        exit(1);
+    if (length(filtered) == 0) {
+        print_line("No matching logs found in system journal (needle: " + needle + ")");
+        return;
+    }
 
     max_lines = int(max_lines || "100", 10) || 100;
     let start = length(filtered) > max_lines ? length(filtered) - max_lines : 0;
@@ -1535,8 +1537,10 @@ function render_tachyon_logs() {
         push(filtered, line);
     }
 
-    if (length(filtered) == 0)
-        exit(1);
+    if (length(filtered) == 0) {
+        print_line("No Tachyon entries found in recent system logs");
+        return;
+    }
 
     if (start >= 0) {
         print_lines(filtered, start, length(filtered));

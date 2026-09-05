@@ -902,10 +902,8 @@ function check_logs() {
     let rendered = status_capture([ "tachyon-logs" ], command_output_from_args([ "logread", "-l", LOGREAD_LINE_LIMIT ]));
     if (rendered.output != "")
         print(rendered.output);
-    if (rendered.status != 0) {
-        nolog("Logs not found");
-        return 1;
-    }
+    else
+        print("No Tachyon entries found in recent system logs\n");
     return 0;
 }
 
@@ -917,10 +915,8 @@ function check_sing_box_logs() {
     let rendered = status_capture([ "matching-log-tail", "sing-box", "100" ], command_output_from_args([ "logread", "-l", LOGREAD_LINE_LIMIT ]));
     if (rendered.output != "")
         print(rendered.output);
-    if (rendered.status != 0) {
-        nolog("sing-box logs not found");
-        return 1;
-    }
+    else
+        print("No matching logs found in system journal (needle: sing-box)\n");
     return 0;
 }
 

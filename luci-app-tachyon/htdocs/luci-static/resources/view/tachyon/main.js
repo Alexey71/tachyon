@@ -19041,9 +19041,9 @@ function renderVersionBadgeText(opts) {
         return `${cVer} (${tSha})`;
       }
       if (cSha) {
-        return `${cVer} (${cSha})`;
+        return `${cVer} (${cSha} \u2192 ${_("new build")})`;
       }
-      return `${cVer} \u2192 ${tVer}`;
+      return `${cVer} (${_("new build")})`;
     }
     const currentPart = cVer ? cSha ? `${cVer} (${cSha})` : cVer : "";
     const targetPart = tSha ? `${tVer} (${tSha})` : tVer;
