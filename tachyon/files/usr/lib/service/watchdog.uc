@@ -311,6 +311,12 @@ function run_zero_rtt_prefetching() {
     let sections = uci_core.get_all(CONFIG_NAME);
     if (!sections) return;
 
+    // Safety cap: prefetching thousands of domains on a 128 MB router spawns
+    // enough dig/nslookup processes to trigger the OOM killer. The cap is a
+    // reasonable upper bound for user-managed lists; ruleset-driven traffic is
+    // handled by sing-box's own DNS cache, not by this prefetcher.
+    const PREFETCH_DOMAIN_LIMIT = 500;
+
     let unique_domains = {};
     for (let k in keys(sections)) {
         let sec = sections[k];
@@ -328,8 +334,11 @@ function run_zero_rtt_prefetching() {
             dom = trim(dom);
             if (dom != "" && index(dom, "*") < 0 && index(dom, "?") < 0) {
                 unique_domains[dom] = true;
+                if (length(keys(unique_domains)) >= PREFETCH_DOMAIN_LIMIT) break;
             }
         }
+
+        if (length(keys(unique_domains)) >= PREFETCH_DOMAIN_LIMIT) break;
 
         let text_val = sec.user_domains_text;
         if (text_val) {
@@ -337,13 +346,19 @@ function run_zero_rtt_prefetching() {
                 line = trim(line);
                 if (line != "" && index(line, "#") != 0 && index(line, "*") < 0 && index(line, "?") < 0) {
                     unique_domains[line] = true;
+                    if (length(keys(unique_domains)) >= PREFETCH_DOMAIN_LIMIT) break;
                 }
             }
         }
+
+        if (length(keys(unique_domains)) >= PREFETCH_DOMAIN_LIMIT) break;
     }
 
     let domain_list = keys(unique_domains);
     if (length(domain_list) == 0) return;
+
+    if (length(domain_list) >= PREFETCH_DOMAIN_LIMIT)
+        log_message("Zero-RTT Prefetcher: domain list capped at " + PREFETCH_DOMAIN_LIMIT + " to prevent OOM on low-RAM devices", "warn");
 
     log_message("Zero-RTT Prefetcher: pre-resolving " + length(domain_list) + " domains in batches...", "info");
     let batch = [];

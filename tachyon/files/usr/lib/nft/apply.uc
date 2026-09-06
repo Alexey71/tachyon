@@ -458,7 +458,7 @@ function nft_add_set_elements(table, set_name, elements) {
 
     if (res != 0) {
         let err_msg = trim(as_string(fs.readfile("/tmp/nft_err.log") || ""));
-        log_fatal("nft add element failed: cmd='" + cmd_str + "', code=" + res + ", err='" + err_msg + "'");
+        log_warn("nft add element failed: cmd='" + cmd_str + "', code=" + res + ", err='" + err_msg + "'");
     }
     return res == 0;
 }
@@ -1903,14 +1903,14 @@ function ensure_tproxy_route_rule(table, mark, rt_tables_path) {
     rt_tables_path = as_string(rt_tables_path || "/etc/iproute2/rt_tables");
 
     if (!ensure_rt_table_entry(rt_tables_path, "105", table)) {
-        log_fatal("Failed to update route table registry. Aborted.");
+        log_warn("Failed to update route table registry. TPROXY routing may not work correctly.");
         return false;
     }
 
     if (!tproxy_route4_present(table)) {
         log_debug("Added IPv4 TPROXY route");
         if (!run_args([ "ip", "route", "add", "local", "0.0.0.0/0", "dev", "lo", "table", table ]) && !tproxy_route4_present(table)) {
-            log_fatal("Failed to add IPv4 route for tproxy. Aborted.");
+            log_warn("Failed to add IPv4 route for tproxy. IPv4 TPROXY interception will not work.");
             return false;
         }
     }
@@ -1921,7 +1921,7 @@ function ensure_tproxy_route_rule(table, mark, rt_tables_path) {
     if (!tproxy_marking_rule4_present(table, mark)) {
         log_debug("Creating IPv4 TPROXY marking rule");
         if (!run_args([ "ip", "-4", "rule", "add", "fwmark", as_string(mark) + "/" + as_string(mark), "table", table, "priority", "105" ]) && !tproxy_marking_rule4_present(table, mark)) {
-            log_fatal("Failed to create IPv4 marking rule. Aborted.");
+            log_warn("Failed to create IPv4 marking rule. IPv4 TPROXY interception will not work.");
             return false;
         }
     }

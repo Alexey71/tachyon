@@ -164,19 +164,31 @@ function int_or_range_option(section, key, fallback) {
     return fallback;
 }
 
+let _ipv6_supported_cached = null;
+
 function ipv6_supported() {
+    // Environment override bypasses cache so tests can control the value per-call.
     let override = getenv("TACHYON_ENABLE_IPV6");
     if (override != null && override != "")
         return override == "1" || override == "true";
+    // Cache the /proc result for the lifetime of this process: the kernel IPv6
+    // support state does not change at runtime, and reading two /proc paths on
+    // every probe tick adds unnecessary I/O on storage-constrained routers.
+    if (_ipv6_supported_cached != null)
+        return _ipv6_supported_cached;
     if (!fs.stat("/proc/net/if_inet6")) {
         if (!fs.stat("/proc"))
-            return true;
-        return false;
+            _ipv6_supported_cached = true;
+        else
+            _ipv6_supported_cached = false;
+        return _ipv6_supported_cached;
     }
     let data = fs.readfile("/proc/sys/net/ipv6/conf/all/disable_ipv6");
     if (data != null && trim(data) == "1")
-        return false;
-    return true;
+        _ipv6_supported_cached = false;
+    else
+        _ipv6_supported_cached = true;
+    return _ipv6_supported_cached;
 }
 
 // Normalize a custom-signature-packet value (AmneziaWG i1-i5 / j1-j3) into

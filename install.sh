@@ -2460,10 +2460,12 @@ get_total_ram_kb() {
 }
 
 zram_is_active() {
-    if [ -f /proc/swaps ] && grep -E -q '/dev/zram|partition|file' /proc/swaps 2>/dev/null; then
+    # Skip the header line — the old grep matched "file" inside "Filename" (the header),
+    # so this used to return true even when no swap was active at all.
+    if [ -f /proc/swaps ] && awk 'NR>1 { found=1 } END { exit !found }' /proc/swaps 2>/dev/null; then
         return 0
     fi
-    if command_exists zramctl && zramctl >/dev/null 2>&1; then
+    if command_exists zramctl && zramctl 2>/dev/null | grep -q '.'; then
         return 0
     fi
     if pkg_is_installed "zram-swap"; then
@@ -2492,7 +2494,7 @@ decide_zram_installation() {
     total_ram_kb="$(get_total_ram_kb)"
     total_ram_mb=$((total_ram_kb / 1024))
 
-    if [ "$total_ram_kb" -gt 0 ] && [ "$total_ram_mb" -le 350 ]; then
+    if [ "$total_ram_kb" -gt 0 ] && [ "$total_ram_mb" -le 256 ]; then
         warn "$(printf "$(installer_text zram_low_mem_warning)" "$total_ram_mb")"
 
         if [ "$ASSUME_YES" -eq 1 ] || [ ! -t 0 ]; then
