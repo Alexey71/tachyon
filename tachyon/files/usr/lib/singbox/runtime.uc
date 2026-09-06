@@ -787,7 +787,7 @@ function patch_dns_config(state_path) {
     let temp_config = temp_path();
     if (backup_path == "" || temp_config == "" ||
         fs.writefile(backup_path, fs.readfile(config_path)) == null ||
-        !common.write_json_file(temp_config, config)) {
+        !common.write_json_file(temp_config, config, 2)) {
         remove_files([ backup_path, temp_config ]);
         exit(1);
     }

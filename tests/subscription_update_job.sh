@@ -139,4 +139,19 @@ if (value.message !== "Subscription update completed by fake worker") {
 }
 NODE
 
+# list-update-status checks
+idle_status="$(updates_ucode list-update-status)"
+JSON_VALUE="$idle_status" node -e '
+const v = JSON.parse(process.env.JSON_VALUE);
+if (v.success !== true || v.running !== false) process.exit(1);
+' || fail "list-update-status idle state mismatch"
+
+printf '%s\n' "$$" >"$WORK_DIR/tachyon_list_update.pid"
+running_status="$(TACHYON_LIST_UPDATE_PID_FILE="$WORK_DIR/tachyon_list_update.pid" updates_ucode list-update-status)"
+JSON_VALUE="$running_status" node -e '
+const v = JSON.parse(process.env.JSON_VALUE);
+if (v.success !== true || v.running !== true) process.exit(1);
+' || fail "list-update-status running state mismatch"
+rm -f "$WORK_DIR/tachyon_list_update.pid"
+
 printf 'subscription update job checks passed\n'

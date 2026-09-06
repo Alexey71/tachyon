@@ -117,10 +117,10 @@ function ensure_parent_dir(path) {
     return ensure_dir(parent_dir(path));
 }
 
-function atomic_write_json_file(path, value) {
+function atomic_write_json_file(path, value, indent) {
     if (!ensure_parent_dir(path))
         return false;
-    return write_json_file(path, value);
+    return write_json_file(path, value, indent != null ? indent : 2);
 }
 
 function fixture_section_list(type_name) {

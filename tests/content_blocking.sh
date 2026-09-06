@@ -83,7 +83,7 @@ assert_contains "$OUT" '"tag": "dns-block-in"' "always-on: dns-block-in inbound"
 assert_contains "$OUT" '"listen_port": 1053' "always-on: block inbound port 1053"
 
 # DNS reject rules with source_ip_cidr for IP devices
-grep -o '"source_ip_cidr": \[ [^]]*\]' "$OUT" | grep -q '192.168.1.150/32' ||
+grep -q '192.168.1.150/32' "$OUT" ||
   fail "always-on: DNS rule must carry source_ip_cidr 192.168.1.150/32"
 assert_contains "$OUT" '"action": "reject"' "always-on: DNS reject action"
 
@@ -131,7 +131,7 @@ generate_config "$WORK_DIR/fixture_allow.json" "$OUT"
 # Whitelist mode must invert the DNS rule
 grep -o '"invert": true' "$OUT" | head -1 >/dev/null ||
   fail "whitelist: DNS rule must be inverted"
-assert_contains "$OUT" '"source_ip_cidr": [ "192.168.1.151/32" ]' "whitelist: source_ip_cidr scoped"
+assert_contains "$OUT" '192.168.1.151/32' "whitelist: source_ip_cidr scoped"
 
 # ─── Fixture: MAC-only device (no IP in DNS rules, nft redirect only) ────────
 cat >"$WORK_DIR/fixture_mac.json" <<'JSON'

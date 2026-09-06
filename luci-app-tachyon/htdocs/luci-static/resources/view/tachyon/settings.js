@@ -1985,22 +1985,120 @@ function createSettingsContent(section, capabilities) {
   updateListsBtn.inputstyle = "action";
   updateListsBtn.depends("list_update_enabled", "1");
   updateListsBtn.onclick = function () {
+    const statusText = E(
+      "p",
+      { class: "spinning" },
+      _("Downloading and applying rule sets and lists..."),
+    );
+    const helpText = E(
+      "p",
+      { style: "margin-top: 8px; font-size: 90%; opacity: 0.7;" },
+      _(
+        "This may take 1-2 minutes. The process runs in the background on the router.",
+      ),
+    );
+
+    let pollTimer = null;
+    let pollAttempts = 0;
+    const maxPollAttempts = 120; // 120 * 2s = 240s = 4 minutes
+
+    function stopPolling() {
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    const closeBtn = E(
+      "button",
+      {
+        class: "btn cbi-button cbi-button-neutral",
+        type: "button",
+        click: function () {
+          stopPolling();
+          ui.hideModal();
+          ui.addNotification(
+            null,
+            E("p", _("Lists update is continuing in the background.")),
+            "info",
+          );
+        },
+      },
+      _("Close"),
+    );
+
     ui.showModal(_("Updating lists..."), [
+      statusText,
+      helpText,
       E(
-        "p",
-        { class: "spinning" },
-        _("Downloading and applying rule sets and lists..."),
+        "div",
+        { class: "button-row", style: "margin-top: 16px; text-align: right;" },
+        [closeBtn],
       ),
     ]);
+
+    function checkStatus() {
+      pollAttempts++;
+      return fs
+        .exec("/usr/bin/tachyon", ["list_update_status"])
+        .then(function (res) {
+          let data = {};
+          try {
+            data = JSON.parse((res.stdout || "").trim() || "{}");
+          } catch (e) {}
+
+          if (data.running) {
+            if (data.message) {
+              statusText.textContent = _(data.message) || data.message;
+            }
+            if (pollAttempts >= maxPollAttempts) {
+              stopPolling();
+              ui.hideModal();
+              ui.addNotification(
+                null,
+                E(
+                  "p",
+                  _(
+                    "Lists update is still running in background. You can check system logs.",
+                  ),
+                ),
+                "info",
+              );
+            }
+          } else {
+            stopPolling();
+            ui.hideModal();
+            if (data.success !== false) {
+              ui.addNotification(
+                null,
+                E("p", _("Lists and rule sets successfully updated!")),
+                "info",
+              );
+            } else {
+              ui.addNotification(
+                null,
+                E(
+                  "p",
+                  _("Error updating lists: ") +
+                    (data.message || _("Update failed")),
+                ),
+                "error",
+              );
+            }
+          }
+        })
+        .catch(function () {
+          if (pollAttempts >= maxPollAttempts) {
+            stopPolling();
+            ui.hideModal();
+          }
+        });
+    }
+
     return fs
-      .exec("/usr/bin/tachyon", ["list_update"])
+      .exec("/usr/bin/tachyon", ["list_update_async"])
       .then(function () {
-        ui.hideModal();
-        ui.addNotification(
-          null,
-          E("p", _("Lists and rule sets successfully updated!")),
-          "info",
-        );
+        pollTimer = window.setInterval(checkStatus, 2000);
       })
       .catch(function (err) {
         ui.hideModal();

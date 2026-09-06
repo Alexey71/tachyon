@@ -67,11 +67,12 @@ function csv_to_json_array(value) {
 // rename. Both failure paths already report to the caller through `false`, and
 // an unlink that throws means the temp file was never created — nothing left
 // to clean up.
-function write_json_file(path, value) {
+function write_json_file(path, value, indent) {
     path = as_string(path);
     let stamp = clock();
     let tmp_path = sprintf("%s.%d.%d.tmp", path, stamp[0], stamp[1]);
-    let result = fs.writefile(tmp_path, sprintf("%J\n", value));
+    let fmt = (indent != null && indent > 0) ? sprintf("%%.%dJ\n", indent) : "%J\n";
+    let result = fs.writefile(tmp_path, sprintf(fmt, value));
     if (result == null || (type(result) == "boolean" && !result)) {
         try { fs.unlink(tmp_path); } catch(e) {}
         return false;

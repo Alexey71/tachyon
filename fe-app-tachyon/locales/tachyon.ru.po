@@ -5935,3 +5935,25 @@ msgstr "Обратите внимание: серверы Cloudflare WARP под
 
 msgid "new build"
 msgstr "новая сборка"
+
+msgid "This may take 1-2 minutes. The process runs in the background on the router."
+msgstr "Это может занять 1–2 минуты. Процесс выполняется в фоновом режиме на роутере."
+
+msgid "Lists update is continuing in the background."
+msgstr "Обновление списков продолжается в фоновом режиме."
+
+msgid "Lists update is still running in background. You can check system logs."
+msgstr "Обновление списков всё ещё выполняется в фоне. Вы можете проверить системный журнал."
+
+msgid "Error starting lists update: "
+msgstr "Ошибка запуска обновления списков: "
+
+msgid "Starting lists update"
+msgstr "Запуск обновления списков"
+
+msgid "Downloading and processing lists"
+msgstr "Скачивание и обработка списков"
+
+msgid "Applying rules and subnet lists"
+msgstr "Применение правил и списков подсетей"
+

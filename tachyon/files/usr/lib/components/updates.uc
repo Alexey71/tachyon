@@ -22,6 +22,7 @@ const TMP_SUBSCRIPTION_FOLDER = getenv("TMP_SUBSCRIPTION_FOLDER") || TMP_SING_BO
 const RUNTIME_STATE_DIR = getenv("TACHYON_RUNTIME_STATE_DIR") || "/var/run/tachyon";
 const LIST_UPDATE_STATE_FILE = getenv("TACHYON_LIST_UPDATE_STATE_FILE") || RUNTIME_STATE_DIR + "/list-update.timestamp";
 const LIST_UPDATE_PID_FILE = getenv("TACHYON_LIST_UPDATE_PID_FILE") || "/var/run/tachyon_list_update.pid";
+const LIST_UPDATE_STATUS_FILE = getenv("TACHYON_LIST_UPDATE_STATUS_FILE") || RUNTIME_STATE_DIR + "/list-update.status";
 const SUBSCRIPTION_UPDATE_STATE_DIR = getenv("TACHYON_SUBSCRIPTION_UPDATE_STATE_DIR") || RUNTIME_STATE_DIR + "/subscription-update";
 const SUBSCRIPTION_JOB_DIR = getenv("TACHYON_SUBSCRIPTION_UPDATE_JOB_DIR") || "/var/run/tachyon/subscription-update-jobs";
 const SUBSCRIPTION_UPDATE_LOCK_DIR = getenv("TACHYON_SUBSCRIPTION_UPDATE_LOCK_DIR") || RUNTIME_STATE_DIR + "/subscription-update.lock";
@@ -103,6 +104,7 @@ let command_success = common.command_success;
 let command_success_from_args = common.command_success_from_args;
 let read_json_file = common.read_json_file;
 let write_json = common.write_json;
+let write_json_file = common.write_json_file;
 let write_file = common.write_file;
 let remove_file = common.remove_file;
 let object_or_empty = common.object_or_empty;
@@ -2905,20 +2907,35 @@ function write_list_update_timestamp(timestamp) {
     write_file(LIST_UPDATE_STATE_FILE, as_string(timestamp) + "\n");
 }
 
+function update_list_status(running, success, progress, message) {
+    ensure_dir(RUNTIME_STATE_DIR);
+    write_json_file(LIST_UPDATE_STATUS_FILE, {
+        running: running,
+        success: success,
+        progress: progress,
+        message: message,
+        timestamp: now_seconds()
+    });
+}
+
 function list_update() {
     log_message("Starting lists update", "info");
     if (!list_update_pid_begin())
         exit(0);
 
+    update_list_status(true, null, "starting", "Starting lists update");
+
     let settings = uci_settings();
     let proxy_address = service_proxy_address(settings, "lists");
     if (!dns_probe_passed(proxy_address)) {
+        update_list_status(false, false, "error", "DNS probe failed");
         list_update_pid_end();
         exit(0);
     }
     github_probe(proxy_address);
 
     log_message("Downloading and processing lists", "info");
+    update_list_status(true, null, "downloading", "Downloading and processing lists");
     let sections = uci_sections("section");
     let ok = true;
 
@@ -2937,6 +2954,7 @@ function list_update() {
     // Фаза 2: применение к nft (захватываем лок reload, чтобы не конфликтовать
     // с reload-firewall, который пересоздаёт таблицы и сеты nftables)
     log_message("Waiting for reload lock to apply nft rules", "debug");
+    update_list_status(true, null, "applying", "Applying rules and subnet lists");
     if (!acquire_runtime_lock(RELOAD_LOCK_DIR, true)) {
         log_message("Could not acquire reload lock for nft apply; saving pending marker for next attempt", "warn");
         // Without this marker the deferred apply is lost for good — nothing else
@@ -2952,6 +2970,7 @@ function list_update() {
         }
         if (!marker_written)
             log_message("Failed to save pending nft marker, this list update will not be re-applied", "err");
+        update_list_status(false, false, "error", "Could not acquire reload lock for nft apply");
         list_update_pid_end();
         exit(1);
     }
@@ -2976,13 +2995,67 @@ function list_update() {
         write_list_update_timestamp(now_seconds());
         log_message("Lists update completed successfully", "info");
         reload_singbox_after_list_update();
+        update_list_status(false, true, "done", "Lists and rule sets successfully updated");
     }
     else {
         log_message("Lists update failed", "info");
+        update_list_status(false, false, "failed", "Lists update failed");
     }
 
     list_update_pid_end();
     exit(ok ? 0 : 1);
+}
+
+function list_update_async() {
+    let existing_pid = trim(as_string(fs.readfile(LIST_UPDATE_PID_FILE) || ""));
+    if (existing_pid != "" && runtime_pid_running(existing_pid)) {
+        write_json({
+            success: true,
+            running: true,
+            message: "Lists update is already running"
+        });
+        return;
+    }
+
+    update_list_status(true, null, "starting", "Starting lists update");
+
+    let cmd = command_env({
+        TACHYON_CONFIG_NAME: CONFIG_NAME,
+        TACHYON_LIB: LIB_DIR,
+        TACHYON_BIN: BIN_PATH
+    }) + " " + BIN_PATH + " list_update";
+
+    system(common.background_command(cmd));
+
+    write_json({
+        success: true,
+        running: true,
+        message: "Lists update started"
+    });
+}
+
+function list_update_status() {
+    let pid = trim(as_string(fs.readfile(LIST_UPDATE_PID_FILE) || ""));
+    let running = (pid != "" && runtime_pid_running(pid));
+    let status_data = object_or_empty(read_json_file(LIST_UPDATE_STATUS_FILE));
+
+    if (running) {
+        write_json({
+            success: true,
+            running: true,
+            progress: status_data.progress || "updating",
+            message: status_data.message || "Updating lists...",
+            timestamp: status_data.timestamp
+        });
+    } else {
+        write_json({
+            success: status_data.success != null ? status_data.success : true,
+            running: false,
+            progress: status_data.progress || "idle",
+            message: status_data.message || "Idle",
+            timestamp: status_data.timestamp || file_first_line_value(LIST_UPDATE_STATE_FILE)
+        });
+    }
 }
 
 function list_update_if_due() {
@@ -3384,6 +3457,10 @@ else if (mode == "remove-cron-jobs")
     remove_cron_jobs(ARGV[1], ARGV[2], ARGV[3]);
 else if (mode == "list-update")
     list_update();
+else if (mode == "list-update-async")
+    list_update_async();
+else if (mode == "list-update-status")
+    list_update_status();
 else if (mode == "list-update-if-due")
     list_update_if_due();
 else if (mode == "stop-list-update")
