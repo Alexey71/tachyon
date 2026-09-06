@@ -98,12 +98,12 @@ function strip_first_scheme_marker(value) {
 
 function authority(value) {
     value = strip_first_scheme_marker(value);
-    let at = rindex(value, "@");
-    if (at >= 0)
-        value = substr(value, at + 1);
-
     let end = first_index_any(value, ["/", "?", "#"], 0);
-    return end >= 0 ? substr(value, 0, end) : value;
+    if (end >= 0)
+        value = substr(value, 0, end);
+
+    let at = rindex(value, "@");
+    return at >= 0 ? substr(value, at + 1) : value;
 }
 
 function host(value) {
@@ -318,6 +318,7 @@ return {
     fragment,
     strip_fragment,
     strip_anchored_scheme,
+    authority,
     host,
     port,
     userinfo,

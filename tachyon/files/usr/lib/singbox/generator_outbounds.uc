@@ -548,7 +548,7 @@ function apply_link_transport(outbound, query) {
         optional_query_number(result, "max_early_data", query.ed);
     }
     else if (transport == "grpc") {
-        optional_query_string(result, "service_name", query.serviceName);
+        optional_query_string(result, "service_name", query.serviceName || query.service_name);
     }
     else if (transport == "httpupgrade") {
         optional_query_string(result, "path", query.path);

@@ -653,7 +653,7 @@ function add_transport(url) {
     let path = query.path || "";
     let host = query.host || "";
     let early_data = query.ed || "";
-    let grpc_service_name = query.serviceName || "";
+    let grpc_service_name = query.serviceName || query.service_name || "";
     let xhttp_mode = query.mode || "auto";
     let sni = query.sni || "";
 

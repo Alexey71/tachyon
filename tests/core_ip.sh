@@ -44,6 +44,13 @@ assert(ip.ip_family("abc") == 0, "family of abc is 0");
 
 // format_ipv6_tproxy_target
 assert(ip.format_ipv6_tproxy_target("2001:db8::1", 1234) == "[2001:db8::1]:1234", "format IPv6 target");
+
+// ipv6_supported function exists and returns boolean
+assert(type(ip.ipv6_supported()) == "bool", "ipv6_supported returns bool");
 '
+
+# Test override environment variable
+[ "$(TACHYON_ENABLE_IPV6=0 ucode -L "$TACHYON_LIB" -e 'let ip = require("core.ip"); print(ip.ipv6_supported() ? "true" : "false");')" = "false" ] || { echo "ipv6 override 0 failed" >&2; exit 1; }
+[ "$(TACHYON_ENABLE_IPV6=1 ucode -L "$TACHYON_LIB" -e 'let ip = require("core.ip"); print(ip.ipv6_supported() ? "true" : "false");')" = "true" ] || { echo "ipv6 override 1 failed" >&2; exit 1; }
 
 printf 'core/ip checks passed\n'

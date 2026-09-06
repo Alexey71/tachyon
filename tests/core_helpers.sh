@@ -62,4 +62,22 @@ assert_eq direct-1-out \
   "$(ucode "$HELPERS_UC" outbound-tag direct-1)" \
   "numbered direct outbound tag"
 
+COMPLEX_URL="vless://my-uuid-123@proxy.example.com:8443?authority=user@channel&service_name=grpc-service#my-node"
+assert_eq vless "$(ucode "$HELPERS_UC" url-get-scheme "$COMPLEX_URL")" "url-get-scheme"
+assert_eq my-uuid-123 "$(ucode "$HELPERS_UC" url-get-userinfo "$COMPLEX_URL")" "url-get-userinfo"
+assert_eq proxy.example.com "$(ucode "$HELPERS_UC" url-get-host "$COMPLEX_URL")" "url-get-host"
+assert_eq 8443 "$(ucode "$HELPERS_UC" url-get-port "$COMPLEX_URL")" "url-get-port"
+assert_eq grpc-service "$(ucode "$HELPERS_UC" url-get-query-param "$COMPLEX_URL" service_name)" "url-get-query-param"
+
+# Verify core.url module directly
+assert_eq proxy.example.com \
+  "$(ucode -e 'let u = require("core.url"); print(u.host(ARGV[0]));' "$COMPLEX_URL")" \
+  "core.url host"
+assert_eq 8443 \
+  "$(ucode -e 'let u = require("core.url"); print(u.port(ARGV[0]));' "$COMPLEX_URL")" \
+  "core.url port"
+assert_eq my-uuid-123 \
+  "$(ucode -e 'let u = require("core.url"); print(u.userinfo(ARGV[0]));' "$COMPLEX_URL")" \
+  "core.url userinfo"
+
 printf 'core helpers checks passed\n'

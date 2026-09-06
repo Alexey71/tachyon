@@ -344,6 +344,8 @@ DRY_RUN=0
 VERBOSE=0
 QUIET=0
 SKIP_SING_BOX=0
+ZRAM_INSTALL_REQUESTED=0
+ZRAM_INSTALL_OVERRIDE=""
 
 TACHYON_RELEASE_JSON=""
 TACHYON_RELEASE_TAG=""
@@ -510,6 +512,8 @@ Options:
   -v, --verbose       Print extra diagnostic detail while installing
   -q, --quiet         Suppress informational output (errors/warnings still show)
       --skip-sing-box Skip sing-box installation
+      --zram          Install and enable zram-swap (compressed RAM swap)
+      --no-zram       Skip zram-swap prompt and installation
       --version       Print the installer version and exit
   -h, --help          Show this help text and exit
 
@@ -542,6 +546,12 @@ parse_args() {
                 ;;
             --skip-sing-box|--no-sing-box)
                 SKIP_SING_BOX=1
+                ;;
+            --zram)
+                ZRAM_INSTALL_OVERRIDE="yes"
+                ;;
+            --no-zram)
+                ZRAM_INSTALL_OVERRIDE="no"
                 ;;
             *)
                 fail "Unknown installer option: $1 (see --help)"
@@ -2114,6 +2124,14 @@ installer_text() {
             summary_legacy_removed) printf '%s\n' "Предыдущая версия перенесена и удалена." ;;
             summary_log) printf '%s\n' "Лог" ;;
             summary_luci_notice) printf '%s\n' "Откройте LuCI и проверьте правила перед включением Tachyon. Если меню не появилось сразу, обновите страницу (Ctrl+F5) или перезайдите в LuCI." ;;
+            zram_low_mem_warning) printf '%s\n' "ВНИМАНИЕ: Обнаружен малый объем оперативной памяти (%s МБ). При работе sing-box возможен сбой ядра Out-Of-Memory (OOM-killer)." ;;
+            zram_prompt) printf '%s\n' "Настоятельно рекомендуется установить zram-swap (сжатый swap в RAM) для стабильной работы. Установить zram-swap?" ;;
+            zram_auto_enable) printf '%s\n' "Автоматически выбираю установку zram-swap для стабильной работы при малом объеме RAM." ;;
+            zram_installing) printf '%s\n' "Установка и активация zram-swap..." ;;
+            zram_success) printf '%s\n' "zram-swap успешно установлен и запущен." ;;
+            zram_skipped) printf '%s\n' "Установка zram-swap пропущена. Внимание: возможны сбои OOM-killer при нехватке памяти." ;;
+            zram_requested) printf '%s\n' "Выбрана установка zram-swap." ;;
+            zram_status) printf '%s\n' "RAM Swap (zram)" ;;
             *) printf '%s\n' "$key" ;;
         esac
         return 0
@@ -2162,6 +2180,14 @@ installer_text() {
         summary_legacy_removed) printf '%s\n' "Legacy installation migrated and removed." ;;
         summary_log) printf '%s\n' "Log" ;;
         summary_luci_notice) printf '%s\n' "Open LuCI and review your rules before enabling Tachyon. If the menu doesn't appear immediately, hard-refresh the page (Ctrl+F5) or re-login." ;;
+        zram_low_mem_warning) printf '%s\n' "WARNING: Low RAM detected (%s MB). Running sing-box may trigger kernel Out-Of-Memory (OOM-killer) under load." ;;
+        zram_prompt) printf '%s\n' "It is strongly recommended to install zram-swap (compressed RAM swap) for stability. Install zram-swap?" ;;
+        zram_auto_enable) printf '%s\n' "Auto-selecting zram-swap for stability on low-RAM device." ;;
+        zram_installing) printf '%s\n' "Installing and activating zram-swap..." ;;
+        zram_success) printf '%s\n' "zram-swap installed and activated successfully." ;;
+        zram_skipped) printf '%s\n' "Skipped zram-swap installation. Warning: Out-Of-Memory crashes may occur under load." ;;
+        zram_requested) printf '%s\n' "zram-swap installation requested." ;;
+        zram_status) printf '%s\n' "RAM Swap (zram)" ;;
         *) printf '%s\n' "$key" ;;
     esac
 }
@@ -2426,6 +2452,80 @@ install_selected_sing_box() {
     msg "$(installer_text installing_singbox_backend)"
     if ! run_logged "sing-box" /usr/bin/tachyon component_action sing_box "$action"; then
         fail "Failed to install selected sing-box variant"
+    fi
+}
+
+get_total_ram_kb() {
+    awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0
+}
+
+zram_is_active() {
+    if [ -f /proc/swaps ] && grep -E -q '/dev/zram|partition|file' /proc/swaps 2>/dev/null; then
+        return 0
+    fi
+    if command_exists zramctl && zramctl >/dev/null 2>&1; then
+        return 0
+    fi
+    if pkg_is_installed "zram-swap"; then
+        return 0
+    fi
+    return 1
+}
+
+decide_zram_installation() {
+    if [ "$ZRAM_INSTALL_OVERRIDE" = "no" ]; then
+        ZRAM_INSTALL_REQUESTED=0
+        return 0
+    fi
+
+    if [ "$ZRAM_INSTALL_OVERRIDE" = "yes" ]; then
+        ZRAM_INSTALL_REQUESTED=1
+        msg "$(installer_text zram_requested)"
+        return 0
+    fi
+
+    if zram_is_active; then
+        ZRAM_INSTALL_REQUESTED=0
+        return 0
+    fi
+
+    total_ram_kb="$(get_total_ram_kb)"
+    total_ram_mb=$((total_ram_kb / 1024))
+
+    if [ "$total_ram_kb" -gt 0 ] && [ "$total_ram_mb" -le 350 ]; then
+        warn "$(printf "$(installer_text zram_low_mem_warning)" "$total_ram_mb")"
+
+        if [ "$ASSUME_YES" -eq 1 ] || [ ! -t 0 ]; then
+            ZRAM_INSTALL_REQUESTED=1
+            msg "$(installer_text zram_auto_enable)"
+            return 0
+        fi
+
+        if confirm_prompt "$(installer_text zram_prompt)"; then
+            ZRAM_INSTALL_REQUESTED=1
+        else
+            ZRAM_INSTALL_REQUESTED=0
+            warn "$(installer_text zram_skipped)"
+        fi
+    fi
+}
+
+install_zram_if_requested() {
+    [ "$ZRAM_INSTALL_REQUESTED" -eq 1 ] || return 0
+    if [ "$DRY_RUN" -eq 1 ]; then
+        msg "[dry-run] would install and enable zram-swap"
+        return 0
+    fi
+
+    msg "$(installer_text zram_installing)"
+    if pkg_install_name "zram-swap"; then
+        if [ -x /etc/init.d/zram ]; then
+            /etc/init.d/zram enable 2>/dev/null || true
+            /etc/init.d/zram start 2>/dev/null || true
+        fi
+        msg "$(installer_text zram_success)"
+    else
+        warn "Failed to install zram-swap package. Continuing installation without zram."
     fi
 }
 
@@ -2750,6 +2850,7 @@ main() {
     detect_legacy_installation
     decide_i18n_installation
     select_sing_box_installation
+    decide_zram_installation
 
     msg "$(installer_text install_start)"
 
@@ -2759,6 +2860,8 @@ main() {
 
     step 3 "$TOTAL_STEPS" "$(installer_text downloading_packages)"
     download_tachyon_packages
+
+    install_zram_if_requested
 
     step 4 "$TOTAL_STEPS" "$(installer_text cleaning_legacy)"
     cleanup_legacy_installation
@@ -2787,6 +2890,13 @@ print_summary() {
     elapsed=$((end_time - START_TIME))
     [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0
 
+    local zram_stat="not active"
+    if [ -f /proc/swaps ] && grep -E -q '/dev/zram|partition|file' /proc/swaps 2>/dev/null; then
+        zram_stat="active (zram-swap)"
+    elif pkg_is_installed "zram-swap"; then
+        zram_stat="installed"
+    fi
+
     if command -v tui_box_start >/dev/null 2>&1; then
         tui_box_start
         if [ "$DRY_RUN" -eq 1 ]; then
@@ -2796,6 +2906,7 @@ print_summary() {
         fi
         tui_box_line "$(installer_text summary_release): ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
         [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && tui_box_line "$(installer_text summary_legacy_removed)"
+        tui_box_line "$(installer_text zram_status): $zram_stat"
         tui_box_line "$(installer_text summary_log): $LOG_FILE"
         if command -v tui_box_divider >/dev/null 2>&1; then
             tui_box_divider
@@ -2813,6 +2924,7 @@ print_summary() {
         fi
         msg "$(installer_text summary_release): ${REPO_OWNER}/${REPO_NAME}@${TACHYON_RELEASE_TAG}"
         [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] && msg "$(installer_text summary_legacy_removed)"
+        msg "$(installer_text zram_status): $zram_stat"
         msg "$(installer_text summary_log): $LOG_FILE"
         warn "$(installer_text summary_luci_notice)"
     fi

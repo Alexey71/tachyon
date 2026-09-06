@@ -164,6 +164,21 @@ function int_or_range_option(section, key, fallback) {
     return fallback;
 }
 
+function ipv6_supported() {
+    let override = getenv("TACHYON_ENABLE_IPV6");
+    if (override != null && override != "")
+        return override == "1" || override == "true";
+    if (!fs.stat("/proc/net/if_inet6")) {
+        if (!fs.stat("/proc"))
+            return true;
+        return false;
+    }
+    let data = fs.readfile("/proc/sys/net/ipv6/conf/all/disable_ipv6");
+    if (data != null && trim(data) == "1")
+        return false;
+    return true;
+}
+
 // Normalize a custom-signature-packet value (AmneziaWG i1-i5 / j1-j3) into
 // the tag-chain format understood by the userspace WireGuard shipped with
 // sing-box-extended and sing-box-lx ("<b 0x..>", "<r N>", "<rd N>", "<rc N>",
@@ -617,5 +632,6 @@ return {
     get_mixed_port,
     timeout_prefix,
     bounded_command,
-    kill_matching_command
+    kill_matching_command,
+    ipv6_supported
 };

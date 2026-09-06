@@ -280,6 +280,9 @@ function url_get_scheme(value) {
 
 function url_get_userinfo(value) {
     value = strip_anchored_scheme(value);
+    let end = first_index_any(value, ["/", "?", "#"], 0);
+    if (end >= 0)
+        value = substr(value, 0, end);
     let at = index(value, "@");
     if (at >= 0)
         print(substr(value, 0, at), "\n");
@@ -287,12 +290,15 @@ function url_get_userinfo(value) {
 
 function url_authority(value) {
     value = strip_first_scheme_marker(value);
+    let end = first_index_any(value, ["/", "?", "#"], 0);
+    if (end >= 0)
+        value = substr(value, 0, end);
+
     let at = index(value, "@");
     if (at >= 0)
         value = substr(value, at + 1);
 
-    let end = first_index_any(value, ["/", "?", "#"], 0);
-    return end >= 0 ? substr(value, 0, end) : value;
+    return value;
 }
 
 function url_get_host(value) {

@@ -45,6 +45,13 @@ assert(url.github_to_jsdelivr("https://raw.githubusercontent.com/owner/repo/main
 // download_candidates
 let candidates = url.download_candidates("https://github.com/owner/repo/blob/main/hosts");
 assert(candidates[0] == "https://raw.githubusercontent.com/owner/repo/main/hosts", "download_candidates first entry normalized");
+
+// authority, host, port, userinfo with @ in query parameters
+let complex = "vless://user-uuid@example.com:8443?authority=name@channel&mode=gun#my-fragment";
+assert(url.authority(complex) == "example.com:8443", "authority strips userinfo and query with @");
+assert(url.host(complex) == "example.com", "host with @ in query parameters");
+assert(url.port(complex) == "8443", "port with @ in query parameters");
+assert(url.userinfo(complex) == "user-uuid", "userinfo with @ in query parameters");
 '
 
 printf 'core/url checks passed\n'

@@ -139,6 +139,10 @@ function format_ipv6_tproxy_target(address, port) {
     return "[" + address + "]:" + as_string(port);
 }
 
+function ipv6_supported() {
+    return common.ipv6_supported();
+}
+
 return {
     valid_ipv4,
     valid_ipv4_cidr,
@@ -149,5 +153,6 @@ return {
     valid_ip_or_cidr,
     nft_ip_or_cidr,
     ip_family,
-    format_ipv6_tproxy_target
+    format_ipv6_tproxy_target,
+    ipv6_supported
 };

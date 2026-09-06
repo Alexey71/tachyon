@@ -1918,17 +1918,6 @@ function ensure_tproxy_route_rule(table, mark, rt_tables_path) {
         log_debug("IPv4 TPROXY route already exists");
     }
 
-    if (!tproxy_route6_present(table)) {
-        log_debug("Added IPv6 TPROXY route");
-        if (!run_args([ "ip", "-6", "route", "add", "local", "::/0", "dev", "lo", "table", table ]) && !tproxy_route6_present(table)) {
-            log_fatal("Failed to add IPv6 route for tproxy. Aborted.");
-            return false;
-        }
-    }
-    else {
-        log_debug("IPv6 TPROXY route already exists");
-    }
-
     if (!tproxy_marking_rule4_present(table, mark)) {
         log_debug("Creating IPv4 TPROXY marking rule");
         if (!run_args([ "ip", "-4", "rule", "add", "fwmark", as_string(mark) + "/" + as_string(mark), "table", table, "priority", "105" ]) && !tproxy_marking_rule4_present(table, mark)) {
@@ -1940,15 +1929,29 @@ function ensure_tproxy_route_rule(table, mark, rt_tables_path) {
         log_debug("IPv4 TPROXY marking rule already exists");
     }
 
-    if (!tproxy_marking_rule6_present(table, mark)) {
-        log_debug("Creating IPv6 TPROXY marking rule");
-        if (!run_args([ "ip", "-6", "rule", "add", "fwmark", as_string(mark) + "/" + as_string(mark), "table", table, "priority", "105" ]) && !tproxy_marking_rule6_present(table, mark)) {
-            log_fatal("Failed to create IPv6 marking rule. Aborted.");
-            return false;
+    if (core_ip.ipv6_supported()) {
+        if (!tproxy_route6_present(table)) {
+            log_debug("Added IPv6 TPROXY route");
+            if (!run_args([ "ip", "-6", "route", "add", "local", "::/0", "dev", "lo", "table", table ]) && !tproxy_route6_present(table)) {
+                log_warn("Failed to add IPv6 route for tproxy, skipping IPv6 routing");
+            }
+        }
+        else {
+            log_debug("IPv6 TPROXY route already exists");
+        }
+
+        if (!tproxy_marking_rule6_present(table, mark)) {
+            log_debug("Creating IPv6 TPROXY marking rule");
+            if (!run_args([ "ip", "-6", "rule", "add", "fwmark", as_string(mark) + "/" + as_string(mark), "table", table, "priority", "105" ]) && !tproxy_marking_rule6_present(table, mark)) {
+                log_warn("Failed to create IPv6 marking rule, skipping IPv6 marking");
+            }
+        }
+        else {
+            log_debug("IPv6 TPROXY marking rule already exists");
         }
     }
     else {
-        log_debug("IPv6 TPROXY marking rule already exists");
+        log_debug("IPv6 is disabled or not supported, skipping IPv6 TPROXY route and marking rule");
     }
 
     let fw4_forward_out = command_output_from_args([ "nft", "list", "chain", "inet", "fw4", "forward" ]);
