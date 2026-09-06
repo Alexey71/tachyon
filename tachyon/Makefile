@@ -145,6 +145,20 @@ if [ -d /www/cgi-bin ]; then
 fi
 endef
 
+define Package/tachyon/postrm
+#!/bin/sh
+
+[ -n "$${IPKG_INSTROOT}" ] && exit 0
+
+rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
+rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
+rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+[ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
+
+exit 0
+endef
+
 define Package/tachyon/conffiles
 /etc/config/tachyon
 endef

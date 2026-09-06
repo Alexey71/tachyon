@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DOCS_DIR="${1:-$ROOT_DIR/docs/knowledge-base}"
-OUTPUT_DIR="${2:-$ROOT_DIR/tachyon/files/usr/lib/tachyon}"
+OUTPUT_DIR="${2:-$ROOT_DIR/tachyon/files/usr/lib}"
 OUTPUT_FILE="$OUTPUT_DIR/rag_index.json"
 
 CHUNK_SIZE="${CHUNK_SIZE:-2000}"

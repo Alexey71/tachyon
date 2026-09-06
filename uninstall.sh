@@ -7,7 +7,7 @@
 
 set -u
 
-UNINSTALLER_VERSION="1.2.88"
+UNINSTALLER_VERSION="1.3.0"
 
 # ─── TUI helpers & Color detection ───────────────────────────────────────────
 ESC="$(printf '\033')"
@@ -120,7 +120,7 @@ for _arg in "$@"; do
 done
 
 # ─── Root check ──────────────────────────────────────────────────────────────
-if [ "$(id -u)" -ne 0 ] 2>/dev/null; then
+if [ "$(id -u 2>/dev/null || echo 1)" -ne 0 ]; then
     printf '%sОшибка: скрипт удаления должен запускаться с правами root!%s\n' "$_c_red" "$_c_reset" >&2
     exit 1
 fi
@@ -158,9 +158,9 @@ if [ "$OPT_PURGE" -eq 0 ]; then
     TIMESTAMP="$(date +%Y%m%d_%H%M%S 2>/dev/null || date +%s)"
     if [ -f "/etc/config/tachyon" ]; then
         BACKUP_PATH="/etc/config/tachyon.backup-${TIMESTAMP}"
-        cp -af "/etc/config/tachyon" "$BACKUP_PATH" 2>/dev/null
-        cp -af "/etc/config/tachyon" "/etc/config/tachyon.bak" 2>/dev/null
-        chmod 600 "$BACKUP_PATH" "/etc/config/tachyon.bak" 2>/dev/null
+        cp -af "/etc/config/tachyon" "$BACKUP_PATH" 2>/dev/null || true
+        cp -af "/etc/config/tachyon" "/etc/config/tachyon.bak" 2>/dev/null || true
+        chmod 600 "$BACKUP_PATH" "/etc/config/tachyon.bak" 2>/dev/null || true
         tui_ok "Конфигурация успешно сохранена в: ${BACKUP_PATH}"
     else
         tui_info "Конфигурационный файл /etc/config/tachyon не найден, бэкап пропущен."
@@ -174,42 +174,92 @@ CURRENT_STEP=$((CURRENT_STEP + 1))
 # ─── STEP 2: Stop Services & Daemons ─────────────────────────────────────────
 tui_step "$CURRENT_STEP" "$TOTAL_STEPS" "Остановка служб и фоновых процессов..."
 
+# Remove stale locks so stop doesn't block on orphaned states
+rm -f /var/run/tachyon/starting /var/run/tachyon/reloading /var/run/tachyon*.lock 2>/dev/null || true
+
 if [ -f "/etc/init.d/tachyon" ]; then
-    /etc/init.d/tachyon stop >/dev/null 2>&1 || true
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 8 /etc/init.d/tachyon stop >/dev/null 2>&1 || true
+    else
+        /etc/init.d/tachyon stop >/dev/null 2>&1 || true
+    fi
     /etc/init.d/tachyon disable >/dev/null 2>&1 || true
     tui_ok "Служба /etc/init.d/tachyon остановлена и отключена"
 fi
 
-# Terminate running DPI and proxy processes if any
-killall sing-box >/dev/null 2>&1 || true
-killall nfqws >/dev/null 2>&1 || true
-killall nfqws2 >/dev/null 2>&1 || true
-killall ciadpi >/dev/null 2>&1 || true
+# Stop and remove managed sing-box service if created by Tachyon
+if [ -f "/etc/init.d/sing-box" ]; then
+    if grep -q "Tachyon managed sing-box" "/etc/init.d/sing-box" 2>/dev/null; then
+        if command -v timeout >/dev/null 2>&1; then
+            timeout 8 /etc/init.d/sing-box stop >/dev/null 2>&1 || true
+        else
+            /etc/init.d/sing-box stop >/dev/null 2>&1 || true
+        fi
+        /etc/init.d/sing-box disable >/dev/null 2>&1 || true
+        rm -f /etc/init.d/sing-box /etc/rc.d/*sing-box* 2>/dev/null || true
+        tui_ok "Управляемый сервис sing-box остановлен и удален"
+    fi
+fi
 
-tui_ok "Фоновые процессы sing-box, zapret и byedpi завершены"
+# Terminate running DPI and proxy processes if any
+killall -9 sing-box >/dev/null 2>&1 || true
+killall -9 nfqws >/dev/null 2>&1 || true
+killall -9 nfqws2 >/dev/null 2>&1 || true
+killall -9 ciadpi >/dev/null 2>&1 || true
+killall -9 tachyon >/dev/null 2>&1 || true
+
+# Terminate running background Tachyon daemons (watchdog, telegram, failover, etc.)
+_self_pid="$$"
+ps 2>/dev/null | grep -E 'dns_failover|watchdog|telegram' | grep -v grep | awk '{print $1}' | while read -r _pid; do
+    if [ -n "$_pid" ] && [ "$_pid" != "$_self_pid" ]; then
+        kill -9 "$_pid" 2>/dev/null || true
+    fi
+done
+
+tui_ok "Фоновые процессы sing-box, zapret, byedpi и сервисы Tachyon завершены"
 
 CURRENT_STEP=$((CURRENT_STEP + 1))
 
-# ─── STEP 3: Clean up Network & nftables ─────────────────────────────────────
+# ─── STEP 3: Clean up Network, nftables & Policy Routing ─────────────────────
 tui_step "$CURRENT_STEP" "$TOTAL_STEPS" "Очистка сетевых таблиц nftables и политик маршрутизации..."
 
-# Remove nftables tables
+# Remove nftables tables & drop-in file
 if command -v nft >/dev/null 2>&1; then
     nft delete table inet TachyonTable >/dev/null 2>&1 || true
     nft delete table inet tachyon >/dev/null 2>&1 || true
     nft delete table ip tachyon >/dev/null 2>&1 || true
     nft delete table ip6 tachyon >/dev/null 2>&1 || true
     rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
-    tui_ok "Таблицы nftables (TachyonTable) успешно удалены"
+    # Restart firewall to purge in-memory dynamic rules from inet fw4
+    if [ -x "/etc/init.d/firewall" ]; then
+        /etc/init.d/firewall restart >/dev/null 2>&1 || true
+    fi
+    tui_ok "Таблицы nftables (TachyonTable) удалены, фаервол сброшен"
 fi
 
-# Remove IP policy routing rules & flush table 100
+# Remove IP policy routing rules & flush routing tables
 if command -v ip >/dev/null 2>&1; then
-    ip rule del fwmark 0x10000000/0x10000000 lookup 100 >/dev/null 2>&1 || true
-    ip rule del fwmark 0x1/0x1 lookup 100 >/dev/null 2>&1 || true
-    ip rule del fwmark 0x2/0x2 lookup 100 >/dev/null 2>&1 || true
+    # IPv4 and IPv6 rules used by Tachyon (0x04000000 / table tachyon / priority 105)
+    ip -4 rule del fwmark 0x04000000/0x04000000 table tachyon priority 105 >/dev/null 2>&1 || true
+    ip -6 rule del fwmark 0x04000000/0x04000000 table tachyon priority 105 >/dev/null 2>&1 || true
+    ip -4 rule del fwmark 0x10000000/0x10000000 lookup 100 >/dev/null 2>&1 || true
+    ip -4 rule del fwmark 0x1/0x1 lookup 100 >/dev/null 2>&1 || true
+    ip -4 rule del fwmark 0x2/0x2 lookup 100 >/dev/null 2>&1 || true
+    ip route flush table tachyon >/dev/null 2>&1 || true
+    ip route flush table 105 >/dev/null 2>&1 || true
     ip route flush table 100 >/dev/null 2>&1 || true
-    tui_ok "Политики маршрутизации (table 100, fwmark) сброшены"
+
+    # Clean /etc/iproute2/rt_tables entry
+    if [ -f "/etc/iproute2/rt_tables" ]; then
+        sed -i '/105[[:space:]]\+tachyon/d' /etc/iproute2/rt_tables 2>/dev/null || true
+    fi
+
+    # Clean network namespaces and diagnostic veth pairs
+    ip netns del fkpsc >/dev/null 2>&1 || true
+    ip link del fkpsc0 >/dev/null 2>&1 || true
+    rm -rf /etc/netns/fkpsc 2>/dev/null || true
+
+    tui_ok "Политики маршрутизации (table tachyon/105/100, fwmark) полностью сброшены"
 fi
 
 CURRENT_STEP=$((CURRENT_STEP + 1))
@@ -221,11 +271,42 @@ rm -f /etc/dnsmasq.d/tachyon*.conf 2>/dev/null || true
 rm -f /tmp/dnsmasq.d/tachyon*.conf 2>/dev/null || true
 rm -rf /tmp/tachyon 2>/dev/null || true
 
-# Restore dnsmasq backup if exists
-if [ -f "/etc/config/dnsmasq.tachyon-bak" ]; then
-    cp -f "/etc/config/dnsmasq.tachyon-bak" "/etc/config/dnsmasq" 2>/dev/null
-    rm -f "/etc/config/dnsmasq.tachyon-bak" 2>/dev/null
-    tui_ok "Восстановлен исходный /etc/config/dnsmasq из бэкапа"
+# Restore /etc/config/dhcp via UCI
+if command -v uci >/dev/null 2>&1 && [ -f "/etc/config/dhcp" ]; then
+    # Remove sing-box DNS 127.0.0.42
+    uci -q del_list dhcp.@dnsmasq[0].server="127.0.0.42" 2>/dev/null || true
+
+    # Restore original servers from tachyon_server backup
+    _orig_servers="$(uci -q get dhcp.@dnsmasq[0].tachyon_server 2>/dev/null || true)"
+    if [ -n "$_orig_servers" ]; then
+        uci -q delete dhcp.@dnsmasq[0].server 2>/dev/null || true
+        for _srv in $_orig_servers; do
+            [ "$_srv" != "127.0.0.42" ] && uci -q add_list dhcp.@dnsmasq[0].server="$_srv" 2>/dev/null || true
+        done
+        uci -q delete dhcp.@dnsmasq[0].tachyon_server 2>/dev/null || true
+    fi
+
+    # Restore backed-up options
+    for _opt in noresolv cachesize rebind_protection localuse addn_hosts notinterface; do
+        _val="$(uci -q get "dhcp.@dnsmasq[0].tachyon_${_opt}" 2>/dev/null || true)"
+        if [ -n "$_val" ]; then
+            uci -q set "dhcp.@dnsmasq[0].${_opt}=${_val}" 2>/dev/null || true
+            uci -q delete "dhcp.@dnsmasq[0].tachyon_${_opt}" 2>/dev/null || true
+        fi
+    done
+
+    # Failsafe: if noresolv remains 1, reset to 0 so router queries ISP/upstream resolvers
+    if [ "$(uci -q get dhcp.@dnsmasq[0].noresolv 2>/dev/null)" = "1" ]; then
+        uci -q set dhcp.@dnsmasq[0].noresolv="0" 2>/dev/null || true
+    fi
+    # Failsafe: if cachesize remains 0, restore standard default 150
+    if [ "$(uci -q get dhcp.@dnsmasq[0].cachesize 2>/dev/null)" = "0" ]; then
+        uci -q set dhcp.@dnsmasq[0].cachesize="150" 2>/dev/null || true
+    fi
+
+    uci -q delete dhcp.tachyon 2>/dev/null || true
+    uci -q commit dhcp 2>/dev/null || true
+    tui_ok "Параметры DHCP и DNS dnsmasq возвращены в исходное состояние"
 fi
 
 # Restart dnsmasq to apply clean DNS configuration
@@ -236,8 +317,17 @@ fi
 
 CURRENT_STEP=$((CURRENT_STEP + 1))
 
-# ─── STEP 5: Remove Packages ─────────────────────────────────────────────────
-tui_step "$CURRENT_STEP" "$TOTAL_STEPS" "Удаление установленных пакетов Tachyon..."
+# ─── STEP 5: Clean Crontabs & Remove Packages ────────────────────────────────
+tui_step "$CURRENT_STEP" "$TOTAL_STEPS" "Очистка crontab и удаление установленных пакетов..."
+
+# Clean root crontab from Tachyon jobs
+if command -v crontab >/dev/null 2>&1; then
+    _crontmp="$(mktemp /tmp/cron.XXXXXX 2>/dev/null || echo '/tmp/cron.tachyon.tmp')"
+    crontab -l 2>/dev/null | grep -v -E 'tachyon|parental_quota_tick' > "$_crontmp" || true
+    crontab "$_crontmp" 2>/dev/null || true
+    rm -f "$_crontmp" 2>/dev/null || true
+    tui_ok "Задачи планировщика crontab очищены"
+fi
 
 if command -v apk >/dev/null 2>&1 && [ -d "/lib/apk/db" ]; then
     for _pkg in luci-i18n-tachyon-ru luci-app-tachyon tachyon; do
@@ -258,13 +348,26 @@ elif command -v opkg >/dev/null 2>&1; then
             opkg remove --force-depends --force-remove "$_pkg" >/dev/null 2>&1 || true
         fi
     done
+    if [ "$OPT_KEEP_BINARIES" -eq 0 ]; then
+        for _pkg in sing-box-extended sing-box-tiny; do
+            if opkg list-installed "$_pkg" 2>/dev/null | grep -q "^$_pkg "; then
+                opkg remove --force-depends --force-remove "$_pkg" >/dev/null 2>&1 || true
+            fi
+        done
+        if [ ! -f /etc/init.d/sing-box ] || grep -q "Tachyon managed sing-box" /etc/init.d/sing-box 2>/dev/null; then
+            if opkg list-installed "sing-box" 2>/dev/null | grep -q "^sing-box "; then
+                opkg remove --force-depends --force-remove "sing-box" >/dev/null 2>&1 || true
+            fi
+            rm -f /usr/bin/sing-box 2>/dev/null || true
+        fi
+    fi
     tui_ok "Пакеты удалены через opkg"
 fi
 
 CURRENT_STEP=$((CURRENT_STEP + 1))
 
 # ─── STEP 6: Remove Leftover Files & LuCI Cache ──────────────────────────────
-tui_step "$CURRENT_STEP" "$TOTAL_STEPS" "Очистка оставшихся файлов и кэша LuCI..."
+tui_step "$CURRENT_STEP" "$TOTAL_STEPS" "Очистка оставшихся файлов, хуков и кэша LuCI..."
 
 rm -rf /usr/lib/tachyon 2>/dev/null || true
 rm -rf /usr/share/tachyon 2>/dev/null || true
@@ -275,10 +378,18 @@ rm -f /etc/uci-defaults/50_luci-tachyon 2>/dev/null || true
 rm -f /etc/tachyon_commit 2>/dev/null || true
 rm -f /usr/bin/tachyon 2>/dev/null || true
 rm -f /etc/init.d/tachyon 2>/dev/null || true
+rm -f /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
+rm -f /www/cgi-bin/tachyon-agent 2>/dev/null || true
+rm -f /usr/lib/cgi-bin/tachyon-agent 2>/dev/null || true
 
 # Optional binary removal
 if [ "$OPT_KEEP_BINARIES" -eq 0 ]; then
-    # Only remove binaries if they were placed for tachyon
+    # Remove sing-box binary if it was managed by Tachyon
+    if [ ! -f "/lib/apk/db/installed" ] && command -v opkg >/dev/null 2>&1; then
+        if ! opkg list-installed "sing-box*" 2>/dev/null | grep -q "^sing-box"; then
+            rm -f /usr/bin/sing-box 2>/dev/null || true
+        fi
+    fi
     rm -f /usr/lib/libcronet.so 2>/dev/null || true
 fi
 
@@ -286,17 +397,20 @@ fi
 rm -f /usr/lib/lua/luci/i18n/tachyon.* 2>/dev/null || true
 find /usr/lib/lua/luci/i18n/ -name "tachyon.*" -delete 2>/dev/null || true
 
+# Clear runtime and temporary state
+rm -rf /var/run/tachyon* /var/log/tachyon* /tmp/sing-box /tmp/tachyon* /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+
 # Clear LuCI index and module caches
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
 
-# Purge configs if requested
+# Purge configs and persistent state if requested
 if [ "$OPT_PURGE" -eq 1 ]; then
     rm -f /etc/config/tachyon* 2>/dev/null || true
-    rm -rf /etc/tachyon 2>/dev/null || true
-    tui_ok "Все конфигурации Tachyon удалены (--purge)"
+    rm -rf /etc/tachyon /etc/.tachyon /etc/backup/tachyon_config /etc/sing-box 2>/dev/null || true
+    tui_ok "Все конфигурации и скрытые состояния Tachyon удалены (--purge)"
 fi
 
-# Restart rpcd and uhttpd to update LuCI menu
+# Restart rpcd and uhttpd to immediately update LuCI menu
 if [ -f "/etc/init.d/rpcd" ]; then
     /etc/init.d/rpcd restart >/dev/null 2>&1 || true
 fi
@@ -315,7 +429,7 @@ elif [ -f "/etc/init.d/podkop" ]; then
     tui_ok "Обнаружен родительский сервис Podkop — восстановлен и запущен"
 fi
 
-tui_ok "Кэш LuCI очищен, файлы удалены"
+tui_ok "Кэш LuCI очищен, файлы и остаточные фрагменты полностью удалены"
 
 # ─── Final Summary ───────────────────────────────────────────────────────────
 printf '\n'

@@ -1158,6 +1158,58 @@ function tproxy_inbound_matcher() {
     return [ runtime_constants.TPROXY_INBOUND_TAG, runtime_constants.TPROXY_INBOUND6_TAG ];
 }
 
+function outbound_supports_udp(config, tag_name) {
+    tag_name = as_string(tag_name);
+    if (tag_name == "")
+        return true;
+    for (let outb in (config.outbounds || [])) {
+        if (as_string(outb.tag) == tag_name) {
+            let t = as_string(outb.type);
+            if (t == "http")
+                return false;
+            if (t == "selector" || t == "urltest") {
+                if (type(outb.outbounds) == "array" && length(outb.outbounds) > 0) {
+                    let has_udp = false;
+                    for (let nested_tag in outb.outbounds) {
+                        if (outbound_supports_udp(config, nested_tag)) {
+                            has_udp = true;
+                            break;
+                        }
+                    }
+                    return has_udp;
+                }
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+function push_section_route_rule(config, rule, target_outbound) {
+    if (target_outbound && !outbound_supports_udp(config, target_outbound)) {
+        if (rule.network == "tcp") {
+            push(config.route.rules, rule);
+            return;
+        }
+        if (rule.network == "udp") {
+            delete rule.outbound;
+            rule.action = "reject";
+            push(config.route.rules, rule);
+            return;
+        }
+        let udp_rule = {};
+        for (let k, v in rule)
+            udp_rule[k] = v;
+        delete udp_rule.outbound;
+        udp_rule.action = "reject";
+        udp_rule.network = "udp";
+        push(config.route.rules, udp_rule);
+
+        rule.network = "tcp";
+    }
+    push(config.route.rules, rule);
+}
+
 function add_fully_routed_ips_rule(config, section) {
     let source_ip_cidr = list_option(section, "fully_routed_ips");
     if (length(source_ip_cidr) == 0)
@@ -1174,7 +1226,7 @@ function add_fully_routed_ips_rule(config, section) {
     if (target.outbound)
         route_rule.outbound = target.outbound;
     route_rule.source_ip_cidr = single_or_array(source_ip_cidr);
-    push(config.route.rules, route_rule);
+    push_section_route_rule(config, route_rule, target.outbound);
 }
 
 function add_excluded_ips_rule(config, section) {
@@ -1338,13 +1390,13 @@ function add_combined_route_for_section(config, section) {
         else if (type(resolve) == "object" && resolve.rule)
             push(config.route.rules, resolve.rule);
 
-        push(config.route.rules, domain_rule);
+        push_section_route_rule(config, domain_rule, target.outbound);
     }
 
     if (has_ip_cidr) {
         let ip_rule = create_section_route_rule();
         ip_rule.ip_cidr = ip_cidr;
-        push(config.route.rules, ip_rule);
+        push_section_route_rule(config, ip_rule, target.outbound);
     }
 
     let country_list = connections.geoip_country_list(section);
@@ -1370,7 +1422,7 @@ function add_combined_route_for_section(config, section) {
             if (country_mode == "exclude")
                 geoip_route_rule.invert = true;
 
-            push(config.route.rules, geoip_route_rule);
+            push_section_route_rule(config, geoip_route_rule, target.outbound);
         }
     }
 
@@ -1380,7 +1432,7 @@ function add_combined_route_for_section(config, section) {
             fallback_rule.port != null || fallback_rule.port_range != null ||
             fallback_rule.protocol != null || fallback_rule.dscp != null;
         if (has_any_matcher)
-            push(config.route.rules, fallback_rule);
+            push_section_route_rule(config, fallback_rule, target.outbound);
     }
 
     let rewrite_ttl = int_option(ctx.runtime_settings(), "dns_rewrite_ttl", "60");
@@ -1620,12 +1672,12 @@ function add_service_route_rules(config, sections) {
             });
             catchall_target = FAILOVER_GROUP_TAG;
         }
-        push(config.route.rules, {
+        push_section_route_rule(config, {
             action: "route",
             inbound: tproxy_inbound_matcher(),
             outbound: catchall_target,
             domain: runtime_constants.CHECK_PROXY_IP_DOMAIN
-        });
+        }, catchall_target);
     }
     push(config.route.rules, {
         action: "route-options",
@@ -1735,7 +1787,7 @@ function add_server_routes(config, servers, sections) {
             };
             if (target.outbound)
                 rule.outbound = target.outbound;
-            push(config.route.rules, rule);
+            push_section_route_rule(config, rule, target.outbound);
         }
         else {
             ctx.runtime_generate_unsupported("unsupported server routing_mode " + routing_mode);

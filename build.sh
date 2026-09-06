@@ -435,7 +435,18 @@ if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
 exit(0);
 EOF
 
-  chmod 0755 "$control_dir/postinst" "$control_dir/prerm"
+  cat > "$control_dir/postrm" <<'EOF'
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] && exit 0
+rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
+rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
+rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+[ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
+exit 0
+EOF
+
+  chmod 0755 "$control_dir/postinst" "$control_dir/prerm" "$control_dir/postrm"
 }
 
 write_app_ipk_control() {
@@ -480,7 +491,16 @@ EOF
 default_prerm $0 $@
 EOF
 
-  chmod 0755 "$control_dir/postinst" "$control_dir/prerm"
+  cat > "$control_dir/postrm" <<'EOF'
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] && exit 0
+rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/uhttpd ] && /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
+exit 0
+EOF
+
+  chmod 0755 "$control_dir/postinst" "$control_dir/prerm" "$control_dir/postrm"
 }
 
 write_i18n_ipk_control() {
@@ -518,7 +538,15 @@ EOF
 default_prerm $0 $@
 EOF
 
-  chmod 0755 "$control_dir/postinst" "$control_dir/prerm"
+  cat > "$control_dir/postrm" <<'EOF'
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] && exit 0
+rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
+exit 0
+EOF
+
+  chmod 0755 "$control_dir/postinst" "$control_dir/prerm" "$control_dir/postrm"
 }
 
 build_ipk_package() {
@@ -739,6 +767,17 @@ if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
 exit(0);
 EOF
 
+  cat > "$scripts_dir/backend-post-deinstall.sh" <<'EOF'
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] && exit 0
+rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
+rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
+rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+[ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
+exit 0
+EOF
+
   chmod 0755 "$scripts_dir"/backend-*.sh
 }
 
@@ -792,6 +831,16 @@ default_postinst
 [ -n "${IPKG_INSTROOT}" ] || /usr/bin/tachyon luci_postinst >/dev/null 2>&1 || true
 EOF
 
+  cat > "$scripts_dir/app-post-deinstall.sh" <<'EOF'
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] && exit 0
+rm -f /var/luci-indexcache* /var/luci-modulecache* 2>/dev/null || true
+rm -f /tmp/luci-* 2>/dev/null || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/uhttpd ] && /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
+exit 0
+EOF
+
   chmod 0755 "$scripts_dir"/app-*.sh
 }
 
@@ -842,6 +891,11 @@ add_group_and_user
 default_postinst
 EOF
 
+  cat > "$scripts_dir/i18n-post-deinstall.sh" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+
   chmod 0755 "$scripts_dir"/i18n-*.sh
 }
 
@@ -889,6 +943,7 @@ build_apk_package() {
       -s "pre-install:${temp_scripts}/${script_prefix}-pre-install.sh" \
       -s "post-install:${temp_scripts}/${script_prefix}-post-install.sh" \
       -s "pre-deinstall:${temp_scripts}/${script_prefix}-pre-deinstall.sh" \
+      -s "post-deinstall:${temp_scripts}/${script_prefix}-post-deinstall.sh" \
       -s "pre-upgrade:${temp_scripts}/${script_prefix}-pre-upgrade.sh" \
       -s "post-upgrade:${temp_scripts}/${script_prefix}-post-upgrade.sh"
   elif have_passwordless_sudo; then
@@ -909,6 +964,7 @@ build_apk_package() {
       -s "pre-install:${temp_scripts}/${script_prefix}-pre-install.sh" \
       -s "post-install:${temp_scripts}/${script_prefix}-post-install.sh" \
       -s "pre-deinstall:${temp_scripts}/${script_prefix}-pre-deinstall.sh" \
+      -s "post-deinstall:${temp_scripts}/${script_prefix}-post-deinstall.sh" \
       -s "pre-upgrade:${temp_scripts}/${script_prefix}-pre-upgrade.sh" \
       -s "post-upgrade:${temp_scripts}/${script_prefix}-post-upgrade.sh"
     sudo chown "$(id -u):$(id -g)" "$output_file"
@@ -933,6 +989,7 @@ build_apk_package() {
         -s pre-install:'$temp_scripts/${script_prefix}-pre-install.sh' \
         -s post-install:'$temp_scripts/${script_prefix}-post-install.sh' \
         -s pre-deinstall:'$temp_scripts/${script_prefix}-pre-deinstall.sh' \
+        -s post-deinstall:'$temp_scripts/${script_prefix}-post-deinstall.sh' \
         -s pre-upgrade:'$temp_scripts/${script_prefix}-pre-upgrade.sh' \
         -s post-upgrade:'$temp_scripts/${script_prefix}-post-upgrade.sh'
     "
@@ -957,6 +1014,7 @@ build_apk_package() {
         -s pre-install:'$temp_scripts/${script_prefix}-pre-install.sh' \
         -s post-install:'$temp_scripts/${script_prefix}-post-install.sh' \
         -s pre-deinstall:'$temp_scripts/${script_prefix}-pre-deinstall.sh' \
+        -s post-deinstall:'$temp_scripts/${script_prefix}-post-deinstall.sh' \
         -s pre-upgrade:'$temp_scripts/${script_prefix}-pre-upgrade.sh' \
         -s post-upgrade:'$temp_scripts/${script_prefix}-post-upgrade.sh'
     " 2>"$stderr_file"; then
@@ -1100,7 +1158,7 @@ main() {
   [[ -x "$apk_bin" ]] || { echo "apk host tool not found at $apk_bin" >&2; exit 1; }
 
   echo "Building RAG index..." >&2
-  bash "$ROOT_DIR/tools/rag_build_index.sh" "$ROOT_DIR/docs/knowledge-base" "$ROOT_DIR/tachyon/files/usr/lib/tachyon" || true
+  bash "$ROOT_DIR/tools/rag_build_index.sh" "$ROOT_DIR/docs/knowledge-base" "$ROOT_DIR/tachyon/files/usr/lib" || true
 
   build_backend_root "$backend_root"
   build_app_root "$app_root"

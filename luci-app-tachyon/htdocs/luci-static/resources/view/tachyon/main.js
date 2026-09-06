@@ -930,6 +930,85 @@ function validateTuicUrl(url) {
   }
 }
 
+// src/validators/validateHttpProxyUrl.ts
+function validateHttpProxyUrl(url) {
+  try {
+    if (!/^https?:\/\//.test(url)) {
+      return {
+        valid: false,
+        message: _(
+          "Invalid HTTP proxy URL: must start with http:// or https://"
+        )
+      };
+    }
+    if (!url || /\s/.test(url)) {
+      return {
+        valid: false,
+        message: _("Invalid HTTP proxy URL: must not contain spaces")
+      };
+    }
+    const body = url.replace(/^https?:\/\//, "");
+    if (/[/?#]/.test(body)) {
+      return {
+        valid: false,
+        message: _(
+          "Invalid HTTP proxy URL: path, query, and fragment are not supported"
+        )
+      };
+    }
+    const atIndex = body.lastIndexOf("@");
+    const credentials = atIndex >= 0 ? body.slice(0, atIndex) : "";
+    const hostPortPart = atIndex >= 0 ? body.slice(atIndex + 1) : body;
+    if (credentials) {
+      const [username] = credentials.split(":");
+      if (!username) {
+        return {
+          valid: false,
+          message: _("Invalid HTTP proxy URL: missing username")
+        };
+      }
+    }
+    if (!hostPortPart) {
+      return {
+        valid: false,
+        message: _("Invalid HTTP proxy URL: missing host and port")
+      };
+    }
+    const parsedHostPort = parseHostPort(hostPortPart);
+    if (!parsedHostPort) {
+      return {
+        valid: false,
+        message: _("Invalid HTTP proxy URL: invalid host and port")
+      };
+    }
+    const { host, port } = parsedHostPort;
+    if (!host) {
+      return {
+        valid: false,
+        message: _("Invalid HTTP proxy URL: missing hostname or IP")
+      };
+    }
+    if (!port) {
+      return {
+        valid: false,
+        message: _("Invalid HTTP proxy URL: missing port")
+      };
+    }
+    if (!isValidPort(port)) {
+      return {
+        valid: false,
+        message: _("Invalid HTTP proxy URL: invalid port number")
+      };
+    }
+  } catch (_e) {
+    return {
+      valid: false,
+      message: _("Invalid HTTP proxy URL: parsing failed")
+    };
+  }
+  return { valid: true, message: _("Valid") };
+}
+
 // src/validators/validateProxyUrl.ts
 function validateProxyUrl(url) {
   const trimmedUrl = url.trim();
@@ -948,6 +1027,9 @@ function validateProxyUrl(url) {
   if (/^socks(4|4a|5):\/\//.test(trimmedUrl)) {
     return validateSocksUrl(trimmedUrl);
   }
+  if (/^https?:\/\//.test(trimmedUrl)) {
+    return validateHttpProxyUrl(trimmedUrl);
+  }
   if (trimmedUrl.startsWith("hysteria2://") || trimmedUrl.startsWith("hy2://")) {
     return validateHysteria2Url(trimmedUrl);
   }
@@ -957,7 +1039,7 @@ function validateProxyUrl(url) {
   return {
     valid: false,
     message: _(
-      "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2://, or tuic://"
+      "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, http://, https://, hysteria2://, hy2://, or tuic://"
     )
   };
 }
@@ -1336,7 +1418,7 @@ function insertIf(condition, elements) {
 }
 
 // src/helpers/isCopyableProxyLink.ts
-var COPYABLE_PROXY_URI_RE = /^(vless|vmess|trojan|ss|ssr|hysteria2|hy2|tuic|socks4|socks4a|socks5):\/\//i;
+var COPYABLE_PROXY_URI_RE = /^(vless|vmess|trojan|ss|ssr|hysteria2|hy2|tuic|socks4|socks4a|socks5|http|https):\/\//i;
 function isCopyableProxyLink(link) {
   return COPYABLE_PROXY_URI_RE.test((link || "").trim());
 }

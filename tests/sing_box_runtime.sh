@@ -964,8 +964,8 @@ cat >"$WORK_DIR/subscriptions/grouped-subscription-1.json" <<'JSON'
       "tag": "provider-direct"
     },
     {
-      "type": "http",
-      "tag": "provider-http",
+      "type": "unsupported",
+      "tag": "provider-unsupported",
       "server": "127.0.0.3",
       "server_port": 8080
     }
@@ -1049,12 +1049,7 @@ generate_config "$WORK_DIR/server-inbound-fixture.json" "$WORK_DIR/server.json"
 generate_config "$WORK_DIR/runtime-matchers-fixture.json" "$WORK_DIR/matchers.json"
 generate_config "$WORK_DIR/dns-action-fixture.json" "$WORK_DIR/dns-action.json"
 generate_config "$WORK_DIR/urltest-filter-fixture.json" "$WORK_DIR/urltest.json"
-if generate_config "$WORK_DIR/manual-http-fixture.json" "$WORK_DIR/manual-http.json" \
-  >"$WORK_DIR/manual-http.stdout" 2>"$WORK_DIR/manual-http.stderr"; then
-  fail "generator should reject native HTTP connection URLs"
-fi
-grep -Fxq 'manual proxy link scheme is not supported by sing-box config generation yet' "$WORK_DIR/manual-http.stderr" ||
-  fail "native HTTP connection URL failure should identify the unsupported scheme"
+generate_config "$WORK_DIR/manual-http-fixture.json" "$WORK_DIR/manual-http.json"
 generate_config "$WORK_DIR/provider-actions-fixture.json" "$WORK_DIR/providers.json"
 generate_config "$WORK_DIR/manual-transport-fixture.json" "$WORK_DIR/manual.json"
 generate_config "$WORK_DIR/vpn-interface-fixture.json" "$WORK_DIR/vpn.json"
@@ -1285,6 +1280,11 @@ assert(urltest_out && length(urltest_out.outbounds) == 1 && urltest_out.outbound
 assert(outbound(urltest, "Keep").type == "http", "HTTP JSON outbound remains supported");
 assert(outbound(urltest, "proxy-out").default == "proxy-urltest-out", "selector defaults to URLTest");
 
+let manual_http = cfg("manual-http");
+let manual_http_out = outbound(manual_http, "proxy-1-out");
+assert(manual_http_out && manual_http_out.type == "http" && manual_http_out.server == "127.0.0.1" && manual_http_out.server_port == 8080, "manual HTTP outbound supported");
+assert(route_rule(manual_http, r => r.action == "reject" && contains(r.network, "udp")) != null, "HTTP outbound generates UDP reject rule");
+
 let providers = cfg("providers");
 assert(outbound(providers, "zap-out").routing_mark == 0x01000001, "Zapret mark");
 assert(outbound(providers, "zap2-out").routing_mark == 0x02000001, "Zapret2 mark");
@@ -1372,7 +1372,7 @@ let second_leaf = outbound(subscription_group, "leaf");
 assert(grouped_leaf && grouped_leaf.detour == null, "hidden subscription leaf does not receive connection URL detour");
 assert(second_leaf && second_leaf.detour == null, "second hidden subscription leaf does not receive connection URL detour");
 assert(outbound(subscription_group, "provider-direct") == null, "provider direct outbound skipped");
-assert(outbound(subscription_group, "provider-http") == null, "provider HTTP outbound skipped");
+assert(outbound(subscription_group, "provider-unsupported") == null, "provider unsupported outbound skipped");
 let grouped_selector = outbound(subscription_group, "grouped-out");
 assert(grouped_selector && length(grouped_selector.outbounds) == 1 && grouped_selector.outbounds[0] == "Provider Group", "selector exposes provider group only");
 let grouped_state = cfg("subscription-group.json.section-cache/grouped");

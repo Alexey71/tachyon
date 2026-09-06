@@ -47,7 +47,7 @@ expected_shell_scripts="$(
     'tachyon/files/etc/hotplug.d/iface/99-tachyon-wan-monitor' \
     'tachyon/files/etc/init.d/tachyon' \
     'tachyon/files/usr/lib/cgi-bin/tachyon-agent' \
-    'tachyon/files/usr/lib/tachyon/firewall.include' |
+    'tachyon/files/usr/lib/firewall.include' |
     LC_ALL=C sort
 )"
 

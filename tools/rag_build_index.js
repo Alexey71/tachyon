@@ -5,7 +5,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const docsDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(rootDir, 'docs', 'knowledge-base');
-const outputFile = process.argv[3] ? path.resolve(process.argv[3]) : path.join(rootDir, 'tachyon', 'files', 'usr', 'lib', 'tachyon', 'rag_index.json');
+const outputFile = process.argv[3] ? path.resolve(process.argv[3]) : path.join(rootDir, 'tachyon', 'files', 'usr', 'lib', 'rag_index.json');
 const chunkSize = parseInt(process.env.CHUNK_SIZE || '2000', 10);
 const chunkOverlap = parseInt(process.env.CHUNK_OVERLAP || '200', 10);
 
