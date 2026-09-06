@@ -2273,10 +2273,20 @@ function nft_populate_runtime_set_for_section(section, deferred_sections, table,
                 "/tmp/sing-box/rulesets/community-subnets-" + service + ".lst",
                 "/etc/tachyon/rulesets/community-subnets-" + service + ".lst"
             ];
+            let found = false;
             for (let path in cached_paths) {
                 if (helpers.file_is_usable(path, 50)) {
                     nft_add_file_chunks_to_family_sets(path, table, sets.subnets, sets.subnets6, "ips", "", "5000");
+                    found = true;
                     break;
+                }
+            }
+            if (!found) {
+                if (service == "discord") {
+                    nft_add_set_elements(table, sets.subnets, "162.158.0.0/15, 172.64.0.0/13, 138.128.136.0/21");
+                }
+                else if (service == "telegram") {
+                    nft_add_set_elements(table, sets.subnets, "149.154.160.0/20, 91.108.4.0/22, 91.108.8.0/22, 91.108.12.0/22, 91.108.16.0/22, 91.108.56.0/22, 5.28.192.0/18, 91.105.192.0/23, 95.161.64.0/20, 185.76.151.0/24, 194.221.0.0/16");
                 }
             }
         }

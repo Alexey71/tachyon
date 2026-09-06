@@ -1309,6 +1309,53 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
         ),
       ];
 
+      if (item.data_verified) {
+        statusChildren.push(
+          E(
+            'span',
+            {
+              class: 'label badge-success',
+              style:
+                'font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #28a745; color: #fff; font-weight: 500;',
+              title: _(
+                'Data transfer verified: streamed >= 32KB without throttling or disconnect',
+              ),
+            },
+            '✓ 32KB Прокачано',
+          ),
+        );
+      } else if (item.dpi_verdict === 'throttled_16k') {
+        statusChildren.push(
+          E(
+            'span',
+            {
+              class: 'label badge-danger',
+              style:
+                'font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #dc3545; color: #fff; font-weight: 500;',
+              title: _(
+                'DPI throttling: stream cut off after ~16KB payload transfer',
+              ),
+            },
+            '✗ Задушено на 16KB',
+          ),
+        );
+      } else if (item.dpi_verdict === 'server_fakes') {
+        statusChildren.push(
+          E(
+            'span',
+            {
+              class: 'label badge-warning',
+              style:
+                'font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #ffc107; color: #111; font-weight: 500;',
+              title: _(
+                'Fake packets reached remote server (HTTP 400 Bad Request)',
+              ),
+            },
+            '⚠️ Сервер получил фейки',
+          ),
+        );
+      }
+
       if (item.sub_probes && item.sub_probes.length > 1) {
         const passedSub = item.sub_probes.filter((p) => p.success).length;
         const totalSub = item.sub_probes.length;
@@ -1376,7 +1423,18 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           E(
             'td',
             { style: 'padding: 8px 10px;' },
-            item.success ? `${(item.speed_kbps / 1024).toFixed(1)}MB/s` : '—',
+            item.success
+              ? [
+                  E('div', {}, `${(item.speed_kbps / 1024).toFixed(1)}MB/s`),
+                  item.data_bytes && item.data_bytes > 0
+                    ? E(
+                        'div',
+                        { style: 'font-size: 10px; opacity: 0.65;' },
+                        `${(item.data_bytes / 1024).toFixed(1)} KB`,
+                      )
+                    : '',
+                ]
+              : '—',
           ),
           E(
             'td',
@@ -1488,6 +1546,11 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
 
         updateProgressUI(res.data);
 
+        if (res.data.dpi_detection) {
+          currentDpiDetection = res.data.dpi_detection;
+          updateDpiBanner(res.data.dpi_detection);
+        }
+
         // Only re-render results when new results arrive or benchmark finishes
         const resultCount = res.data.results?.length || 0;
         const finishedAt = res.data.finished_at || 0;
@@ -1568,6 +1631,11 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
         border: '#17a2b8',
         icon: '🔵',
       },
+      ip_block: {
+        bg: 'rgba(220, 53, 69, 0.18)',
+        border: '#dc3545',
+        icon: '🚫',
+      },
       unknown: {
         bg: 'rgba(108, 117, 125, 0.12)',
         border: '#6c757d',
@@ -1584,12 +1652,20 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       rst: 'TCP Reset Injection',
       throttle: 'Throttling / Deep Inspection',
       dns_block: 'DNS Blocking',
+      ip_block: _('Блокировка по IP (Таймаут TCP SYN)'),
       unknown: 'Unknown DPI Pattern',
       none: 'No Blocking Detected',
     };
 
     const colors = typeColors[detection.type] || typeColors.unknown;
     const label = typeLabels[detection.type] || detection.type;
+
+    const ipBlockNotice =
+      detection.type === 'ip_block'
+        ? `<div style="margin-top: 8px; padding: 8px 12px; background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.35); border-radius: 4px; color: #ff6b6b; font-size: 11px; font-weight: 500; line-height: 1.4;">
+             ⚠️ ${_('Обнаружена блокировка по IP! Ресурс блокируется на сетевом уровне (нет ответа на TCP SYN). Методы обхода DPI (Zapret / ByeDPI) бессильны для этого адреса — настройте маршрутизацию через прокси/VPN (Sing-box) для данного домена!')}
+           </div>`
+        : '';
 
     banner.style.display = 'block';
     banner.style.background = colors.bg;
@@ -1603,6 +1679,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
         ${detection.recommended_engines.length > 0 ? `<div style="font-size: 11px; opacity: 0.7;">${_('Recommended')}: ${detection.recommended_engines.join(', ')}</div>` : ''}
       </div>
       <div style="margin-top: 4px; opacity: 0.8; font-size: 11px;">${detection.details}</div>
+      ${ipBlockNotice}
     `;
   };
 

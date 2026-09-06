@@ -918,6 +918,9 @@ export namespace Tachyon {
     handshake_ms: number;
     ttfb_ms: number;
     speed_kbps: number;
+    data_verified?: boolean;
+    data_bytes?: number;
+    dpi_verdict?: string;
     success: boolean;
     error?: string;
   }
@@ -934,6 +937,9 @@ export namespace Tachyon {
     handshake_ms: number;
     ttfb_ms: number;
     speed_kbps: number;
+    data_verified?: boolean;
+    data_bytes?: number;
+    dpi_verdict?: string;
     score: number;
     error?: string;
     badge?: string;
@@ -944,6 +950,9 @@ export namespace Tachyon {
       handshake_ms: number;
       ttfb_ms: number;
       speed_kbps: number;
+      data_verified?: boolean;
+      data_bytes?: number;
+      dpi_verdict?: string;
       score: number;
       success: boolean;
       error?: string;
@@ -1047,7 +1056,7 @@ export namespace Tachyon {
   }
 
   export interface FuzzerDpiDetection {
-    type: 'rst' | 'throttle' | 'dns_block' | 'unknown' | 'none';
+    type: 'rst' | 'throttle' | 'dns_block' | 'ip_block' | 'unknown' | 'none';
     confidence: number;
     details: string;
     recommended_engines: string[];
@@ -1056,6 +1065,7 @@ export namespace Tachyon {
       handshake_ms: number;
       ttfb_ms: number;
       speed_kbps: number;
+      data_bytes?: number;
       error: string;
     };
   }

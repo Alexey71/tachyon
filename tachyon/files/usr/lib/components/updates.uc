@@ -2975,6 +2975,7 @@ function list_update() {
     if (ok) {
         write_list_update_timestamp(now_seconds());
         log_message("Lists update completed successfully", "info");
+        reload_singbox_after_list_update();
     }
     else {
         log_message("Lists update failed", "info");
@@ -3090,6 +3091,34 @@ function write_current_reload_state_clean() {
         RELOAD_STATE_FORMAT,
         RULE_CONDITION_CACHE_DIR
     ]);
+}
+
+function reload_singbox_after_list_update() {
+    let sing_box_pid = trim(module_output([ LIB_DIR + "/service/state.uc", "sing-box-service-runtime-pid" ]));
+    if (sing_box_pid == "" || int(sing_box_pid) <= 0)
+        return true;
+    let sing_box_config_path = option(uci_settings(), "config_path", "") || "/etc/sing-box/config.json";
+    let sing_box_config_hash_before = file_md5(sing_box_config_path);
+    if (!singbox_runtime_success([ "init-config", "0", "1", "1" ]))
+        return false;
+    let sing_box_config_hash_after = file_md5(sing_box_config_path);
+    if (sing_box_config_hash_before != sing_box_config_hash_after) {
+        log_message("Rulesets updated on disk; reloading sing-box with new configuration", "info");
+        module_success([ DNS_FAILOVER_UC, "stop-runtime" ]);
+        module_success([ PRIORITY_UC, "stop-runtime" ]);
+        let ok = service_state_success([
+            "reload-sing-box-runtime",
+            sing_box_pid,
+            sing_box_config_hash_before,
+            sing_box_config_hash_after,
+            "1"
+        ]);
+        module_success([ PRIORITY_UC, "start-runtime" ]);
+        module_success([ DNS_FAILOVER_UC, "start-runtime" ]);
+        write_current_reload_state_clean();
+        return ok;
+    }
+    return true;
 }
 
 function mark_pending_reload(reason) {

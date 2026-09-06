@@ -13422,6 +13422,49 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           item.success ? `HTTP ${item.http_code}` : "DROP"
         )
       ];
+      if (item.data_verified) {
+        statusChildren.push(
+          E(
+            "span",
+            {
+              class: "label badge-success",
+              style: "font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #28a745; color: #fff; font-weight: 500;",
+              title: _(
+                "Data transfer verified: streamed >= 32KB without throttling or disconnect"
+              )
+            },
+            "\u2713 32KB \u041F\u0440\u043E\u043A\u0430\u0447\u0430\u043D\u043E"
+          )
+        );
+      } else if (item.dpi_verdict === "throttled_16k") {
+        statusChildren.push(
+          E(
+            "span",
+            {
+              class: "label badge-danger",
+              style: "font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #dc3545; color: #fff; font-weight: 500;",
+              title: _(
+                "DPI throttling: stream cut off after ~16KB payload transfer"
+              )
+            },
+            "\u2717 \u0417\u0430\u0434\u0443\u0448\u0435\u043D\u043E \u043D\u0430 16KB"
+          )
+        );
+      } else if (item.dpi_verdict === "server_fakes") {
+        statusChildren.push(
+          E(
+            "span",
+            {
+              class: "label badge-warning",
+              style: "font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #ffc107; color: #111; font-weight: 500;",
+              title: _(
+                "Fake packets reached remote server (HTTP 400 Bad Request)"
+              )
+            },
+            "\u26A0\uFE0F \u0421\u0435\u0440\u0432\u0435\u0440 \u043F\u043E\u043B\u0443\u0447\u0438\u043B \u0444\u0435\u0439\u043A\u0438"
+          )
+        );
+      }
       if (item.sub_probes && item.sub_probes.length > 1) {
         const passedSub = item.sub_probes.filter((p) => p.success).length;
         const totalSub = item.sub_probes.length;
@@ -13482,7 +13525,14 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           E(
             "td",
             { style: "padding: 8px 10px;" },
-            item.success ? `${(item.speed_kbps / 1024).toFixed(1)}MB/s` : "\u2014"
+            item.success ? [
+              E("div", {}, `${(item.speed_kbps / 1024).toFixed(1)}MB/s`),
+              item.data_bytes && item.data_bytes > 0 ? E(
+                "div",
+                { style: "font-size: 10px; opacity: 0.65;" },
+                `${(item.data_bytes / 1024).toFixed(1)} KB`
+              ) : ""
+            ] : "\u2014"
           ),
           E(
             "td",
@@ -13577,6 +13627,10 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           startBtn.disabled = false;
         }
         updateProgressUI(res.data);
+        if (res.data.dpi_detection) {
+          currentDpiDetection = res.data.dpi_detection;
+          updateDpiBanner(res.data.dpi_detection);
+        }
         const resultCount = res.data.results?.length || 0;
         const finishedAt = res.data.finished_at || 0;
         if (resultCount !== lastRenderedCount || finishedAt !== lastRenderedFinishedAt) {
@@ -13642,6 +13696,11 @@ function renderStrategyFuzzerModal(ruleNames = []) {
         border: "#17a2b8",
         icon: "\u{1F535}"
       },
+      ip_block: {
+        bg: "rgba(220, 53, 69, 0.18)",
+        border: "#dc3545",
+        icon: "\u{1F6AB}"
+      },
       unknown: {
         bg: "rgba(108, 117, 125, 0.12)",
         border: "#6c757d",
@@ -13657,11 +13716,15 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       rst: "TCP Reset Injection",
       throttle: "Throttling / Deep Inspection",
       dns_block: "DNS Blocking",
+      ip_block: _("\u0411\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0430 \u043F\u043E IP (\u0422\u0430\u0439\u043C\u0430\u0443\u0442 TCP SYN)"),
       unknown: "Unknown DPI Pattern",
       none: "No Blocking Detected"
     };
     const colors = typeColors[detection.type] || typeColors.unknown;
     const label = typeLabels[detection.type] || detection.type;
+    const ipBlockNotice = detection.type === "ip_block" ? `<div style="margin-top: 8px; padding: 8px 12px; background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.35); border-radius: 4px; color: #ff6b6b; font-size: 11px; font-weight: 500; line-height: 1.4;">
+             \u26A0\uFE0F ${_("\u041E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u0430 \u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0430 \u043F\u043E IP! \u0420\u0435\u0441\u0443\u0440\u0441 \u0431\u043B\u043E\u043A\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u043D\u0430 \u0441\u0435\u0442\u0435\u0432\u043E\u043C \u0443\u0440\u043E\u0432\u043D\u0435 (\u043D\u0435\u0442 \u043E\u0442\u0432\u0435\u0442\u0430 \u043D\u0430 TCP SYN). \u041C\u0435\u0442\u043E\u0434\u044B \u043E\u0431\u0445\u043E\u0434\u0430 DPI (Zapret / ByeDPI) \u0431\u0435\u0441\u0441\u0438\u043B\u044C\u043D\u044B \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0430\u0434\u0440\u0435\u0441\u0430 \u2014 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0438\u0437\u0430\u0446\u0438\u044E \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u043A\u0441\u0438/VPN (Sing-box) \u0434\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0435\u043D\u0430!")}
+           </div>` : "";
     banner.style.display = "block";
     banner.style.background = colors.bg;
     banner.style.borderLeft = `3px solid ${colors.border}`;
@@ -13674,6 +13737,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
         ${detection.recommended_engines.length > 0 ? `<div style="font-size: 11px; opacity: 0.7;">${_("Recommended")}: ${detection.recommended_engines.join(", ")}</div>` : ""}
       </div>
       <div style="margin-top: 4px; opacity: 0.8; font-size: 11px;">${detection.details}</div>
+      ${ipBlockNotice}
     `;
   };
   const handleToggleRun = async () => {

@@ -583,6 +583,134 @@ const STRATEGIES_ZAPRET2 = [
         engine: "zapret2",
         args: "--lua-desync=oob:pos=1",
         description: "TCP Out-Of-Band URG flag packet to desynchronize DPI reassembly."
+    },
+
+    // ── 8. BLOCKCHECKW & BLOCKCHECK2 COMBAT STRATEGIES ─────────────────────────
+    {
+        id: "z2_bc_multisplit_7point",
+        name: "7-Point MultiSplit (ClientHello Full Spectrum)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=multisplit:pos=1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1",
+        description: "Splits at start, SNI extension, host header, mid-SLD, and end of host. Top blockcheck2 bypass."
+    },
+    {
+        id: "z2_bc_multidisorder_7point",
+        name: "7-Point MultiDisorder (ClientHello Full Spectrum)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=multidisorder:pos=1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1",
+        description: "Disorders all critical TLS ClientHello headers. Devastates stateful DPI reassembly."
+    },
+    {
+        id: "z2_bc_multisplit_1220",
+        name: "Tri-Point MultiSplit (pos=1,midsld,1220)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=multisplit:pos=1,midsld,1220",
+        description: "Splits at start, mid-SLD, and packet boundary (1220 B)."
+    },
+    {
+        id: "z2_bc_multidisorder_1220",
+        name: "Tri-Point MultiDisorder (pos=1,midsld,1220)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=multidisorder:pos=1,midsld,1220",
+        description: "Disorders stream at start, mid-SLD, and MTU boundary (1220 B)."
+    },
+    {
+        id: "z2_bc_tcpseg_rep260",
+        name: "TCP Segment Desync (repeats=260, pos=0,1)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=tcpseg:pos=0,1:ip_id=rnd:repeats=260",
+        description: "Forces randomized IP ID TCP segmentation burst with 260 repeats to overflow DPI state table."
+    },
+    {
+        id: "z2_bc_tcpseg_rep100_midsld",
+        name: "TCP Segment Desync (repeats=100, midsld)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=tcpseg:pos=0,midsld:ip_id=rnd:repeats=100",
+        description: "Mid-SLD TCP segmentation with 100 repeats."
+    },
+    {
+        id: "z2_bc_oob_midsld",
+        name: "OOB Desync (urp=midsld)",
+        engine: "zapret2",
+        args: "--in-range=-s1 --lua-desync=oob:urp=midsld",
+        description: "TCP Out-Of-Band packet with urgent pointer pointing directly to mid-domain."
+    },
+    {
+        id: "z2_bc_oob_b",
+        name: "OOB Desync (urp=b)",
+        engine: "zapret2",
+        args: "--in-range=-s1 --lua-desync=oob:urp=b",
+        description: "TCP Out-Of-Band with beginning urgent pointer offset."
+    },
+    {
+        id: "z2_bc_seqovl_sniext",
+        name: "Exact SeqOvl Pattern Overlap (sniext+1, Max.ru)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=multidisorder:pos=sniext+1:seqovl=sniext:seqovl_pattern=tls_max",
+        description: "Disorders at SNI extension with exact sequence overlap pattern."
+    },
+    {
+        id: "z2_bc_seqovl_midsld",
+        name: "Exact SeqOvl Pattern Overlap (midsld, Google)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=multidisorder:pos=midsld:seqovl=midsld-1:seqovl_pattern=tls_google",
+        description: "Disorders at mid-SLD with exact sequence overlap pattern from Google ClientHello."
+    },
+    {
+        id: "z2_bc_lua_padencap",
+        name: "Dynamic Lua TLS Mod (padencap + dupsid) + MultiSplit",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=luaexec:code=desync.patmod=tls_mod(fake_default_tls,'rnd,dupsid,padencap',desync.reasm_data) --lua-desync=multisplit:pos=10,sniext+1:seqovl=#patmod:seqovl_pattern=patmod",
+        description: "Dynamically pads and encapsulates ClientHello payload via Lua runtime."
+    },
+    {
+        id: "z2_bc_tcp_ack_offset",
+        name: "TCP ACK Offset Spoofing (-66000) + TS_UP",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_max:tcp_ack=-66000:tcp_ts_up:repeats=6",
+        description: "Injects fake packets with corrupted ACK number and ascending TCP timestamps."
+    },
+    {
+        id: "z2_bc_tcp_flags_unset_ack",
+        name: "TCP Flags Manipulation (Unset ACK)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_google:tcp_flags_unset=ACK:repeats=6",
+        description: "Fake packets with ACK flag cleared, accepted only by DPI state trackers."
+    },
+    {
+        id: "z2_bc_tcp_flags_set_syn",
+        name: "TCP Flags Manipulation (Set SYN on Data)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_max:tcp_flags_set=SYN:repeats=6",
+        description: "Sets SYN flag on ClientHello fake packets to trigger DPI state desynchronization."
+    },
+    {
+        id: "z2_bc_badsum",
+        name: "BadSum Checksum Invalidation",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_google:badsum:repeats=6",
+        description: "Packets with invalid L4 checksum are dropped by remote server NIC but inspected by DPI."
+    },
+    {
+        id: "z2_bc_autottl_1",
+        name: "Auto-TTL Adaptive Probe (autottl=-1, 3-20)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_max:ip_autottl=-1,3-20:repeats=6",
+        description: "Dynamically calculates hop distance to target and injects fake packets right before DPI hop."
+    },
+    {
+        id: "z2_bc_autottl_2",
+        name: "Auto-TTL Adaptive Probe (autottl=-2, 3-20)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_google:ip_autottl=-2,3-20:repeats=6",
+        description: "Auto-TTL probe with 2 hops before target."
+    },
+    {
+        id: "z2_bc_pktmod",
+        name: "PktMod Packet Mutation (ip_ttl=1)",
+        engine: "zapret2",
+        args: "--payload=tls_client_hello --lua-desync=fake:blob=tls_max:ip_ttl=1:repeats=6 --payload=empty --out-range=s1<d1 --lua-desync=pktmod:ip_ttl=1",
+        description: "Mutates outgoing packets in the range between server SYN and data."
     }
 ];
 
@@ -702,6 +830,79 @@ const STRATEGIES_ZAPRET = [
 ];
 
 const STRATEGIES_BYEDPI = [
+    // ── 1. COMBAT MULTI-SPLIT & LADDER CHAINS (Real TSPU Bypass) ───────────────
+    {
+        id: "bd_ladder_interleaved_10x",
+        name: "Ultimate Multi-Split Ladder (10x SNI + Reverse + Drop-SACK)",
+        engine: "byedpi",
+        args: "-d1 -d3+s -s6+s -d9+s -s12+s -d15+s -s20+s -d25+s -s30+s -d35+s -r1+s -S -a1 -As",
+        description: "10-stage interleaved split and disorder ladder across SNI offsets with reverse segment and SACK drop. Bypasses advanced stateful DPI reassembly."
+    },
+    {
+        id: "bd_ladder_split_9x",
+        name: "Staircase Split Ladder (9x SNI + Reverse + Drop-SACK)",
+        engine: "byedpi",
+        args: "-s1 -s3+s -s6+s -s9+s -s12+s -s15+s -s20+s -s25+s -s30+s -r1+s -S -a1",
+        description: "Dense forward multi-split sequence along SNI with reverse disorder tail and SACK drop."
+    },
+    {
+        id: "bd_ladder_disorder_8x",
+        name: "Staircase Disorder Ladder (8x SNI + SACK Drop + Auto-s)",
+        engine: "byedpi",
+        args: "-d1 -d3+s -d6+s -d9+s -d12+s -d15+s -d20+s -d25+s -r1+s -S -As",
+        description: "Out-of-order segment ladder across SNI payload prevents stateful DPI reassembly."
+    },
+    {
+        id: "bd_ladder_fake_drop_t4",
+        name: "Fake Ladder (TTL=4) + 4x SNI Step + Drop-SACK",
+        engine: "byedpi",
+        args: "-s1+s -d2+s -s3+s -d4+s -f-1 -t4 -r1+s -S -a1",
+        description: "Low-TTL fake ClientHello burst followed by 4-step SNI fragmentation ladder."
+    },
+    {
+        id: "bd_ladder_fake_drop_t6",
+        name: "Fake Ladder (TTL=6) + 4x SNI Step + Drop-SACK",
+        engine: "byedpi",
+        args: "-s1+s -d2+s -s3+s -d4+s -f-1 -t6 -r1+s -S -a1 -As",
+        description: "TTL=6 fake packet with stepped SNI offsets and reverse tail."
+    },
+    {
+        id: "bd_ladder_fake_drop_t8",
+        name: "Fake Ladder (TTL=8) + 4x SNI Step + Drop-SACK",
+        engine: "byedpi",
+        args: "-s1+s -d2+s -s3+s -d4+s -f-1 -t8 -r1+s -S -a1 -As",
+        description: "TTL=8 fake packet with stepped SNI offsets."
+    },
+    {
+        id: "bd_tlsrec_ladder",
+        name: "TLS Record Fragment + SNI Ladder",
+        engine: "byedpi",
+        args: "--tlsrec 1+sniext -d1 -d3+s -s6+s -d9+s -r1+s -S -a1",
+        description: "Fragments outer TLS Record header before SNI extension ladder."
+    },
+    {
+        id: "bd_oob_ladder",
+        name: "OOB Desync + SNI Ladder",
+        engine: "byedpi",
+        args: "-o 1 -q 1 -d1 -d3+s -s6+s -d9+s -r1+s -S -a1",
+        description: "TCP Out-Of-Band URG flag with 4-step ladder."
+    },
+    {
+        id: "bd_dense_staircase",
+        name: "Dense Alternating Staircase (8-step) + Drop-SACK",
+        engine: "byedpi",
+        args: "-s1 -d2 -s3+s -d4+s -s5+s -d6+s -s7+s -d8+s -r1+s -S -As",
+        description: "Alternating 1-byte split and disorder steps along SNI boundary."
+    },
+    {
+        id: "bd_reverse_sni_combo",
+        name: "Reverse SNI (-r 1+s) + Drop-SACK + Auto",
+        engine: "byedpi",
+        args: "-s 1 -d 1 -r 1+s -S --auto=r,s",
+        description: "Reverses SNI chunks with auto fallback and SACK suppression."
+    },
+
+    // ── 2. CLASSIC & COMPATIBILITY SUITE ───────────────────────────────────────
     {
         id: "bd_auto_tr_d2",
         name: "ByeDPI Auto (t,r,a,s) + Disorder",
@@ -944,6 +1145,54 @@ function generate_combinatorial_zapret2() {
             sprintf("--lua-desync=hostfakesplit:pos=%s:fooling=badseq", pos),
             "Host header substitution in initial packet");
     }
+
+    // 8. Blockcheck2 & Blockcheckw Heavy Multi-Split Chains
+    let multi_chains = [
+        "1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1",
+        "1,midsld,1220",
+        "1,sniext+1,host+1",
+        "10,sniext+4"
+    ];
+    for (let chain in multi_chains) {
+        add(sprintf("7-Point MultiSplit (%s)", chain),
+            sprintf("--payload=tls_client_hello --lua-desync=multisplit:pos=%s", chain),
+            "Full-spectrum ClientHello multisplit fragmentation");
+        add(sprintf("7-Point MultiDisorder (%s)", chain),
+            sprintf("--payload=tls_client_hello --lua-desync=multidisorder:pos=%s", chain),
+            "Full-spectrum ClientHello multidisorder fragmentation");
+    }
+
+    // 9. TCP Segmentation & OOB combinations
+    for (let rep in [ 20, 100, 260 ]) {
+        add(sprintf("TCPSegment (repeats=%d, pos=0,1)", rep),
+            sprintf("--payload=tls_client_hello --lua-desync=tcpseg:pos=0,1:ip_id=rnd:repeats=%d", rep),
+            "Randomized IP-ID TCP segmentation burst");
+        add(sprintf("TCPSegment (repeats=%d, midsld)", rep),
+            sprintf("--payload=tls_client_hello --lua-desync=tcpseg:pos=0,midsld:ip_id=rnd:repeats=%d", rep),
+            "Mid-SLD TCP segmentation burst");
+    }
+
+    for (let urp in [ "midsld", "b", "2" ]) {
+        add(sprintf("OOB Desync (urp=%s)", urp),
+            sprintf("--in-range=-s1 --lua-desync=oob:urp=%s", urp),
+            "TCP Out-Of-Band URG packet with urgent pointer offset");
+    }
+
+    // 10. Advanced TCP flag & ACK offsets with authentic blobs
+    for (let blob in [ "tls_max", "tls_google" ]) {
+        add(sprintf("TCP ACK Offset (-66000, %s)", blob),
+            sprintf("--payload=tls_client_hello --lua-desync=fake:blob=%s:tcp_ack=-66000:tcp_ts_up:repeats=6", blob),
+            "Corrupted TCP ACK offset with PAWS ascending timestamps");
+        add(sprintf("TCP Flags Unset ACK (%s)", blob),
+            sprintf("--payload=tls_client_hello --lua-desync=fake:blob=%s:tcp_flags_unset=ACK:repeats=6", blob),
+            "Fake packets with ACK flag cleared");
+        add(sprintf("BadSum Checksum Invalidation (%s)", blob),
+            sprintf("--payload=tls_client_hello --lua-desync=fake:blob=%s:badsum:repeats=6", blob),
+            "Corrupted L4 checksum fake packets");
+        add(sprintf("Auto-TTL Adaptive Probe (%s, autottl=-1,3-20)", blob),
+            sprintf("--payload=tls_client_hello --lua-desync=fake:blob=%s:ip_autottl=-1,3-20:repeats=6", blob),
+            "Adaptive distance TTL calculation before DPI hop");
+    }
     
     return list;
 }
@@ -1037,6 +1286,7 @@ function generate_combinatorial_byedpi() {
     let oobs = p.oobs || [ "1", "2" ];
     let autos = p.autos || [ "t,r,a,s", "r,s", "t,a" ];
     
+    // 1. Classic adaptive combinations
     for (let a in autos) {
         for (let o in oobs) {
             for (let d in disorders) {
@@ -1052,6 +1302,7 @@ function generate_combinatorial_byedpi() {
         }
     }
     
+    // 2. Fake with split & disorder
     for (let ttl in [ 3, 4, 8 ]) {
         for (let s in [ "1", "1+sniext", "midsld" ]) {
             for (let d in [ "1", "2" ]) {
@@ -1060,6 +1311,43 @@ function generate_combinatorial_byedpi() {
                     "Fake injection with split and disorder");
             }
         }
+    }
+
+    // 3. Multi-split ladder chains (Combinatorial combat suites)
+    let ladder_bases = [
+        { name: "Ladder 3-Step", args: "-d1 -d3+s -s6+s" },
+        { name: "Ladder 5-Step", args: "-d1 -d3+s -s6+s -d9+s -s12+s" },
+        { name: "Ladder 8-Step", args: "-d1 -d3+s -s6+s -d9+s -s12+s -d15+s -s20+s -d25+s" },
+        { name: "Ladder 10-Step", args: "-d1 -d3+s -s6+s -d9+s -s12+s -d15+s -s20+s -d25+s -s30+s -d35+s" },
+        { name: "Split Ladder 6-Step", args: "-s1 -s3+s -s6+s -s9+s -s12+s -s15+s" },
+        { name: "Disorder Ladder 6-Step", args: "-d1 -d3+s -d6+s -d9+s -d12+s -d15+s" }
+    ];
+
+    let reverse_tails = [ "", " -r1+s", " -r2+s" ];
+    let sack_options = [ " -S", "" ];
+    let auto_tails = [ " -a1 -As", " -a1", " --auto=r,s", "" ];
+
+    for (let lb in ladder_bases) {
+        for (let rt in reverse_tails) {
+            for (let so in sack_options) {
+                for (let at in auto_tails) {
+                    let comb_args = trim(sprintf("%s%s%s%s", lb.args, rt, so, at));
+                    add(sprintf("%s%s%s%s", lb.name, rt != "" ? " + Rev" : "", so != "" ? " + SACK" : "", at != "" ? " + Auto" : ""),
+                        comb_args,
+                        "Multi-stage ladder split & disorder chain for resilient DPI bypass");
+                }
+            }
+        }
+    }
+
+    // 4. Fake packet with multi-split ladder
+    for (let ttl in [ 3, 4, 6, 8 ]) {
+        add(sprintf("Fake (TTL=%d) + 4-Step Ladder + SACK Drop", ttl),
+            sprintf("-s1+s -d2+s -s3+s -d4+s -f-1 -t%d -r1+s -S -a1", ttl),
+            "Fake handshake packet followed by 4-step SNI ladder and SACK suppression");
+        add(sprintf("Fake (TTL=%d) + TLS Record Split + SACK Drop", ttl),
+            sprintf("--tlsrec 1+sniext -s1+s -d2+s -f-1 -t%d -S -a1", ttl),
+            "TLS record boundary split with fake packet and SACK drop");
     }
     
     return list;
@@ -1477,6 +1765,9 @@ function parse_curl_output(output, result) {
         result.handshake_ms = 0;
         result.ttfb_ms = 0;
         result.speed_kbps = 0;
+        result.data_bytes = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "timeout";
         result.score = 0;
         result.error = "Probe timeout or connection refused";
         return result;
@@ -1487,6 +1778,9 @@ function parse_curl_output(output, result) {
         result.success = false;
         result.http_code = 0;
         result.score = 0;
+        result.data_bytes = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "malformed";
         result.error = "Malformed probe metrics output";
         return result;
     }
@@ -1495,24 +1789,69 @@ function parse_curl_output(output, result) {
     let appconnect = double(parts[1]);
     let starttransfer = double(parts[2]);
     let speed_bytes = double(parts[3]);
+    let size_download = length(parts) >= 5 ? int(parts[4]) : 0;
+    let exit_code = length(parts) >= 6 ? int(parts[5]) : 0;
     
     result.http_code = http_code;
     result.handshake_ms = int(appconnect * 1000.0);
     result.ttfb_ms = int(starttransfer * 1000.0);
     result.speed_kbps = int(speed_bytes / 1024.0);
+    result.data_bytes = size_download;
+
+    // Check for HTTP 400 (Server Receives Fakes - desync corruption)
+    if (http_code == 400) {
+        result.success = false;
+        result.score = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "server_fakes";
+        result.error = "HTTP 400 (Remote server rejected corrupted/fake packet payload)";
+        return result;
+    }
+
+    // Check for 16KB DPI Throttling (TSPU stream drop / connection reset after 10-28KB)
+    if (exit_code != 0 && size_download >= 10240 && size_download <= 28672) {
+        result.success = false;
+        result.score = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "throttled_16k";
+        result.error = sprintf("16KB DPI Data Throttle (stream killed after %d B, curl exit %d)", size_download, exit_code);
+        return result;
+    }
+
+    if (exit_code != 0 && http_code == 0) {
+        result.success = false;
+        result.score = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "dropped";
+        result.error = sprintf("Connection dropped by DPI (curl exit %d)", exit_code);
+        return result;
+    }
+
+    if (exit_code != 0 && http_code >= 200 && http_code < 400) {
+        result.success = false;
+        result.score = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "transfer_failed";
+        result.error = sprintf("Data transfer aborted after %d B (curl exit %d)", size_download, exit_code);
+        return result;
+    }
     
     // Any valid HTTP response from origin (including 401/403/404/405 when hitting endpoints without auth headers)
-    // proves that TCP handshake, TLS ClientHello, and HTTP negotiation successfully reached the remote server past TSPU.
     if ((http_code >= 200 && http_code < 400) || http_code == 401 || http_code == 403 || http_code == 404 || http_code == 405) {
         result.success = true;
         let base_score = (http_code >= 200 && http_code < 400) ? 100 : 85;
         let latency_score = max(0, 1000 - result.ttfb_ms);
         let speed_score = int(result.speed_kbps / 10.0);
-        result.score = base_score + latency_score + speed_score;
+        let data_bonus = size_download >= 32768 ? 50 : (size_download >= 1024 ? 20 : 0);
+        result.score = base_score + latency_score + speed_score + data_bonus;
         result.error = "";
+        result.data_verified = size_download >= 32768;
+        result.dpi_verdict = size_download >= 32768 ? "verified_32k" : "available";
     } else {
         result.success = false;
         result.score = 0;
+        result.data_verified = false;
+        result.dpi_verdict = "failed";
         result.error = http_code > 0 ? sprintf("HTTP Status %d", http_code) : "Connection dropped by DPI";
     }
     
@@ -1521,7 +1860,7 @@ function parse_curl_output(output, result) {
 
 // ── DPI Type Detection ──────────────────────────────────────────────────────
 // Probes the target without any bypass to determine how it's being blocked.
-// Returns: { type: "rst"|"throttle"|"dns_block"|"unknown"|"none",
+// Returns: { type: "rst"|"throttle"|"dns_block"|"ip_block"|"unknown"|"none",
 //            confidence: 0-100, details: string, recommended_engines: string[] }
 function detect_dpi_type(target_key, custom_url) {
     let urls_list = resolve_target_urls_list(target_key, custom_url);
@@ -1542,7 +1881,7 @@ function detect_dpi_type(target_key, custom_url) {
     system("nft 'add rule inet tachyon_fuzzer bypass_singbox meta l4proto tcp tcp dport { 80, 443 } meta mark set meta mark | 0x00200000 counter' 2>/dev/null");
 
     let curl_cmd = sprintf(
-        "curl %s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}' -L --connect-timeout 4 --max-time 6 %s 2>&1",
+        "curl %s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>&1; printf '\\t%%d\\n' $?",
         dns_flags,
         shell_quote(target_url)
     );
@@ -1560,6 +1899,8 @@ function detect_dpi_type(target_key, custom_url) {
         handshake_ms: metrics.handshake_ms || 0,
         ttfb_ms: metrics.ttfb_ms || 0,
         speed_kbps: metrics.speed_kbps || 0,
+        data_bytes: metrics.data_bytes || 0,
+        dpi_verdict: metrics.dpi_verdict || "unknown",
         error: metrics.error || ""
     };
 
@@ -1589,6 +1930,16 @@ function detect_dpi_type(target_key, custom_url) {
         result.confidence = 90;
         result.details = sprintf("DNS resolution failed for %s — likely DNS-level blocking or hijacking", domain);
         result.recommended_engines = ["byedpi", "zapret2"];
+    } else if (metrics.dpi_verdict == "throttled_16k" || (http_code == 200 && metrics.data_bytes >= 10240 && metrics.data_bytes <= 28672)) {
+        result.type = "throttle";
+        result.confidence = 95;
+        result.details = sprintf("16KB DPI throttling detected on %s — handshake succeeded but stream dropped at ~16KB data transfer", domain);
+        result.recommended_engines = ["byedpi", "zapret2"];
+    } else if ((http_code == 0 && handshake == 0) && (index(error_str, "timed out") >= 0 || index(error_str, "Connection timed out") >= 0 || index(error_str, "ETIMEDOUT") >= 0)) {
+        result.type = "ip_block";
+        result.confidence = 95;
+        result.details = sprintf("TCP connect timed out before TLS handshake for %s — host is blocked at the IP layer. DPI bypass cannot unblock this; route via Sing-box VPN/Proxy outbound instead.", domain);
+        result.recommended_engines = [];
     } else if (index(error_str, "Connection reset") >= 0 || index(error_str, "ECONNRESET") >= 0) {
         result.type = "rst";
         result.confidence = 85;
@@ -1798,11 +2149,14 @@ function run_probe(engine, args_str, target_key, custom_url) {
         let sum_handshake = 0;
         let sum_ttfb = 0;
         let max_speed = 0;
+        let sum_data_bytes = 0;
+        let all_data_verified = true;
         let last_http = 0;
+        let last_dpi_verdict = "available";
         
         for (let target_item in urls_list) {
             let curl_cmd = sprintf(
-                "curl -x socks5h://127.0.0.1:%d -so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null",
+                "curl -x socks5h://127.0.0.1:%d -so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
                 BYEDPI_PORT,
                 shell_quote(target_item.url)
             );
@@ -1819,11 +2173,16 @@ function run_probe(engine, args_str, target_key, custom_url) {
                 passed_count++;
                 sum_handshake += single_res.handshake_ms;
                 sum_ttfb += single_res.ttfb_ms;
+                sum_data_bytes += single_res.data_bytes || 0;
+                if (!single_res.data_verified) all_data_verified = false;
                 if (single_res.speed_kbps > max_speed) max_speed = single_res.speed_kbps;
                 last_http = single_res.http_code;
+                last_dpi_verdict = single_res.dpi_verdict || "available";
             } else {
+                all_data_verified = false;
                 if (last_http == 0) last_http = single_res.http_code;
                 if (single_res.error && result.error == "") result.error = single_res.error;
+                last_dpi_verdict = single_res.dpi_verdict || "failed";
                 break;
             }
         }
@@ -1836,11 +2195,17 @@ function run_probe(engine, args_str, target_key, custom_url) {
             result.handshake_ms = int(sum_handshake / double(total_urls));
             result.ttfb_ms = int(sum_ttfb / double(total_urls));
             result.speed_kbps = max_speed;
-            result.score = 100 + max(0, 1000 - result.ttfb_ms) + int(result.speed_kbps / 10.0);
+            result.data_bytes = int(sum_data_bytes / double(total_urls));
+            result.data_verified = all_data_verified;
+            result.dpi_verdict = all_data_verified ? "verified_32k" : last_dpi_verdict;
+            result.score = 100 + max(0, 1000 - result.ttfb_ms) + int(result.speed_kbps / 10.0) + (result.data_verified ? 50 : 20);
             result.error = "";
         } else {
             result.success = false;
             result.http_code = last_http;
+            result.data_bytes = sum_data_bytes;
+            result.data_verified = false;
+            result.dpi_verdict = last_dpi_verdict;
             result.score = 0;
             if (result.error == "") {
                 result.error = sprintf("Failed %d of %d endpoints", total_urls - passed_count, total_urls);
@@ -1919,12 +2284,15 @@ function run_probe(engine, args_str, target_key, custom_url) {
         let sum_handshake = 0;
         let sum_ttfb = 0;
         let max_speed = 0;
+        let sum_data_bytes = 0;
+        let all_data_verified = true;
         let last_http = 0;
+        let last_dpi_verdict = "available";
         let dns_flags = get_fuzzer_curl_dns_flags();
         
         for (let target_item in urls_list) {
             let curl_cmd = sprintf(
-                "curl %s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null",
+                "curl %s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
                 dns_flags,
                 shell_quote(target_item.url)
             );
@@ -1941,11 +2309,16 @@ function run_probe(engine, args_str, target_key, custom_url) {
                 passed_count++;
                 sum_handshake += single_res.handshake_ms;
                 sum_ttfb += single_res.ttfb_ms;
+                sum_data_bytes += single_res.data_bytes || 0;
+                if (!single_res.data_verified) all_data_verified = false;
                 if (single_res.speed_kbps > max_speed) max_speed = single_res.speed_kbps;
                 last_http = single_res.http_code;
+                last_dpi_verdict = single_res.dpi_verdict || "available";
             } else {
+                all_data_verified = false;
                 if (last_http == 0) last_http = single_res.http_code;
                 if (single_res.error && result.error == "") result.error = single_res.error;
+                last_dpi_verdict = single_res.dpi_verdict || "failed";
                 break;
             }
         }
@@ -1958,11 +2331,17 @@ function run_probe(engine, args_str, target_key, custom_url) {
             result.handshake_ms = int(sum_handshake / double(total_urls));
             result.ttfb_ms = int(sum_ttfb / double(total_urls));
             result.speed_kbps = max_speed;
-            result.score = 100 + max(0, 1000 - result.ttfb_ms) + int(result.speed_kbps / 10.0);
+            result.data_bytes = int(sum_data_bytes / double(total_urls));
+            result.data_verified = all_data_verified;
+            result.dpi_verdict = all_data_verified ? "verified_32k" : last_dpi_verdict;
+            result.score = 100 + max(0, 1000 - result.ttfb_ms) + int(result.speed_kbps / 10.0) + (result.data_verified ? 50 : 20);
             result.error = "";
         } else {
             result.success = false;
             result.http_code = last_http;
+            result.data_bytes = sum_data_bytes;
+            result.data_verified = false;
+            result.dpi_verdict = last_dpi_verdict;
             result.score = 0;
             if (result.error == "") {
                 result.error = sprintf("Failed %d of %d endpoints", total_urls - passed_count, total_urls);
@@ -2050,6 +2429,9 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
                 handshake_ms: probe.handshake_ms,
                 ttfb_ms: probe.ttfb_ms,
                 speed_kbps: probe.speed_kbps,
+                data_bytes: probe.data_bytes || 0,
+                data_verified: probe.data_verified || false,
+                dpi_verdict: probe.dpi_verdict || "unknown",
                 score: probe.score,
                 error: probe.error,
                 sub_probes: probe.sub_probes || [],
