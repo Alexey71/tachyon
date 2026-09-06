@@ -8,6 +8,7 @@ import { isCopyableProxyLink, svgEl } from '../../../../helpers';
 import { prettyBytes } from '../../../../helpers/prettyBytes';
 import { Tachyon } from '../../../types';
 import { renderFlagEmojis } from './renderFlagEmojis';
+import { formatServiceStatusMessage } from '../../../helpers/formatServiceStatusMessage';
 
 interface IRenderSectionsProps {
   loading: boolean;
@@ -723,7 +724,7 @@ function renderDefaultState({
               style:
                 'padding: 0 16px 8px; font-size: 12px; opacity: 0.6; word-break: break-word;',
             },
-            ss.statusMessage,
+            formatServiceStatusMessage(ss.statusMessage),
           )
         : '',
     ]);

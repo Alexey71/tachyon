@@ -397,7 +397,15 @@ function runtime_outbounds_signature(path) {
     if (type(subscription) != "object" || type(subscription.outbounds) != "array")
         return null;
 
-    return canonical_runtime_value(subscription.outbounds);
+    let result = [];
+    for (let outbound in subscription.outbounds)
+        push(result, sprintf("%J", canonical_runtime_value(outbound)));
+
+    sort(result, function(a, b) {
+        return a < b ? -1 : (a > b ? 1 : 0);
+    });
+
+    return result;
 }
 
 function runtime_outbounds_equal(left_path, right_path) {

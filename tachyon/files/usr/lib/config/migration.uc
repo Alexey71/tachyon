@@ -638,6 +638,30 @@ function migrate_byedpi_cmd_opts(ctx, section) {
     delete_option(ctx, section, "cmd_opts");
 }
 
+function migrate_ctrack_timeouts(ctx, section) {
+    let action = migrated_rule_action(section);
+    let opt_name = action == "zapret2" ? "nfqws2_opt" : (action == "zapret" ? "nfqws_opt" : "");
+    if (opt_name == "")
+        return;
+    let opt = option(section, opt_name, "");
+    if (opt == "" || index(opt, "--ctrack-timeouts=") < 0)
+        return;
+    let normalized = replace(opt, /--ctrack-timeouts=([0-9,]+)/g, function(full, numbers) {
+        if (index(numbers, ",") < 0)
+            return full;
+        let parts = split(numbers, ",");
+        if (length(parts) >= 8 && parts[0] == "30" && parts[2] == "600")
+            return "--ctrack-timeouts=30:600:30:30";
+        if (length(parts) >= 4)
+            return "--ctrack-timeouts=" + parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3];
+        if (length(parts) >= 3)
+            return "--ctrack-timeouts=" + parts[0] + ":" + parts[1] + ":" + parts[2];
+        return "--ctrack-timeouts=30:600:30:30";
+    });
+    if (normalized != opt)
+        set_option(ctx, section, opt_name, normalized);
+}
+
 function migrate_zapret_nfqws_default(ctx, section, constants) {
     if (migrated_rule_action(section) != "zapret")
         return;
@@ -1045,6 +1069,7 @@ function migrate_rule(ctx, section, converted_from_rule, constants) {
 
     migrate_byedpi_cmd_opts(ctx, section);
     migrate_zapret_nfqws_default(ctx, section, constants);
+    migrate_ctrack_timeouts(ctx, section);
 }
 
 function migrate_rule_section(ctx, section, constants) {

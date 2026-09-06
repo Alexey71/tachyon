@@ -106,6 +106,19 @@ if (zapret2_validator.validate_strategy("nfqws", "--dpi-desync=fake", "").valid)
 
 if (validator.strategy_or_default("", "--default\t1") != "--default 1")
     exit(1);
+
+let runtime = require("providers.nfqueue.runtime");
+let cfg = { legacy_runtime_base: "", provider_base_dir: "" };
+let normalized = runtime.expand_strategy(cfg, "--filter-tcp=80 --ctrack-timeouts=30,30,600,30,30,30,30,30");
+if (normalized != "--filter-tcp=80 --ctrack-timeouts=30:600:30:30") {
+    print("Unexpected normalized timeouts: " + normalized + "\n");
+    exit(1);
+}
+let untouched = runtime.expand_strategy(cfg, "--filter-tcp=80 --ctrack-timeouts=30:600:30:30");
+if (untouched != "--filter-tcp=80 --ctrack-timeouts=30:600:30:30") {
+    print("Untouched timeouts changed: " + untouched + "\n");
+    exit(1);
+}
 UCODE
 
 ucode -L "$TACHYON_LIB" "$WORK_DIR/require-zapret-validator.uc"

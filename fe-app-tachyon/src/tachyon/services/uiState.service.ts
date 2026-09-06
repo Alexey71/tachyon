@@ -41,6 +41,10 @@ function getEmptyUpdatesActions(): StoreType['updatesActions'] {
     tailscaleInstall: { loading: false },
     tailscaleRemove: { loading: false },
     tailscaleRollback: { loading: false },
+    directBypassEnable: { loading: false },
+    directBypassDisable: { loading: false },
+    torrserverDirectEnable: { loading: false },
+    torrserverDirectDisable: { loading: false },
   };
 }
 

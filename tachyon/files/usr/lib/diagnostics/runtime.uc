@@ -1148,6 +1148,15 @@ function build_system_info() {
     let tailscale_version = tailscale_installed ? provider_version(TAILSCALE_RUNTIME_UC) : "not installed";
     let device_model = first_line_value("/tmp/sysinfo/model", "unknown");
 
+    let direct_bypass_enabled = bool_option(settings(), "direct_bypass_enabled", false) ? 1 : 0;
+    let direct_bypass_port = option(settings(), "direct_bypass_port", "2080");
+    let direct_bypass_address = direct_bypass_enabled
+        ? trim(command_output_from_args([ "ucode", "-L", LIB_DIR, LIB_DIR + "/singbox/runtime.uc", "service-listen-address" ]))
+        : "";
+    let torrserver_direct_status = parse_json_or_null(command_output_from_args([ "ucode", "-L", LIB_DIR, LIB_DIR + "/torrserver/direct.uc", "status" ]));
+    if (type(torrserver_direct_status) != "object")
+        torrserver_direct_status = {};
+
     let base_bdir = getenv("TACHYON_COMPONENT_BACKUPS_DIR") || "/etc/tachyon/component-backups";
     let read_backup_meta = function(comp) {
         let path = base_bdir + "/" + comp + "/metadata.json";
@@ -1197,6 +1206,13 @@ function build_system_info() {
         tailscale_installed,
         tailscale_backup_version: tailscale_meta ? as_string(tailscale_meta.version) : "",
         tailscale_backup_time: tailscale_meta ? int(tailscale_meta.timestamp || 0) : 0,
+        direct_bypass_enabled,
+        direct_bypass_address,
+        direct_bypass_port,
+        torrserver_running: int(torrserver_direct_status.running || 0),
+        torrserver_direct_available: int(torrserver_direct_status.available || 0),
+        torrserver_direct_enabled: int(torrserver_direct_status.enabled || 0),
+        torrserver_direct_active: int(torrserver_direct_status.active || 0),
         openwrt_version: openwrt_release(),
         device_model,
         generated_at: int(clock()[0])

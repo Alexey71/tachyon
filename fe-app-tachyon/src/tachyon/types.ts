@@ -596,6 +596,13 @@ export namespace Tachyon {
     byedpi_installed: 0 | 1;
     tailscale_version: string;
     tailscale_installed: 0 | 1;
+    direct_bypass_enabled?: 0 | 1;
+    direct_bypass_address?: string;
+    direct_bypass_port?: string;
+    torrserver_running?: 0 | 1;
+    torrserver_direct_available?: 0 | 1;
+    torrserver_direct_enabled?: 0 | 1;
+    torrserver_direct_active?: 0 | 1;
     openwrt_version: string;
     device_model: string;
     generated_at?: number;
@@ -677,7 +684,9 @@ export namespace Tachyon {
     | 'zapret'
     | 'zapret2'
     | 'byedpi'
-    | 'tailscale';
+    | 'tailscale'
+    | 'direct_bypass'
+    | 'torrserver_direct';
 
   export type ComponentAction =
     | 'check_update'
@@ -690,7 +699,9 @@ export namespace Tachyon {
     | 'install_extended_compressed'
     | 'install_lx'
     | 'install_tiny'
-    | 'install_stable';
+    | 'install_stable'
+    | 'enable'
+    | 'disable';
 
   export interface ComponentActionResult {
     success: boolean;

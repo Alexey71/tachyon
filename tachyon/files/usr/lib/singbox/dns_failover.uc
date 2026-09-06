@@ -294,7 +294,7 @@ function worker() {
 
         let failure_threshold = is_parallel
             ? 2
-            : int(common.option(current_cfg, "dns_failure_threshold", "3"));
+            : int(common.option(current_cfg, "dns_failure_threshold", common.option(current_cfg, "dns_failover_failure_threshold", "3")));
         let recovery_threshold = is_parallel
             ? 2
             : int(common.option(current_cfg, "dns_recovery_threshold", "3"));

@@ -618,6 +618,45 @@ function add_mixed_proxy_for_section(config, section, service_address) {
     });
 }
 
+/*
+ * Direct Bypass provides an explicit, clean mixed (HTTP+SOCKS5) proxy port on LAN
+ * mapped directly to the direct outbound marked with OUTBOUND_MARK (0x08000000).
+ * Traffic received on this port bypasses all section routing rules, VPN tunnels, and
+ * DPI evasion engines, giving clients a guaranteed straight WAN route.
+ */
+function add_direct_bypass_proxy(config, settings, service_address) {
+    if (!bool_option(settings, "direct_bypass_enabled", false))
+        return;
+
+    let listen = as_string(service_address || "");
+    if (listen == "")
+        runtime_generate_unsupported("direct bypass listen address is not set");
+
+    let port_value = option(settings, "direct_bypass_port", as_string(runtime_constants.DIRECT_BYPASS_DEFAULT_PORT));
+    if (match(port_value, /^[0-9]+$/) == null)
+        runtime_generate_unsupported("direct bypass port is invalid");
+    let listen_port = int(port_value, 10);
+    if (listen_port < 1 || listen_port > 65535)
+        runtime_generate_unsupported("direct bypass port is invalid");
+
+    push(config.inbounds, {
+        type: "mixed",
+        tag: runtime_constants.DIRECT_BYPASS_INBOUND_TAG,
+        listen,
+        listen_port
+    });
+    push(config.outbounds, {
+        type: "direct",
+        tag: runtime_constants.DIRECT_BYPASS_OUTBOUND_TAG,
+        routing_mark: runtime_constants.OUTBOUND_MARK
+    });
+    push(config.route.rules, {
+        action: "route",
+        inbound: runtime_constants.DIRECT_BYPASS_INBOUND_TAG,
+        outbound: runtime_constants.DIRECT_BYPASS_OUTBOUND_TAG
+    });
+}
+
 function add_service_mixed_proxy_inbound(config, tag_name, listen_port, outbound) {
     push(config.inbounds, {
         type: "mixed",
@@ -990,6 +1029,7 @@ function generate_config(output_path, service_address, mwan3_active, supports_xh
             push(config.dns.rules, rule);
     }
 
+    add_direct_bypass_proxy(config, settings, service_address);
     add_service_mixed_proxy(config, settings, sections);
     for (let section in sections)
         add_mixed_proxy_for_section(config, section, service_address);

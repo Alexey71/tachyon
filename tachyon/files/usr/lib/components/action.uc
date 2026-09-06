@@ -2785,6 +2785,10 @@ function normalize_component_name(component) {
         return "sing_box";
     if (component == "tachyon")
         return "tachyon";
+    if (component == "direct-bypass" || component == "directbypass" || component == "direct_proxy")
+        return "direct_bypass";
+    if (component == "torrserver_direct" || component == "torrserver-direct")
+        return "torrserver_direct";
     return component;
 }
 
@@ -3134,6 +3138,86 @@ function install_component_version(component, tag) {
     }
 }
 
+function set_direct_bypass(action) {
+    let enable = action == "enable";
+    let cursor = uci_core.cursor();
+    cursor.load("tachyon");
+
+    if (enable) {
+        cursor.set("tachyon", "settings", "direct_bypass_enabled", "1");
+        let current_port = trim(as_string(cursor.get("tachyon", "settings", "direct_bypass_port") || ""));
+        if (current_port == "" || match(current_port, /^[0-9]+$/) == null)
+            cursor.set("tachyon", "settings", "direct_bypass_port", "2080");
+    } else {
+        cursor.set("tachyon", "settings", "direct_bypass_enabled", "0");
+    }
+    cursor.commit("tachyon");
+
+    remove_file(SYSTEM_INFO_CACHE_FILE);
+    restart_tachyon_after_successful_change();
+
+    action_success(
+        "direct_bypass",
+        action,
+        enable ? "Direct bypass enabled" : "Direct bypass disabled",
+        enable ? "enabled" : "disabled",
+        enable ? "enabled" : "disabled",
+        1
+    );
+}
+
+const TORRSERVER_DIRECT_INIT = getenv("TACHYON_TORRSERVER_DIRECT_INIT") || "/etc/init.d/tachyon-torrserver-direct";
+const TORRSERVER_DIRECT_UC = LIB_DIR + "/torrserver/direct.uc";
+
+function set_torrserver_direct(action) {
+    let cursor = uci_core.cursor();
+    cursor.load("tachyon");
+    let current_enabled = trim(as_string(cursor.get("tachyon", "settings", "torrserver_direct_enabled") || "0")) == "1" ? "1" : "0";
+    let target_enabled = action == "enable" ? "1" : "0";
+
+    if (!file_exists(TORRSERVER_DIRECT_INIT) || !file_exists(TORRSERVER_DIRECT_UC))
+        action_fail("torrserver_direct", action, "TorrServer Direct service is not available", current_enabled, target_enabled);
+
+    if (target_enabled == "1") {
+        if (!command_success_from_args([ "modprobe", "nft_socket" ]) &&
+            (!run_logged("Installing TorrServer Direct kernel support", pkg_install_name_command("kmod-nft-socket")) ||
+             !command_success_from_args([ "modprobe", "nft_socket" ])))
+            action_fail("torrserver_direct", action, "This firmware does not provide kmod-nft-socket required for TorrServer Direct", current_enabled, target_enabled);
+        let status = null;
+        try {
+            status = json(command_output_from_args([ "ucode", "-L", LIB_DIR, TORRSERVER_DIRECT_UC, "status" ]));
+        } catch (e) {}
+        if (type(status) != "object" || int(status.running || 0) != 1)
+            action_fail("torrserver_direct", action, "TorrServer is not running", current_enabled, target_enabled);
+        if (int(status.available || 0) != 1)
+            action_fail("torrserver_direct", action, "TorrServer does not have a dedicated cgroup", current_enabled, target_enabled);
+    }
+
+    cursor.set("tachyon", "settings", "torrserver_direct_enabled", target_enabled);
+    cursor.commit("tachyon");
+
+    let applied = target_enabled == "1"
+        ? command_success_from_args([ TORRSERVER_DIRECT_INIT, "enable" ]) &&
+            command_success_from_args([ TORRSERVER_DIRECT_INIT, "restart" ]) &&
+            command_success_from_args([ "ucode", "-L", LIB_DIR, TORRSERVER_DIRECT_UC, "reconcile" ])
+        : command_success_from_args([ TORRSERVER_DIRECT_INIT, "stop" ]) &&
+            command_success_from_args([ TORRSERVER_DIRECT_INIT, "disable" ]);
+    if (!applied) {
+        cursor.set("tachyon", "settings", "torrserver_direct_enabled", current_enabled);
+        cursor.commit("tachyon");
+        action_fail("torrserver_direct", action, "Failed to apply TorrServer Direct settings", current_enabled, target_enabled);
+    }
+    remove_file(SYSTEM_INFO_CACHE_FILE);
+    action_success(
+        "torrserver_direct",
+        action,
+        target_enabled == "1" ? "TorrServer Direct has been enabled" : "TorrServer Direct has been disabled",
+        target_enabled == "1" ? "enabled" : "disabled",
+        target_enabled == "1" ? "enabled" : "disabled",
+        current_enabled == target_enabled ? 0 : 1
+    );
+}
+
 function component_action(component, action, extra) {
     component = normalize_component_name(component);
     action = as_string(action);
@@ -3160,7 +3244,7 @@ function component_action(component, action, extra) {
         return;
     }
 
-    if (action != "check_update" && action != "remove") {
+    if (action != "check_update" && action != "remove" && component != "direct_bypass" && component != "torrserver_direct") {
         create_component_backup(component);
     }
 
@@ -3191,6 +3275,10 @@ function component_action(component, action, extra) {
         install_tailscale(action);
     else if (component == "tailscale" && action == "remove")
         remove_optional_component("tailscale", "tailscale", "Tailscale", LIB_DIR + "/providers/tailscale/runtime.uc");
+    else if (component == "direct_bypass" && (action == "enable" || action == "disable"))
+        set_direct_bypass(action);
+    else if (component == "torrserver_direct" && (action == "enable" || action == "disable"))
+        set_torrserver_direct(action);
     else
         action_fail(component != "" ? component : "unknown", action != "" ? action : "unknown", "Unknown component action");
 }

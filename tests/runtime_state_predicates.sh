@@ -575,6 +575,10 @@ debug
 127.0.0.1
 [runtime.mwan3_active]
 1
+[settings.direct_bypass_enabled]
+0
+[settings.direct_bypass_port]
+2080
 [settings.enable_yacd]
 1
 [settings.enable_yacd_wan_access]

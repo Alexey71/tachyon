@@ -1,9 +1,11 @@
 import { onMount, preserveScrollForPage } from '../../../helpers';
+import { copyToClipboard } from '../../../helpers/copyToClipboard';
 import { TACHYON_ACTION_PROVIDERS_AVAILABILITY_EVENT } from '../../../constants';
 import { normalizeCompiledVersion } from '../../../helpers/normalizeCompiledVersion';
 import { capSetSize } from '../../helpers/capCollectionSize';
 import { showToast } from '../../../helpers/showToast';
 import {
+  renderCopyIcon24,
   renderDownloadIcon24,
   renderGlobeIcon24,
   renderRotateCcwIcon24,
@@ -106,6 +108,7 @@ interface ComponentActionButton {
   component: Tachyon.ComponentName;
   action: Tachyon.ComponentAction;
   targetVersion?: string;
+  disabled?: boolean;
 }
 
 interface ComponentCard {
@@ -119,6 +122,7 @@ interface ComponentCard {
   actions: ComponentActionButton[];
   badgeNode?: Node | null;
   supportsVersions?: boolean;
+  copyValue?: string;
 }
 
 let updatesLifecycleRegistered = false;
@@ -521,6 +525,16 @@ function patchSystemInfoAfterMutation(result: Tachyon.ComponentActionResult) {
       nextSystemInfo.byedpi_installed = 1;
       nextSystemInfo.byedpi_version = version;
     }
+  }
+
+  if (result.component === 'direct_bypass') {
+    nextSystemInfo.direct_bypass_enabled = result.action === 'enable' ? 1 : 0;
+  }
+  if (result.component === 'torrserver_direct') {
+    nextSystemInfo.torrserver_direct_enabled =
+      result.action === 'enable' ? 1 : 0;
+    nextSystemInfo.torrserver_direct_active =
+      result.action === 'enable' ? 1 : 0;
   }
 
   const normalizedSystemInfo = normalizeSingBoxVariantFields(nextSystemInfo);
@@ -1031,6 +1045,8 @@ function getComponentInstallKey(
       return 'byedpiInstall';
     case 'tailscale':
       return 'tailscaleInstall';
+    default:
+      return 'tachyonInstall';
   }
 }
 
@@ -1136,6 +1152,8 @@ const COMPONENT_REPO_URLS: Record<Tachyon.ComponentName, string> = {
   zapret2: 'https://github.com/Dushnilin/zapret2-openwrt',
   byedpi: 'https://github.com/DPITrickster/ByeDPI-OpenWrt',
   tailscale: 'https://openwrt.org/packages/pkgdata/tailscale',
+  direct_bypass: '',
+  torrserver_direct: '',
 };
 
 function getComponentCards(): ComponentCard[] {
@@ -1266,6 +1284,54 @@ function getComponentCards(): ComponentCard[] {
     rollbackKey: 'tailscaleRollback',
   });
 
+  const directBypassEnabled = Boolean(systemInfo.direct_bypass_enabled);
+  const directBypassEndpoint = systemInfo.direct_bypass_address
+    ? `${systemInfo.direct_bypass_address}:${systemInfo.direct_bypass_port || '2080'}`
+    : '';
+  const torrserverRunning = Boolean(systemInfo.torrserver_running);
+  const torrserverDirectAvailable = Boolean(
+    systemInfo.torrserver_direct_available,
+  );
+  const torrserverDirectEnabled = Boolean(systemInfo.torrserver_direct_enabled);
+  const torrserverDirectActive = Boolean(systemInfo.torrserver_direct_active);
+
+  const directBypassActions: ComponentActionButton[] = [
+    directBypassEnabled
+      ? {
+          key: 'directBypassDisable' as const,
+          text: _('Disable'),
+          icon: renderXIcon24,
+          component: 'direct_bypass' as const,
+          action: 'disable' as const,
+        }
+      : {
+          key: 'directBypassEnable' as const,
+          text: _('Enable'),
+          icon: renderRotateCcwIcon24,
+          component: 'direct_bypass' as const,
+          action: 'enable' as const,
+        },
+  ];
+
+  const torrserverDirectActions: ComponentActionButton[] = [
+    torrserverDirectEnabled
+      ? {
+          key: 'torrserverDirectDisable' as const,
+          text: _('Disable'),
+          icon: renderXIcon24,
+          component: 'torrserver_direct' as const,
+          action: 'disable' as const,
+        }
+      : {
+          key: 'torrserverDirectEnable' as const,
+          text: _('Enable'),
+          icon: renderRotateCcwIcon24,
+          component: 'torrserver_direct' as const,
+          action: 'enable' as const,
+          disabled: !torrserverDirectAvailable,
+        },
+  ];
+
   return [
     {
       component: 'tachyon',
@@ -1304,6 +1370,34 @@ function getComponentCards(): ComponentCard[] {
             : COMPONENT_REPO_URLS.sing_box),
       actions: singBoxActions,
       supportsVersions: true,
+    },
+    {
+      component: 'direct_bypass',
+      column: 0,
+      title: _('Direct Proxy'),
+      version: directBypassEnabled
+        ? `HTTP/SOCKS5 · ${directBypassEndpoint || _('Enabled')}`
+        : _('Disabled'),
+      copyValue:
+        directBypassEnabled && directBypassEndpoint
+          ? directBypassEndpoint
+          : undefined,
+      actions: directBypassActions,
+    },
+    {
+      component: 'torrserver_direct',
+      column: 0,
+      title: _('TorrServer Direct'),
+      version: !torrserverRunning
+        ? _('TorrServer not found')
+        : !torrserverDirectAvailable
+          ? _('Dedicated cgroup unavailable')
+          : torrserverDirectEnabled && torrserverDirectActive
+            ? _('Enabled')
+            : torrserverDirectEnabled
+              ? _('Waiting for TorrServer')
+              : _('Disabled'),
+      actions: torrserverDirectActions,
     },
     {
       component: 'zapret',
@@ -1677,7 +1771,10 @@ function renderComponentCard(card: ComponentCard) {
       text: action.text,
       icon: action.icon,
       loading,
-      disabled: systemInfoLoading || (anyActionLoading && !loading),
+      disabled:
+        action.disabled ||
+        systemInfoLoading ||
+        (anyActionLoading && !loading),
       onClick: () => void handleComponentAction(action),
     });
   });
@@ -1690,7 +1787,10 @@ function renderComponentCard(card: ComponentCard) {
       text: action.text,
       icon: action.icon,
       loading,
-      disabled: systemInfoLoading || (anyActionLoading && !loading),
+      disabled:
+        action.disabled ||
+        systemInfoLoading ||
+        (anyActionLoading && !loading),
       onClick: () => void handleComponentAction(action),
     });
   });
@@ -1700,6 +1800,19 @@ function renderComponentCard(card: ComponentCard) {
       E('div', { class: 'tachyon_updates-page__component__actions-main' }, [
         ...primaryButtons,
         ...dangerButtons,
+      ]),
+    );
+  }
+
+  if (card.copyValue) {
+    actionElements.push(
+      E('div', { class: 'tachyon_updates-page__component__actions-main' }, [
+        renderButton({
+          text: _('Copy address'),
+          icon: renderCopyIcon24,
+          disabled: anyActionLoading,
+          onClick: () => copyToClipboard(card.copyValue || ''),
+        }),
       ]),
     );
   }

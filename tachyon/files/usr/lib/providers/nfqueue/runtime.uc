@@ -293,8 +293,24 @@ function cleanup_legacy_runtime(cfg) {
     command_success_from_args([ "rm", "-rf", cfg.legacy_runtime_base ]);
 }
 
-function expand_strategy(cfg, value) {
+function normalize_ctrack_timeouts(value) {
     value = as_string(value);
+    return replace(value, /--ctrack-timeouts=([0-9,]+)/g, function(full, numbers) {
+        if (index(numbers, ",") < 0)
+            return full;
+        let parts = split(numbers, ",");
+        if (length(parts) >= 8 && parts[0] == "30" && parts[2] == "600")
+            return "--ctrack-timeouts=30:600:30:30";
+        if (length(parts) >= 4)
+            return "--ctrack-timeouts=" + parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3];
+        if (length(parts) >= 3)
+            return "--ctrack-timeouts=" + parts[0] + ":" + parts[1] + ":" + parts[2];
+        return "--ctrack-timeouts=30:600:30:30";
+    });
+}
+
+function expand_strategy(cfg, value) {
+    value = normalize_ctrack_timeouts(as_string(value));
     if (cfg.legacy_runtime_base == "" || cfg.provider_base_dir == "")
         return value;
     return replace(value, cfg.legacy_runtime_base, cfg.provider_base_dir);
@@ -701,5 +717,7 @@ function run(provider, argv) {
 }
 
 return {
-    run
+    run,
+    expand_strategy,
+    normalize_ctrack_timeouts
 };

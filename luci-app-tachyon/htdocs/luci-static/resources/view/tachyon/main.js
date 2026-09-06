@@ -2123,6 +2123,84 @@ function prettyBytes(n) {
   return n + " " + unit;
 }
 
+// src/tachyon/helpers/formatServiceStatusMessage.ts
+function formatServiceStatusMessage(msg) {
+  if (!msg) return "";
+  const normalMatch = msg.match(/^([a-zA-Z0-9_-]+) provider status is normal$/);
+  if (normalMatch) {
+    const provider = normalMatch[1];
+    return `${_("Provider status is normal")}: ${provider}`;
+  }
+  const notReadyWithDetailMatch = msg.match(
+    /^action=([^ ]+) is configured, but the Tachyon-managed ([^ ]+) runtime is not ready \((.+)\)$/
+  );
+  if (notReadyWithDetailMatch) {
+    const [, action, bin, detail] = notReadyWithDetailMatch;
+    return `${_("Action is configured, but runtime is not ready")} (${action} -> ${bin}): ${detail}`;
+  }
+  const notReadyMatch = msg.match(
+    /^action=([^ ]+) is configured, but the Tachyon-managed ([^ ]+) runtime is not ready$/
+  );
+  if (notReadyMatch) {
+    const [, action, bin] = notReadyMatch;
+    return `${_("Action is configured, but runtime is not ready")} (${action} -> ${bin})`;
+  }
+  const notAvailablePathMatch = msg.match(
+    /^action=([^ ]+) is configured, but (.+) (?:provider|ciadpi) is not available at (.+)$/
+  );
+  if (notAvailablePathMatch) {
+    const [, action, provider, path] = notAvailablePathMatch;
+    return `${_("Action is configured, but binary is not available")} (${action} -> ${provider}): ${path}`;
+  }
+  const overlapMatch = msg.match(
+    /^external NFQUEUE rules overlap with the Tachyon (.+) range (.+)$/
+  );
+  if (overlapMatch) {
+    const [, provider, range] = overlapMatch;
+    return `${_("External NFQUEUE rules overlap with Tachyon")} ${provider} (${range})`;
+  }
+  if (msg === "legacy zapret runtime paths are still present and should be migrated") {
+    return _("Legacy zapret runtime paths are still present and should be migrated");
+  }
+  const unexpectedProcessesMatch = msg.match(
+    /^unexpected Tachyon-managed ([^ ]+) processes are running without matching action=([^ ]+) rules$/
+  );
+  if (unexpectedProcessesMatch) {
+    const [, bin, action] = unexpectedProcessesMatch;
+    return `${_("Unexpected background processes")} (${bin}, action=${action})`;
+  }
+  if (msg.startsWith("standalone ")) {
+    return _("Standalone service is active alongside Tachyon; policy or port conflicts are possible");
+  }
+  const packageInstalledNoBinMatch = msg.match(
+    /^(.+) package is installed, but (?:the provider binary|ciadpi) is not available at (.+)$/
+  );
+  if (packageInstalledNoBinMatch) {
+    const [, provider, path] = packageInstalledNoBinMatch;
+    return `${_("Package is installed, but binary missing")} (${provider}): ${path}`;
+  }
+  const notInstalledMatch = msg.match(
+    /^(.+) (?:provider|package) is not installed; (?:action=([^ ]+) is unavailable|native Tailscale is unavailable)$/
+  );
+  if (notInstalledMatch) {
+    const [, provider, action] = notInstalledMatch;
+    return `${_("Package is not installed")} (${provider})${action ? `: action=${action} ${_("is unavailable")}` : ""}`;
+  }
+  if (msg.includes("ciadpi has restarted after exiting")) {
+    return _("ByeDPI restarted after exiting; strategy or traffic load may be unstable");
+  }
+  if (msg.includes("native Tailscale is configured, but the tailscale package is missing")) {
+    return _("Native Tailscale is configured, but tailscale package is missing");
+  }
+  if (msg.includes("native Tailscale is configured, but tailscaled is not running")) {
+    return _("Native Tailscale is configured, but tailscaled is not running for every section");
+  }
+  if (msg.includes("no server section uses native mode")) {
+    return _("Tailscale package is installed, but no server section uses native mode");
+  }
+  return _(msg);
+}
+
 // src/tachyon/tabs/dashboard/partials/renderSections.ts
 function renderFailedState() {
   return E(
@@ -2649,7 +2727,7 @@ function renderDefaultState({
         {
           style: "padding: 0 16px 8px; font-size: 12px; opacity: 0.6; word-break: break-word;"
         },
-        ss.statusMessage
+        formatServiceStatusMessage(ss.statusMessage)
       ) : ""
     ]);
   }
@@ -5947,6 +6025,13 @@ var initialDiagnosticStore = {
     tailscale_backup_version: "",
     tailscale_backup_time: 0,
     server_inbounds_enabled_count: -1,
+    direct_bypass_enabled: 0,
+    direct_bypass_address: "",
+    direct_bypass_port: "",
+    torrserver_running: 0,
+    torrserver_direct_available: 0,
+    torrserver_direct_enabled: 0,
+    torrserver_direct_active: 0,
     openwrt_version: "loading",
     device_model: "loading"
   },
@@ -6018,7 +6103,11 @@ var initialDiagnosticStore = {
     tailscaleCheck: { loading: false },
     tailscaleInstall: { loading: false },
     tailscaleRemove: { loading: false },
-    tailscaleRollback: { loading: false }
+    tailscaleRollback: { loading: false },
+    directBypassEnable: { loading: false },
+    directBypassDisable: { loading: false },
+    torrserverDirectEnable: { loading: false },
+    torrserverDirectDisable: { loading: false }
   },
   updatesChecks: {
     tachyon: { status: null, latest_version: "", release_url: "" },
@@ -6026,7 +6115,9 @@ var initialDiagnosticStore = {
     zapret: { status: null, latest_version: "", release_url: "" },
     zapret2: { status: null, latest_version: "", release_url: "" },
     byedpi: { status: null, latest_version: "", release_url: "" },
-    tailscale: { status: null, latest_version: "", release_url: "" }
+    tailscale: { status: null, latest_version: "", release_url: "" },
+    direct_bypass: { status: null, latest_version: "", release_url: "" },
+    torrserver_direct: { status: null, latest_version: "", release_url: "" }
   }
 };
 
@@ -6403,7 +6494,11 @@ var componentActionKeyMap = {
   "tailscale:install": "tailscaleInstall",
   "tailscale:install_version": "tailscaleInstall",
   "tailscale:remove": "tailscaleRemove",
-  "tailscale:rollback": "tailscaleRollback"
+  "tailscale:rollback": "tailscaleRollback",
+  "direct_bypass:enable": "directBypassEnable",
+  "direct_bypass:disable": "directBypassDisable",
+  "torrserver_direct:enable": "torrserverDirectEnable",
+  "torrserver_direct:disable": "torrserverDirectDisable"
 };
 function getComponentActionKey(component, action) {
   return componentActionKeyMap[`${component}:${action}`];
@@ -6573,7 +6668,11 @@ function getEmptyUpdatesActions() {
     tailscaleCheck: { loading: false },
     tailscaleInstall: { loading: false },
     tailscaleRemove: { loading: false },
-    tailscaleRollback: { loading: false }
+    tailscaleRollback: { loading: false },
+    directBypassEnable: { loading: false },
+    directBypassDisable: { loading: false },
+    torrserverDirectEnable: { loading: false },
+    torrserverDirectDisable: { loading: false }
   };
 }
 function getEmptyDiagnosticsActions() {
@@ -19967,6 +20066,13 @@ function patchSystemInfoAfterMutation(result) {
       nextSystemInfo.byedpi_version = version;
     }
   }
+  if (result.component === "direct_bypass") {
+    nextSystemInfo.direct_bypass_enabled = result.action === "enable" ? 1 : 0;
+  }
+  if (result.component === "torrserver_direct") {
+    nextSystemInfo.torrserver_direct_enabled = result.action === "enable" ? 1 : 0;
+    nextSystemInfo.torrserver_direct_active = result.action === "enable" ? 1 : 0;
+  }
   const normalizedSystemInfo = normalizeSingBoxVariantFields(nextSystemInfo);
   store.set({
     diagnosticsSystemInfo: normalizedSystemInfo
@@ -20351,6 +20457,8 @@ function getComponentInstallKey(component) {
       return "byedpiInstall";
     case "tailscale":
       return "tailscaleInstall";
+    default:
+      return "tachyonInstall";
   }
 }
 function getComponentInstallAction(component) {
@@ -20427,7 +20535,9 @@ var COMPONENT_REPO_URLS = {
   zapret: "https://github.com/remittor/zapret-openwrt",
   zapret2: "https://github.com/Dushnilin/zapret2-openwrt",
   byedpi: "https://github.com/DPITrickster/ByeDPI-OpenWrt",
-  tailscale: "https://openwrt.org/packages/pkgdata/tailscale"
+  tailscale: "https://openwrt.org/packages/pkgdata/tailscale",
+  direct_bypass: "",
+  torrserver_direct: ""
 };
 function getComponentCards() {
   const systemInfo = normalizeSingBoxVariantFields(
@@ -20543,6 +20653,45 @@ function getComponentCards() {
     removeKey: "tailscaleRemove",
     rollbackKey: "tailscaleRollback"
   });
+  const directBypassEnabled = Boolean(systemInfo.direct_bypass_enabled);
+  const directBypassEndpoint = systemInfo.direct_bypass_address ? `${systemInfo.direct_bypass_address}:${systemInfo.direct_bypass_port || "2080"}` : "";
+  const torrserverRunning = Boolean(systemInfo.torrserver_running);
+  const torrserverDirectAvailable = Boolean(
+    systemInfo.torrserver_direct_available
+  );
+  const torrserverDirectEnabled = Boolean(systemInfo.torrserver_direct_enabled);
+  const torrserverDirectActive = Boolean(systemInfo.torrserver_direct_active);
+  const directBypassActions = [
+    directBypassEnabled ? {
+      key: "directBypassDisable",
+      text: _("Disable"),
+      icon: renderXIcon24,
+      component: "direct_bypass",
+      action: "disable"
+    } : {
+      key: "directBypassEnable",
+      text: _("Enable"),
+      icon: renderRotateCcwIcon24,
+      component: "direct_bypass",
+      action: "enable"
+    }
+  ];
+  const torrserverDirectActions = [
+    torrserverDirectEnabled ? {
+      key: "torrserverDirectDisable",
+      text: _("Disable"),
+      icon: renderXIcon24,
+      component: "torrserver_direct",
+      action: "disable"
+    } : {
+      key: "torrserverDirectEnable",
+      text: _("Enable"),
+      icon: renderRotateCcwIcon24,
+      component: "torrserver_direct",
+      action: "enable",
+      disabled: !torrserverDirectAvailable
+    }
+  ];
   return [
     {
       component: "tachyon",
@@ -20569,6 +20718,21 @@ function getComponentCards() {
       repoUrl: systemInfo.sing_box_repo_url || (singBoxLx ? "https://github.com/Leadaxe/sing-box-lx" : singBoxExtended || singBoxExtendedCompressed ? "https://github.com/shtorm-7/sing-box-extended" : COMPONENT_REPO_URLS.sing_box),
       actions: singBoxActions,
       supportsVersions: true
+    },
+    {
+      component: "direct_bypass",
+      column: 0,
+      title: _("Direct Proxy"),
+      version: directBypassEnabled ? `HTTP/SOCKS5 \xB7 ${directBypassEndpoint || _("Enabled")}` : _("Disabled"),
+      copyValue: directBypassEnabled && directBypassEndpoint ? directBypassEndpoint : void 0,
+      actions: directBypassActions
+    },
+    {
+      component: "torrserver_direct",
+      column: 0,
+      title: _("TorrServer Direct"),
+      version: !torrserverRunning ? _("TorrServer not found") : !torrserverDirectAvailable ? _("Dedicated cgroup unavailable") : torrserverDirectEnabled && torrserverDirectActive ? _("Enabled") : torrserverDirectEnabled ? _("Waiting for TorrServer") : _("Disabled"),
+      actions: torrserverDirectActions
     },
     {
       component: "zapret",
@@ -20884,7 +21048,7 @@ function renderComponentCard(card) {
       text: action.text,
       icon: action.icon,
       loading: loading2,
-      disabled: systemInfoLoading || anyActionLoading && !loading2,
+      disabled: action.disabled || systemInfoLoading || anyActionLoading && !loading2,
       onClick: () => void handleComponentAction(action)
     });
   });
@@ -20895,7 +21059,7 @@ function renderComponentCard(card) {
       text: action.text,
       icon: action.icon,
       loading: loading2,
-      disabled: systemInfoLoading || anyActionLoading && !loading2,
+      disabled: action.disabled || systemInfoLoading || anyActionLoading && !loading2,
       onClick: () => void handleComponentAction(action)
     });
   });
@@ -20904,6 +21068,18 @@ function renderComponentCard(card) {
       E("div", { class: "tachyon_updates-page__component__actions-main" }, [
         ...primaryButtons,
         ...dangerButtons
+      ])
+    );
+  }
+  if (card.copyValue) {
+    actionElements.push(
+      E("div", { class: "tachyon_updates-page__component__actions-main" }, [
+        renderButton({
+          text: _("Copy address"),
+          icon: renderCopyIcon24,
+          disabled: anyActionLoading,
+          onClick: () => copyToClipboard(card.copyValue || "")
+        })
       ])
     );
   }

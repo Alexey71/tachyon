@@ -1516,6 +1516,8 @@ function sing_box_signature_body(settings, sections, servers, mwan3_active) {
     body = signature_add_value(body, "settings.log_level", option(settings, "log_level", "warn"));
     body = signature_add_value(body, "settings.service_listen_address", option(settings, "service_listen_address", ""));
     body = signature_add_value(body, "runtime.mwan3_active", bool_value(mwan3_active));
+    body = signature_add_value(body, "settings.direct_bypass_enabled", bool_option_value(settings, "direct_bypass_enabled", false));
+    body = signature_add_value(body, "settings.direct_bypass_port", option(settings, "direct_bypass_port", "2080"));
 
     let enable_yacd = bool_option_value(settings, "enable_yacd", false);
     body = signature_add_value(body, "settings.enable_yacd", enable_yacd);

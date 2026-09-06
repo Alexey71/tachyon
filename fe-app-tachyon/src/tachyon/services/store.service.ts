@@ -238,6 +238,13 @@ export interface StoreType {
     tailscale_backup_version?: string;
     tailscale_backup_time?: number;
     server_inbounds_enabled_count: number;
+    direct_bypass_enabled?: number;
+    direct_bypass_address?: string;
+    direct_bypass_port?: string;
+    torrserver_running?: number;
+    torrserver_direct_available?: number;
+    torrserver_direct_enabled?: number;
+    torrserver_direct_active?: number;
     openwrt_version: string;
     device_model: string;
   };
@@ -270,6 +277,10 @@ export interface StoreType {
     tailscaleInstall: { loading: boolean };
     tailscaleRemove: { loading: boolean };
     tailscaleRollback: { loading: boolean };
+    directBypassEnable: { loading: boolean };
+    directBypassDisable: { loading: boolean };
+    torrserverDirectEnable: { loading: boolean };
+    torrserverDirectDisable: { loading: boolean };
   };
   updatesChecks: Record<
     Tachyon.ComponentName,

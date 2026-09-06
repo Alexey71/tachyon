@@ -38,6 +38,10 @@ const componentActionKeyMap: Record<string, UpdatesActionKey> = {
   'tailscale:install_version': 'tailscaleInstall',
   'tailscale:remove': 'tailscaleRemove',
   'tailscale:rollback': 'tailscaleRollback',
+  'direct_bypass:enable': 'directBypassEnable',
+  'direct_bypass:disable': 'directBypassDisable',
+  'torrserver_direct:enable': 'torrserverDirectEnable',
+  'torrserver_direct:disable': 'torrserverDirectDisable',
 };
 
 export function getComponentActionKey(
