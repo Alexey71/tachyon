@@ -1428,7 +1428,7 @@ async function handleRunAiDoctor() {
         'div',
         {
           class: 'tachyon-partial-modal__body',
-          style: 'width: 100%; max-width: 680px; box-sizing: border-box;',
+          style: 'width: 100%; box-sizing: border-box;',
         },
         [],
       );

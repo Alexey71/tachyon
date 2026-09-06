@@ -12355,12 +12355,12 @@ function renderAiChatModal() {
   );
   const modalWrapper = E(
     "div",
-    { style: "width: 100%; max-width: 680px; box-sizing: border-box;" },
+    { style: "width: 100%; box-sizing: border-box;" },
     [quickPromptsBar, messageListContainer, inputToolbar]
   );
   const modalContent = E(
     "div",
-    { style: "width: 100%; max-width: 680px; box-sizing: border-box;" },
+    { style: "width: 100%; box-sizing: border-box;" },
     [
       modalWrapper,
       E(
@@ -12423,7 +12423,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
   };
   const modalContainer = E("div", {
     class: "tachyon_fuzzer_modal",
-    style: "display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 920px; box-sizing: border-box;"
+    style: "display: flex; flex-direction: column; gap: 14px; width: 100%; box-sizing: border-box;"
   });
   const tabButtons = {};
   const createTabButton = (id, icon, label) => {
@@ -12777,35 +12777,77 @@ function renderStrategyFuzzerModal(ruleNames = []) {
   const tableEl = E(
     "table",
     {
-      class: "table",
+      class: "table cbi-section-table",
       style: "width: 100%; min-width: 620px; margin: 0; font-size: 12px; text-align: left; border-collapse: collapse;"
     },
     [
       E(
         "thead",
         {
+          class: "cbi-section-table-titles",
           style: "background: var(--background-color-secondary, rgba(0,0,0,0.25)); position: sticky; top: 0; z-index: 2;"
         },
         [
-          E("tr", {}, [
-            E("th", { style: "padding: 8px 10px; width: 35px;" }, "#"),
-            E("th", { style: "padding: 8px 10px; width: 75px;" }, _("Engine")),
+          E("tr", { class: "cbi-section-table-titles" }, [
             E(
               "th",
-              { style: "padding: 8px 10px;" },
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 35px;"
+              },
+              "#"
+            ),
+            E(
+              "th",
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 75px;"
+              },
+              _("Engine")
+            ),
+            E(
+              "th",
+              { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
               _("Strategy & Parameters")
             ),
             E(
               "th",
-              { style: "padding: 8px 10px; width: 95px;" },
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 95px;"
+              },
               _("Status / Suite")
             ),
-            E("th", { style: "padding: 8px 10px; width: 65px;" }, _("TTFB")),
-            E("th", { style: "padding: 8px 10px; width: 75px;" }, _("Speed")),
-            E("th", { style: "padding: 8px 10px; width: 80px;" }, _("Score")),
             E(
               "th",
-              { style: "padding: 8px 10px; width: 85px; text-align: center;" },
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 65px;"
+              },
+              _("TTFB")
+            ),
+            E(
+              "th",
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 75px;"
+              },
+              _("Speed")
+            ),
+            E(
+              "th",
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 80px;"
+              },
+              _("Score")
+            ),
+            E(
+              "th",
+              {
+                class: "cbi-section-table-cell",
+                style: "padding: 8px 10px; width: 85px; text-align: center;"
+              },
               _("Actions")
             )
           ])
@@ -13384,19 +13426,53 @@ function renderStrategyFuzzerModal(ruleNames = []) {
         const table = E(
           "table",
           {
-            class: "table",
+            class: "table cbi-section-table",
             style: "width: 100%; margin: 0; font-size: 12px;"
           },
           [
-            E("thead", {}, [
-              E("tr", {}, [
-                E("th", { style: "padding: 8px;" }, _("Date")),
-                E("th", { style: "padding: 8px;" }, _("Engine")),
-                E("th", { style: "padding: 8px;" }, _("Target")),
-                E("th", { style: "padding: 8px;" }, _("DPI Type")),
-                E("th", { style: "padding: 8px;" }, _("Best Strategy")),
-                E("th", { style: "padding: 8px; width: 60px;" }, _("Score")),
-                E("th", { style: "padding: 8px; width: 70px;" }, _("Working"))
+            E("thead", { class: "cbi-section-table-titles" }, [
+              E("tr", { class: "cbi-section-table-titles" }, [
+                E(
+                  "th",
+                  { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                  _("Date")
+                ),
+                E(
+                  "th",
+                  { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                  _("Engine")
+                ),
+                E(
+                  "th",
+                  { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                  _("Target")
+                ),
+                E(
+                  "th",
+                  { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                  _("DPI Type")
+                ),
+                E(
+                  "th",
+                  { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                  _("Best Strategy")
+                ),
+                E(
+                  "th",
+                  {
+                    class: "cbi-section-table-cell",
+                    style: "padding: 8px; width: 60px;"
+                  },
+                  _("Score")
+                ),
+                E(
+                  "th",
+                  {
+                    class: "cbi-section-table-cell",
+                    style: "padding: 8px; width: 70px;"
+                  },
+                  _("Working")
+                )
               ])
             ]),
             E(
@@ -13409,30 +13485,51 @@ function renderStrategyFuzzerModal(ruleNames = []) {
                 const bestName = entry.best_strategy ? entry.best_strategy.name : "\u2014";
                 const bestScore = entry.best_strategy ? String(entry.best_strategy.score) : "0";
                 const working = `${entry.working_count}/${entry.total_tested}`;
-                return E("tr", {}, [
-                  E("td", { style: "padding: 8px;" }, dateStr),
+                return E("tr", { class: "cbi-section-table-row" }, [
+                  E(
+                    "td",
+                    { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                    dateStr
+                  ),
                   E(
                     "td",
                     {
+                      class: "cbi-section-table-cell",
                       style: "padding: 8px; font-family: monospace;"
                     },
                     entry.engine
                   ),
-                  E("td", { style: "padding: 8px;" }, entry.target),
-                  E("td", { style: "padding: 8px;" }, dpiType),
+                  E(
+                    "td",
+                    { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                    entry.target
+                  ),
+                  E(
+                    "td",
+                    { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                    dpiType
+                  ),
                   E(
                     "td",
                     {
+                      class: "cbi-section-table-cell",
                       style: "padding: 8px; font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                     },
                     bestName
                   ),
                   E(
                     "td",
-                    { style: "padding: 8px; font-weight: bold;" },
+                    {
+                      class: "cbi-section-table-cell",
+                      style: "padding: 8px; font-weight: bold;"
+                    },
                     bestScore
                   ),
-                  E("td", { style: "padding: 8px;" }, working)
+                  E(
+                    "td",
+                    { class: "cbi-section-table-cell", style: "padding: 8px;" },
+                    working
+                  )
                 ]);
               })
             )
@@ -13498,8 +13595,8 @@ function renderStrategyFuzzerModal(ruleNames = []) {
         E(
           "span",
           {
-            class: `label ${item.success ? "badge-success" : "badge-danger"}`,
-            style: "font-size: 10px; padding: 2px 6px; border-radius: 3px; display: inline-block;"
+            class: `badge ${item.success ? "badge-success" : "badge-danger"}`,
+            style: "font-size: 10px; padding: 2px 6px; display: inline-block;"
           },
           item.success ? `HTTP ${item.http_code}` : "DROP"
         )
@@ -13509,8 +13606,8 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           E(
             "span",
             {
-              class: "label badge-success",
-              style: "font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #28a745; color: #fff; font-weight: 500;",
+              class: "badge badge-success",
+              style: "font-size: 9px; padding: 2px 5px; margin-left: 4px; display: inline-block; font-weight: 500;",
               title: _(
                 "Data transfer verified: streamed >= 32KB without throttling or disconnect"
               )
@@ -13523,8 +13620,8 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           E(
             "span",
             {
-              class: "label badge-danger",
-              style: "font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #dc3545; color: #fff; font-weight: 500;",
+              class: "badge badge-danger",
+              style: "font-size: 9px; padding: 2px 5px; margin-left: 4px; display: inline-block; font-weight: 500;",
               title: _(
                 "DPI throttling: stream cut off after ~16KB payload transfer"
               )
@@ -13537,8 +13634,8 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           E(
             "span",
             {
-              class: "label badge-warning",
-              style: "font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #ffc107; color: #111; font-weight: 500;",
+              class: "badge badge-warning",
+              style: "font-size: 9px; padding: 2px 5px; margin-left: 4px; display: inline-block; font-weight: 500;",
               title: _(
                 "Fake packets reached remote server (HTTP 400 Bad Request)"
               )
@@ -13563,7 +13660,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           E(
             "div",
             {
-              style: "font-size: 10px; color: #dc3545; opacity: 0.85; margin-top: 2px; max-width: 140px; word-break: break-word;",
+              style: "font-size: 10px; color: var(--error-color-medium, #dc3545); opacity: 0.85; margin-top: 2px; max-width: 220px; word-break: break-word;",
               title: item.error
             },
             item.error
@@ -13573,40 +13670,50 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       const tr = E(
         "tr",
         {
-          style: `border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.06)); ${isBest ? "background: rgba(40, 167, 69, 0.08);" : ""}`
+          class: `cbi-section-table-row ${isBest ? "cbi-rowstyle-1" : "cbi-rowstyle-2"}`,
+          style: `border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.06)); ${isBest ? "background: var(--background-color-high, rgba(40, 167, 69, 0.08));" : ""}`
         },
         [
-          E("td", { style: "padding: 8px 10px;" }, String(idx + 1)),
+          E(
+            "td",
+            { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
+            String(idx + 1)
+          ),
           E(
             "td",
             {
+              class: "cbi-section-table-cell",
               style: "padding: 8px 10px; font-family: monospace; font-size: 11px;"
             },
             item.engine
           ),
-          E("td", { style: "padding: 8px 10px;" }, [
-            E("div", { style: "font-weight: 600;" }, nameChildren),
-            E(
-              "div",
-              {
-                style: "font-size: 10px; opacity: 0.7; font-family: monospace; word-break: break-all; margin-top: 2px;"
-              },
-              item.args
-            )
-          ]),
           E(
             "td",
-            { style: "padding: 8px 10px;" },
+            { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
+            [
+              E("div", { style: "font-weight: 600;" }, nameChildren),
+              E(
+                "div",
+                {
+                  style: "font-size: 10px; opacity: 0.7; font-family: monospace; word-break: break-all; margin-top: 2px;"
+                },
+                item.args
+              )
+            ]
+          ),
+          E(
+            "td",
+            { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
             E("div", {}, statusChildren)
           ),
           E(
             "td",
-            { style: "padding: 8px 10px;" },
+            { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
             item.success ? `${item.ttfb_ms}ms` : "\u2014"
           ),
           E(
             "td",
-            { style: "padding: 8px 10px;" },
+            { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
             item.success ? [
               E("div", {}, `${(item.speed_kbps / 1024).toFixed(1)}MB/s`),
               item.data_bytes && item.data_bytes > 0 ? E(
@@ -13618,12 +13725,18 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           ),
           E(
             "td",
-            { style: "padding: 8px 10px; font-weight: bold;" },
+            {
+              class: "cbi-section-table-cell",
+              style: "padding: 8px 10px; font-weight: bold;"
+            },
             item.success ? String(item.score) : "0"
           ),
           E(
             "td",
-            { style: "padding: 8px 10px; text-align: center;" },
+            {
+              class: "cbi-section-table-cell",
+              style: "padding: 8px 10px; text-align: center;"
+            },
             E(
               "div",
               { style: "display: flex; gap: 4px; justify-content: center;" },
@@ -13766,33 +13879,13 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       banner.style.display = "none";
       return;
     }
-    const typeColors = {
-      rst: { bg: "rgba(220, 53, 69, 0.12)", border: "#dc3545", icon: "\u{1F534}" },
-      throttle: {
-        bg: "rgba(255, 193, 7, 0.12)",
-        border: "#ffc107",
-        icon: "\u{1F7E1}"
-      },
-      dns_block: {
-        bg: "rgba(23, 162, 184, 0.12)",
-        border: "#17a2b8",
-        icon: "\u{1F535}"
-      },
-      ip_block: {
-        bg: "rgba(220, 53, 69, 0.18)",
-        border: "#dc3545",
-        icon: "\u{1F6AB}"
-      },
-      unknown: {
-        bg: "rgba(108, 117, 125, 0.12)",
-        border: "#6c757d",
-        icon: "\u26AA"
-      },
-      none: {
-        bg: "rgba(40, 167, 69, 0.12)",
-        border: "#28a745",
-        icon: "\u{1F7E2}"
-      }
+    const typeMeta = {
+      rst: { alertClass: "danger", icon: "\u{1F534}" },
+      throttle: { alertClass: "warning", icon: "\u{1F7E1}" },
+      dns_block: { alertClass: "info", icon: "\u{1F535}" },
+      ip_block: { alertClass: "danger", icon: "\u{1F6AB}" },
+      unknown: { alertClass: "notice", icon: "\u26AA" },
+      none: { alertClass: "success", icon: "\u{1F7E2}" }
     };
     const typeLabels = {
       rst: "TCP Reset Injection",
@@ -13802,23 +13895,22 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       unknown: "Unknown DPI Pattern",
       none: "No Blocking Detected"
     };
-    const colors = typeColors[detection.type] || typeColors.unknown;
+    const meta = typeMeta[detection.type] || typeMeta.unknown;
     const label = typeLabels[detection.type] || detection.type;
-    const ipBlockNotice = detection.type === "ip_block" ? `<div style="margin-top: 8px; padding: 8px 12px; background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.35); border-radius: 4px; color: #ff6b6b; font-size: 11px; font-weight: 500; line-height: 1.4;">
+    const ipBlockNotice = detection.type === "ip_block" ? `<div class="alert-message danger" style="margin-top: 8px;">
              \u26A0\uFE0F ${_("\u041E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u0430 \u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0430 \u043F\u043E IP! \u0420\u0435\u0441\u0443\u0440\u0441 \u0431\u043B\u043E\u043A\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u043D\u0430 \u0441\u0435\u0442\u0435\u0432\u043E\u043C \u0443\u0440\u043E\u0432\u043D\u0435 (\u043D\u0435\u0442 \u043E\u0442\u0432\u0435\u0442\u0430 \u043D\u0430 TCP SYN). \u041C\u0435\u0442\u043E\u0434\u044B \u043E\u0431\u0445\u043E\u0434\u0430 DPI (Zapret / ByeDPI) \u0431\u0435\u0441\u0441\u0438\u043B\u044C\u043D\u044B \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0430\u0434\u0440\u0435\u0441\u0430 \u2014 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0438\u0437\u0430\u0446\u0438\u044E \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u043A\u0441\u0438/VPN (Sing-box) \u0434\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0435\u043D\u0430!")}
            </div>` : "";
+    banner.className = `alert-message ${meta.alertClass}`;
     banner.style.display = "block";
-    banner.style.background = colors.bg;
-    banner.style.borderLeft = `3px solid ${colors.border}`;
     banner.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 6px;">
         <div>
-          <span style="font-weight: bold;">${colors.icon} ${_("DPI Detected")}: ${label}</span>
+          <span style="font-weight: bold;">${meta.icon} ${_("DPI Detected")}: ${label}</span>
           <span style="opacity: 0.7; margin-left: 8px;">${detection.confidence}% ${_("confidence")}</span>
         </div>
-        ${detection.recommended_engines.length > 0 ? `<div style="font-size: 11px; opacity: 0.7;">${_("Recommended")}: ${detection.recommended_engines.join(", ")}</div>` : ""}
+        ${detection.recommended_engines.length > 0 ? `<div style="font-size: 11px; opacity: 0.8;">${_("Recommended")}: ${detection.recommended_engines.join(", ")}</div>` : ""}
       </div>
-      <div style="margin-top: 4px; opacity: 0.8; font-size: 11px;">${detection.details}</div>
+      <div style="margin-top: 4px; opacity: 0.9; font-size: 11px;">${detection.details}</div>
       ${ipBlockNotice}
     `;
   };
@@ -15993,7 +16085,7 @@ async function handleRunAiDoctor() {
         "div",
         {
           class: "tachyon-partial-modal__body",
-          style: "width: 100%; max-width: 680px; box-sizing: border-box;"
+          style: "width: 100%; box-sizing: border-box;"
         },
         []
       );
@@ -21194,7 +21286,6 @@ var styles6 = `
     flex-direction: column;
     gap: 10px;
     width: 100%;
-    max-width: 640px;
     box-sizing: border-box;
     padding: 6px 0;
 }
@@ -21204,7 +21295,7 @@ var styles6 = `
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid var(--border-color-low, #dee2e6);
+    border-bottom: 1px solid var(--border-color-low, rgba(128,128,128,0.2));
     padding-bottom: 10px;
 }
 

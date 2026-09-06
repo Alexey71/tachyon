@@ -53,7 +53,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
   const modalContainer = E('div', {
     class: 'tachyon_fuzzer_modal',
     style:
-      'display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 920px; box-sizing: border-box;',
+      'display: flex; flex-direction: column; gap: 14px; width: 100%; box-sizing: border-box;',
   });
 
   // ── Tab Bar Navigation ────────────────────────────────────────────────────
@@ -476,7 +476,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
   const tableEl = E(
     'table',
     {
-      class: 'table',
+      class: 'table cbi-section-table',
       style:
         'width: 100%; min-width: 620px; margin: 0; font-size: 12px; text-align: left; border-collapse: collapse;',
     },
@@ -484,29 +484,71 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       E(
         'thead',
         {
+          class: 'cbi-section-table-titles',
           style:
             'background: var(--background-color-secondary, rgba(0,0,0,0.25)); position: sticky; top: 0; z-index: 2;',
         },
         [
-          E('tr', {}, [
-            E('th', { style: 'padding: 8px 10px; width: 35px;' }, '#'),
-            E('th', { style: 'padding: 8px 10px; width: 75px;' }, _('Engine')),
+          E('tr', { class: 'cbi-section-table-titles' }, [
             E(
               'th',
-              { style: 'padding: 8px 10px;' },
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 35px;',
+              },
+              '#',
+            ),
+            E(
+              'th',
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 75px;',
+              },
+              _('Engine'),
+            ),
+            E(
+              'th',
+              { class: 'cbi-section-table-cell', style: 'padding: 8px 10px;' },
               _('Strategy & Parameters'),
             ),
             E(
               'th',
-              { style: 'padding: 8px 10px; width: 95px;' },
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 95px;',
+              },
               _('Status / Suite'),
             ),
-            E('th', { style: 'padding: 8px 10px; width: 65px;' }, _('TTFB')),
-            E('th', { style: 'padding: 8px 10px; width: 75px;' }, _('Speed')),
-            E('th', { style: 'padding: 8px 10px; width: 80px;' }, _('Score')),
             E(
               'th',
-              { style: 'padding: 8px 10px; width: 85px; text-align: center;' },
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 65px;',
+              },
+              _('TTFB'),
+            ),
+            E(
+              'th',
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 75px;',
+              },
+              _('Speed'),
+            ),
+            E(
+              'th',
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 80px;',
+              },
+              _('Score'),
+            ),
+            E(
+              'th',
+              {
+                class: 'cbi-section-table-cell',
+                style: 'padding: 8px 10px; width: 85px; text-align: center;',
+              },
               _('Actions'),
             ),
           ]),
@@ -1166,19 +1208,53 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
         const table = E(
           'table',
           {
-            class: 'table',
+            class: 'table cbi-section-table',
             style: 'width: 100%; margin: 0; font-size: 12px;',
           },
           [
-            E('thead', {}, [
-              E('tr', {}, [
-                E('th', { style: 'padding: 8px;' }, _('Date')),
-                E('th', { style: 'padding: 8px;' }, _('Engine')),
-                E('th', { style: 'padding: 8px;' }, _('Target')),
-                E('th', { style: 'padding: 8px;' }, _('DPI Type')),
-                E('th', { style: 'padding: 8px;' }, _('Best Strategy')),
-                E('th', { style: 'padding: 8px; width: 60px;' }, _('Score')),
-                E('th', { style: 'padding: 8px; width: 70px;' }, _('Working')),
+            E('thead', { class: 'cbi-section-table-titles' }, [
+              E('tr', { class: 'cbi-section-table-titles' }, [
+                E(
+                  'th',
+                  { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                  _('Date'),
+                ),
+                E(
+                  'th',
+                  { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                  _('Engine'),
+                ),
+                E(
+                  'th',
+                  { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                  _('Target'),
+                ),
+                E(
+                  'th',
+                  { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                  _('DPI Type'),
+                ),
+                E(
+                  'th',
+                  { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                  _('Best Strategy'),
+                ),
+                E(
+                  'th',
+                  {
+                    class: 'cbi-section-table-cell',
+                    style: 'padding: 8px; width: 60px;',
+                  },
+                  _('Score'),
+                ),
+                E(
+                  'th',
+                  {
+                    class: 'cbi-section-table-cell',
+                    style: 'padding: 8px; width: 70px;',
+                  },
+                  _('Working'),
+                ),
               ]),
             ]),
             E(
@@ -1198,20 +1274,34 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
                   : '0';
                 const working = `${entry.working_count}/${entry.total_tested}`;
 
-                return E('tr', {}, [
-                  E('td', { style: 'padding: 8px;' }, dateStr),
+                return E('tr', { class: 'cbi-section-table-row' }, [
+                  E(
+                    'td',
+                    { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                    dateStr,
+                  ),
                   E(
                     'td',
                     {
+                      class: 'cbi-section-table-cell',
                       style: 'padding: 8px; font-family: monospace;',
                     },
                     entry.engine,
                   ),
-                  E('td', { style: 'padding: 8px;' }, entry.target),
-                  E('td', { style: 'padding: 8px;' }, dpiType),
+                  E(
+                    'td',
+                    { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                    entry.target,
+                  ),
+                  E(
+                    'td',
+                    { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                    dpiType,
+                  ),
                   E(
                     'td',
                     {
+                      class: 'cbi-section-table-cell',
                       style:
                         'padding: 8px; font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;',
                     },
@@ -1219,10 +1309,17 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
                   ),
                   E(
                     'td',
-                    { style: 'padding: 8px; font-weight: bold;' },
+                    {
+                      class: 'cbi-section-table-cell',
+                      style: 'padding: 8px; font-weight: bold;',
+                    },
                     bestScore,
                   ),
-                  E('td', { style: 'padding: 8px;' }, working),
+                  E(
+                    'td',
+                    { class: 'cbi-section-table-cell', style: 'padding: 8px;' },
+                    working,
+                  ),
                 ]);
               }),
             ),
@@ -1301,9 +1398,8 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
         E(
           'span',
           {
-            class: `label ${item.success ? 'badge-success' : 'badge-danger'}`,
-            style:
-              'font-size: 10px; padding: 2px 6px; border-radius: 3px; display: inline-block;',
+            class: `badge ${item.success ? 'badge-success' : 'badge-danger'}`,
+            style: 'font-size: 10px; padding: 2px 6px; display: inline-block;',
           },
           item.success ? `HTTP ${item.http_code}` : 'DROP',
         ),
@@ -1314,9 +1410,9 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           E(
             'span',
             {
-              class: 'label badge-success',
+              class: 'badge badge-success',
               style:
-                'font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #28a745; color: #fff; font-weight: 500;',
+                'font-size: 9px; padding: 2px 5px; margin-left: 4px; display: inline-block; font-weight: 500;',
               title: _(
                 'Data transfer verified: streamed >= 32KB without throttling or disconnect',
               ),
@@ -1329,9 +1425,9 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           E(
             'span',
             {
-              class: 'label badge-danger',
+              class: 'badge badge-danger',
               style:
-                'font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #dc3545; color: #fff; font-weight: 500;',
+                'font-size: 9px; padding: 2px 5px; margin-left: 4px; display: inline-block; font-weight: 500;',
               title: _(
                 'DPI throttling: stream cut off after ~16KB payload transfer',
               ),
@@ -1344,9 +1440,9 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           E(
             'span',
             {
-              class: 'label badge-warning',
+              class: 'badge badge-warning',
               style:
-                'font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; background: #ffc107; color: #111; font-weight: 500;',
+                'font-size: 9px; padding: 2px 5px; margin-left: 4px; display: inline-block; font-weight: 500;',
               title: _(
                 'Fake packets reached remote server (HTTP 400 Bad Request)',
               ),
@@ -1374,7 +1470,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
             'div',
             {
               style:
-                'font-size: 10px; color: #dc3545; opacity: 0.85; margin-top: 2px; max-width: 140px; word-break: break-word;',
+                'font-size: 10px; color: var(--error-color-medium, #dc3545); opacity: 0.85; margin-top: 2px; max-width: 220px; word-break: break-word;',
               title: item.error,
             },
             item.error,
@@ -1385,44 +1481,56 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       const tr = E(
         'tr',
         {
+          class: `cbi-section-table-row ${isBest ? 'cbi-rowstyle-1' : 'cbi-rowstyle-2'}`,
           style: `border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.06)); ${
-            isBest ? 'background: rgba(40, 167, 69, 0.08);' : ''
+            isBest
+              ? 'background: var(--background-color-high, rgba(40, 167, 69, 0.08));'
+              : ''
           }`,
         },
         [
-          E('td', { style: 'padding: 8px 10px;' }, String(idx + 1)),
+          E(
+            'td',
+            { class: 'cbi-section-table-cell', style: 'padding: 8px 10px;' },
+            String(idx + 1),
+          ),
           E(
             'td',
             {
+              class: 'cbi-section-table-cell',
               style:
                 'padding: 8px 10px; font-family: monospace; font-size: 11px;',
             },
             item.engine,
           ),
-          E('td', { style: 'padding: 8px 10px;' }, [
-            E('div', { style: 'font-weight: 600;' }, nameChildren),
-            E(
-              'div',
-              {
-                style:
-                  'font-size: 10px; opacity: 0.7; font-family: monospace; word-break: break-all; margin-top: 2px;',
-              },
-              item.args,
-            ),
-          ]),
           E(
             'td',
-            { style: 'padding: 8px 10px;' },
+            { class: 'cbi-section-table-cell', style: 'padding: 8px 10px;' },
+            [
+              E('div', { style: 'font-weight: 600;' }, nameChildren),
+              E(
+                'div',
+                {
+                  style:
+                    'font-size: 10px; opacity: 0.7; font-family: monospace; word-break: break-all; margin-top: 2px;',
+                },
+                item.args,
+              ),
+            ],
+          ),
+          E(
+            'td',
+            { class: 'cbi-section-table-cell', style: 'padding: 8px 10px;' },
             E('div', {}, statusChildren),
           ),
           E(
             'td',
-            { style: 'padding: 8px 10px;' },
+            { class: 'cbi-section-table-cell', style: 'padding: 8px 10px;' },
             item.success ? `${item.ttfb_ms}ms` : '—',
           ),
           E(
             'td',
-            { style: 'padding: 8px 10px;' },
+            { class: 'cbi-section-table-cell', style: 'padding: 8px 10px;' },
             item.success
               ? [
                   E('div', {}, `${(item.speed_kbps / 1024).toFixed(1)}MB/s`),
@@ -1438,12 +1546,18 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           ),
           E(
             'td',
-            { style: 'padding: 8px 10px; font-weight: bold;' },
+            {
+              class: 'cbi-section-table-cell',
+              style: 'padding: 8px 10px; font-weight: bold;',
+            },
             item.success ? String(item.score) : '0',
           ),
           E(
             'td',
-            { style: 'padding: 8px 10px; text-align: center;' },
+            {
+              class: 'cbi-section-table-cell',
+              style: 'padding: 8px 10px; text-align: center;',
+            },
             E(
               'div',
               { style: 'display: flex; gap: 4px; justify-content: center;' },
@@ -1616,36 +1730,13 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       return;
     }
 
-    const typeColors: Record<
-      string,
-      { bg: string; border: string; icon: string }
-    > = {
-      rst: { bg: 'rgba(220, 53, 69, 0.12)', border: '#dc3545', icon: '🔴' },
-      throttle: {
-        bg: 'rgba(255, 193, 7, 0.12)',
-        border: '#ffc107',
-        icon: '🟡',
-      },
-      dns_block: {
-        bg: 'rgba(23, 162, 184, 0.12)',
-        border: '#17a2b8',
-        icon: '🔵',
-      },
-      ip_block: {
-        bg: 'rgba(220, 53, 69, 0.18)',
-        border: '#dc3545',
-        icon: '🚫',
-      },
-      unknown: {
-        bg: 'rgba(108, 117, 125, 0.12)',
-        border: '#6c757d',
-        icon: '⚪',
-      },
-      none: {
-        bg: 'rgba(40, 167, 69, 0.12)',
-        border: '#28a745',
-        icon: '🟢',
-      },
+    const typeMeta: Record<string, { alertClass: string; icon: string }> = {
+      rst: { alertClass: 'danger', icon: '🔴' },
+      throttle: { alertClass: 'warning', icon: '🟡' },
+      dns_block: { alertClass: 'info', icon: '🔵' },
+      ip_block: { alertClass: 'danger', icon: '🚫' },
+      unknown: { alertClass: 'notice', icon: '⚪' },
+      none: { alertClass: 'success', icon: '🟢' },
     };
 
     const typeLabels: Record<string, string> = {
@@ -1657,28 +1748,27 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       none: 'No Blocking Detected',
     };
 
-    const colors = typeColors[detection.type] || typeColors.unknown;
+    const meta = typeMeta[detection.type] || typeMeta.unknown;
     const label = typeLabels[detection.type] || detection.type;
 
     const ipBlockNotice =
       detection.type === 'ip_block'
-        ? `<div style="margin-top: 8px; padding: 8px 12px; background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.35); border-radius: 4px; color: #ff6b6b; font-size: 11px; font-weight: 500; line-height: 1.4;">
+        ? `<div class="alert-message danger" style="margin-top: 8px;">
              ⚠️ ${_('Обнаружена блокировка по IP! Ресурс блокируется на сетевом уровне (нет ответа на TCP SYN). Методы обхода DPI (Zapret / ByeDPI) бессильны для этого адреса — настройте маршрутизацию через прокси/VPN (Sing-box) для данного домена!')}
            </div>`
         : '';
 
+    banner.className = `alert-message ${meta.alertClass}`;
     banner.style.display = 'block';
-    banner.style.background = colors.bg;
-    banner.style.borderLeft = `3px solid ${colors.border}`;
     banner.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 6px;">
         <div>
-          <span style="font-weight: bold;">${colors.icon} ${_('DPI Detected')}: ${label}</span>
+          <span style="font-weight: bold;">${meta.icon} ${_('DPI Detected')}: ${label}</span>
           <span style="opacity: 0.7; margin-left: 8px;">${detection.confidence}% ${_('confidence')}</span>
         </div>
-        ${detection.recommended_engines.length > 0 ? `<div style="font-size: 11px; opacity: 0.7;">${_('Recommended')}: ${detection.recommended_engines.join(', ')}</div>` : ''}
+        ${detection.recommended_engines.length > 0 ? `<div style="font-size: 11px; opacity: 0.8;">${_('Recommended')}: ${detection.recommended_engines.join(', ')}</div>` : ''}
       </div>
-      <div style="margin-top: 4px; opacity: 0.8; font-size: 11px;">${detection.details}</div>
+      <div style="margin-top: 4px; opacity: 0.9; font-size: 11px;">${detection.details}</div>
       ${ipBlockNotice}
     `;
   };

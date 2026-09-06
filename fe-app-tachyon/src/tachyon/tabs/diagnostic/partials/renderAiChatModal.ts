@@ -207,13 +207,13 @@ export function renderAiChatModal() {
 
   const modalWrapper = E(
     'div',
-    { style: 'width: 100%; max-width: 680px; box-sizing: border-box;' },
+    { style: 'width: 100%; box-sizing: border-box;' },
     [quickPromptsBar, messageListContainer, inputToolbar],
   );
 
   const modalContent = E(
     'div',
-    { style: 'width: 100%; max-width: 680px; box-sizing: border-box;' },
+    { style: 'width: 100%; box-sizing: border-box;' },
     [
       modalWrapper,
       E(

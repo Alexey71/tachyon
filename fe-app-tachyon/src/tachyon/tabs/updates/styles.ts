@@ -200,7 +200,6 @@ export const styles = `
     flex-direction: column;
     gap: 10px;
     width: 100%;
-    max-width: 640px;
     box-sizing: border-box;
     padding: 6px 0;
 }
@@ -210,7 +209,7 @@ export const styles = `
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid var(--border-color-low, #dee2e6);
+    border-bottom: 1px solid var(--border-color-low, rgba(128,128,128,0.2));
     padding-bottom: 10px;
 }
 
