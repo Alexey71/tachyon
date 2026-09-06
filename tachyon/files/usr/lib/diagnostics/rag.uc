@@ -1,6 +1,7 @@
 let fs = require("fs");
 let common = require("core.common");
 
+let as_string = common.as_string;
 let command_from_args = common.command_from_args;
 let rag_index = null;
 let rag_embed_cache = null;
@@ -156,6 +157,12 @@ function call_embedding_api(api_url, api_key, model, texts) {
     return null;
 }
 
+function sqrt_val(x) {
+    if (x <= 0)
+        return 0.0;
+    return x ** 0.5;
+}
+
 function cosine_similarity(a, b) {
     let len = length(a);
     if (len == 0 || length(b) != len)
@@ -166,7 +173,7 @@ function cosine_similarity(a, b) {
         norm_a += a[i] * a[i];
         norm_b += b[i] * b[i];
     }
-    let denom = sqrt(norm_a) * sqrt(norm_b);
+    let denom = sqrt_val(norm_a) * sqrt_val(norm_b);
     if (denom == 0)
         return 0;
     return dot / denom;
@@ -223,12 +230,12 @@ function search(query_embedding, index, top_k) {
         if (length(chunk.embedding) == 0)
             continue;
         let score = cosine_similarity(query_embedding, chunk.embedding);
-        push({ chunk: chunk, score: score }, scored);
+        push(scored, { chunk: chunk, score: score });
     }
     sort(scored, function(a, b) { return b.score - a.score; });
     let limit = top_k || 3;
     if (length(scored) > limit)
-        scored = scored.slice(0, limit);
+        scored = slice(scored, 0, limit);
     return scored;
 }
 
@@ -250,8 +257,8 @@ function retrieve(query, provider, api_key, custom_url, model_override, top_k) {
         let r = results[i];
         if (r.score < 0.3)
             continue;
-        push(sprintf("[Source: %s — %s] (relevance: %.0f%%)\n%s",
-            r.chunk.file, r.chunk.heading, r.score * 100, r.chunk.text), parts);
+        push(parts, sprintf("[Source: %s — %s] (relevance: %.0f%%)\n%s",
+            r.chunk.file, r.chunk.heading, r.score * 100, r.chunk.text));
     }
     return join("\n\n---\n\n", parts);
 }
@@ -278,5 +285,7 @@ return {
     retrieve: retrieve,
     invalidate_cache: invalidate_cache,
     status: status,
-    load_raw_index: load_raw_index
+    load_raw_index: load_raw_index,
+    get_embedding_model: get_embedding_model,
+    search: search
 };

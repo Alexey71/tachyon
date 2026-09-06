@@ -56,4 +56,26 @@ print((length(out) == 2 && length(out[0]) == 2 && out[1][1] == 4) ? "OK" : "BAD"
 [ "$push_check" = "OK" ] ||
   fail "ucode push(array, value) did not behave as expected (saw '$push_check')"
 
+# 6. Runtime verification of rag.uc functions (as_string, get_embedding_model, search, sqrt_val, slice)
+runtime_check="$(ucode -L "$TACHYON_LIB" -e '
+let rag = require("diagnostics.rag");
+assert(rag.get_embedding_model("OpenAI") == "text-embedding-3-small", "OpenAI");
+assert(rag.get_embedding_model("DEEPSEEK") == "deepseek-embedding", "DeepSeek");
+assert(rag.get_embedding_model(null, null) == "text-embedding-3-small", "null");
+
+let idx = {
+    chunks: [
+        { file: "f1.md", heading: "H1", text: "T1", embedding: [1.0, 0.0] },
+        { file: "f2.md", heading: "H2", text: "T2", embedding: [0.9, 0.1] },
+        { file: "f3.md", heading: "H3", text: "T3", embedding: [0.8, 0.2] }
+    ]
+};
+let res = rag.search([1.0, 0.0], idx, 2);
+assert(length(res) == 2, "limit 2");
+assert(res[0].chunk.file == "f1.md", "best match");
+print("OK");
+' 2>&1 || echo "FAIL")"
+[ "$runtime_check" = "OK" ] ||
+  fail "rag.uc runtime execution failed (saw '$runtime_check')"
+
 printf 'rag embeddings checks passed\n'

@@ -46,5 +46,7 @@ assert_eq binary \
   "unknown remote ruleset format"
 
 ucode -L "$TACHYON_LIB" -e 'let rulesets = require("singbox.rulesets"); if (rulesets.kind_from_reference_hint("geoip") != "subnets") exit(1);'
+ucode -L "$TACHYON_LIB" -e 'let rulesets = require("singbox.rulesets"); if (type(rulesets.COMMUNITY_SERVICES) != "object" || !rulesets.COMMUNITY_SERVICES.discord) exit(1);'
 
 printf 'singbox rulesets checks passed\n'
+

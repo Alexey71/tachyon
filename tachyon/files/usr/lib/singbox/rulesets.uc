@@ -128,6 +128,7 @@ function remote_format(reference) {
 
 function module_exports() {
     return {
+        COMMUNITY_SERVICES,
         is_community,
         community_url,
         hash12,
