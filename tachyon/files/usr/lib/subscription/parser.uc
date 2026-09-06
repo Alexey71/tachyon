@@ -29,7 +29,9 @@ function is_supported_share_link(line) {
         starts_with(line, "socks://") ||
         starts_with(line, "socks4://") ||
         starts_with(line, "socks4a://") ||
-        starts_with(line, "socks5://");
+        starts_with(line, "socks5://") ||
+        starts_with(line, "http://") ||
+        starts_with(line, "https://");
 }
 
 function split_csv(value) {
@@ -880,6 +882,50 @@ function process_socks(raw, url) {
     return outbound;
 }
 
+function process_http(raw, url) {
+    let port = url.port;
+    if (port == null || port == "")
+        port = url.scheme == "https" ? 443 : 80;
+    if (url.host == "" || is_dummy_server(url.host, port) || !valid_port(port))
+        return null;
+
+    let username = "", password = "";
+    if (url.userinfo != "") {
+        let colon = index(url.userinfo, ":");
+        if (colon >= 0) {
+            username = urldecode(substr(url.userinfo, 0, colon));
+            password = urldecode(substr(url.userinfo, colon + 1));
+            if (username == password)
+                password = "";
+        }
+        else {
+            username = urldecode(url.userinfo);
+        }
+    }
+
+    let outbound = {
+        type: "http",
+        tag: url.fragment != "" ? url.fragment : (url.host + ":" + port),
+        share_link: raw,
+        server: url.host,
+        server_port: int(port)
+    };
+    if (username != "")
+        outbound.username = username;
+    if (password != "")
+        outbound.password = password;
+
+    if (url.scheme == "https") {
+        let tls = { enabled: true };
+        if ((url.query.sni || "") != "")
+            tls.server_name = url.query.sni;
+        if (is_true(url.query.allowInsecure || url.query.insecure))
+            tls.insecure = true;
+        outbound.tls = tls;
+    }
+    return outbound;
+}
+
 function is_shadowsocks_userinfo_format(value) {
     if (type(value) != "string")
         return false;
@@ -1183,6 +1229,8 @@ function parse_share_link(line) {
         return process_tuic(line, url);
     if (match(url.scheme, /^socks/))
         return process_socks(line, url);
+    if (url.scheme == "http" || url.scheme == "https")
+        return process_http(line, url);
     return null;
 }
 

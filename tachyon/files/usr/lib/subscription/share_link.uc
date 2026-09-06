@@ -242,6 +242,33 @@ function serialize_socks(outbound) {
     return scheme + "://" + auth + host_port(outbound.server, outbound.server_port) + fragment(outbound);
 }
 
+function serialize_http(outbound) {
+    if (as_string(outbound.server) == "" || outbound.server_port == null)
+        return "";
+
+    let is_tls = type(outbound.tls) == "object" && (outbound.tls.enabled === true || outbound.tls.enabled == 1);
+    let scheme = is_tls ? "https" : "http";
+    let auth = "";
+    if (as_string(outbound.username) != "") {
+        auth = uri_encode(outbound.username);
+        if (as_string(outbound.password) != "")
+            auth += ":" + uri_encode(outbound.password);
+        auth += "@";
+    }
+
+    let params = [];
+    if (is_tls && type(outbound.tls) == "object") {
+        let tls = outbound.tls;
+        if (tls.server_name)
+            add_query(params, "sni", tls.server_name);
+        if (tls.insecure === true)
+            add_query(params, "insecure", "1");
+    }
+
+    return scheme + "://" + auth + host_port(outbound.server, outbound.server_port) + query_string(params) + fragment(outbound);
+}
+
+
 function serialize_hysteria2(outbound) {
     let port = hysteria2_server_ports_uri(outbound);
     if (port == "" && outbound.server_port != null)
@@ -365,6 +392,8 @@ function serialize_outbound_link(outbound) {
         return serialize_shadowsocks(outbound);
     if (outbound_type == "socks")
         return serialize_socks(outbound);
+    if (outbound_type == "http")
+        return serialize_http(outbound);
     if (outbound_type == "hysteria2")
         return serialize_hysteria2(outbound);
     if (outbound_type == "tuic")
@@ -379,7 +408,8 @@ function is_copyable_link(value) {
     let prefixes = [
         "vless://", "vmess://", "trojan://", "ss://", "ssr://",
         "hysteria2://", "hy2://", "tuic://",
-        "socks4://", "socks4a://", "socks5://"
+        "socks4://", "socks4a://", "socks5://",
+        "http://", "https://"
     ];
     for (let prefix in prefixes) {
         if (starts_with(value, prefix))

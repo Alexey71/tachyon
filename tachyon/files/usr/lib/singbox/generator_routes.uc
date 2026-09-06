@@ -643,8 +643,11 @@ function is_valid_detour(config, tag) {
     if (tag == runtime_constants.DIRECT_OUTBOUND_TAG || tag == runtime_constants.BYPASS_OUTBOUND_TAG)
         return true;
     for (let out in array_or_empty(config.outbounds)) {
-        if (type(out) == "object" && out.tag == tag)
+        if (type(out) == "object" && out.tag == tag) {
+            if (out.tag == "DPI-out" || (out.type == "socks" && (out.server == "127.0.0.1" || out.server == "::1")))
+                return false;
             return true;
+        }
     }
     return false;
 }
@@ -1284,18 +1287,6 @@ function load_community_subnet_cidrs(community) {
                 return cidrs;
         }
     }
-    // Hardcoded seed fallback for cold boot before list-update downloads .lst
-    if (service == "discord") {
-        return [ "162.158.0.0/15", "172.64.0.0/13", "138.128.136.0/21" ];
-    }
-    if (service == "telegram") {
-        return [
-            "149.154.160.0/20", "91.108.4.0/22", "91.108.8.0/22",
-            "91.108.12.0/22", "91.108.16.0/22", "91.108.56.0/22",
-            "5.28.192.0/18", "91.105.192.0/23", "95.161.64.0/20",
-            "185.76.151.0/24", "194.221.0.0/16"
-        ];
-    }
     return [];
 }
 
@@ -1321,10 +1312,8 @@ function add_combined_route_for_section(config, section) {
         let ensured = ensure_community_ruleset(config, section_name, service);
         push(rule_set_tags, ensured.tag);
         push(dns_rule_set_tags, ensured.tag);
-        if (service != "cloudflare" && service != "cloudfront" && service != "hetzner" && service != "ovh" && service != "digitalocean") {
-            for (let cidr in load_community_subnet_cidrs(community))
-                push(ip_cidr, cidr);
-        }
+        for (let cidr in load_community_subnet_cidrs(community))
+            push(ip_cidr, cidr);
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
@@ -1355,9 +1344,9 @@ function add_combined_route_for_section(config, section) {
     if (target.unsupported)
         ctx.runtime_generate_unsupported(target.unsupported);
 
-    let has_domain_or_ruleset = length(domain) > 0 || length(domain_suffix) > 0 ||
-        length(domain_keyword) > 0 || length(domain_regex) > 0 ||
-        length(rule_set_tags) > 0;
+    let has_domain = length(domain) > 0 || length(domain_suffix) > 0 ||
+        length(domain_keyword) > 0 || length(domain_regex) > 0;
+    let has_ruleset = length(rule_set_tags) > 0;
     let has_ip_cidr = length(ip_cidr) > 0;
 
     let create_section_route_rule = function() {
@@ -1375,14 +1364,12 @@ function add_combined_route_for_section(config, section) {
         return r;
     };
 
-    if (has_domain_or_ruleset) {
+    if (has_domain) {
         let domain_rule = create_section_route_rule();
         add_domain_array(domain_rule, "domain", domain);
         add_domain_array(domain_rule, "domain_suffix", domain_suffix);
         add_domain_array(domain_rule, "domain_keyword", domain_keyword);
         add_domain_array(domain_rule, "domain_regex", domain_regex);
-        if (length(rule_set_tags) > 0)
-            domain_rule.rule_set = single_or_array(rule_set_tags);
 
         let resolve = runtime_route.resolve_rule_for_section(section, domain_rule);
         if (type(resolve) == "object" && resolve.warning)
@@ -1391,6 +1378,19 @@ function add_combined_route_for_section(config, section) {
             push(config.route.rules, resolve.rule);
 
         push_section_route_rule(config, domain_rule, target.outbound);
+    }
+
+    if (has_ruleset) {
+        let rs_rule = create_section_route_rule();
+        rs_rule.rule_set = single_or_array(rule_set_tags);
+
+        let resolve = runtime_route.resolve_rule_for_section(section, rs_rule);
+        if (type(resolve) == "object" && resolve.warning)
+            warn(resolve.warning, "\n");
+        else if (type(resolve) == "object" && resolve.rule)
+            push(config.route.rules, resolve.rule);
+
+        push_section_route_rule(config, rs_rule, target.outbound);
     }
 
     if (has_ip_cidr) {
@@ -1426,7 +1426,7 @@ function add_combined_route_for_section(config, section) {
         }
     }
 
-    if (!has_domain_or_ruleset && !has_ip_cidr && length(country_list) == 0) {
+    if (!has_domain && !has_ruleset && !has_ip_cidr && length(country_list) == 0) {
         let fallback_rule = create_section_route_rule();
         let has_any_matcher = fallback_rule.source_ip_cidr != null ||
             fallback_rule.port != null || fallback_rule.port_range != null ||
@@ -1629,20 +1629,20 @@ function add_service_route_rules(config, sections) {
                     push(detour_domains, host);
             }
             if (length(detour_ips) > 0) {
-                push(config.route.rules, {
+                push_section_route_rule(config, {
                     action: "route",
                     inbound: tproxy_inbound_matcher(),
                     outbound: detour_target,
                     ip_cidr: single_or_array(detour_ips)
-                });
+                }, detour_target);
             }
             if (length(detour_domains) > 0) {
-                push(config.route.rules, {
+                push_section_route_rule(config, {
                     action: "route",
                     inbound: tproxy_inbound_matcher(),
                     outbound: detour_target,
                     domain: single_or_array(detour_domains)
-                });
+                }, detour_target);
             }
         }
     }
