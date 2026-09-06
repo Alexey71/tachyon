@@ -415,6 +415,23 @@ elif [ -f /etc/config/podkop_plus ]; then
 else
 	TACHYON_LIB=/usr/lib/tachyon ucode -L /usr/lib/tachyon /usr/lib/tachyon/config/migration.uc migrate
 fi
+
+/etc/init.d/tachyon enable >/dev/null 2>&1 || true
+/usr/bin/tachyon package_postinst >/dev/null 2>&1 || true
+chmod 600 /etc/config/tachyon 2>/dev/null || true
+chown root:root /etc/config/tachyon 2>/dev/null || true
+if [ -d /www/cgi-bin ]; then
+	cp /usr/lib/cgi-bin/tachyon-agent /www/cgi-bin/tachyon-agent 2>/dev/null || true
+	chmod 755 /www/cgi-bin/tachyon-agent 2>/dev/null || true
+fi
+
+# Neutralize legacy unshielded postrm scripts on disk if upgrading from 1.3.21/1.3.22
+for p in /usr/lib/opkg/info/tachyon.postrm /usr/lib/opkg/info/luci-app-tachyon.postrm /usr/lib/opkg/info/luci-i18n-tachyon-ru.postrm; do
+	if [ -f "$p" ] && ! grep -q '\[ "$1" = "upgrade" \]' "$p"; then
+		sed -i '2i[ "$1" = "upgrade" ] && exit 0' "$p" 2>/dev/null || true
+	fi
+done
+exit 0
 EOF
 
   cat > "$control_dir/prerm" <<'EOF'
@@ -429,7 +446,8 @@ if (getenv("IPKG_INSTROOT") == null || getenv("IPKG_INSTROOT") == "") {
 	else if (system("timeout -t 1 /bin/true >/dev/null 2>&1") == 0)
 		prefix = "timeout -t 90 ";
 
-	system(prefix + "/usr/bin/tachyon package_prerm >/dev/null 2>&1");
+	let action = (length(ARGV) > 0 && ARGV[0] != null && ARGV[0] != "") ? ARGV[0] : "upgrade";
+	system(prefix + "/usr/bin/tachyon package_prerm " + action + " >/dev/null 2>&1");
 }
 
 exit(0);
@@ -438,6 +456,8 @@ EOF
   cat > "$control_dir/postrm" <<'EOF'
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
+[ "$1" = "upgrade" ] && exit 0
+[ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
 rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
 rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
@@ -494,9 +514,10 @@ EOF
   cat > "$control_dir/postrm" <<'EOF'
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
+[ "$1" = "upgrade" ] && exit 0
+[ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
-[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
-[ -x /etc/init.d/uhttpd ] && /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 exit 0
 EOF
 
@@ -541,8 +562,10 @@ EOF
   cat > "$control_dir/postrm" <<'EOF'
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
+[ "$1" = "upgrade" ] && exit 0
+[ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
-[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 exit 0
 EOF
 
@@ -770,6 +793,7 @@ EOF
   cat > "$scripts_dir/backend-post-deinstall.sh" <<'EOF'
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
+[ -f /usr/bin/tachyon ] && exit 0
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
 rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
 rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
@@ -834,10 +858,10 @@ EOF
   cat > "$scripts_dir/app-post-deinstall.sh" <<'EOF'
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
+[ -f /usr/share/luci/menu.d/luci-app-tachyon.json ] && exit 0
 rm -f /var/luci-indexcache* /var/luci-modulecache* 2>/dev/null || true
 rm -f /tmp/luci-* 2>/dev/null || true
-[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
-[ -x /etc/init.d/uhttpd ] && /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 exit 0
 EOF
 

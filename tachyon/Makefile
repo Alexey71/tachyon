@@ -143,12 +143,21 @@ if [ -d /www/cgi-bin ]; then
 	cp /usr/lib/cgi-bin/tachyon-agent /www/cgi-bin/tachyon-agent 2>/dev/null || true
 	chmod 755 /www/cgi-bin/tachyon-agent 2>/dev/null || true
 fi
+
+# Neutralize legacy unshielded postrm scripts on disk if upgrading from 1.3.21/1.3.22
+for p in /usr/lib/opkg/info/tachyon.postrm /usr/lib/opkg/info/luci-app-tachyon.postrm /usr/lib/opkg/info/luci-i18n-tachyon-ru.postrm; do
+	if [ -f "$$p" ] && ! grep -q '\[ "$$1" = "upgrade" \]' "$$p"; then
+		sed -i '2i[ "$$1" = "upgrade" ] && exit 0' "$$p" 2>/dev/null || true
+	fi
+done
 endef
 
 define Package/tachyon/postrm
 #!/bin/sh
 
 [ -n "$${IPKG_INSTROOT}" ] && exit 0
+[ "$$1" = "upgrade" ] && exit 0
+[ "$$1" != "remove" ] && [ "$$1" != "purge" ] && [ -n "$$1" ] && exit 0
 
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
 rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true

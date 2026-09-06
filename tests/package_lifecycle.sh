@@ -317,4 +317,28 @@ grep -Fq '/fd/1000' "$PACKAGE_UC" ||
 grep -Fq 'procd_tachyon' "$PACKAGE_UC" ||
   fail "package prerm must only kill holders of Tachyon's own procd lock"
 
+# Verify that write_backend_ipk_control includes autostart enable and package_postinst
+sed -n '/^write_backend_ipk_control() {/,/^write_app_ipk_control() {/p' "$BUILD_SCRIPT" |
+  grep -Fq '/usr/bin/tachyon package_postinst' ||
+  fail "backend IPK postinst must call /usr/bin/tachyon package_postinst"
+
+sed -n '/^write_backend_ipk_control() {/,/^write_app_ipk_control() {/p' "$BUILD_SCRIPT" |
+  grep -Fq '/etc/init.d/tachyon enable' ||
+  fail "backend IPK postinst must ensure service autostart is enabled"
+
+# Verify all postrm scripts guard against upgrade
+grep -Fq '[ "$1" = "upgrade" ] && exit 0' "$BUILD_SCRIPT" ||
+  fail "build.sh IPK postrm scripts must guard against execution during upgrade"
+
+grep -Fq '[ "$$1" = "upgrade" ] && exit 0' "$TACHYON_MAKEFILE" ||
+  fail "tachyon/Makefile postrm must guard against execution during upgrade"
+
+grep -Fq '[ "$$1" = "upgrade" ] && exit 0' "$ROOT_DIR/luci-app-tachyon/Makefile" ||
+  fail "luci-app-tachyon/Makefile postrm must guard against execution during upgrade"
+
+# Verify postrm does not restart uhttpd or rpcd (must reload or avoid touching)
+if grep -E 'rpcd restart|uhttpd restart' "$ROOT_DIR/luci-app-tachyon/Makefile" "$BUILD_SCRIPT" >/dev/null; then
+  fail "package postrm scripts must not restart rpcd or uhttpd"
+fi
+
 printf 'package lifecycle checks passed\n'

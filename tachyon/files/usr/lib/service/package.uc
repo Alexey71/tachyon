@@ -184,7 +184,7 @@ function remember_upgrade_state(action) {
     // other init call here. A timeout is indistinguishable from "not running", and
     // that is the safe reading: the worst case is not restarting a service that was
     // wedged anyway, versus stalling the upgrade until apk rolls it back.
-    if (as_string(action) != "upgrade" || !bounded_command_success_from_args([ INIT_PATH, "status" ])) {
+    if (as_string(action) == "remove" || !bounded_command_success_from_args([ INIT_PATH, "status" ])) {
         unlink_if_exists(PACKAGE_UPGRADE_STATE);
         return;
     }
@@ -234,7 +234,18 @@ function prerm_cleanup(action) {
 }
 
 function postinst_restore() {
-    if (env("IPKG_INSTROOT", "") != "" || !path_exists(PACKAGE_UPGRADE_STATE))
+    if (env("IPKG_INSTROOT", "") != "")
+        return true;
+
+    let should_restore = path_exists(PACKAGE_UPGRADE_STATE);
+    unlink_if_exists(PACKAGE_UPGRADE_STATE);
+
+    if (!should_restore && !PACKAGE_TEST_MODE) {
+        if (path_exists("/etc/rc.d/S99" + SERVICE_NAME) || path_exists("/etc/rc.d/S99" + CONFIG_NAME))
+            should_restore = true;
+    }
+
+    if (!should_restore)
         return true;
 
     if (!PACKAGE_TEST_MODE) {
@@ -246,7 +257,6 @@ function postinst_restore() {
     // transaction down with it — the service can be started by hand afterwards,
     // a rolled-back upgrade leaves the user on the old build with no recourse.
     bounded_command_success_from_args([INIT_PATH, "start"], HOOK_START_TIMEOUT);
-    unlink_if_exists(PACKAGE_UPGRADE_STATE);
     return true;
 }
 

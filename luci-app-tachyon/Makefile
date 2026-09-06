@@ -37,10 +37,11 @@ define Package/$(PKG_NAME)/postrm
 #!/bin/sh
 
 [ -n "$${IPKG_INSTROOT}" ] && exit 0
+[ "$$1" = "upgrade" ] && exit 0
+[ "$$1" != "remove" ] && [ "$$1" != "purge" ] && [ -n "$$1" ] && exit 0
 
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
-[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd restart >/dev/null 2>&1 || true
-[ -x /etc/init.d/uhttpd ] && /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 
 exit 0
 endef
