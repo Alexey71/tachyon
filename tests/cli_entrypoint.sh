@@ -64,6 +64,10 @@ show_version_out="$(TACHYON_LIB="$fake_lib" ucode "$TACHYON_BIN" show_version)"
 [ "$show_version_out" = $'diagnostics\tshow-version\t\t\t' ] ||
   fail "show_version must dispatch through diagnostics/runtime.uc"
 
+byedpi_val_out="$(TACHYON_LIB="$fake_lib" ucode "$TACHYON_BIN" validate_byedpi_strategy_json '--disorder 3')"
+[ "$byedpi_val_out" = $'diagnostics\tvalidate-byedpi-strategy-json\t--disorder 3\t\t' ] ||
+  fail "validate_byedpi_strategy_json must dispatch through diagnostics/runtime.uc with arguments"
+
 subscription_out="$(TACHYON_LIB="$fake_lib" ucode "$TACHYON_BIN" subscription_update proxy 2)"
 [ "$subscription_out" = $'updates\tsubscription-update\tproxy\t2' ] ||
   fail "subscription_update must dispatch through components/updates.uc with arguments"
