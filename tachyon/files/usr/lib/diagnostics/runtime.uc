@@ -60,6 +60,7 @@ const BYEDPI_RUNTIME_UC = LIB_DIR + "/providers/byedpi/runtime.uc";
 const TAILSCALE_RUNTIME_UC = LIB_DIR + "/providers/tailscale/runtime.uc";
 const ZAPRET_VALIDATOR_UC = LIB_DIR + "/providers/zapret/validator.uc";
 const ZAPRET2_VALIDATOR_UC = LIB_DIR + "/providers/zapret2/validator.uc";
+const BYEDPI_VALIDATOR_UC = LIB_DIR + "/providers/byedpi/validator.uc";
 
 let as_string = common.as_string;
 let shell_quote = common.shell_quote;
@@ -1343,6 +1344,15 @@ function validate_nfqws2_strategy_json(raw_opt) {
     let result = module_capture(ZAPRET2_VALIDATOR_UC, [ "validate-json", "nfqws2", as_string(raw_opt) ]);
     if (result.output != "")
         print(result.output);
+    return 0;
+}
+
+function validate_byedpi_strategy_json(raw_opt) {
+    let result = module_capture(BYEDPI_VALIDATOR_UC, [ "validate-json", as_string(raw_opt) ]);
+    if (result.output != "")
+        print(result.output);
+    else
+        print("{\"valid\":false,\"message\":\"ByeDPI validator produced no output\"}\n");
     return 0;
 }
 
@@ -5012,6 +5022,8 @@ else if (mode == "validate-nfqws-strategy-json")
     exit(validate_nfqws_strategy_json(ARGV[1] || ""));
 else if (mode == "validate-nfqws2-strategy-json")
     exit(validate_nfqws2_strategy_json(ARGV[1] || ""));
+else if (mode == "validate-byedpi-strategy-json")
+    exit(validate_byedpi_strategy_json(ARGV[1] || ""));
 else {
     warn("Usage: diagnostics/runtime.uc <operation> ...\n");
     exit(1);

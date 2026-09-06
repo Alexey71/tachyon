@@ -76,4 +76,12 @@ UCODE
 
 ucode -L "$TACHYON_LIB" "$WORK_DIR/require-byedpi-validator.uc"
 
+TACHYON_BIN="$ROOT_DIR/tachyon/files/usr/bin/tachyon"
+cli_valid_json="$(TACHYON_LIB="$TACHYON_LIB" ucode "$TACHYON_BIN" validate_byedpi_strategy_json '--disorder 3 --fake-sni example.org -N')"
+assert_json_field "$cli_valid_json" valid true
+
+cli_invalid_json="$(TACHYON_LIB="$TACHYON_LIB" ucode "$TACHYON_BIN" validate_byedpi_strategy_json '--port 1080 --disorder 3')"
+assert_json_field "$cli_invalid_json" valid false
+assert_json_field "$cli_invalid_json" needle --port
+
 printf 'ByeDPI validator checks passed\n'
