@@ -515,7 +515,26 @@ function base_config(settings, service_address, runtime_context) {
         let sb_ui_cache = getenv("TACHYON_UI_SING_BOX_VERSION_CACHE_FILE") || "/var/run/tachyon/ui-state/sing-box-version";
         sb_version_val = trim(fs.readfile(sb_ui_cache) || "");
     }
-    let use_legacy_rdrc = match(sb_version_val, /^v?1\.1[0-3]\./) != null;
+    if (sb_version_val == "") {
+        try {
+            let pipe = fs.popen("sing-box version 2>/dev/null", "r");
+            if (pipe) {
+                let out = pipe.read("all");
+                pipe.close();
+                let m = match(out, /sing-box version ([^\s]+)/);
+                if (m)
+                    sb_version_val = m[1];
+            }
+        } catch (e) {}
+    }
+    let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
+    let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
+    let is_extended_variant = sb_variant_val == "extended" || sb_variant_val == "extended-compressed";
+
+    let use_legacy_rdrc = sb_version_val != ""
+        ? (match(sb_version_val, /^v?1\.1[0-3]\./) != null)
+        : !is_extended_variant;
+
     let cache_file_section = {
         enabled: true,
         path: cache_path,

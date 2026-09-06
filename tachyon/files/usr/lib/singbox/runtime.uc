@@ -993,21 +993,59 @@ function init_config(populate_nft, caches_prepared, no_refresh) {
                     stripped = true;
                 }
             }
-            else if (match(check_result.reason, /header_protection_key/)) {
-                log_message("Installed sing-box rejected header_protection_key: " + check_result.reason + "; stripping and retrying", "warn");
+            else if (match(check_result.reason, /experimental\.cache_file\.store_dns/)) {
+                log_message("Installed sing-box rejected store_dns: " + check_result.reason + "; switching to store_rdrc and retrying", "warn");
                 let cfg_text = as_string(fs.readfile(temp_config) || "");
                 let cfg = length(cfg_text) > 0 ? json(cfg_text) : null;
-                if (type(cfg) == "object") {
-                    if (type(cfg.endpoints) == "array") {
-                        for (let ep in cfg.endpoints) {
-                            if (type(ep) == "object" && ep.header_protection_key != null)
-                                delete ep.header_protection_key;
-                        }
-                    }
-                    if (type(cfg.inbounds) == "array") {
-                        for (let inb in cfg.inbounds) {
-                            if (type(inb) == "object" && inb.header_protection_key != null)
-                                delete inb.header_protection_key;
+                if (type(cfg) == "object" && type(cfg.experimental) == "object" && type(cfg.experimental.cache_file) == "object") {
+                    delete cfg.experimental.cache_file.store_dns;
+                    cfg.experimental.cache_file.store_rdrc = true;
+                    write_file(temp_config, sprintf("%J", cfg));
+                    stripped = true;
+                }
+            }
+            else if (match(check_result.reason, /experimental\.cache_file\.store_rdrc/)) {
+                log_message("Installed sing-box rejected store_rdrc: " + check_result.reason + "; switching to store_dns and retrying", "warn");
+                let cfg_text = as_string(fs.readfile(temp_config) || "");
+                let cfg = length(cfg_text) > 0 ? json(cfg_text) : null;
+                if (type(cfg) == "object" && type(cfg.experimental) == "object" && type(cfg.experimental.cache_file) == "object") {
+                    delete cfg.experimental.cache_file.store_rdrc;
+                    cfg.experimental.cache_file.store_dns = true;
+                    write_file(temp_config, sprintf("%J", cfg));
+                    stripped = true;
+                }
+            }
+            else if (match(check_result.reason, /experimental\.cache_file\.(\w+): json: unknown field/)) {
+                let cf_m = match(check_result.reason, /experimental\.cache_file\.(\w+): json: unknown field/);
+                let unknown_field = cf_m[1];
+                log_message("Installed sing-box does not support cache_file field '" + unknown_field + "'; stripping and retrying", "warn");
+                let cfg_text = as_string(fs.readfile(temp_config) || "");
+                let cfg = length(cfg_text) > 0 ? json(cfg_text) : null;
+                if (type(cfg) == "object" && type(cfg.experimental) == "object" && type(cfg.experimental.cache_file) == "object") {
+                    delete cfg.experimental.cache_file[unknown_field];
+                    write_file(temp_config, sprintf("%J", cfg));
+                    stripped = true;
+                }
+            }
+            else if (match(check_result.reason, /outbounds\[\d+\]\.transport: unknown transport type: (\w+)/)) {
+                let tr_m = match(check_result.reason, /outbounds\[\d+\]\.transport: unknown transport type: (\w+)/);
+                let bad_transport = tr_m[1];
+                let out_idx_m = match(check_result.reason, /outbounds\[(\d+)\]/);
+                let out_idx = out_idx_m ? int(out_idx_m[1]) : -1;
+                log_message("Installed sing-box does not support transport '" + bad_transport + "' on outbound index " + out_idx + "; stripping outbound and retrying", "warn");
+                let cfg_text = as_string(fs.readfile(temp_config) || "");
+                let cfg = length(cfg_text) > 0 ? json(cfg_text) : null;
+                if (type(cfg) == "object" && type(cfg.outbounds) == "array" && out_idx >= 0 && out_idx < length(cfg.outbounds)) {
+                    let bad_tag = cfg.outbounds[out_idx].tag;
+                    splice(cfg.outbounds, out_idx, 1);
+                    for (let outb in cfg.outbounds) {
+                        if (type(outb) == "object" && type(outb.outbounds) == "array") {
+                            let filtered = [];
+                            for (let tag in outb.outbounds) {
+                                if (tag != bad_tag)
+                                    push(filtered, tag);
+                            }
+                            outb.outbounds = filtered;
                         }
                     }
                     write_file(temp_config, sprintf("%J", cfg));

@@ -1255,8 +1255,6 @@ function add_combined_route_for_section(config, section) {
         let ensured = ensure_community_ruleset(config, section_name, as_string(community));
         push(rule_set_tags, ensured.tag);
         push(dns_rule_set_tags, ensured.tag);
-        for (let cidr in load_community_subnet_cidrs(community))
-            push(ip_cidr, cidr);
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
@@ -1286,51 +1284,71 @@ function add_combined_route_for_section(config, section) {
     let target = runtime_route.target(section, outbound_tag(section_name));
     if (target.unsupported)
         ctx.runtime_generate_unsupported(target.unsupported);
-    let route_rule = {
-        action: target.action,
-        inbound: tproxy_inbound_matcher()
-    };
-    if (target.outbound)
-        route_rule.outbound = target.outbound;
-    add_domain_array(route_rule, "domain", domain);
-    add_domain_array(route_rule, "domain_suffix", domain_suffix);
-    add_domain_array(route_rule, "domain_keyword", domain_keyword);
-    add_domain_array(route_rule, "domain_regex", domain_regex);
-    if (length(ip_cidr) > 0)
-        route_rule.ip_cidr = ip_cidr;
-    if (length(source_ip_cidr) > 0)
-        route_rule.source_ip_cidr = source_ip_cidr;
-    add_port_matchers(route_rule, section);
-    add_dscp_matchers(route_rule, section);
-    add_protocol_matchers(route_rule, section);
 
-    if (length(rule_set_tags) > 0)
-        route_rule.rule_set = single_or_array(rule_set_tags);
+    let has_domain_or_ruleset = length(domain) > 0 || length(domain_suffix) > 0 ||
+        length(domain_keyword) > 0 || length(domain_regex) > 0 ||
+        length(rule_set_tags) > 0;
+    let has_ip_cidr = length(ip_cidr) > 0;
+
+    let create_section_route_rule = function() {
+        let r = {
+            action: target.action,
+            inbound: tproxy_inbound_matcher()
+        };
+        if (target.outbound)
+            r.outbound = target.outbound;
+        if (length(source_ip_cidr) > 0)
+            r.source_ip_cidr = source_ip_cidr;
+        add_port_matchers(r, section);
+        add_dscp_matchers(r, section);
+        add_protocol_matchers(r, section);
+        return r;
+    };
+
+    if (has_domain_or_ruleset) {
+        let domain_rule = create_section_route_rule();
+        add_domain_array(domain_rule, "domain", domain);
+        add_domain_array(domain_rule, "domain_suffix", domain_suffix);
+        add_domain_array(domain_rule, "domain_keyword", domain_keyword);
+        add_domain_array(domain_rule, "domain_regex", domain_regex);
+        if (length(rule_set_tags) > 0)
+            domain_rule.rule_set = single_or_array(rule_set_tags);
+
+        let resolve = runtime_route.resolve_rule_for_section(section, domain_rule);
+        if (type(resolve) == "object" && resolve.warning)
+            warn(resolve.warning, "\n");
+        else if (type(resolve) == "object" && resolve.rule)
+            push(config.route.rules, resolve.rule);
+
+        push(config.route.rules, domain_rule);
+    }
+
+    if (has_ip_cidr) {
+        let ip_rule = create_section_route_rule();
+        ip_rule.ip_cidr = ip_cidr;
+        push(config.route.rules, ip_rule);
+    }
 
     let country_list = connections.geoip_country_list(section);
     let country_mode = connections.geoip_country_mode(section);
 
     if (target.outbound && length(country_list) > 0) {
-        let rule_set_tags = [];
+        let geo_tags = [];
         for (let cc in country_list) {
             let ip_ruleset = ensure_community_ruleset(config, section_name, "geoip_" + cc);
             if (ip_ruleset && ip_ruleset.tag)
-                push(rule_set_tags, ip_ruleset.tag);
+                push(geo_tags, ip_ruleset.tag);
 
             if (cc == "ru") {
                 let site_ruleset = ensure_community_ruleset(config, section_name, "geosite_ru");
                 if (site_ruleset && site_ruleset.tag)
-                    push(rule_set_tags, site_ruleset.tag);
+                    push(geo_tags, site_ruleset.tag);
             }
         }
 
-        if (length(rule_set_tags) > 0) {
-            let geoip_route_rule = {
-                action: target.action,
-                inbound: tproxy_inbound_matcher(),
-                rule_set: rule_set_tags,
-                outbound: target.outbound
-            };
+        if (length(geo_tags) > 0) {
+            let geoip_route_rule = create_section_route_rule();
+            geoip_route_rule.rule_set = geo_tags;
             if (country_mode == "exclude")
                 geoip_route_rule.invert = true;
 
@@ -1338,19 +1356,13 @@ function add_combined_route_for_section(config, section) {
         }
     }
 
-    let has_route_matchers = route_rule.domain != null || route_rule.domain_suffix != null ||
-        route_rule.domain_keyword != null || route_rule.domain_regex != null ||
-        route_rule.ip_cidr != null || route_rule.source_ip_cidr != null ||
-        route_rule.port != null || route_rule.port_range != null ||
-        route_rule.protocol != null || route_rule.dscp != null ||
-        route_rule.rule_set != null;
-    if (has_route_matchers) {
-        let resolve = runtime_route.resolve_rule_for_section(section, route_rule);
-        if (type(resolve) == "object" && resolve.warning)
-            warn(resolve.warning, "\n");
-        else if (type(resolve) == "object" && resolve.rule)
-            push(config.route.rules, resolve.rule);
-        push(config.route.rules, route_rule);
+    if (!has_domain_or_ruleset && !has_ip_cidr && length(country_list) == 0) {
+        let fallback_rule = create_section_route_rule();
+        let has_any_matcher = fallback_rule.source_ip_cidr != null ||
+            fallback_rule.port != null || fallback_rule.port_range != null ||
+            fallback_rule.protocol != null || fallback_rule.dscp != null;
+        if (has_any_matcher)
+            push(config.route.rules, fallback_rule);
     }
 
     let rewrite_ttl = int_option(ctx.runtime_settings(), "dns_rewrite_ttl", "60");

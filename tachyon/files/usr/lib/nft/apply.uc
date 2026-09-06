@@ -2265,6 +2265,13 @@ function nft_populate_runtime_set_for_section(section, deferred_sections, table,
         // function declarations, and nft_add_subnet_file_for_section is defined below this function.
         for (let community in connections.community_lists(section)) {
             let service = as_string(community);
+            // Multi-tenant shared CDNs and hosting providers (Cloudflare, CloudFront, Hetzner,
+            // OVH, DigitalOcean) host millions of unrelated third-party websites. Loading their
+            // subnets into nftables L4 destination IP sets causes blanket interception that breaks
+            // SNI-based routing and hijacks traffic from lower-priority sections (e.g. Discord,
+            // YouTube, bypass lists). Domain routing for these services is handled by sing-box rule_sets.
+            if (service == "cloudflare" || service == "cloudfront" || service == "hetzner" || service == "ovh" || service == "digitalocean")
+                continue;
             let cached_paths = [
                 "/tmp/sing-box/rulesets/community-subnets-" + service + ".lst",
                 "/etc/tachyon/rulesets/community-subnets-" + service + ".lst"
