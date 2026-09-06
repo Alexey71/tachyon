@@ -294,7 +294,7 @@ function get_all_dns_servers(cfg, key) {
 }
 
 function module_args(module_path, args) {
-    let result = [ "ucode", "-L", LIB_DIR, module_path ];
+    let result = [ "ucode", "-L", LIB_DIR, "--", module_path ];
     for (let arg in args)
         push(result, arg);
     return result;
