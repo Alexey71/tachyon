@@ -1772,9 +1772,7 @@ function renderComponentCard(card: ComponentCard) {
       icon: action.icon,
       loading,
       disabled:
-        action.disabled ||
-        systemInfoLoading ||
-        (anyActionLoading && !loading),
+        action.disabled || systemInfoLoading || (anyActionLoading && !loading),
       onClick: () => void handleComponentAction(action),
     });
   });
@@ -1788,9 +1786,7 @@ function renderComponentCard(card: ComponentCard) {
       icon: action.icon,
       loading,
       disabled:
-        action.disabled ||
-        systemInfoLoading ||
-        (anyActionLoading && !loading),
+        action.disabled || systemInfoLoading || (anyActionLoading && !loading),
       onClick: () => void handleComponentAction(action),
     });
   });

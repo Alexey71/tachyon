@@ -1296,8 +1296,23 @@ function add_awg_endpoint(config, section) {
     let mtu = int_option(section, "awg_mtu", "1280");
     endpoint.mtu = mtu > 0 ? mtu : 1280;
 
-    let keepalive = int_option(section, "awg_keepalive", "25");
-    endpoint.peers[0].persistent_keepalive_interval = keepalive > 0 ? keepalive : 25;
+    let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
+    let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
+    let sb_version_val = trim(fs.readfile(sb_version_file) || "");
+    let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
+    let is_lx = sb_variant_val == "lx" || index(sb_version_val, "-lx") >= 0;
+
+    let keepalive = int_or_range_option(section, "awg_keepalive", 25);
+    if (is_lx) {
+        endpoint.peers[0].persistent_keepalive_interval = keepalive;
+    } else {
+        if (type(keepalive) == "string") {
+            let m = match(keepalive, /^([0-9]+)/);
+            endpoint.peers[0].persistent_keepalive_interval = m ? int(m[1], 10) : 25;
+        } else {
+            endpoint.peers[0].persistent_keepalive_interval = keepalive > 0 ? keepalive : 25;
+        }
+    }
 
     let jc = int_option(section, "awg_jc", "4");
     if (jc > 10) jc = 10;
@@ -1331,10 +1346,6 @@ function add_awg_endpoint(config, section) {
     let j2 = awg_cps_option(section, "awg_j2");
     let j3 = awg_cps_option(section, "awg_j3");
     let itime = int_option(section, "awg_itime", "0");
-    let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
-    let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
-    let sb_version_val = trim(fs.readfile(sb_version_file) || "");
-    let is_lx = sb_version_val != "" ? (index(sb_version_val, "-lx") >= 0) : (trim(fs.readfile(sb_variant_file) || "") == "lx");
 
     if (is_lx) {
         // sing-box-lx expects AWG fields at the endpoint root (AWG 2.0 schema).
@@ -1382,7 +1393,8 @@ function add_awg_endpoint(config, section) {
     if (awg_ver == "") {
         if (option(section, "awg_rekey_after_time", "") != "" || option(section, "awg_rekey_timeout", "") != "" ||
             option(section, "awg_reject_after_time", "") != "" || option(section, "awg_keepalive_timeout", "") != "" ||
-            option(section, "awg_max_handshake_attempts", "") != "") {
+            option(section, "awg_max_handshake_attempts", "") != "" ||
+            bool_option(section, "awg_random_trailers", false) || bool_option(section, "awg_disable_cookies", false)) {
             awg_ver = "3.1";
         } else if (option(section, "awg_header_protection_key", "") != "" || option(section, "awg_content_padding_addition", "") != "") {
             awg_ver = "3.0";
@@ -1445,6 +1457,13 @@ function add_awg_endpoint(config, section) {
         if (mha != "") {
             if (is_lx) endpoint.max_handshake_attempts = mha;
             else endpoint.amnezia.max_handshake_attempts = mha;
+        }
+
+        if (is_lx) {
+            if (bool_option(section, "awg_random_trailers", false))
+                endpoint.random_trailers = true;
+            if (bool_option(section, "awg_disable_cookies", false))
+                endpoint.disable_cookies = true;
         }
     }
 

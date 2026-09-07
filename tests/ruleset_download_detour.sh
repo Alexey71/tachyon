@@ -86,4 +86,33 @@ ucode -L "$TACHYON_LIB" "$GENERATOR_UC" generate-config-fixture \
 grep -Fq '"download_detour": "first_proxy-out"' "$output2" || \
   fail "global download_lists_via_proxy without explicit section must default to first enabled proxy section"
 
+# 3. Verify http_clients and default_http_client handling:
+# Omitted on sing-box < 1.14 (1.12, 1.13, Leadaxe, Extended) to avoid unknown field crash
+output_v13="$WORK_DIR/out_v13.json"
+mkdir -p "$output_v13.section-cache" "$output_v13.rulesets"
+printf 'v1.13.5\n' > "$WORK_DIR/sb_v13"
+SB_VERSION_STATE_FILE="$WORK_DIR/sb_v13" \
+ucode -L "$TACHYON_LIB" "$GENERATOR_UC" generate-config-fixture \
+  "$WORK_DIR/fixture.json" "$output_v13" "127.0.0.1" "0" "1"
+
+if grep -q '"http_clients"' "$output_v13"; then
+  fail "sing-box < 1.14 must not have http_clients (causes fatal unknown field crash)"
+fi
+if grep -q '"default_http_client"' "$output_v13"; then
+  fail "sing-box < 1.14 must not have default_http_client (causes fatal unknown field crash)"
+fi
+
+# Included on sing-box 1.14+
+output_v14="$WORK_DIR/out_v14.json"
+mkdir -p "$output_v14.section-cache" "$output_v14.rulesets"
+printf 'v1.14.0\n' > "$WORK_DIR/sb_v14"
+SB_VERSION_STATE_FILE="$WORK_DIR/sb_v14" \
+ucode -L "$TACHYON_LIB" "$GENERATOR_UC" generate-config-fixture \
+  "$WORK_DIR/fixture.json" "$output_v14" "127.0.0.1" "0" "1"
+
+grep -q '"http_clients"' "$output_v14" || \
+  fail "sing-box 1.14+ must include http_clients"
+grep -q '"default_http_client": "ruleset-http"' "$output_v14" || \
+  fail "sing-box 1.14+ must configure default_http_client"
+
 printf "ruleset download detour checks passed\n"

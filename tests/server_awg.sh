@@ -97,15 +97,26 @@ cat >"$WORK_DIR/awg_fixture.json" <<'JSON'
       "awg_rekey_timeout": "5-6",
       "awg_reject_after_time": "171-193",
       "awg_keepalive_timeout": "11-18",
-      "awg_max_handshake_attempts": "15-24"
+      "awg_max_handshake_attempts": "15-24",
+      "awg_random_trailers": "1",
+      "awg_disable_cookies": "1"
     }
   ],
   "section": [
     {
-      ".name": "default_direct",
+      ".name": "my_awg_section",
       ".type": "section",
       "enabled": "1",
-      "action": "bypass"
+      "action": "awg",
+      "awg_version": "3.1",
+      "awg_private_key": "cHJpdmF0ZV9rZXk=",
+      "awg_peer_public_key": "cGVlcl9wdWJsaWNfa2V5",
+      "awg_server_address": "1.2.3.4",
+      "awg_server_port": "51820",
+      "awg_local_address": ["10.0.0.2/32"],
+      "awg_keepalive": "25-35",
+      "awg_random_trailers": "1",
+      "awg_disable_cookies": "1"
     }
   ]
 }
@@ -114,6 +125,10 @@ JSON
 mkdir -p "$WORK_DIR/out.section-cache"
 out_json="$WORK_DIR/singbox_awg.json"
 
+# Test 1: Leadaxe variant via variant state file
+printf 'lx\n' > "$WORK_DIR/sing-box-variant"
+SB_VARIANT_STATE_FILE="$WORK_DIR/sing-box-variant" \
+SB_VERSION_STATE_FILE="$WORK_DIR/nonexistent" \
 ucode -L "$TACHYON_LIB" "$TACHYON_LIB/singbox/generator.uc" generate-config-fixture \
   "$WORK_DIR/awg_fixture.json" "$out_json" "127.0.0.1" 0 0
 
@@ -135,5 +150,19 @@ grep -q '"rekey_timeout": "5-6"' "$out_json" || fail "AWG 3.1 server missing rek
 grep -q '"reject_after_time": "171-193"' "$out_json" || fail "AWG 3.1 server missing reject_after_time"
 grep -q '"keepalive_timeout": "11-18"' "$out_json" || fail "AWG 3.1 server missing keepalive_timeout"
 grep -q '"max_handshake_attempts": "15-24"' "$out_json" || fail "AWG 3.1 server missing max_handshake_attempts"
+grep -q '"random_trailers": true' "$out_json" || fail "AWG 3.1 server missing random_trailers"
+grep -q '"disable_cookies": true' "$out_json" || fail "AWG 3.1 server missing disable_cookies"
 
-printf 'AWG 2.0, 3.0, and 3.1 server configuration checks passed\n'
+# Check AWG 3.1 outbound on Leadaxe (range keepalive passed through, trailers/cookies present)
+grep -q '"persistent_keepalive_interval": "25-35"' "$out_json" || fail "Leadaxe AWG outbound missing range keepalive"
+
+# Test 2: Extended/Standard variant (range keepalive must degrade safely to integer 25)
+printf 'extended\n' > "$WORK_DIR/sing-box-variant"
+SB_VARIANT_STATE_FILE="$WORK_DIR/sing-box-variant" \
+SB_VERSION_STATE_FILE="$WORK_DIR/nonexistent" \
+ucode -L "$TACHYON_LIB" "$TACHYON_LIB/singbox/generator.uc" generate-config-fixture \
+  "$WORK_DIR/awg_fixture.json" "$out_json" "127.0.0.1" 0 0
+
+grep -q '"persistent_keepalive_interval": 25' "$out_json" || fail "Non-lx AWG outbound must safely fallback to integer keepalive"
+
+printf 'AWG 2.0, 3.0, and 3.1 server and outbound configuration checks passed\n'

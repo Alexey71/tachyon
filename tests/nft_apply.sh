@@ -604,9 +604,13 @@ fi
 if grep -Fq $'nft\tadd\telement\tinet\tTachyonTable\ttachyon_rule_ports_with_domain_ports\t{ 8443 }' "$NFT_LOG"; then
   fail "ports with destination matchers should not populate global port set"
 fi
-if grep -Fq '192.0.2.53' "$NFT_LOG" || grep -Fq '192.168.1.53' "$NFT_LOG" || grep -Fq 'tachyon_rule_dns_only' "$NFT_LOG"; then
-  fail "DNS action should not populate nft sets or fully routed rules"
+if grep -Fq '192.0.2.53' "$NFT_LOG" || grep -Fq 'tachyon_rule_dns_only' "$NFT_LOG"; then
+  fail "DNS action should not populate routing nft sets"
 fi
+if grep -Fq $'mangle\tiifname\t@tachyon_interfaces\tip\tsaddr\t192.168.1.53' "$NFT_LOG"; then
+  fail "DNS action should not create fully routed mangle rules"
+fi
+assert_contains "$NFT_LOG" $'nft\tadd\telement\tinet\tTachyonTable\ttachyon_dns_sources\t{ 192.168.1.53/32 }' "DNS action populates dns sources set"
 if [ "$(grep -F $'ip\tsaddr\t192.168.1.20/32' "$NFT_LOG" | wc -l | tr -d ' ')" != "3" ]; then
   fail "duplicate fully routed source should insert exactly one tcp/udp/local rule set"
 fi
@@ -670,6 +674,8 @@ bypass
 198.51.100.1,203.0.113.0/24
 [rule.text_rule.source_ip_cidr]
 
+[rule.text_rule.source_aware_dns]
+1
 [rule.text_rule.ports]
 443,80,443-444
 [rule.text_rule.fully_routed_ips]
@@ -696,6 +702,8 @@ proxy
 10.0.0.0/8,192.0.2.1
 [rule.default_enabled.source_ip_cidr]
 
+[rule.default_enabled.source_aware_dns]
+1
 [rule.default_enabled.ports]
 53,853
 [rule.default_enabled.fully_routed_ips]
@@ -756,6 +764,8 @@ bypass
 10.0.0.0/8,192.0.2.1
 [rule.enabled.source_ip_cidr]
 
+[rule.enabled.source_aware_dns]
+1
 [rule.enabled.ports]
 443,80,443-444
 [rule.enabled.fully_routed_ips]

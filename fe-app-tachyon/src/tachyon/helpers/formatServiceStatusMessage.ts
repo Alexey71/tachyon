@@ -43,8 +43,13 @@ export function formatServiceStatusMessage(msg: string): string {
     return `${_('External NFQUEUE rules overlap with Tachyon')} ${provider} (${range})`;
   }
 
-  if (msg === 'legacy zapret runtime paths are still present and should be migrated') {
-    return _('Legacy zapret runtime paths are still present and should be migrated');
+  if (
+    msg ===
+    'legacy zapret runtime paths are still present and should be migrated'
+  ) {
+    return _(
+      'Legacy zapret runtime paths are still present and should be migrated',
+    );
   }
 
   const unexpectedProcessesMatch = msg.match(
@@ -56,7 +61,9 @@ export function formatServiceStatusMessage(msg: string): string {
   }
 
   if (msg.startsWith('standalone ')) {
-    return _('Standalone service is active alongside Tachyon; policy or port conflicts are possible');
+    return _(
+      'Standalone service is active alongside Tachyon; policy or port conflicts are possible',
+    );
   }
 
   const packageInstalledNoBinMatch = msg.match(
@@ -76,17 +83,33 @@ export function formatServiceStatusMessage(msg: string): string {
   }
 
   if (msg.includes('ciadpi has restarted after exiting')) {
-    return _('ByeDPI restarted after exiting; strategy or traffic load may be unstable');
+    return _(
+      'ByeDPI restarted after exiting; strategy or traffic load may be unstable',
+    );
   }
 
-  if (msg.includes('native Tailscale is configured, but the tailscale package is missing')) {
-    return _('Native Tailscale is configured, but tailscale package is missing');
+  if (
+    msg.includes(
+      'native Tailscale is configured, but the tailscale package is missing',
+    )
+  ) {
+    return _(
+      'Native Tailscale is configured, but tailscale package is missing',
+    );
   }
-  if (msg.includes('native Tailscale is configured, but tailscaled is not running')) {
-    return _('Native Tailscale is configured, but tailscaled is not running for every section');
+  if (
+    msg.includes(
+      'native Tailscale is configured, but tailscaled is not running',
+    )
+  ) {
+    return _(
+      'Native Tailscale is configured, but tailscaled is not running for every section',
+    );
   }
   if (msg.includes('no server section uses native mode')) {
-    return _('Tailscale package is installed, but no server section uses native mode');
+    return _(
+      'Tailscale package is installed, but no server section uses native mode',
+    );
   }
 
   return _(msg);

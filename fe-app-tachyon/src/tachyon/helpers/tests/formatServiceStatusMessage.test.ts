@@ -3,9 +3,9 @@ import { formatServiceStatusMessage } from '../formatServiceStatusMessage';
 
 describe('formatServiceStatusMessage', () => {
   it('formats normal provider status', () => {
-    expect(formatServiceStatusMessage('zapret2 provider status is normal')).toBe(
-      'Provider status is normal: zapret2',
-    );
+    expect(
+      formatServiceStatusMessage('zapret2 provider status is normal'),
+    ).toBe('Provider status is normal: zapret2');
     expect(formatServiceStatusMessage('byedpi provider status is normal')).toBe(
       'Provider status is normal: byedpi',
     );
@@ -20,7 +20,8 @@ describe('formatServiceStatusMessage', () => {
   });
 
   it('formats missing binary path', () => {
-    const msg = 'action=zapret2 is configured, but zapret2 provider is not available at /opt/zapret2/nfq2/nfqws2';
+    const msg =
+      'action=zapret2 is configured, but zapret2 provider is not available at /opt/zapret2/nfq2/nfqws2';
     expect(formatServiceStatusMessage(msg)).toBe(
       'Action is configured, but binary is not available (zapret2 -> zapret2): /opt/zapret2/nfq2/nfqws2',
     );

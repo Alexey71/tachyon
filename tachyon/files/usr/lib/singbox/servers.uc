@@ -339,14 +339,16 @@ function add_standard_inbound(config, section, protocol, tag_name) {
         let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
         let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
         let sb_version_val = trim(fs.readfile(sb_version_file) || "");
-        let is_lx = sb_version_val != "" ? (index(sb_version_val, "-lx") >= 0) : (trim(fs.readfile(sb_variant_file) || "") == "lx");
+        let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
+        let is_lx = sb_variant_val == "lx" || index(sb_version_val, "-lx") >= 0;
 
         // AmneziaWG version handling: 2.0, 3.0, and 3.1 (sing-box-lx v1.14.0-lx.32+)
         let awg_ver = option(section, "awg_version", "");
         if (awg_ver == "") {
             if (option(section, "awg_rekey_after_time", "") != "" || option(section, "awg_rekey_timeout", "") != "" ||
                 option(section, "awg_reject_after_time", "") != "" || option(section, "awg_keepalive_timeout", "") != "" ||
-                option(section, "awg_max_handshake_attempts", "") != "") {
+                option(section, "awg_max_handshake_attempts", "") != "" ||
+                bool_option(section, "awg_random_trailers", false) || bool_option(section, "awg_disable_cookies", false)) {
                 awg_ver = "3.1";
             } else if (option(section, "awg_header_protection_key", "") != "" || option(section, "awg_content_padding_addition", "") != "") {
                 awg_ver = "3.0";
@@ -408,6 +410,11 @@ function add_standard_inbound(config, section, protocol, tag_name) {
 
                 let mha = option(section, "awg_max_handshake_attempts", "");
                 if (mha != "") inbound.max_handshake_attempts = mha;
+
+                if (bool_option(section, "awg_random_trailers", false))
+                    inbound.random_trailers = true;
+                if (bool_option(section, "awg_disable_cookies", false))
+                    inbound.disable_cookies = true;
             }
         } else {
             if (i1 != "") amnezia.i1 = i1;

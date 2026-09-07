@@ -405,6 +405,7 @@ function tproxy_inbound_matcher() {
 }
 
 function base_config(settings, service_address, runtime_context) {
+    runtime_context = object_or_empty(runtime_context);
     let log_level = option(settings, "log_level", "warn");
     let rewrite_ttl = int_option(settings, "dns_rewrite_ttl", "60");
     let turbo_cache = bool_option(settings, "dns_turbo_cache", false);
@@ -494,6 +495,14 @@ function base_config(settings, service_address, runtime_context) {
         push(inbounds, { type: "tproxy", tag: runtime_constants.TPROXY_INBOUND6_TAG, listen: runtime_constants.TPROXY_INBOUND6_ADDRESS, listen_port: runtime_constants.TPROXY_INBOUND_PORT, tcp_fast_open: true, udp_fragment: true });
     }
     push(inbounds, { type: "direct", tag: runtime_constants.DNS_INBOUND_TAG, listen: runtime_constants.DNS_INBOUND_ADDRESS, listen_port: runtime_constants.DNS_INBOUND_PORT });
+    if (runtime_context.source_aware_dns) {
+        push(inbounds, {
+            type: "direct",
+            tag: runtime_constants.SOURCE_DNS_INBOUND_TAG,
+            listen: core_ip.ipv6_supported() ? runtime_constants.SOURCE_DNS_INBOUND_ADDRESS : "0.0.0.0",
+            listen_port: runtime_constants.SOURCE_DNS_INBOUND_PORT
+        });
+    }
     for (let inbound in dns_config.inbounds)
         push(inbounds, inbound);
 
@@ -502,7 +511,6 @@ function base_config(settings, service_address, runtime_context) {
         { type: "direct", tag: runtime_constants.BYPASS_OUTBOUND_TAG }
     ];
 
-    runtime_context = object_or_empty(runtime_context);
     runtime_context.dns_health_inbounds = dns_config.sniff_inbounds;
     runtime_context.default_domain_resolver = runtime_dns.default_domain_resolver(settings);
 
@@ -539,6 +547,14 @@ function base_config(settings, service_address, runtime_context) {
         ? (match(sb_version_val, /^v?1\.1[0-3]\./) != null)
         : !is_extended_variant;
 
+    let is_sb_1_14_plus = sb_version_val != ""
+        ? (match(sb_version_val, /^v?1\.(1[4-9]|[2-9][0-9])\./) != null)
+        : false;
+
+    let route_section = runtime_route.config(settings, runtime_context);
+    if (is_sb_1_14_plus)
+        route_section.default_http_client = "ruleset-http";
+
     let cache_file_section = {
         enabled: true,
         path: cache_path,
@@ -549,7 +565,7 @@ function base_config(settings, service_address, runtime_context) {
     else
         cache_file_section.store_dns = true;
 
-    return {
+    let base_cfg = {
         log: {
             disabled: false,
             level: log_level,
@@ -561,7 +577,7 @@ function base_config(settings, service_address, runtime_context) {
         endpoints: [],
         inbounds,
         outbounds: default_outbounds,
-        route: runtime_route.config(settings, runtime_context),
+        route: route_section,
         services: [],
         experimental: {
             cache_file: cache_file_section,
@@ -569,6 +585,11 @@ function base_config(settings, service_address, runtime_context) {
         },
         __dns_hosts_predefined: dns_hosts_predefined
     };
+
+    if (is_sb_1_14_plus)
+        base_cfg.http_clients = [{ tag: "ruleset-http" }];
+
+    return base_cfg;
 }
 
 
@@ -991,6 +1012,78 @@ function add_content_blocking(config) {
     add_content_block_route_rules(config, profiles);
 }
 
+function single_or_array(values) {
+    if (type(values) != "array")
+        return values;
+    if (length(values) == 1)
+        return values[0];
+    return values;
+}
+
+function source_aware_dns_sources(sections) {
+    let sources = [];
+    let seen = {};
+    let add_source = function(value) {
+        value = as_string(value);
+        if (value == "" || seen[value])
+            return;
+        seen[value] = true;
+        push(sources, value);
+    };
+
+    for (let section in sections) {
+        let action = option(section, "action", "");
+        let has_dns_matchers = connections.has_dns_matchers(section);
+
+        if (has_dns_matchers) {
+            for (let ip in list_option(section, "source_ip_cidr"))
+                add_source(ip);
+        }
+
+        if (action == "bypass") {
+            for (let ip in list_option(section, "fully_routed_ips"))
+                add_source(ip);
+        }
+
+        if (action == "dns") {
+            for (let ip in list_option(section, "fully_routed_ips"))
+                add_source(ip);
+            for (let ip in list_option(section, "source_ip_cidr"))
+                add_source(ip);
+        }
+    }
+
+    return sources;
+}
+
+function add_source_aware_dns_support(config, source_aware_dns) {
+    if (length(source_aware_dns) == 0)
+        return;
+
+    push(config.dns.servers, {
+        type: "udp",
+        tag: runtime_constants.DNSMASQ_DNS_SERVER_TAG,
+        server: "127.0.0.1",
+        server_port: 53
+    });
+}
+
+function add_source_aware_dns_fallback(config, source_aware_dns) {
+    if (length(source_aware_dns) == 0)
+        return;
+
+    let settings = runtime_settings_cache || {};
+    let rewrite_ttl = int_option(settings, "dns_rewrite_ttl", "60");
+
+    push(config.dns.rules, {
+        action: "route",
+        server: runtime_constants.DNSMASQ_DNS_SERVER_TAG,
+        inbound: [ runtime_constants.SOURCE_DNS_INBOUND_TAG ],
+        source_ip_cidr: single_or_array(source_aware_dns),
+        rewrite_ttl
+    });
+}
+
 function generate_config(output_path, service_address, mwan3_active, supports_xhttp) {
     ctx.runtime_ruleset_folder = runtime_ruleset_folder;
     runtime_supports_xhttp = supports_xhttp == null || as_string(supports_xhttp) == ""
@@ -1007,7 +1100,12 @@ function generate_config(output_path, service_address, mwan3_active, supports_xh
     if (length(sections) == 0 && length(servers) == 0)
         runtime_generate_unsupported("no enabled sections");
 
-    let config = base_config(settings, service_address, { mwan3_active: cli_bool(mwan3_active) });
+    let source_aware_dns = source_aware_dns_sources(sections);
+    let config = base_config(settings, service_address, {
+        mwan3_active: cli_bool(mwan3_active),
+        source_aware_dns: length(source_aware_dns) > 0
+    });
+    add_source_aware_dns_support(config, source_aware_dns);
     let taken = reserved_runtime_tag_set(config.outbounds);
     reserve_section_outbound_tags(sections, taken);
     for (let server in servers)
@@ -1018,6 +1116,7 @@ function generate_config(output_path, service_address, mwan3_active, supports_xh
     for (let section in sections)
         add_route_for_section(config, section);
     add_server_routes(config, servers, sections);
+    add_source_aware_dns_fallback(config, source_aware_dns);
 
     // Append dns_hosts predefined rules AFTER section DNS rules so that
     // FakeIP/section-level DNS routing takes precedence over hardcoded IPs

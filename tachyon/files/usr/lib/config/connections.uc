@@ -508,6 +508,51 @@ function rule_sets_value(section) {
     return list_option_value_from_array(rule_sets(section));
 }
 
+function combined_domain_condition_text(section) {
+    if (type(raw_option(section, "domain")) != "array") {
+        let value = option(section, "domain", "");
+        if (value != "")
+            return value;
+    }
+
+    return option(section, "domain_suffix_text", "");
+}
+
+function rule_config_or_null() {
+    try {
+        return require("config.rule");
+    } catch (e) {
+        return null;
+    }
+}
+
+function rule_condition_csv(section, key, kind) {
+    let rule_config = rule_config_or_null();
+    if (!rule_config)
+        return "";
+    return rule_config.rule_condition_csv_value(
+        key,
+        kind,
+        option(section, key + "_text_mode", "0"),
+        option(section, "conditions_text_mode", "0"),
+        option(section, key + "_text", ""),
+        option(section, key, ""),
+        combined_domain_condition_text(section),
+        option(section, "domain_suffix", "")
+    );
+}
+
+function has_dns_matchers(section) {
+    return rule_condition_csv(section, "domain", "domains") != "" ||
+        rule_condition_csv(section, "domain_suffix", "domains") != "" ||
+        rule_condition_csv(section, "domain_keyword", "generic") != "" ||
+        rule_condition_csv(section, "domain_regex", "generic") != "" ||
+        length(community_lists(section)) > 0 ||
+        length(rule_sets(section)) > 0 ||
+        length(rule_sets_with_subnets(section)) > 0 ||
+        option(section, "domain_ip_lists", "") != "";
+}
+
 const DSCP_ALIASES = {
     "cs0": 0, "cs1": 8, "cs2": 16, "cs3": 24, "cs4": 32, "cs5": 40, "cs6": 48, "cs7": 56,
     "ef": 46,
@@ -1359,5 +1404,6 @@ return {
     geoip_country_value,
     subscription_download_targets,
     subscription_download_target_port,
+    has_dns_matchers,
     item_index_from_cursor
 };

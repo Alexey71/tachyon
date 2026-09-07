@@ -8620,6 +8620,8 @@ function createSectionContent(section) {
           uci.unset(UCI_PACKAGE, section_id, "awg_reject_after_time");
           uci.unset(UCI_PACKAGE, section_id, "awg_keepalive_timeout");
           uci.unset(UCI_PACKAGE, section_id, "awg_max_handshake_attempts");
+          uci.unset(UCI_PACKAGE, section_id, "awg_random_trailers");
+          uci.unset(UCI_PACKAGE, section_id, "awg_disable_cookies");
 
           setState("success", _("Generated!"));
           resetAfter(2500);
@@ -8880,8 +8882,10 @@ function createSectionContent(section) {
         const rja = getConfVal("RejectAfterTime") || "";
         const kpt = getConfVal("KeepaliveTimeout") || "";
         const mha = getConfVal("MaxHandshakeAttempts") || "";
+        const randomTrailers = getConfVal("RandomTrailers") || "";
+        const disableCookies = getConfVal("DisableCookies") || "";
 
-        const isV31 = !!(rka || rkt || rja || kpt || mha);
+        const isV31 = !!(rka || rkt || rja || kpt || mha || randomTrailers || disableCookies);
         const isV30 = !isV31 && !!(hpk || cpa);
         const detectedVersion = isV31 ? "3.1" : (isV30 ? "3.0" : "2.0");
 
@@ -8903,6 +8907,8 @@ function createSectionContent(section) {
           setVal("awg_reject_after_time", rja);
           setVal("awg_keepalive_timeout", kpt);
           setVal("awg_max_handshake_attempts", mha);
+          uci.set(UCI_PACKAGE, section_id, "awg_random_trailers", /^(1|true|yes|on)$/i.test(String(randomTrailers).trim()) ? "1" : "0");
+          uci.set(UCI_PACKAGE, section_id, "awg_disable_cookies", /^(1|true|yes|on)$/i.test(String(disableCookies).trim()) ? "1" : "0");
         } else {
           setVal("awg_rekey_after_time", "");
           setVal("awg_rekey_timeout", "");
@@ -8914,6 +8920,8 @@ function createSectionContent(section) {
           uci.unset(UCI_PACKAGE, section_id, "awg_reject_after_time");
           uci.unset(UCI_PACKAGE, section_id, "awg_keepalive_timeout");
           uci.unset(UCI_PACKAGE, section_id, "awg_max_handshake_attempts");
+          uci.unset(UCI_PACKAGE, section_id, "awg_random_trailers");
+          uci.unset(UCI_PACKAGE, section_id, "awg_disable_cookies");
         }
 
         // --- [Peer] ---
@@ -9034,8 +9042,14 @@ function createSectionContent(section) {
     "awg_keepalive",
     _("Persistent Keepalive"),
   );
-  o.datatype = "uinteger";
-  o.placeholder = "25";
+  o.placeholder = "25-35";
+  o.validate = function (_section_id, value) {
+    if (!value) return true;
+    if (/^\d+$/.test(value)) return true;
+    const m = value.match(/^(\d+)-(\d+)$/);
+    if (m && Number(m[1]) <= Number(m[2])) return true;
+    return _("Enter a number or range, e.g. 25 or 25-35");
+  };
   o.modalonly = true;
   o.rmempty = true;
   o.depends("action", "awg");
@@ -9063,12 +9077,16 @@ function createSectionContent(section) {
       uci.unset(UCI_PACKAGE, section_id, "awg_reject_after_time");
       uci.unset(UCI_PACKAGE, section_id, "awg_keepalive_timeout");
       uci.unset(UCI_PACKAGE, section_id, "awg_max_handshake_attempts");
+      uci.unset(UCI_PACKAGE, section_id, "awg_random_trailers");
+      uci.unset(UCI_PACKAGE, section_id, "awg_disable_cookies");
     } else if (formvalue === "3.0") {
       uci.unset(UCI_PACKAGE, section_id, "awg_rekey_after_time");
       uci.unset(UCI_PACKAGE, section_id, "awg_rekey_timeout");
       uci.unset(UCI_PACKAGE, section_id, "awg_reject_after_time");
       uci.unset(UCI_PACKAGE, section_id, "awg_keepalive_timeout");
       uci.unset(UCI_PACKAGE, section_id, "awg_max_handshake_attempts");
+      uci.unset(UCI_PACKAGE, section_id, "awg_random_trailers");
+      uci.unset(UCI_PACKAGE, section_id, "awg_disable_cookies");
     }
     return uci.set(UCI_PACKAGE, section_id, "awg_version", formvalue);
   };
@@ -9142,6 +9160,24 @@ function createSectionContent(section) {
   addAwgV31Param("awg_reject_after_time", _("Reject After Time"), _("AmneziaWG 3.1 reject after time"));
   addAwgV31Param("awg_keepalive_timeout", _("Keepalive Timeout"), _("AmneziaWG 3.1 keepalive timeout"));
   addAwgV31Param("awg_max_handshake_attempts", _("Max Handshake Attempts"), _("AmneziaWG 3.1 max handshake attempts"));
+
+  o = section.taboption(
+    "settings", form.Flag, "awg_random_trailers", _("Random Trailers"),
+    _("AmneziaWG 3.1 random packet trailers"),
+  );
+  o.modalonly = true;
+  o.rmempty = false;
+  o.default = "0";
+  o.depends({ action: "awg", awg_version: "3.1" });
+
+  o = section.taboption(
+    "settings", form.Flag, "awg_disable_cookies", _("Disable Cookies"),
+    _("AmneziaWG 3.1 disable cookie replies"),
+  );
+  o.modalonly = true;
+  o.rmempty = false;
+  o.default = "0";
+  o.depends({ action: "awg", awg_version: "3.1" });
 
 
   // ── WARP (Cloudflare WARP via sing-box-extended) ──────────────────────────

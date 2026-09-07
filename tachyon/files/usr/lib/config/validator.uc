@@ -1388,8 +1388,17 @@ function validate_dns_action(section, sections, context) {
     }
     if (length(connections.rule_sets_with_subnets(section)) > 0)
         fail_validation("DNS rule '" + name + "' can use domain-only rule sets, but subnet extraction is enabled. Disable 'Include IP addresses and subnets'. Aborted.");
-    if (!dns_action_has_domain_matchers(section))
-        fail_validation("DNS rule '" + name + "' must contain at least one domain condition or domain rule set. Aborted.");
+    let fully_routed_ips = list_option(section, "fully_routed_ips");
+    if (!dns_action_has_domain_matchers(section) && length(fully_routed_ips) == 0)
+        fail_validation("DNS rule '" + name + "' must contain at least one domain condition, domain rule set, or forced device. Aborted.");
+    for (let ip in fully_routed_ips) {
+        if (!core_ip.valid_ip_or_cidr(ip))
+            fail_validation("DNS rule '" + name + "' has an invalid forced device IP or subnet '" + ip + "'. Aborted.");
+    }
+    for (let ip in list_option(section, "source_ip_cidr")) {
+        if (!core_ip.valid_ip_or_cidr(ip))
+            fail_validation("DNS rule '" + name + "' has an invalid device filter IP or subnet '" + ip + "'. Aborted.");
+    }
     if (!bool_option(section, "dns_detour_enabled", false))
         return;
 

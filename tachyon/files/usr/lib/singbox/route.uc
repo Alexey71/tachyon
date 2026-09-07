@@ -65,15 +65,20 @@ function config(settings, runtime) {
     let output_network_interface = option(settings, "output_network_interface", "");
     let mwan3_active = type(runtime) == "object" && bool_value(runtime.mwan3_active);
     let sniff_inbounds = [ runtime_constants.TPROXY_INBOUND_TAG, runtime_constants.DNS_INBOUND_TAG ];
+    if (type(runtime) == "object" && bool_value(runtime.source_aware_dns))
+        push(sniff_inbounds, runtime_constants.SOURCE_DNS_INBOUND_TAG);
     if (type(runtime) == "object" && type(runtime.dns_health_inbounds) == "array")
         for (let inbound in runtime.dns_health_inbounds)
             push(sniff_inbounds, inbound);
+    let rules = [
+        { action: "sniff", inbound: sniff_inbounds },
+        { action: "hijack-dns", port: 53 },
+        { action: "hijack-dns", protocol: "dns" }
+    ];
+    if (type(runtime) == "object" && bool_value(runtime.source_aware_dns))
+        push(rules, { action: "hijack-dns", inbound: [ runtime_constants.SOURCE_DNS_INBOUND_TAG ] });
     let result = {
-        rules: [
-            { action: "sniff", inbound: sniff_inbounds },
-            { action: "hijack-dns", port: 53 },
-            { action: "hijack-dns", protocol: "dns" }
-        ],
+        rules,
         rule_set: [],
         final: runtime_constants.DIRECT_OUTBOUND_TAG,
         auto_detect_interface: output_network_interface == "" && !mwan3_active,
