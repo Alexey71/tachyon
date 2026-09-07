@@ -32,6 +32,7 @@ function isDownloadSectionAction(action, capabilities) {
     case "proxy":
     case "outbound":
     case "vpn":
+    case "awg":
       return true;
     case "zapret":
       return !capabilities?.loaded || Boolean(capabilities.zapretInstalled);

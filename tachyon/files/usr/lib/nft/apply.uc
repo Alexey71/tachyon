@@ -1890,7 +1890,7 @@ function tproxy_route6_present(table) {
 }
 
 function tproxy_route_present(table) {
-    return tproxy_route4_present(table) && tproxy_route6_present(table);
+    return tproxy_route4_present(table) && (!core_ip.ipv6_supported() || tproxy_route6_present(table));
 }
 
 function tproxy_marking_rule4_present(table, mark) {
@@ -1902,7 +1902,7 @@ function tproxy_marking_rule6_present(table, mark) {
 }
 
 function tproxy_marking_rule_present(table, mark) {
-    return tproxy_marking_rule4_present(table, mark) && tproxy_marking_rule6_present(table, mark);
+    return tproxy_marking_rule4_present(table, mark) && (!core_ip.ipv6_supported() || tproxy_marking_rule6_present(table, mark));
 }
 
 function tproxy_route_rule_present(table, mark) {

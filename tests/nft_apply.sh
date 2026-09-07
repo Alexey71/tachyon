@@ -408,6 +408,14 @@ if IP_ROUTE_OUTPUT='local default dev lo scope host' \
   fail "tproxy route/rule presence should require matching lookup table"
 fi
 
+# IPv6 disabled: should only require IPv4 route/rule
+TACHYON_ENABLE_IPV6=0 \
+  IP_ROUTE_OUTPUT='local default dev lo scope host' \
+  IP_ROUTE6_OUTPUT='' \
+  IP_RULE_OUTPUT='105: from all fwmark 0x100000/0x100000 lookup tachyon' \
+  IP_RULE6_OUTPUT='' \
+  nft_ucode tproxy-route-rule-present tachyon 0x00100000
+
 : > "$SYSCTL_LOG"
 : > "$LOGGER_LOG"
 LSMOD_OUTPUT='br_netfilter 32768 0' SYSCTL_BRIDGE_NF_CALL_IPTABLES=1 nft_ucode ensure-bridge-netfilter-disabled
