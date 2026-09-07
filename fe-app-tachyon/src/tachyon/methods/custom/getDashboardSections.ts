@@ -1473,6 +1473,76 @@ export async function getDashboardSections(
       value,
     }),
   );
+  const serviceStatusCache = new Map<
+    string,
+    Promise<Tachyon.ServiceStatus | undefined>
+  >();
+
+  const getServiceStatus = (serviceType: 'zapret' | 'zapret2' | 'byedpi') => {
+    if (!serviceStatusCache.has(serviceType)) {
+      serviceStatusCache.set(
+        serviceType,
+        (async () => {
+          try {
+            if (serviceType === 'zapret') {
+              const result = await TachyonShellMethods.getZapretStatus();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: 'zapret',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: s.restart_count,
+                  unstable: Boolean(s.runtime_unstable),
+                  statusMessage: s.status_message,
+                };
+              }
+            } else if (serviceType === 'zapret2') {
+              const result = await TachyonShellMethods.getZapret2Status();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: 'zapret2',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: 0,
+                  unstable: false,
+                  statusMessage: s.status_message,
+                };
+              }
+            } else if (serviceType === 'byedpi') {
+              const result = await TachyonShellMethods.getByedpiStatus();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: 'byedpi',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: s.restart_count,
+                  unstable: Boolean(s.runtime_unstable),
+                  statusMessage: s.status_message,
+                };
+              }
+            }
+          } catch (_error) {
+            // Status fetch failed — show section without status
+          }
+          return undefined;
+        })(),
+      );
+    }
+    return serviceStatusCache.get(serviceType)!;
+  };
+
   const data = await Promise.all(
     configSections
       .filter(
@@ -1599,62 +1669,7 @@ export async function getDashboardSections(
 
         if (isServiceAction(sectionAction)) {
           const serviceType = sectionAction as 'zapret' | 'zapret2' | 'byedpi';
-
-          let serviceStatus: Tachyon.ServiceStatus | undefined;
-
-          try {
-            if (serviceType === 'zapret') {
-              const result = await TachyonShellMethods.getZapretStatus();
-              if (result.success) {
-                const s = result.data;
-                serviceStatus = {
-                  serviceType: 'zapret',
-                  configured: Boolean(s.configured),
-                  ready: Boolean(s.ready),
-                  conflict: Boolean(s.conflict),
-                  runningProcesses: s.running_process_count,
-                  expectedProcesses: s.expected_process_count,
-                  restartCount: s.restart_count,
-                  unstable: Boolean(s.runtime_unstable),
-                  statusMessage: s.status_message,
-                };
-              }
-            } else if (serviceType === 'zapret2') {
-              const result = await TachyonShellMethods.getZapret2Status();
-              if (result.success) {
-                const s = result.data;
-                serviceStatus = {
-                  serviceType: 'zapret2',
-                  configured: Boolean(s.configured),
-                  ready: Boolean(s.ready),
-                  conflict: Boolean(s.conflict),
-                  runningProcesses: s.running_process_count,
-                  expectedProcesses: s.expected_process_count,
-                  restartCount: 0,
-                  unstable: false,
-                  statusMessage: s.status_message,
-                };
-              }
-            } else if (serviceType === 'byedpi') {
-              const result = await TachyonShellMethods.getByedpiStatus();
-              if (result.success) {
-                const s = result.data;
-                serviceStatus = {
-                  serviceType: 'byedpi',
-                  configured: Boolean(s.configured),
-                  ready: Boolean(s.ready),
-                  conflict: Boolean(s.conflict),
-                  runningProcesses: s.running_process_count,
-                  expectedProcesses: s.expected_process_count,
-                  restartCount: s.restart_count,
-                  unstable: Boolean(s.runtime_unstable),
-                  statusMessage: s.status_message,
-                };
-              }
-            }
-          } catch (_error) {
-            // Status fetch failed — show section without status
-          }
+          const serviceStatus = await getServiceStatus(serviceType);
 
           const statusLabel = serviceStatus
             ? serviceStatus.ready

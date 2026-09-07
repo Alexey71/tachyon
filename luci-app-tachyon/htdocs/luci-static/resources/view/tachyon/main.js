@@ -2402,9 +2402,102 @@ function renderDefaultState({
   const isConnectionNode = ["vpn", "awg", "warp"].includes(
     section.action || ""
   );
-  const isServiceNode = ["zapret", "zapret2", "byedpi"].includes(
-    section.action || ""
-  );
+  const isServiceNode = ["zapret", "zapret2", "byedpi"].includes(section.action || "") || Boolean(section.serviceStatus);
+  if (isServiceNode) {
+    const ss = section.serviceStatus;
+    const serviceType = ss?.serviceType || (["zapret", "zapret2", "byedpi"].includes(section.action || "") ? section.action : "zapret");
+    const typeLabel = serviceType === "zapret" ? "Zapret" : serviceType === "zapret2" ? "Zapret2" : "ByeDPI";
+    const statusColor = ss ? ss.ready ? "var(--success-color-medium, green)" : ss.conflict ? "var(--error-color-medium, red)" : ss.configured ? "var(--warn-color-medium, orange)" : "var(--primary-color-low, lightgray)" : "var(--primary-color-low, lightgray)";
+    const statusText = ss ? ss.ready ? _("Running") : ss.conflict ? _("Conflict") : ss.configured ? _("Stopped") : _("Not configured") : _("Unknown");
+    return E("div", { class: "tachyon_dashboard-page__outbound-section" }, [
+      E(
+        "div",
+        {
+          class: "tachyon_dashboard-page__outbound-section__title-section",
+          style: "cursor: default;"
+        },
+        [
+          E(
+            "div",
+            {
+              class: "tachyon_dashboard-page__outbound-section__title-section__title",
+              style: "display: flex; align-items: center; gap: 8px;"
+            },
+            [
+              E("span", {}, section.displayName),
+              E(
+                "span",
+                {
+                  style: "font-size: 12px; opacity: 0.6; font-weight: normal;"
+                },
+                typeLabel
+              )
+            ]
+          )
+        ]
+      ),
+      E(
+        "div",
+        {
+          style: "display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 16px 12px;"
+        },
+        [
+          E("div", { style: "display: flex; align-items: center; gap: 6px;" }, [
+            E(
+              "span",
+              { style: "opacity: 0.7; font-size: 13px;" },
+              _("Status") + ":"
+            ),
+            E(
+              "span",
+              {
+                style: `font-size: 13px; font-weight: 500; color: ${statusColor};`
+              },
+              statusText
+            )
+          ]),
+          ss && ss.restartCount > 0 ? E(
+            "div",
+            { style: "display: flex; align-items: center; gap: 6px;" },
+            [
+              E(
+                "span",
+                { style: "opacity: 0.7; font-size: 13px;" },
+                _("Restarts") + ":"
+              ),
+              E(
+                "span",
+                {
+                  style: "font-size: 13px; font-weight: 500; color: var(--warn-color-medium, orange);"
+                },
+                `${ss.restartCount}`
+              )
+            ]
+          ) : "",
+          ss && ss.unstable ? E(
+            "div",
+            { style: "display: flex; align-items: center; gap: 6px;" },
+            [
+              E(
+                "span",
+                {
+                  style: "font-size: 13px; font-weight: 500; color: var(--error-color-medium, red);"
+                },
+                _("Unstable")
+              )
+            ]
+          ) : ""
+        ]
+      ),
+      ss?.statusMessage ? E(
+        "div",
+        {
+          style: "padding: 0 16px 8px; font-size: 12px; opacity: 0.6; word-break: break-word;"
+        },
+        formatServiceStatusMessage(ss.statusMessage)
+      ) : ""
+    ]);
+  }
   function testLatency() {
     if (section.withTagSelect) {
       return onTestLatency(
@@ -2653,106 +2746,13 @@ function renderDefaultState({
       ]
     );
   }
-  if (isServiceNode && section.serviceStatus) {
-    const ss = section.serviceStatus;
-    const statusColor = ss.ready ? "var(--success-color-medium, green)" : ss.conflict ? "var(--error-color-medium, red)" : ss.configured ? "var(--warn-color-medium, orange)" : "var(--primary-color-low, lightgray)";
-    const statusText = ss.ready ? _("Running") : ss.conflict ? _("Conflict") : ss.configured ? _("Stopped") : _("Not configured");
-    const typeLabel = ss.serviceType === "zapret" ? "Zapret" : ss.serviceType === "zapret2" ? "Zapret2" : "ByeDPI";
-    return E("div", { class: "tachyon_dashboard-page__outbound-section" }, [
-      E(
-        "div",
-        {
-          class: "tachyon_dashboard-page__outbound-section__title-section",
-          style: "cursor: default;"
-        },
-        [
-          E(
-            "div",
-            {
-              class: "tachyon_dashboard-page__outbound-section__title-section__title",
-              style: "display: flex; align-items: center; gap: 8px;"
-            },
-            [
-              E("span", {}, section.displayName),
-              E(
-                "span",
-                {
-                  style: "font-size: 12px; opacity: 0.6; font-weight: normal;"
-                },
-                typeLabel
-              )
-            ]
-          )
-        ]
-      ),
-      E(
-        "div",
-        {
-          style: "display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 16px 12px;"
-        },
-        [
-          E("div", { style: "display: flex; align-items: center; gap: 6px;" }, [
-            E(
-              "span",
-              { style: "opacity: 0.7; font-size: 13px;" },
-              _("Status") + ":"
-            ),
-            E(
-              "span",
-              {
-                style: `font-size: 13px; font-weight: 500; color: ${statusColor};`
-              },
-              statusText
-            )
-          ]),
-          ss.restartCount > 0 ? E(
-            "div",
-            { style: "display: flex; align-items: center; gap: 6px;" },
-            [
-              E(
-                "span",
-                { style: "opacity: 0.7; font-size: 13px;" },
-                _("Restarts") + ":"
-              ),
-              E(
-                "span",
-                {
-                  style: "font-size: 13px; font-weight: 500; color: var(--warn-color-medium, orange);"
-                },
-                `${ss.restartCount}`
-              )
-            ]
-          ) : "",
-          ss.unstable ? E(
-            "div",
-            { style: "display: flex; align-items: center; gap: 6px;" },
-            [
-              E(
-                "span",
-                {
-                  style: "font-size: 13px; font-weight: 500; color: var(--error-color-medium, red);"
-                },
-                _("Unstable")
-              )
-            ]
-          ) : ""
-        ]
-      ),
-      ss.statusMessage ? E(
-        "div",
-        {
-          style: "padding: 0 16px 8px; font-size: 12px; opacity: 0.6; word-break: break-word;"
-        },
-        formatServiceStatusMessage(ss.statusMessage)
-      ) : ""
-    ]);
-  }
   const metadataNodes = (section.subscriptionMetadata || []).map((metadata) => renderSubscriptionMetadata(metadata)).filter(Boolean);
   const subscriptionUpdateAction = renderSubscriptionUpdateAction(
     section,
     subscriptionUpdating,
     onUpdateSubscription
   );
+  const canTestLatency = !isServiceNode && (section.withTagSelect || section.outbounds && section.outbounds.length > 0);
   return E("div", { class: "tachyon_dashboard-page__outbound-section" }, [
     // Title with test latency
     E(
@@ -2854,39 +2854,41 @@ function renderDefaultState({
           },
           [
             ...subscriptionUpdateAction ? [subscriptionUpdateAction] : [],
-            E(
-              "button",
-              {
-                type: "button",
-                class: "btn dashboard-sections-grid-item-test-latency",
-                "data-latency-section": section.sectionName,
-                disabled: latencyFetching ? true : void 0,
-                click: (event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (latencyFetching) {
-                    return;
+            ...canTestLatency ? [
+              E(
+                "button",
+                {
+                  type: "button",
+                  class: "btn dashboard-sections-grid-item-test-latency",
+                  "data-latency-section": section.sectionName,
+                  disabled: latencyFetching ? true : void 0,
+                  click: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (latencyFetching) {
+                      return;
+                    }
+                    testLatency();
                   }
-                  testLatency();
-                }
-              },
-              latencyFetching ? [
-                renderLoaderCircleIcon24(),
-                E(
+                },
+                latencyFetching ? [
+                  renderLoaderCircleIcon24(),
+                  E(
+                    "span",
+                    {
+                      class: "dashboard-sections-grid-item-test-latency__label"
+                    },
+                    isConnectionNode ? _("Checking...") : getLatencyTestLabel(latencyProgress)
+                  )
+                ] : E(
                   "span",
                   {
                     class: "dashboard-sections-grid-item-test-latency__label"
                   },
-                  isConnectionNode ? _("Checking...") : getLatencyTestLabel(latencyProgress)
+                  isConnectionNode ? _("Check Connection") : _("Test latency")
                 )
-              ] : E(
-                "span",
-                {
-                  class: "dashboard-sections-grid-item-test-latency__label"
-                },
-                isConnectionNode ? _("Check Connection") : _("Test latency")
               )
-            )
+            ] : []
           ]
         )
       ]
@@ -5594,6 +5596,70 @@ async function getDashboardSections(options = {}) {
       value
     })
   );
+  const serviceStatusCache = /* @__PURE__ */ new Map();
+  const getServiceStatus = (serviceType) => {
+    if (!serviceStatusCache.has(serviceType)) {
+      serviceStatusCache.set(
+        serviceType,
+        (async () => {
+          try {
+            if (serviceType === "zapret") {
+              const result = await TachyonShellMethods.getZapretStatus();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: "zapret",
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: s.restart_count,
+                  unstable: Boolean(s.runtime_unstable),
+                  statusMessage: s.status_message
+                };
+              }
+            } else if (serviceType === "zapret2") {
+              const result = await TachyonShellMethods.getZapret2Status();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: "zapret2",
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: 0,
+                  unstable: false,
+                  statusMessage: s.status_message
+                };
+              }
+            } else if (serviceType === "byedpi") {
+              const result = await TachyonShellMethods.getByedpiStatus();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: "byedpi",
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: Boolean(s.conflict),
+                  runningProcesses: s.running_process_count,
+                  expectedProcesses: s.expected_process_count,
+                  restartCount: s.restart_count,
+                  unstable: Boolean(s.runtime_unstable),
+                  statusMessage: s.status_message
+                };
+              }
+            }
+          } catch (_error) {
+          }
+          return void 0;
+        })()
+      );
+    }
+    return serviceStatusCache.get(serviceType);
+  };
   const data = await Promise.all(
     configSections.filter(
       (section) => section.enabled !== "0" && (isConnectionAction(section.action) || isServiceAction(section.action))
@@ -5682,59 +5748,7 @@ async function getDashboardSections(options = {}) {
       }
       if (isServiceAction(sectionAction)) {
         const serviceType = sectionAction;
-        let serviceStatus;
-        try {
-          if (serviceType === "zapret") {
-            const result = await TachyonShellMethods.getZapretStatus();
-            if (result.success) {
-              const s = result.data;
-              serviceStatus = {
-                serviceType: "zapret",
-                configured: Boolean(s.configured),
-                ready: Boolean(s.ready),
-                conflict: Boolean(s.conflict),
-                runningProcesses: s.running_process_count,
-                expectedProcesses: s.expected_process_count,
-                restartCount: s.restart_count,
-                unstable: Boolean(s.runtime_unstable),
-                statusMessage: s.status_message
-              };
-            }
-          } else if (serviceType === "zapret2") {
-            const result = await TachyonShellMethods.getZapret2Status();
-            if (result.success) {
-              const s = result.data;
-              serviceStatus = {
-                serviceType: "zapret2",
-                configured: Boolean(s.configured),
-                ready: Boolean(s.ready),
-                conflict: Boolean(s.conflict),
-                runningProcesses: s.running_process_count,
-                expectedProcesses: s.expected_process_count,
-                restartCount: 0,
-                unstable: false,
-                statusMessage: s.status_message
-              };
-            }
-          } else if (serviceType === "byedpi") {
-            const result = await TachyonShellMethods.getByedpiStatus();
-            if (result.success) {
-              const s = result.data;
-              serviceStatus = {
-                serviceType: "byedpi",
-                configured: Boolean(s.configured),
-                ready: Boolean(s.ready),
-                conflict: Boolean(s.conflict),
-                runningProcesses: s.running_process_count,
-                expectedProcesses: s.expected_process_count,
-                restartCount: s.restart_count,
-                unstable: Boolean(s.runtime_unstable),
-                statusMessage: s.status_message
-              };
-            }
-          }
-        } catch (_error) {
-        }
+        const serviceStatus = await getServiceStatus(serviceType);
         const statusLabel = serviceStatus ? serviceStatus.ready ? _("Running") : serviceStatus.conflict ? _("Conflict") : serviceStatus.configured ? _("Stopped") : _("Not configured") : _("Unknown");
         return {
           withTagSelect: false,
@@ -14768,29 +14782,36 @@ async function runSectionsCheck() {
           latency: _("Not responding")
         };
       }
-      if (section.serviceStatus) {
-        const s = section.serviceStatus;
-        if (s.ready) {
-          return {
-            state: "success",
-            latency: _("Running")
-          };
-        }
-        if (s.conflict) {
+      const isService = ["zapret", "zapret2", "byedpi"].includes(section.action || "") || Boolean(section.serviceStatus);
+      if (isService) {
+        if (section.serviceStatus) {
+          const s = section.serviceStatus;
+          if (s.ready) {
+            return {
+              state: "success",
+              latency: _("Running")
+            };
+          }
+          if (s.conflict) {
+            return {
+              state: "error",
+              latency: _("Conflict")
+            };
+          }
+          if (s.configured) {
+            return {
+              state: "warning",
+              latency: _("Stopped")
+            };
+          }
           return {
             state: "error",
-            latency: _("Conflict")
-          };
-        }
-        if (s.configured) {
-          return {
-            state: "warning",
-            latency: _("Stopped")
+            latency: _("Not configured")
           };
         }
         return {
-          state: "error",
-          latency: _("Not configured")
+          state: "warning",
+          latency: _("Unknown")
         };
       }
       const selectedOutbound = section.outbounds[0];

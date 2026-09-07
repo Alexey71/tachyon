@@ -127,29 +127,39 @@ export async function runSectionsCheck() {
 
       // Service sections (zapret/zapret2/byedpi) don't have Clash API proxies.
       // Use the serviceStatus that was already fetched in getDashboardSections.
-      if (section.serviceStatus) {
-        const s = section.serviceStatus;
-        if (s.ready) {
-          return {
-            state: 'success',
-            latency: _('Running'),
-          };
-        }
-        if (s.conflict) {
+      const isService =
+        ['zapret', 'zapret2', 'byedpi'].includes(section.action || '') ||
+        Boolean(section.serviceStatus);
+
+      if (isService) {
+        if (section.serviceStatus) {
+          const s = section.serviceStatus;
+          if (s.ready) {
+            return {
+              state: 'success',
+              latency: _('Running'),
+            };
+          }
+          if (s.conflict) {
+            return {
+              state: 'error',
+              latency: _('Conflict'),
+            };
+          }
+          if (s.configured) {
+            return {
+              state: 'warning',
+              latency: _('Stopped'),
+            };
+          }
           return {
             state: 'error',
-            latency: _('Conflict'),
-          };
-        }
-        if (s.configured) {
-          return {
-            state: 'warning',
-            latency: _('Stopped'),
+            latency: _('Not configured'),
           };
         }
         return {
-          state: 'error',
-          latency: _('Not configured'),
+          state: 'warning',
+          latency: _('Unknown'),
         };
       }
 
