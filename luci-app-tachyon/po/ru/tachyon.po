@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-05 12:07+0300\n"
-"PO-Revision-Date: 2026-09-05 12:07+0300\n"
+"POT-Creation-Date: 2026-09-07 11:45+0300\n"
+"PO-Revision-Date: 2026-09-07 11:45+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -42,13 +42,13 @@ msgid "+ Add URLTest"
 msgstr "+ Добавить URLTest"
 
 msgid "⏳ Stopping..."
-msgstr ""
+msgstr "⏳ Остановка…"
 
 msgid "⚠️ Benchmark completed. No working bypass found for this target."
 msgstr "⚠️ Бенчмарк завершен. Не найдено рабочих стратегий для данной цели."
 
 msgid "⚠️ Benchmark stopped"
-msgstr ""
+msgstr "⚠️ Бенчмарк остановлен"
 
 msgid "⚠️ If all Bootstrap DNS fail 3 times, queries will be sent to your ISP's DNS in plaintext. Only use as a last resort to prevent complete internet loss."
 msgstr "⚠️ Если все Bootstrap DNS завершатся с ошибкой 3 раза, запросы будут отправлены в DNS вашего провайдера в открытом виде. Используйте только в крайнем случае для предотвращения полной потери интернета."
@@ -66,7 +66,7 @@ msgid "⚡ QUIC / HTTP/3 (UDP 443)"
 msgstr "⚡ QUIC / HTTP/3 (UDP 443)"
 
 msgid "⚡ Quick Benchmark (Presets ~30+)"
-msgstr ""
+msgstr "⚡ Быстрый бенчмарк (Пресеты ~30+)"
 
 msgid "⚡ Strategy Fuzzer & Auto-Tuner"
 msgstr "⚡ Подборщик стратегий и авто-тюнер"
@@ -99,7 +99,7 @@ msgid "🌐 Custom Target URL..."
 msgstr "🌐 Пользовательский URL цели..."
 
 msgid "🎬 YouTube Full Suite (Web + 4K Stream + CDN)"
-msgstr ""
+msgstr "🎬 YouTube Полный набор (Веб + 4K поток + CDN)"
 
 msgid "🏆 Apply Best Match"
 msgstr "🏆 Применить наилучшую"
@@ -108,10 +108,10 @@ msgid "🏴‍☠️ RuTracker Suite"
 msgstr "🏴‍☠️ RuTracker Suite"
 
 msgid "🐦 X / Twitter Suite (API + Media CDN)"
-msgstr ""
+msgstr "🐦 X / Twitter Набор (API + Медиа CDN)"
 
 msgid "💬 Discord Suite (Gateway + Voice + CDN)"
-msgstr ""
+msgstr "💬 Discord Набор (Шлюз + Голос + CDN)"
 
 msgid "💾 Save Custom Patterns"
 msgstr "💾 Сохранить пользовательские паттерны"
@@ -126,13 +126,13 @@ msgid "🔄 Reset to Factory Defaults"
 msgstr "🔄 Сбросить к заводским настройкам"
 
 msgid "🔍 Combinatorial Deep Fuzzing (~150-300+)"
-msgstr ""
+msgstr "🔍 Комбинаторный глубокий фаззинг (~150-300+)"
 
 msgid "🗑️ Clear History"
 msgstr "🗑️ Очистить историю"
 
 msgid "🤖 ChatGPT / OpenAI Suite"
-msgstr ""
+msgstr "🤖 ChatGPT / OpenAI Набор"
 
 msgid "🧠 Synthesize with AI"
 msgstr "🧠 Сгенерировать через ИИ"
@@ -147,7 +147,7 @@ msgid "🚀 Start Benchmark"
 msgstr "🚀 Начать бенчмарк"
 
 msgid "🛑 Benchmark stopped"
-msgstr ""
+msgstr "🛑 Бенчмарк остановлен"
 
 msgid "🛑 Stop Benchmark"
 msgstr "🛑 Остановить бенчмарк"
@@ -156,7 +156,13 @@ msgid "🛠️ My Custom Strategies Only"
 msgstr "🛠️ Только мои стратегии"
 
 msgid "🟣 Twitch Suite (Live Stream + HLS CDN)"
-msgstr ""
+msgstr "🟣 Twitch Набор (Прямой эфир + HLS CDN)"
+
+msgid "Блокировка по IP (Таймаут TCP SYN)"
+msgstr "Блокировка по IP (Таймаут TCP SYN)"
+
+msgid "Обнаружена блокировка по IP! Ресурс блокируется на сетевом уровне (нет ответа на TCP SYN). Методы обхода DPI (Zapret / ByeDPI) бессильны для этого адреса — настройте маршрутизацию через прокси/VPN (Sing-box) для данного домена!"
+msgstr "Обнаружена блокировка по IP! Ресурс блокируется на сетевом уровне (нет ответа на TCP SYN). Методы обхода DPI (Zapret / ByeDPI) бессильны для этого адреса — настройте маршрутизацию через прокси/VPN (Sing-box) для данного домена!"
 
 msgid "Accept external proxy connections and route them with sing-box."
 msgstr "Принимать внешние прокси-подключения и маршрутизировать их через sing-box."
@@ -172,6 +178,12 @@ msgstr "Действие"
 
 msgid "Action failed"
 msgstr "Действие не выполнено"
+
+msgid "Action is configured, but binary is not available"
+msgstr "Действие настроено, но бинарный файл недоступен"
+
+msgid "Action is configured, but runtime is not ready"
+msgstr "Действие настроено, но служба не готова"
 
 msgid "Action Mode"
 msgstr "Режим действия"
@@ -426,25 +438,31 @@ msgid "AmneziaWG 3.0 / 3.1 header protection key"
 msgstr "Ключ защиты заголовков AmneziaWG 3.0 / 3.1"
 
 msgid "AmneziaWG 3.1 content padding range, e.g. 38-104"
-msgstr ""
+msgstr "Диапазон длины паддинга AmneziaWG 3.1, например 38-104"
+
+msgid "AmneziaWG 3.1 disable cookie replies"
+msgstr "Отключение ответов с cookie в AmneziaWG 3.1"
 
 msgid "AmneziaWG 3.1 header protection key"
-msgstr ""
+msgstr "Ключ защиты заголовка AmneziaWG 3.1"
 
 msgid "AmneziaWG 3.1 keepalive timeout"
-msgstr ""
+msgstr "Таймаут keepalive AmneziaWG 3.1"
 
 msgid "AmneziaWG 3.1 max handshake attempts"
-msgstr ""
+msgstr "Максимальное число попыток рукопожатия AmneziaWG 3.1"
+
+msgid "AmneziaWG 3.1 random packet trailers"
+msgstr "Случайные трейлеры пакетов AmneziaWG 3.1"
 
 msgid "AmneziaWG 3.1 reject after time"
-msgstr ""
+msgstr "Отклонять пакеты по истечении времени AmneziaWG 3.1"
 
 msgid "AmneziaWG 3.1 rekey after time"
-msgstr ""
+msgstr "Интервал смены ключей AmneziaWG 3.1"
 
 msgid "AmneziaWG 3.1 rekey timeout"
-msgstr ""
+msgstr "Таймаут смены ключей AmneziaWG 3.1"
 
 msgid "AmneziaWG config loaded successfully!"
 msgstr "Конфигурация AmneziaWG успешно загружена!"
@@ -714,7 +732,7 @@ msgid "By schedule"
 msgstr "По расписанию"
 
 msgid "ByeDPI"
-msgstr ""
+msgstr "ByeDPI"
 
 msgid "ByeDPI (ciadpi)"
 msgstr "ByeDPI (ciadpi)"
@@ -742,6 +760,9 @@ msgstr "Бинарный файл провайдера ByeDPI доступен"
 
 msgid "ByeDPI provider binary is not available"
 msgstr "Бинарный файл провайдера ByeDPI недоступен"
+
+msgid "ByeDPI restarted after exiting; strategy or traffic load may be unstable"
+msgstr "ByeDPI перезапустился после завершения; стратегия или нагрузка трафика могут быть нестабильны"
 
 msgid "ByeDPI sing-box outbound is configured"
 msgstr "Outbound ByeDPI в sing-box настроен"
@@ -894,10 +915,10 @@ msgid "Clear DNS cache"
 msgstr "Очистить кэш DNS"
 
 msgid "Click to hide"
-msgstr ""
+msgstr "Нажмите, чтобы скрыть"
 
 msgid "Click to show"
-msgstr ""
+msgstr "Нажмите, чтобы показать"
 
 msgid "Client Address"
 msgstr "Адрес клиента"
@@ -966,7 +987,7 @@ msgid "Community Lists"
 msgstr "Community-списки"
 
 msgid "Component action timed out"
-msgstr ""
+msgstr "Превышено время ожидания действия компонента"
 
 msgid "Component update available"
 msgstr "Доступно обновление компонента"
@@ -999,7 +1020,7 @@ msgid "Config Snapshots"
 msgstr "Снапшоты конфигурации"
 
 msgid "Configuration applied"
-msgstr ""
+msgstr "Конфигурация применена"
 
 msgid "Configuration for Tachyon service"
 msgstr "Конфигурация сервиса Tachyon"
@@ -1035,7 +1056,7 @@ msgid "Content Mode"
 msgstr "Режим контента"
 
 msgid "Content Padding Addition"
-msgstr ""
+msgstr "Дополнительный паддинг контента"
 
 msgid "Cookie packet junk size (S3)"
 msgstr "Размер мусора в пакете cookie (S3)"
@@ -1045,6 +1066,9 @@ msgstr "Скопировано"
 
 msgid "Copy"
 msgstr "Копировать"
+
+msgid "Copy address"
+msgstr "Копировать адрес"
 
 msgid "Copy log"
 msgstr "Копировать лог"
@@ -1133,11 +1157,17 @@ msgstr "Панель управления"
 msgid "Dashboard currently unavailable"
 msgstr "Дашборд сейчас недоступен"
 
+msgid "Data transfer verified: streamed >= 32KB without throttling or disconnect"
+msgstr "Передача данных подтверждена: передано >= 32 КБ без троттлинга и обрывов"
+
 msgid "Date"
 msgstr "Дата"
 
 msgid "Days of Week"
 msgstr "Дни недели"
+
+msgid "Dedicated cgroup unavailable"
+msgstr "Выделенная cgroup недоступна"
 
 msgid "Default (auto)"
 msgstr "По умолчанию (авто)"
@@ -1211,11 +1241,20 @@ msgstr "Прямой WAN"
 msgid "Direct connection"
 msgstr "Прямое подключение"
 
+msgid "Direct Proxy"
+msgstr "Прямой прокси"
+
 msgid "Direct WAN"
 msgstr "Прямой WAN"
 
+msgid "Disable"
+msgstr "Отключить"
+
 msgid "Disable autostart"
 msgstr "Отключить автостарт"
+
+msgid "Disable Cookies"
+msgstr "Отключить Cookie"
 
 msgid "Disable QUIC"
 msgstr "Отключить QUIC"
@@ -1266,7 +1305,7 @@ msgid "DNS protocol"
 msgstr "Протокол DNS"
 
 msgid "DNS Protocol"
-msgstr ""
+msgstr "Протокол DNS"
 
 msgid "DNS Protocol Type"
 msgstr "Тип протокола DNS"
@@ -1424,6 +1463,9 @@ msgstr "DPI обнаружен"
 msgid "DPI Engine"
 msgstr "Движок DPI"
 
+msgid "DPI throttling: stream cut off after ~16KB payload transfer"
+msgstr "DPI-троттлинг: поток оборван после передачи ~16 КБ данных"
+
 msgid "DPI Type"
 msgstr "Тип DPI"
 
@@ -1550,6 +1592,9 @@ msgstr "Включить YACD"
 msgid "Enable YACD WAN Access"
 msgstr "Включить WAN-доступ к YACD"
 
+msgid "Enabled"
+msgstr "Включено"
+
 msgid "Enables the background daemon that polls Telegram for commands and sends notifications."
 msgstr "Включает фоновый демон, который опрашивает Telegram на наличие команд и отправляет уведомления."
 
@@ -1582,6 +1627,9 @@ msgstr "Введите домен или IP для проверки (напр. e
 
 msgid "Enter a level name"
 msgstr "Введите имя уровня"
+
+msgid "Enter a number or range, e.g. 25 or 25-35"
+msgstr "Введите число или диапазон, например 25 или 25-35"
 
 msgid "Enter a valid time in HH:MM format (00:00 to 23:59)"
 msgstr "Введите корректное время в формате ЧЧ:ММ (от 00:00 до 23:59)"
@@ -1662,10 +1710,13 @@ msgid "Expose this section as a local HTTP+SOCKS proxy"
 msgstr "Предоставить эту секцию как локальный HTTP+SOCKS прокси"
 
 msgid "extended"
-msgstr ""
+msgstr "расширенная"
 
 msgid "External inbound proxy servers"
 msgstr "Внешние входящие прокси-серверы"
+
+msgid "External NFQUEUE rules overlap with Tachyon"
+msgstr "Внешние правила NFQUEUE перекрываются с Tachyon"
 
 msgid "External nfqws config files bypass Tachyon queue management and explicit validation."
 msgstr "Внешние файлы конфигурации nfqws обходят управление очередями Tachyon и явную проверку."
@@ -1677,7 +1728,7 @@ msgid "FAILED"
 msgstr "СБОЙ"
 
 msgid "Failed to apply DNS configuration"
-msgstr ""
+msgstr "Не удалось применить конфигурацию DNS"
 
 msgid "Failed to apply DNS settings"
 msgstr "Не удалось применить настройки DNS"
@@ -1719,7 +1770,7 @@ msgid "Failed to execute"
 msgstr "Не удалось выполнить"
 
 msgid "Failed to fetch releases"
-msgstr ""
+msgstr "Не удалось получить список релизов"
 
 msgid "Failed to generate bug report"
 msgstr "Не удалось создать отчёт об ошибке"
@@ -1728,7 +1779,7 @@ msgid "Failed to generate WARP config:"
 msgstr "Не удалось сгенерировать конфигурацию WARP:"
 
 msgid "Failed to get DNS benchmark status"
-msgstr ""
+msgstr "Не удалось получить статус бенчмарка DNS"
 
 msgid "Failed to get fuzzer history"
 msgstr "Не удалось получить историю фаззера"
@@ -1743,7 +1794,7 @@ msgid "Failed to get fuzzer strategies"
 msgstr "Не удалось получить стратегии фаззера"
 
 msgid "Failed to install version"
-msgstr ""
+msgstr "Не удалось установить версию"
 
 msgid "Failed to load history"
 msgstr "Не удалось загрузить историю"
@@ -1800,7 +1851,7 @@ msgid "Failed to start bot"
 msgstr "Не удалось запустить бота"
 
 msgid "Failed to start DNS benchmark"
-msgstr ""
+msgstr "Не удалось запустить бенчмарк DNS"
 
 msgid "Failed to start fuzzer"
 msgstr "Не удалось запустить фаззер"
@@ -1815,7 +1866,7 @@ msgid "Failed to stop bot"
 msgstr "Не удалось остановить бота"
 
 msgid "Failed to stop DNS benchmark"
-msgstr ""
+msgstr "Не удалось остановить бенчмарк DNS"
 
 msgid "Failed to stop fuzzer"
 msgstr "Не удалось остановить фаззер"
@@ -1841,6 +1892,9 @@ msgstr "Порог срабатывания failover"
 msgid "FAIR"
 msgstr "СРЕДНЕ"
 
+msgid "Fake packets reached remote server (HTTP 400 Bad Request)"
+msgstr "Фейковые пакеты дошли до удалённого сервера (HTTP 400 Bad Request)"
+
 msgid "FakeIP and control checks use different public IPs"
 msgstr "FakeIP и контрольная проверка используют разные публичные IP"
 
@@ -1854,7 +1908,7 @@ msgid "FakeTLS host"
 msgstr "FakeTLS host"
 
 msgid "Fallback DNS"
-msgstr ""
+msgstr "Резервный DNS"
 
 msgid "Fallback DNS Servers"
 msgstr "Резервные DNS серверы"
@@ -1899,7 +1953,7 @@ msgid "Filter:"
 msgstr "Фильтр:"
 
 msgid "Finished with code"
-msgstr ""
+msgstr "Завершено с кодом"
 
 msgid "Finland (fi)"
 msgstr "Финляндия (fi)"
@@ -1941,7 +1995,7 @@ msgid "Forces sing-box to tunnel DNS requests via DoQ with Encrypted Client Hell
 msgstr "Принудительно направлять DNS-запросы через DoQ с Encrypted Client Hello (ECH) для скрытия SNI."
 
 msgid "Found"
-msgstr ""
+msgstr "Найдено"
 
 msgid "France (fr)"
 msgstr "Франция (fr)"
@@ -2043,7 +2097,7 @@ msgid "Handshake timeout"
 msgstr "Таймаут рукопожатия"
 
 msgid "Header Protection Key"
-msgstr ""
+msgstr "Ключ защиты заголовка"
 
 msgid "Hello! I am Tachyon AI Assistant. How can I help you today? Ask me about domain blocks, diagnostics, or router settings."
 msgstr "Привет! Я ИИ-ассистент Tachyon. Чем могу помочь? Задайте вопрос о блокировках, диагностике или настройках роутера."
@@ -2265,7 +2319,7 @@ msgid "Installed version is newer than release"
 msgstr "Установлена версия новее релиза"
 
 msgid "Interface"
-msgstr ""
+msgstr "Интерфейс"
 
 msgid "Interface Monitoring"
 msgstr "Мониторинг интерфейсов"
@@ -2308,6 +2362,36 @@ msgstr "Недопустимый домен: пустое значение пр�
 
 msgid "Invalid format. Use an IP address or CIDR subnet"
 msgstr "Неверный формат. Используйте IP-адрес или подсеть CIDR"
+
+msgid "Invalid HTTP proxy URL: invalid host and port"
+msgstr "Некорректный URL HTTP-прокси: неверный хост и порт"
+
+msgid "Invalid HTTP proxy URL: invalid port number"
+msgstr "Некорректный URL HTTP-прокси: недопустимый номер порта"
+
+msgid "Invalid HTTP proxy URL: missing host and port"
+msgstr "Некорректный URL HTTP-прокси: отсутствуют хост и порт"
+
+msgid "Invalid HTTP proxy URL: missing hostname or IP"
+msgstr "Некорректный URL HTTP-прокси: отсутствует имя хоста или IP"
+
+msgid "Invalid HTTP proxy URL: missing port"
+msgstr "Некорректный URL HTTP-прокси: отсутствует порт"
+
+msgid "Invalid HTTP proxy URL: missing username"
+msgstr "Некорректный URL HTTP-прокси: отсутствует имя пользователя"
+
+msgid "Invalid HTTP proxy URL: must not contain spaces"
+msgstr "Некорректный URL HTTP-прокси: не должен содержать пробелы"
+
+msgid "Invalid HTTP proxy URL: must start with http:// or https://"
+msgstr "Некорректный URL HTTP-прокси: должен начинаться с http:// или https://"
+
+msgid "Invalid HTTP proxy URL: parsing failed"
+msgstr "Некорректный URL HTTP-прокси: ошибка разбора"
+
+msgid "Invalid HTTP proxy URL: path, query, and fragment are not supported"
+msgstr "Некорректный URL HTTP-прокси: путь, query-параметры и фрагменты не поддерживаются"
 
 msgid "Invalid HY2 URL: insecure must be 0 or 1"
 msgstr "Неверный URL Hysteria2: параметр insecure должен быть 0 или 1"
@@ -2516,6 +2600,9 @@ msgstr "Только IPv4"
 msgid "IPv6 only"
 msgstr "Только IPv6"
 
+msgid "is unavailable"
+msgstr "недоступно"
+
 msgid "Isolate BitTorrent traffic and force it direct to prevent VPN bans"
 msgstr "Изолировать трафик BitTorrent и направить его напрямую для предотвращения блокировок VPN"
 
@@ -2601,7 +2688,7 @@ msgid "Keep URLTest before latency-sorted servers"
 msgstr "Сохранять URLTest перед серверами, отсортированными по задержке"
 
 msgid "Keepalive Timeout"
-msgstr ""
+msgstr "Таймаут Keepalive"
 
 msgid "Keeps FakeIP cache persistent across reboots and pre-resolves popular blocked domains on startup so first-visit latency is 0 ms."
 msgstr "Сохраняет FakeIP-кэш между перезагрузками и заранее резолвит популярные заблокированные домены при старте — задержка при первом визите 0 мс."
@@ -2625,7 +2712,7 @@ msgid "Laptop / PC (💻)"
 msgstr "Ноутбук / ПК (💻)"
 
 msgid "Latency"
-msgstr ""
+msgstr "Задержка"
 
 msgid "Latency test failed"
 msgstr "Проверка задержки не удалась"
@@ -2641,6 +2728,9 @@ msgstr "Последняя версия:"
 
 msgid "Leave empty to omit this header"
 msgstr "Оставьте пустым, чтобы пропустить этот заголовок"
+
+msgid "Legacy zapret runtime paths are still present and should be migrated"
+msgstr "Обнаружены устаревшие пути zapret, требуется миграция"
 
 msgid "Level name"
 msgstr "Имя уровня"
@@ -2668,6 +2758,12 @@ msgstr "Слушающий порт"
 
 msgid "Lists and rule sets successfully updated!"
 msgstr "Списки и наборы правил успешно обновлены!"
+
+msgid "Lists update is continuing in the background."
+msgstr "Обновление списков продолжается в фоновом режиме."
+
+msgid "Lists update is still running in background. You can check system logs."
+msgstr "Обновление списков всё ещё выполняется в фоне. Вы можете проверить системный журнал."
 
 msgid "LM Studio (Local PC / Server)"
 msgstr "LM Studio (локальный ПК / сервер)"
@@ -2760,7 +2856,7 @@ msgid "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based Q
 msgstr "Сопоставлять трафик по DSCP-метке пакета (назначается в Windows через Policy-Based QoS). Примеры: 46 (EF), 0x2e, 34 (AF41)"
 
 msgid "Max Handshake Attempts"
-msgstr ""
+msgstr "Максимум попыток рукопожатия"
 
 msgid "Max reconnects per hour before alert (default 10)."
 msgstr "Макс. переподключений в час до оповещения (по умолчанию 10)."
@@ -2855,6 +2951,12 @@ msgstr "Имя в списке уровней приоритета"
 msgid "Native internet restored. Tachyon stopped."
 msgstr "Обычный интернет восстановлен. Tachyon остановлен."
 
+msgid "Native Tailscale is configured, but tailscale package is missing"
+msgstr "Нативный Tailscale настроен, но пакет tailscale отсутствует"
+
+msgid "Native Tailscale is configured, but tailscaled is not running for every section"
+msgstr "Нативный Tailscale настроен, но tailscaled запущен не для всех секций"
+
 msgid "Native tailscaled (tailnet reachable from LAN without client)"
 msgstr "Нативный tailscaled (тейлнет доступен из LAN без клиента)"
 
@@ -2869,6 +2971,9 @@ msgstr "Сетевой интерейс"
 
 msgid "Network interface settings"
 msgstr "Настройки сетевого интерфейса"
+
+msgid "new build"
+msgstr "новая сборка"
 
 msgid "New domains:"
 msgstr "Новые домены:"
@@ -2988,7 +3093,7 @@ msgid "No versions found"
 msgstr "Версии не найдены"
 
 msgid "No working strategy to apply"
-msgstr ""
+msgstr "Нет рабочей стратегии для применения"
 
 msgid "Node list is empty"
 msgstr "Список узлов пуст"
@@ -3188,6 +3293,12 @@ msgstr "Порты P2P-клиента"
 msgid "P2P Leak Protection"
 msgstr "Защита от утечек P2P"
 
+msgid "Package is installed, but binary missing"
+msgstr "Пакет установлен, но бинарный файл отсутствует"
+
+msgid "Package is not installed"
+msgstr "Пакет не установлен"
+
 msgid "Padding"
 msgstr "Padding"
 
@@ -3363,7 +3474,7 @@ msgid "Prevents multiple reload_firewall calls within 120 seconds to avoid conne
 msgstr "Предотвращает множественные вызовы reload_firewall в течение 120 секунд для избежания разрыва соединений."
 
 msgid "Primary DNS"
-msgstr ""
+msgstr "Основной DNS"
 
 msgid "Priority"
 msgstr "Приоритет"
@@ -3411,13 +3522,16 @@ msgid "Protocol version: 2.0 (standard headers, WARP compatible), 3.0 (header pr
 msgstr "Версия протокола: 2.0 (стандартные заголовки, совместимо с WARP), 3.0 (ключ защиты заголовков, диапазоны паддинга), или 3.1 (ключ защиты заголовков, диапазоны паддинга, расширенные таймеры)"
 
 msgid "Protocol version: 2.0 (standard integer headers) or 3.1 (header protection key, padding ranges, advanced timers)"
-msgstr ""
+msgstr "Версия протокола: 2.0 (стандартные целочисленные заголовки) или 3.1 (ключ защиты заголовка, диапазоны паддинга, расширенные таймеры)"
 
 msgid "Provider"
-msgstr ""
+msgstr "Провайдер"
 
 msgid "Provider Global Default"
 msgstr "Глобальные настройки провайдера"
+
+msgid "Provider status is normal"
+msgstr "Состояние службы в норме"
 
 msgid "Proxy"
 msgstr "Прокси"
@@ -3457,6 +3571,9 @@ msgstr "QUIC (HTTP/3)"
 
 msgid "RAG Knowledge Base + Live ISP Probe Context"
 msgstr "База знаний RAG + результаты живого зондирования провайдера"
+
+msgid "Random Trailers"
+msgstr "Случайные трейлеры (Random Trailers)"
 
 msgid "Rating"
 msgstr "Оценка"
@@ -3540,13 +3657,13 @@ msgid "Reinstall"
 msgstr "Переустановить"
 
 msgid "Reject After Time"
-msgstr ""
+msgstr "Время до сброса (Reject After Time)"
 
 msgid "Rekey After Time"
-msgstr ""
+msgstr "Интервал смены ключа (Rekey After Time)"
 
 msgid "Rekey Timeout"
-msgstr ""
+msgstr "Таймаут смены ключа (Rekey Timeout)"
 
 msgid "Reload now"
 msgstr "Перезагрузить сейчас"
@@ -4116,7 +4233,7 @@ msgid "Show subscription metadata for this source on the dashboard"
 msgstr "Показывать метаданные подписки для этого источника на дашборде"
 
 msgid "sing-box"
-msgstr ""
+msgstr "sing-box"
 
 msgid "Sing-box autostart disabled"
 msgstr "Автостарт sing-box отключен"
@@ -4237,6 +4354,9 @@ msgstr "Отдельная служба ByeDPI активна"
 
 msgid "Standalone ByeDPI service is inactive"
 msgstr "Отдельная служба ByeDPI неактивна"
+
+msgid "Standalone service is active alongside Tachyon; policy or port conflicts are possible"
+msgstr "Сторонний сервис активен параллельно с Tachyon; возможны конфликты политик или портов"
 
 msgid "Standalone Zapret is active together with Tachyon Zapret rules"
 msgstr "Отдельная служба Zapret активна вместе с правилами Zapret в Tachyon"
@@ -4371,7 +4491,7 @@ msgid "Successfully imported %d DNS record(s)"
 msgstr "Успешно импортировано %d DNS-записей"
 
 msgid "Successfully updated %d hosts entries"
-msgstr ""
+msgstr "Успешно обновлено %d записей hosts"
 
 msgid "Sun"
 msgstr "Вс"
@@ -4407,7 +4527,7 @@ msgid "Table exist"
 msgstr "Таблица существует"
 
 msgid "Tachyon"
-msgstr ""
+msgstr "Tachyon"
 
 msgid "Tachyon Core"
 msgstr "Ядро Tachyon"
@@ -4493,6 +4613,9 @@ msgstr "Имя хоста Tailscale"
 msgid "Tailscale mode"
 msgstr "Режим Tailscale"
 
+msgid "Tailscale package is installed, but no server section uses native mode"
+msgstr "Пакет Tailscale установлен, но ни одна серверная секция не использует нативный режим"
+
 msgid "Target"
 msgstr "Цель"
 
@@ -4554,7 +4677,7 @@ msgid "Test Telegram Connection"
 msgstr "Проверить подключение к Telegram"
 
 msgid "Testing"
-msgstr ""
+msgstr "Тестирование"
 
 msgid "Testing bypass strategies in isolated sandbox..."
 msgstr "Тестирование стратегий обхода в изолированной песочнице..."
@@ -4616,6 +4739,9 @@ msgstr "Это поле должно запускать рабочую стра�
 msgid "This flag does not accept a value."
 msgstr "Этот флаг не принимает значение."
 
+msgid "This may take 1-2 minutes. The process runs in the background on the router."
+msgstr "Это может занять 1–2 минуты. Процесс выполняется в фоновом режиме на роутере."
+
 msgid "This option requires a value."
 msgstr "Этот параметр требует значение."
 
@@ -4650,7 +4776,7 @@ msgid "Time skew tolerance"
 msgstr "Допуск отклонения времени"
 
 msgid "Timeout"
-msgstr ""
+msgstr "Таймаут"
 
 msgid "tiny"
 msgstr "tiny"
@@ -4678,6 +4804,12 @@ msgstr "Допуск"
 
 msgid "Top level has the highest priority; lower levels are used as fallback"
 msgstr "Верхний уровень имеет наивысший приоритет; нижние уровни используются как запасные"
+
+msgid "TorrServer Direct"
+msgstr "TorrServer Direct"
+
+msgid "TorrServer not found"
+msgstr "TorrServer не найден"
 
 msgid "Total allowed network usage per day for devices in this profile. When the quota is reached, access is blocked until midnight. Enter 0 for unlimited."
 msgstr "Суммарное разрешенное время работы в сети в день для устройств этого профиля. По исчерпании лимита доступ блокируется до полуночи. Введите 0 для отсутствия ограничений."
@@ -4814,6 +4946,9 @@ msgstr "Magic-заголовок пакета недогрузки (H3)"
 msgid "Underload Packet Magic Header (H4)"
 msgstr "Magic-заголовок пакета недогрузки (H4)"
 
+msgid "Unexpected background processes"
+msgstr "Непредвиденные фоновые процессы"
+
 msgid "Unexpected ByeDPI strategy argument: %s"
 msgstr "Неожиданный аргумент стратегии ByeDPI: %s"
 
@@ -4877,8 +5012,11 @@ msgstr "Хранится до 10 снапшотов; самые старые у�
 msgid "Update"
 msgstr "Обновить"
 
+msgid "Update failed"
+msgstr "Ошибка обновления"
+
 msgid "Update failed:"
-msgstr ""
+msgstr "Ошибка обновления:"
 
 msgid "Update is available"
 msgstr "Доступно обновление"
@@ -4893,7 +5031,7 @@ msgid "Update lists now"
 msgstr "Обновить списки сейчас"
 
 msgid "Update Lists Now"
-msgstr ""
+msgstr "Обновить списки сейчас"
 
 msgid "Update subscriptions"
 msgstr "Обновить подписки"
@@ -4917,7 +5055,7 @@ msgid "Updating lists..."
 msgstr "Обновление списков..."
 
 msgid "Updating…"
-msgstr ""
+msgstr "Обновление…"
 
 msgid "Uplink"
 msgstr "Исходящий"
@@ -4928,8 +5066,8 @@ msgstr "Отдано"
 msgid "Upstream Mode"
 msgstr "Режим DNS Upstream"
 
-msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2://, or tuic://"
-msgstr "URL должен начинаться с vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2:// или tuic://"
+msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, http://, https://, hysteria2://, hy2://, or tuic://"
+msgstr "URL должен начинаться с vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, http://, https://, hysteria2://, hy2:// или tuic://"
 
 msgid "URL must use one of the following protocols:"
 msgstr "URL должен использовать один из следующих протоколов:"
@@ -5075,6 +5213,9 @@ msgstr "Ссылки vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hyst
 msgid "Waiting for router services to restart..."
 msgstr "Ожидание перезапуска служб роутера..."
 
+msgid "Waiting for TorrServer"
+msgstr "Ожидание TorrServer"
+
 msgid "WAN"
 msgstr "WAN"
 
@@ -5133,7 +5274,7 @@ msgid "Working"
 msgstr "Рабочих"
 
 msgid "working strategies"
-msgstr ""
+msgstr "рабочих стратегий"
 
 msgid "XHTTP mode"
 msgstr "Режим XHTTP"
@@ -5148,7 +5289,7 @@ msgid "You can select Output Network Interface, by default autodetect"
 msgstr "Вы можете выбрать выходной сетевой интерфейс, по умолчанию автоопределение"
 
 msgid "Zapret"
-msgstr ""
+msgstr "Zapret"
 
 msgid "Zapret hostlist templates are not supported here because Tachyon does not expand them for per-rule NFQWS strategies."
 msgstr "Шаблоны hostlist Zapret не поддерживаются здесь, потому что Tachyon не расширяет их для стратегий NFQWS по правилам."
@@ -5178,7 +5319,7 @@ msgid "Zapret v2 (nfqws2)"
 msgstr "Zapret v2 (nfqws2)"
 
 msgid "Zapret2"
-msgstr ""
+msgstr "Zapret2"
 
 msgid "Zapret2 hostlist templates are not supported here because Tachyon does not expand them for per-rule NFQWS2 strategies."
 msgstr "Шаблоны hostlist Zapret2 не поддерживаются здесь, потому что Tachyon не расширяет их для стратегий NFQWS2 по правилам."
@@ -5200,6 +5341,9 @@ msgstr "sing-box outbound для Zapret2 настроен"
 
 msgid "Zapret2 sing-box outbound is not configured"
 msgstr "sing-box outbound для Zapret2 не настроен"
+
+msgid "URL must start with vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2://, or tuic://"
+msgstr "URL должен начинаться с vless://, vmess://, ss://, trojan://, socks4://, socks4a://, socks5://, hysteria2://, hy2:// или tuic://"
 
 msgid "⚡ Quick Benchmark (Presets ~12-14)"
 msgstr "⚡ Быстрый бенчмарк (Пресеты ~12-14)"
@@ -5307,7 +5451,7 @@ msgid "Move up"
 msgstr "Вверх"
 
 msgid "OpenWrt Network Interfaces"
-msgstr ""
+msgstr "Сетевые интерфейсы OpenWrt"
 
 msgid "Optimization"
 msgstr "Оптимизация"
@@ -5331,7 +5475,7 @@ msgid "Secret token for WRITE requests"
 msgstr "Секретный токен для POST/PUT запросов"
 
 msgid "Section or network interface used for Cloudflare WARP API registration. Supports Tachyon sections (Connection, WireGuard, AmneziaWG, Interface) and OpenWrt system network devices/interfaces (awg0, wg0, tun0, etc.). Leave empty to use direct WAN / default mixed proxy."
-msgstr ""
+msgstr "Секция или сетевой интерфейс для регистрации в API Cloudflare WARP. Поддерживаются секции Tachyon (Подключение, WireGuard, AmneziaWG, Интерфейс) и системные сетевые интерфейсы OpenWrt (awg0, wg0, tun0 и т.д.). Оставьте пустым для прямого выхода через WAN / дефолтный mixed-прокси."
 
 msgid "Section test order (checked = active, drag rows with △▽):"
 msgstr "Порядок проверки секций (галочка = активна, перетаскивайте △▽):"
@@ -5346,7 +5490,7 @@ msgid "Start Watchdog first"
 msgstr "Сначала запустите Watchdog"
 
 msgid "Tachyon Sections"
-msgstr ""
+msgstr "Секции Tachyon"
 
 msgid "WARP Proxy Section"
 msgstr "Секция прокси WARP"
@@ -5687,9 +5831,6 @@ msgstr "Запуск..."
 msgid "Stopping..."
 msgstr "Остановка..."
 
-msgid "Enabled"
-msgstr "Включено"
-
 msgid "Only the specified servers"
 msgstr "Только указанные серверы"
 
@@ -5933,18 +6074,6 @@ msgstr "Конфигурация AmneziaWG %s успешно сгенериро�
 msgid "Notice: Cloudflare WARP edge servers only support AmneziaWG 2.0 (standard headers). For Cloudflare WARP, select version 2.0. Versions 3.0 and 3.1 are intended for dedicated AmneziaWG servers."
 msgstr "Обратите внимание: серверы Cloudflare WARP поддерживают только AmneziaWG 2.0 (стандартные заголовки). Для Cloudflare WARP выберите версию 2.0. Версии 3.0 и 3.1 предназначены для выделенных серверов AmneziaWG."
 
-msgid "new build"
-msgstr "новая сборка"
-
-msgid "This may take 1-2 minutes. The process runs in the background on the router."
-msgstr "Это может занять 1–2 минуты. Процесс выполняется в фоновом режиме на роутере."
-
-msgid "Lists update is continuing in the background."
-msgstr "Обновление списков продолжается в фоновом режиме."
-
-msgid "Lists update is still running in background. You can check system logs."
-msgstr "Обновление списков всё ещё выполняется в фоне. Вы можете проверить системный журнал."
-
 msgid "Error starting lists update: "
 msgstr "Ошибка запуска обновления списков: "
 
@@ -5956,4 +6085,3 @@ msgstr "Скачивание и обработка списков"
 
 msgid "Applying rules and subnet lists"
 msgstr "Применение правил и списков подсетей"
-
