@@ -727,6 +727,89 @@ function restore_rulesets_from_cache() {
     dir.close();
 }
 
+function prepare_community_rulesets() {
+    let runtime_rulesets_mod = require("singbox.rulesets");
+    let core_url_mod = require("core.url");
+    let tmp_dir = TMP_RULESET_FOLDER;
+    let etc_dir = "/etc/tachyon/rulesets";
+
+    command_success_from_args(["mkdir", "-p", tmp_dir]);
+
+    let needed = {};
+    let sections = uci_core.get_all(CONFIG_NAME, "section") || {};
+    for (let name, section in sections) {
+        if (!section || !section.enabled || section.enabled == "0")
+            continue;
+        let comms = section.community_lists;
+        if (type(comms) == "string")
+            comms = split(trim(comms), /[ \t\r\n]+/);
+        if (type(comms) == "array") {
+            for (let c in comms) {
+                c = trim(c);
+                if (c != "" && runtime_rulesets_mod.is_community(c))
+                    needed[c] = true;
+            }
+        }
+        let rulesets = section.rule_sets;
+        if (type(rulesets) == "string")
+            rulesets = split(trim(rulesets), /[ \t\r\n]+/);
+        if (type(rulesets) == "array") {
+            for (let r in rulesets) {
+                r = trim(r);
+                if (r != "" && runtime_rulesets_mod.is_community(r))
+                    needed[r] = true;
+            }
+        }
+    }
+
+    let has_curl = command_status("command -v curl >/dev/null 2>&1") == 0;
+
+    for (let service in keys(needed)) {
+        let tmp_path = tmp_dir + "/community-" + service + ".srs";
+        let etc_path = etc_dir + "/community-" + service + ".srs";
+
+        if (runtime_rulesets_mod.is_valid_srs_file(tmp_path))
+            continue;
+
+        if (runtime_rulesets_mod.is_valid_srs_file(etc_path)) {
+            let content = fs.readfile(etc_path);
+            if (content && fs.writefile(tmp_path, content) != null)
+                continue;
+        }
+
+        let url = runtime_rulesets_mod.community_url(service);
+        let candidates = type(core_url_mod.download_candidates) == "function" ?
+            core_url_mod.download_candidates(url) : [ url ];
+        let fetched = false;
+
+        if (has_curl) {
+            for (let candidate in candidates) {
+                let dl_tmp = tmp_dir + "/.fetch-" + service + ".tmp";
+                let args = [ "curl", "-fsSL", "--connect-timeout", "3", "-m", "5", candidate, "-o", dl_tmp ];
+                if (command_success_from_args(args) && runtime_rulesets_mod.is_valid_srs_file(dl_tmp)) {
+                    let st = fs.stat(dl_tmp);
+                    if (st && st.size >= 100) {
+                        command_success_from_args([ "mv", "-f", dl_tmp, tmp_path ]);
+                        command_success_from_args([ "mkdir", "-p", etc_dir ]);
+                        let cdata = fs.readfile(tmp_path);
+                        if (cdata)
+                            fs.writefile(etc_path, cdata);
+                        log_message("Pre-downloaded community ruleset " + service + " from " + candidate, "info");
+                        fetched = true;
+                        break;
+                    }
+                }
+                remove_file(dl_tmp);
+            }
+        }
+
+        if (!fetched) {
+            runtime_rulesets_mod.ensure_empty_srs_stub(tmp_path);
+            log_message("Community ruleset '" + service + "' initialized with local fallback stub to allow sing-box clean start", "info");
+        }
+    }
+}
+
 function start_main() {
     let status;
 
@@ -748,6 +831,8 @@ function start_main() {
     restore_rulesets_from_cache();
     if (status != 0)
         return status;
+
+    prepare_community_rulesets();
 
     if (!acquire_start_subscription_update_lock())
         return 1;

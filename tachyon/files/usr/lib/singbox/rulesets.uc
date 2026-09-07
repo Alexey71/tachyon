@@ -1,6 +1,10 @@
 #!/usr/bin/env ucode
 
 let common = require("core.common");
+let fs = require("fs");
+
+const EMPTY_SRS_B64 = "U1JTAXjaYgAEAAD//wABAAE=";
+const EMPTY_SRS_PATH = "/usr/share/tachyon/rulesets/empty.srs";
 
 const SRS_MAIN_URL = "https://github.com/itdoginfo/allow-domains/releases/latest/download";
 const SRS_ADS_HAGEZI_PRO_URL = "https://github.com/zxc-rv/ad-filter/releases/latest/download/adlist.srs";
@@ -126,15 +130,54 @@ function remote_format(reference) {
     return file_extension(reference) == "json" ? "source" : "binary";
 }
 
+function is_valid_srs_file(path) {
+    let p = as_string(path);
+    let st = fs.stat(p);
+    if (!st || st.size < 17)
+        return false;
+    let f = fs.open(p, "r");
+    if (!f)
+        return false;
+    let magic = f.read(3);
+    f.close();
+    return magic == "SRS";
+}
+
+function ensure_empty_srs_stub(target_path) {
+    target_path = as_string(target_path);
+    if (is_valid_srs_file(target_path))
+        return true;
+
+    let slash = rindex(target_path, "/");
+    if (slash > 0)
+        common.ensure_dir(substr(target_path, 0, slash));
+
+    if (is_valid_srs_file(EMPTY_SRS_PATH)) {
+        let content = fs.readfile(EMPTY_SRS_PATH);
+        if (content && fs.writefile(target_path, content) != null)
+            return true;
+    }
+
+    let b = b64dec(EMPTY_SRS_B64);
+    if (b && fs.writefile(target_path, b) != null)
+        return true;
+
+    return false;
+}
+
 function module_exports() {
     return {
+        EMPTY_SRS_PATH,
+        EMPTY_SRS_B64,
         COMMUNITY_SERVICES,
         is_community,
         community_url,
         hash12,
         file_extension,
         kind_from_reference_hint,
-        remote_format
+        remote_format,
+        is_valid_srs_file,
+        ensure_empty_srs_stub
     };
 }
 
@@ -151,7 +194,11 @@ else if (mode == "kind-from-reference-hint")
     print(kind_from_reference_hint(ARGV[1]), "\n");
 else if (mode == "remote-format")
     print(remote_format(ARGV[1]), "\n");
+else if (mode == "is-valid-srs-file")
+    exit(is_valid_srs_file(ARGV[1]) ? 0 : 1);
+else if (mode == "ensure-empty-srs-stub")
+    exit(ensure_empty_srs_stub(ARGV[1]) ? 0 : 1);
 else {
-    warn("Usage: singbox/rulesets.uc <file-extension|is-community|kind-from-reference-hint|remote-format> ...\n");
+    warn("Usage: singbox/rulesets.uc <file-extension|is-community|kind-from-reference-hint|remote-format|is-valid-srs-file|ensure-empty-srs-stub> ...\n");
     exit(1);
 }

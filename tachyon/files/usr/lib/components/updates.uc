@@ -2140,7 +2140,19 @@ function download_via_proxy_section(settings, purpose) {
     if (configured != "")
         return configured;
 
-    return option(settings, "download_lists_via_proxy_section", "");
+    let default_section = option(settings, "download_lists_via_proxy_section", "");
+    if (default_section != "")
+        return default_section;
+
+    // Fallback: if purpose is "lists" and download_components_via_proxy is enabled
+    if (purpose == "lists" && bool_option(settings, "download_components_via_proxy", false)) {
+        let comp_section = option(settings, "download_components_via_proxy_section", "");
+        if (comp_section != "")
+            return comp_section;
+        return default_section;
+    }
+
+    return "";
 }
 
 function service_proxy_port_for_purpose(purpose) {
@@ -2414,8 +2426,9 @@ function import_community_srs_file(service, settings) {
     }
     else {
         remove_file(persistent_file);
-        remove_file(cached_file);
-        log_message("Failed to download preset ruleset " + service + "; skipping it until next update", "warn");
+        if (!singbox_rulesets_module().is_valid_srs_file(cached_file))
+            singbox_rulesets_module().ensure_empty_srs_stub(cached_file);
+        log_message("Failed to download preset ruleset " + service + "; preserving fallback stub until next update", "warn");
         ok = false;
     }
 

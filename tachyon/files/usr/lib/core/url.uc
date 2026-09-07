@@ -294,14 +294,15 @@ function download_candidates(value) {
     let is_http = substr(value, 0, 7) == "http://" || substr(value, 0, 8) == "https://";
 
     if (is_github || is_http) {
-        let jsd = github_to_jsdelivr(value);
+        let is_release = index(value, "/releases/") >= 0;
+        let jsd = !is_release ? github_to_jsdelivr(value) : "";
         if (jsd != "")
             push(candidates, jsd);
 
         let mirrors = [
+            "https://gh-proxy.com/",
             "https://ghproxy.net/",
-            "https://mirror.ghproxy.com/",
-            "https://gh-proxy.com/"
+            "https://mirror.ghproxy.com/"
         ];
         for (let prefix in mirrors) {
             if (index(value, prefix) != 0)
