@@ -274,6 +274,10 @@ EOF
 printf '%s\n' "$sing_box_netstat" |
   TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" "$DIAGNOSTICS_RUNTIME" sing-box-standard-ports-listening-fixture >/dev/null ||
   fail "sing-box standard listeners should satisfy diagnostics"
+# IPv6 disabled: should only require IPv4 listeners
+printf '%s\n' "$sing_box_netstat" | grep -v '::' |
+  TACHYON_ENABLE_IPV6=0 TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" "$DIAGNOSTICS_RUNTIME" sing-box-standard-ports-listening-fixture >/dev/null ||
+  fail "sing-box IPv4 listeners should satisfy diagnostics when IPv6 is disabled"
 if printf '%s\n' "$sing_box_netstat" | sed '/0.0.0.0:1602/d' |
   TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" "$DIAGNOSTICS_RUNTIME" sing-box-standard-ports-listening-fixture >/dev/null 2>&1; then
   fail "missing sing-box tproxy listener should fail diagnostics"

@@ -1184,6 +1184,8 @@ function add_port_matchers(rule, section) {
 }
 
 function tproxy_inbound_matcher() {
+    if (!core_ip.ipv6_supported())
+        return [ runtime_constants.TPROXY_INBOUND_TAG ];
     return [ runtime_constants.TPROXY_INBOUND_TAG, runtime_constants.TPROXY_INBOUND6_TAG ];
 }
 
