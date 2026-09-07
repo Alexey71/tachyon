@@ -18,6 +18,7 @@ fail() {
 # silently lose hotplug handlers, the agent CGI and reset defaults.
 required_sources=(
   "files/etc/init.d/tachyon"
+  "files/etc/init.d/tachyon-torrserver-direct"
   "files/etc/config/tachyon"
   "files/usr/bin/tachyon"
   "files/etc/hotplug.d/iface/99-tachyon-wan-monitor"

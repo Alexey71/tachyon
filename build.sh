@@ -265,6 +265,8 @@ build_backend_root() {
   make_dir "$output_root/usr/share/tachyon"
 
   install -m 0755 "$ROOT_DIR/tachyon/files/etc/init.d/tachyon" "$output_root/etc/init.d/tachyon"
+  install -m 0755 "$ROOT_DIR/tachyon/files/etc/init.d/tachyon-torrserver-direct" \
+    "$output_root/etc/init.d/tachyon-torrserver-direct"
   install -m 0644 "$ROOT_DIR/tachyon/files/etc/config/tachyon" "$output_root/etc/config/tachyon"
   install -m 0755 "$ROOT_DIR/tachyon/files/usr/bin/tachyon" "$output_root/usr/bin/tachyon"
   cp -a "$ROOT_DIR/tachyon/files/usr/lib/." "$output_root/usr/lib/tachyon/"
@@ -290,6 +292,7 @@ build_backend_root() {
 
   normalize_package_root_modes "$output_root"
   chmod 0755 "$output_root/etc/init.d/tachyon" "$output_root/usr/bin/tachyon" \
+    "$output_root/etc/init.d/tachyon-torrserver-direct" \
     "$output_root/etc/hotplug.d/iface/99-tachyon-wan-monitor" \
     "$output_root/usr/lib/cgi-bin/tachyon-agent"
   # Contains the Telegram bot token placeholder and receives user secrets.
