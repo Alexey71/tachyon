@@ -20,12 +20,8 @@ fi
 grep -Fq '_("Close")' "$SECTION_JS" ||
   fail "Tachyon section settings modal must expose a Close action"
 
-if grep -Fq 'http(s)://, hy2/hysteria2:// links' \
-  "$SECTION_JS" "$SOURCE_PO" "$PACKAGE_PO" "$SOURCE_POT" "$PACKAGE_POT" "$CALLS_JSON"; then
-  fail "Connection URL help must not advertise removed HTTP proxy links"
-fi
-grep -Fq 'socks4/5://, hy2/hysteria2:// links' "$SECTION_JS" ||
-  fail "Connection URL help must list the remaining native proxy links"
+grep -Fq 'socks4/5://, http/s://, hy2/hysteria2:// links' "$SECTION_JS" ||
+  fail "Connection URL help must list the supported proxy links"
 
 for po in "$SOURCE_PO" "$PACKAGE_PO"; do
   awk '

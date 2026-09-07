@@ -5207,8 +5207,8 @@ msgstr "Видимое имя этой секции"
 msgid "VLESS flow"
 msgstr "VLESS flow"
 
-msgid "vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hysteria2:// links"
-msgstr "Ссылки vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hysteria2://"
+msgid "vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2:// links"
+msgstr "Ссылки vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2://"
 
 msgid "Waiting for router services to restart..."
 msgstr "Ожидание перезапуска служб роутера..."

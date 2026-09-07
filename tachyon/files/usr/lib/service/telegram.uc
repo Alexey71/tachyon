@@ -1731,8 +1731,16 @@ function view_logs(token, chat_id, msg_id, level, count) {
     if (res && res.status == 0 && res.output) {
         let lines = split(res.output, "\n");
         let filtered = [];
+        let udp_http_notice_emitted = false;
         for (let line in lines) {
             if (line == "") continue;
+            if (index(as_string(line), "UDP is not supported by outbound:") >= 0) {
+                if (!udp_http_notice_emitted) {
+                    push(filtered, "UDP traffic through HTTP outbounds is not supported by sing-box; repeated UDP warnings for HTTP outbounds are hidden by Tachyon.");
+                    udp_http_notice_emitted = true;
+                }
+                continue;
+            }
             if (level == "error" && !match(line, /\[err\]|\[error\]/i)) continue;
             if (level == "warn" && !match(line, /\[warn\]/i)) continue;
             if (level == "info" && !match(line, /\[info\]/i)) continue;

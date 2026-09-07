@@ -13593,8 +13593,8 @@
     ]
   },
   {
-    "call": "vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hysteria2:// links",
-    "key": "vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hysteria2:// links",
+    "call": "vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2:// links",
+    "key": "vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2:// links",
     "places": [
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:9600"
     ]

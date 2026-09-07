@@ -1065,7 +1065,8 @@ function write_user_agent_candidates(path, configured_user_agent, preferred_user
 function write_empty_outbound_metadata() {
     write_stdout_json({
         names: {},
-        countries: {}
+        countries: {},
+        transports: {}
     });
 }
 
@@ -1155,6 +1156,9 @@ function normalize_cache(cache, section, format_version) {
     cache.outboundMetadata = object_or_empty(cache.outboundMetadata);
     cache.outboundMetadata.names = object_or_empty(cache.outboundMetadata.names);
     cache.outboundMetadata.countries = object_or_empty(cache.outboundMetadata.countries);
+    cache.outboundMetadata.transports = object_or_empty(cache.outboundMetadata.transports);
+    cache.outboundMetadata.protocols = object_or_empty(cache.outboundMetadata.protocols);
+    cache.outboundMetadata.securities = object_or_empty(cache.outboundMetadata.securities);
     cache.servers = object_or_empty(cache.servers);
     cache.urltestCandidateTags = array_or_empty(cache.urltestCandidateTags);
     cache.urltestGroups = object_or_empty(cache.urltestGroups);
@@ -1179,9 +1183,13 @@ function save_cache(cache_dir, section, format_version, cache) {
 
 function write_outbound_metadata(cache_dir, format_version, section, names_path, countries_path, servers_path) {
     let cache = load_cache(cache_dir, section);
+    let previous_metadata = object_or_empty(cache.outboundMetadata);
     cache.outboundMetadata = {
         names: object_or_empty(read_json(names_path)),
-        countries: object_or_empty(read_json(countries_path))
+        countries: object_or_empty(read_json(countries_path)),
+        transports: object_or_empty(previous_metadata.transports),
+        protocols: object_or_empty(previous_metadata.protocols),
+        securities: object_or_empty(previous_metadata.securities)
     };
     cache.servers = object_or_empty(read_json(servers_path));
     save_cache(cache_dir, section, format_version, cache);
@@ -1354,12 +1362,14 @@ function get_outbound_metadata(cache_dir, section, legacy_path) {
     metadata = object_or_empty(metadata);
     let names = object_or_empty(metadata.names);
     let countries = object_or_empty(metadata.countries);
+    let transports = object_or_empty(metadata.transports);
     let candidate_tags = array_or_empty(cache.urltestCandidateTags);
     let groups = object_or_empty(cache.urltestGroups);
     let priority_groups = object_or_empty(cache.priorityGroups);
     let result = {
         names: {},
-        countries: {}
+        countries: {},
+        transports: {}
     };
 
     if (length(candidate_tags) > 0) {
@@ -1371,6 +1381,8 @@ function get_outbound_metadata(cache_dir, section, legacy_path) {
                 result.names[tag] = names[tag];
             if (countries[tag] != null)
                 result.countries[tag] = countries[tag];
+            if (transports[tag] != null)
+                result.transports[tag] = transports[tag];
         }
     }
     else {
@@ -1381,6 +1393,10 @@ function get_outbound_metadata(cache_dir, section, legacy_path) {
         for (let tag, country in countries) {
             if (!groups[tag] && !priority_groups[tag])
                 result.countries[tag] = country;
+        }
+        for (let tag, transport in transports) {
+            if (!groups[tag] && !priority_groups[tag])
+                result.transports[tag] = transport;
         }
     }
 

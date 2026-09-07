@@ -10,3 +10,5 @@ export * from './parseQueryString';
 export * from './svgEl';
 export * from './insertIf';
 export * from './isCopyableProxyLink';
+export * from './formatOutboundType';
+export * from './getProxyUrlTransport';

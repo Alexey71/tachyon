@@ -632,11 +632,12 @@ function add_mixed_proxy_for_section(config, section, service_address) {
         inbound.users = [{ username, password }];
     }
     push(config.inbounds, inbound);
-    push(config.route.rules, {
+    let section_outbound = runtime_constants.outbound_tag(section[".name"]);
+    generator_routes.push_section_route_rule(config, {
         action: "route",
         inbound: inbound.tag,
-        outbound: runtime_constants.outbound_tag(section[".name"])
-    });
+        outbound: section_outbound
+    }, section_outbound);
 }
 
 /*
@@ -685,11 +686,11 @@ function add_service_mixed_proxy_inbound(config, tag_name, listen_port, outbound
         listen: runtime_constants.SERVICE_MIXED_INBOUND_ADDRESS,
         listen_port
     });
-    push(config.route.rules, {
+    generator_routes.push_section_route_rule(config, {
         action: "route",
         inbound: tag_name,
         outbound
-    });
+    }, outbound);
 }
 
 function service_mixed_proxy_inbound_tag_for_purpose(purpose) {

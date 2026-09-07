@@ -22,6 +22,9 @@ vi.mock('../../../../helpers', () => ({
   getClashHttpUrl: () => 'http://router.example:9090',
   getProxyUrlName: (link?: string) =>
     link?.includes('#') ? decodeURIComponent(link.split('#').pop() || '') : '',
+  getProxyUrlTransport: (_link?: string) => undefined,
+  formatOutboundType: (type?: string, transport?: string) =>
+    transport ? `${type} (${transport.toUpperCase()})` : type || '',
   isCopyableProxyLink: (link?: string) => Boolean(link),
 }));
 

@@ -135,6 +135,7 @@ export namespace Tachyon {
     displayName: string;
     latency: number;
     type: string;
+    transport?: string;
     selected: boolean;
     link?: string;
     canCopyLink?: boolean;
@@ -149,6 +150,7 @@ export namespace Tachyon {
     displayName: string;
     latency: number;
     type: string;
+    transport?: string;
     selected: boolean;
     link?: string;
     canCopyLink?: boolean;
@@ -567,6 +569,9 @@ export namespace Tachyon {
   export interface GetOutboundMetadata {
     names?: Record<string, string>;
     countries?: Record<string, string>;
+    transports?: Record<string, string>;
+    protocols?: Record<string, string>;
+    securities?: Record<string, string>;
   }
 
   export interface GetSingBoxStatus {

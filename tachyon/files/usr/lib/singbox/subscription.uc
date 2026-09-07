@@ -204,11 +204,18 @@ function remember_outbound_metadata(state, tag_name, display_name, outbound) {
         state.outboundMetadata.protocols[tag_name] = protocol;
 
     let transport = lc(as_string(object_or_empty(outbound.transport).type || ""));
-    if (transport == "" || transport == "raw")
-        transport = "tcp";
-    else if (transport == "h2")
+    if (transport == "h2")
         transport = "http";
-    state.outboundMetadata.transports[tag_name] = transport;
+    else if (transport == "raw")
+        transport = "tcp";
+    else if (transport == "" && protocol != "" &&
+             protocol != "direct" && protocol != "wireguard" &&
+             protocol != "hysteria" && protocol != "hysteria2" && protocol != "tuic" &&
+             protocol != "dns" && protocol != "block" &&
+             protocol != "selector" && protocol != "urltest")
+        transport = "tcp";
+    if (transport != "")
+        state.outboundMetadata.transports[tag_name] = transport;
 
     let tls = type(outbound.tls) == "object" ? outbound.tls : null;
     let security = "none";

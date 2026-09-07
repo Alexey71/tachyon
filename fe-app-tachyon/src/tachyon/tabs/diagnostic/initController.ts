@@ -1712,18 +1712,39 @@ async function handleGenerateBugReport() {
       args: ['-e', 'sing-box', '-l', '1000'],
     });
 
+    const filterUdpErrors = (text: string) => {
+      if (!text || !text.includes('UDP is not supported by outbound:'))
+        return text;
+      const lines = text.split('\n');
+      const filtered: string[] = [];
+      let noticeEmitted = false;
+      for (const line of lines) {
+        if (line.includes('UDP is not supported by outbound:')) {
+          if (!noticeEmitted) {
+            filtered.push(
+              'UDP traffic through HTTP outbounds is not supported by sing-box; repeated UDP warnings for HTTP outbounds are hidden by Tachyon.',
+            );
+            noticeEmitted = true;
+          }
+          continue;
+        }
+        filtered.push(line);
+      }
+      return filtered.join('\n');
+    };
+
     const rawReport = [
       '--- TACHYON CONFIG ---',
       configResult || 'Failed to fetch config',
       '',
       '--- TACHYON LOGS ---',
       logsResult.code === 0
-        ? logsResult.stdout
+        ? filterUdpErrors(logsResult.stdout)
         : 'Failed to fetch tachyon logs',
       '',
       '--- SING-BOX LOGS ---',
       singboxLogsResult.code === 0
-        ? singboxLogsResult.stdout
+        ? filterUdpErrors(singboxLogsResult.stdout)
         : 'Failed to fetch sing-box logs',
     ].join('\n');
 

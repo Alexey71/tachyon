@@ -1423,6 +1423,54 @@ function isCopyableProxyLink(link) {
   return COPYABLE_PROXY_URI_RE.test((link || "").trim());
 }
 
+// src/helpers/formatOutboundType.ts
+function formatOutboundType(type, transport) {
+  const cleanType = (type || "").trim();
+  const cleanTransport = (transport || "").trim().toUpperCase();
+  if (!cleanType) {
+    return cleanTransport ? `(${cleanTransport})` : "";
+  }
+  if (!cleanTransport) {
+    return cleanType;
+  }
+  if (cleanType.toUpperCase().includes(`(${cleanTransport})`)) {
+    return cleanType;
+  }
+  return `${cleanType} (${cleanTransport})`;
+}
+
+// src/helpers/getProxyUrlTransport.ts
+function getProxyUrlTransport(url) {
+  if (!url || typeof url !== "string") {
+    return void 0;
+  }
+  try {
+    const trimmed = url.trim();
+    if (trimmed.startsWith("vmess://")) {
+      const b64 = trimmed.slice(8).split("#")[0];
+      if (typeof atob === "function") {
+        const jsonStr = atob(b64.replace(/[\r\n]/g, ""));
+        const obj = JSON.parse(jsonStr);
+        if (obj && typeof obj.net === "string" && obj.net.trim()) {
+          return obj.net.trim().toLowerCase();
+        }
+      }
+    }
+    const [base] = trimmed.split("#");
+    const queryIdx = base.indexOf("?");
+    if (queryIdx !== -1) {
+      const query = base.slice(queryIdx + 1);
+      const params = new URLSearchParams(query);
+      const transport = params.get("type");
+      if (transport && transport.trim()) {
+        return transport.trim().toLowerCase();
+      }
+    }
+  } catch {
+  }
+  return void 0;
+}
+
 // src/icons/renderLoaderCircleIcon24.ts
 function renderLoaderCircleIcon24() {
   const NS = "http://www.w3.org/2000/svg";
@@ -2570,7 +2618,9 @@ function renderDefaultState({
                 {
                   style: "opacity: 0.7; font-size: 13px; white-space: nowrap; flex-shrink: 0;"
                 },
-                [outbound.type].filter(Boolean)
+                [formatOutboundType(outbound.type, outbound.transport)].filter(
+                  Boolean
+                )
               ),
               E(
                 "div",
@@ -2617,7 +2667,8 @@ function renderDefaultState({
     const isManualUrlTest = Boolean(outbound.urlTestInfo?.isManualSelection);
     const isManualPriority = Boolean(outbound.priorityInfo?.isManualSelection);
     const activeServerName = outbound.urlTestInfo?.selectedName || outbound.priorityInfo?.selectedName || "";
-    const typeLabel = isManualUrlTest || isManualPriority ? `${outbound.type} (${_("Manual")})` : outbound.urlTestInfo || outbound.priorityInfo ? `${outbound.type} (${_("Auto")})` : outbound.type;
+    const baseType = formatOutboundType(outbound.type, outbound.transport);
+    const typeLabel = isManualUrlTest || isManualPriority ? `${baseType} (${_("Manual")})` : outbound.urlTestInfo || outbound.priorityInfo ? `${baseType} (${_("Auto")})` : baseType;
     return E(
       "div",
       {
@@ -5244,6 +5295,7 @@ function buildUrlTestInfo({
           ),
           latency: childEntry?.value?.history?.[0]?.delay || 0,
           type: childEntry?.value?.type || "",
+          transport: outboundMetadata?.transports?.[childCode] || getProxyUrlTransport(link),
           selected: selectedCode === childCode,
           link,
           canCopyLink,
@@ -5329,6 +5381,7 @@ function buildPriorityInfo({
         ),
         latency: childEntry?.value?.history?.[0]?.delay || 0,
         type: childEntry?.value?.type || "",
+        transport: outboundMetadata?.transports?.[childCode] || getProxyUrlTransport(link),
         selected: selectedCode === childCode,
         link,
         canCopyLink,
@@ -5458,12 +5511,16 @@ function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGro
       (m) => m.selected || m.code === priorityInfo.selectedCode
     )?.latency || 0;
     const latency = item?.value.history?.[0]?.delay || activeMemberLatency || 0;
+    const isGroupType = Boolean(
+      priorityConfig || urlTestConfig || isRuntimeUrlTest
+    );
     return [
       {
         code,
         displayName,
         latency,
         type: priorityConfig ? "Priority" : item?.value.type || "URLTest",
+        transport: isGroupType ? void 0 : outboundMetadata?.transports?.[code] || getProxyUrlTransport(link),
         selected: isSelected,
         link,
         canCopyLink,
@@ -5570,7 +5627,10 @@ function getOutboundMetadata(dashboardCache) {
   }
   return {
     names: objectMap(metadata.names),
-    countries: objectMap(metadata.countries)
+    countries: objectMap(metadata.countries),
+    transports: objectMap(metadata.transports),
+    protocols: objectMap(metadata.protocols),
+    securities: objectMap(metadata.securities)
   };
 }
 function getCachedProxyLinks(dashboardCache) {
@@ -8242,7 +8302,10 @@ function renderCommonDetailsModal(info, fields, renderMemberName, isPriority, se
                       {
                         class: "tachyon_dashboard-page__urltest-details__row-type"
                       },
-                      member.type
+                      formatOutboundType(
+                        member.type,
+                        member.transport
+                      )
                     )
                   ] : []
                 ] : [
@@ -8253,7 +8316,10 @@ function renderCommonDetailsModal(info, fields, renderMemberName, isPriority, se
                       {
                         class: "tachyon_dashboard-page__urltest-details__row-type"
                       },
-                      member.type
+                      formatOutboundType(
+                        member.type,
+                        member.transport
+                      )
                     )
                   ] : []
                 ]
@@ -16463,15 +16529,35 @@ async function handleGenerateBugReport() {
       command: "/sbin/logread",
       args: ["-e", "sing-box", "-l", "1000"]
     });
+    const filterUdpErrors = (text) => {
+      if (!text || !text.includes("UDP is not supported by outbound:"))
+        return text;
+      const lines = text.split("\n");
+      const filtered = [];
+      let noticeEmitted = false;
+      for (const line of lines) {
+        if (line.includes("UDP is not supported by outbound:")) {
+          if (!noticeEmitted) {
+            filtered.push(
+              "UDP traffic through HTTP outbounds is not supported by sing-box; repeated UDP warnings for HTTP outbounds are hidden by Tachyon."
+            );
+            noticeEmitted = true;
+          }
+          continue;
+        }
+        filtered.push(line);
+      }
+      return filtered.join("\n");
+    };
     const rawReport = [
       "--- TACHYON CONFIG ---",
       configResult || "Failed to fetch config",
       "",
       "--- TACHYON LOGS ---",
-      logsResult.code === 0 ? logsResult.stdout : "Failed to fetch tachyon logs",
+      logsResult.code === 0 ? filterUdpErrors(logsResult.stdout) : "Failed to fetch tachyon logs",
       "",
       "--- SING-BOX LOGS ---",
-      singboxLogsResult.code === 0 ? singboxLogsResult.stdout : "Failed to fetch sing-box logs"
+      singboxLogsResult.code === 0 ? filterUdpErrors(singboxLogsResult.stdout) : "Failed to fetch sing-box logs"
     ].join("\n");
     const maskedReport = maskGlobalCheckText(rawReport);
     const blob = new Blob([maskedReport], { type: "text/plain;charset=utf-8" });

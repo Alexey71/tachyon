@@ -4,6 +4,7 @@ import {
   canUseDirectClashApi,
   getClashHttpUrl,
   getProxyUrlName,
+  getProxyUrlTransport,
   isCopyableProxyLink,
 } from '../../../helpers';
 import { getOutboundTagBySection } from '../../runtimeTags';
@@ -932,6 +933,9 @@ function buildUrlTestInfo({
           ),
           latency: childEntry?.value?.history?.[0]?.delay || 0,
           type: childEntry?.value?.type || '',
+          transport:
+            outboundMetadata?.transports?.[childCode] ||
+            getProxyUrlTransport(link),
           selected: selectedCode === childCode,
           link,
           canCopyLink,
@@ -1061,6 +1065,9 @@ function buildPriorityInfo({
         ),
         latency: childEntry?.value?.history?.[0]?.delay || 0,
         type: childEntry?.value?.type || '',
+        transport:
+          outboundMetadata?.transports?.[childCode] ||
+          getProxyUrlTransport(link),
         selected: selectedCode === childCode,
         link,
         canCopyLink,
@@ -1252,12 +1259,19 @@ function buildProxyGroupOutbounds(
 
     const latency = item?.value.history?.[0]?.delay || activeMemberLatency || 0;
 
+    const isGroupType = Boolean(
+      priorityConfig || urlTestConfig || isRuntimeUrlTest,
+    );
+
     return [
       {
         code,
         displayName,
         latency,
         type: priorityConfig ? 'Priority' : item?.value.type || 'URLTest',
+        transport: isGroupType
+          ? undefined
+          : outboundMetadata?.transports?.[code] || getProxyUrlTransport(link),
         selected: isSelected,
         link,
         canCopyLink,
@@ -1441,6 +1455,9 @@ function getOutboundMetadata(dashboardCache?: DashboardSectionCache) {
   return {
     names: objectMap(metadata.names),
     countries: objectMap(metadata.countries),
+    transports: objectMap(metadata.transports),
+    protocols: objectMap(metadata.protocols),
+    securities: objectMap(metadata.securities),
   };
 }
 

@@ -826,7 +826,7 @@ const dictionary = {
   "Invalid TUIC URL: udp_relay_mode must be native, quic, or qux": "Неверный TUIC URL: udp_relay_mode должен быть native, quic или qux",
   "Invalid TUIC URL: zero_rtt_handshake must be 0, 1, true, or false": "Неверный TUIC URL: zero_rtt_handshake должен быть 0, 1, true или false",
   "Invalid Shadowsocks URL: decoded credentials must contain method:password": "Неверный Shadowsocks URL: декодированные учётные данные должны содержать method:password",
-  "vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hysteria2:// links": "Ссылки vless://, vmess://, ss://, trojan://, socks4/5://, hy2/hysteria2://",
+  "vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2:// links": "Ссылки vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2://",
   "New version %s is available for %s": "Доступна новая версия %s для %s",
   "Checking\u2026": "Проверка\u2026",
   "Starting\u2026": "Запуск\u2026",

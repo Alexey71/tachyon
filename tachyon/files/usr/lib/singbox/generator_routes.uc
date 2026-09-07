@@ -1189,31 +1189,35 @@ function tproxy_inbound_matcher() {
     return [ runtime_constants.TPROXY_INBOUND_TAG, runtime_constants.TPROXY_INBOUND6_TAG ];
 }
 
-function outbound_supports_udp(config, tag_name) {
+function outbound_supports_udp(config, tag_name, visited) {
     tag_name = as_string(tag_name);
     if (tag_name == "")
+        return false;
+    if (tag_name == runtime_constants.DIRECT_OUTBOUND_TAG || tag_name == runtime_constants.BYPASS_OUTBOUND_TAG)
         return true;
+    visited = visited || {};
+    if (visited[tag_name])
+        return true;
+    visited[tag_name] = true;
     for (let outb in (config.outbounds || [])) {
         if (as_string(outb.tag) == tag_name) {
             let t = as_string(outb.type);
-            if (t == "http")
+            if (t == "http" || (t == "socks" && as_string(outb.version) == "4") || t == "block")
                 return false;
             if (t == "selector" || t == "urltest") {
                 if (type(outb.outbounds) == "array" && length(outb.outbounds) > 0) {
-                    let has_udp = false;
                     for (let nested_tag in outb.outbounds) {
-                        if (outbound_supports_udp(config, nested_tag)) {
-                            has_udp = true;
-                            break;
-                        }
+                        if (!outbound_supports_udp(config, nested_tag, visited))
+                            return false;
                     }
-                    return has_udp;
+                    return true;
                 }
+                return false;
             }
             return true;
         }
     }
-    return true;
+    return false;
 }
 
 function push_section_route_rule(config, rule, target_outbound) {
@@ -1860,5 +1864,7 @@ return {
     enabled_sections,
     enabled_servers,
     section_by_name,
-    add_server_routes
+    add_server_routes,
+    outbound_supports_udp,
+    push_section_route_rule
 };

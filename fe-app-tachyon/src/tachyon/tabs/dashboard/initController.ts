@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  formatOutboundType,
   getClashWsUrl,
   isCopyableProxyLink,
   onMount,
@@ -1057,7 +1058,10 @@ function renderCommonDetailsModal(
                                     class:
                                       'tachyon_dashboard-page__urltest-details__row-type',
                                   },
-                                  member.type,
+                                  formatOutboundType(
+                                    member.type,
+                                    member.transport,
+                                  ),
                                 ),
                               ]
                             : []),
@@ -1072,7 +1076,10 @@ function renderCommonDetailsModal(
                                     class:
                                       'tachyon_dashboard-page__urltest-details__row-type',
                                   },
-                                  member.type,
+                                  formatOutboundType(
+                                    member.type,
+                                    member.transport,
+                                  ),
                                 ),
                               ]
                             : []),

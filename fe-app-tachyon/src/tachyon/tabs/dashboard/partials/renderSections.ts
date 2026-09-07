@@ -4,7 +4,11 @@ import {
   renderLinkIcon24,
   renderInfoIcon24,
 } from '../../../../icons';
-import { isCopyableProxyLink, svgEl } from '../../../../helpers';
+import {
+  formatOutboundType,
+  isCopyableProxyLink,
+  svgEl,
+} from '../../../../helpers';
 import { prettyBytes } from '../../../../helpers/prettyBytes';
 import { Tachyon } from '../../../types';
 import { renderFlagEmojis } from './renderFlagEmojis';
@@ -525,7 +529,9 @@ function renderDefaultState({
                   style:
                     'opacity: 0.7; font-size: 13px; white-space: nowrap; flex-shrink: 0;',
                 },
-                [outbound.type].filter(Boolean),
+                [formatOutboundType(outbound.type, outbound.transport)].filter(
+                  Boolean,
+                ),
               ),
               E(
                 'div',
@@ -579,12 +585,14 @@ function renderDefaultState({
       outbound.priorityInfo?.selectedName ||
       '';
 
+    const baseType = formatOutboundType(outbound.type, outbound.transport);
+
     const typeLabel =
       isManualUrlTest || isManualPriority
-        ? `${outbound.type} (${_('Manual')})`
+        ? `${baseType} (${_('Manual')})`
         : outbound.urlTestInfo || outbound.priorityInfo
-          ? `${outbound.type} (${_('Auto')})`
-          : outbound.type;
+          ? `${baseType} (${_('Auto')})`
+          : baseType;
 
     return E(
       'div',
