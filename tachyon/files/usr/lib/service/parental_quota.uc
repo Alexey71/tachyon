@@ -61,8 +61,15 @@ function list_option(section, key) {
     let value = object_or_empty(section)[key];
     if (value == null)
         return [];
-    if (type(value) != "array")
-        value = [ value ];
+    if (type(value) != "array") {
+        let result = [];
+        for (let item in split(replace(as_string(value), /[[:space:],]+/g, " "), " ")) {
+            item = trim(item);
+            if (item != "")
+                push(result, item);
+        }
+        return result;
+    }
     let result = [];
     for (let item in value) {
         item = trim(as_string(item));
@@ -143,14 +150,82 @@ function quota_schedules() {
     return result;
 }
 
+function str_option(section, key, fallback) {
+    let value = object_or_empty(section)[key];
+    if (value == null || value == "")
+        return fallback;
+    return as_string(value);
+}
+
+function guest_mode_config() {
+    let sections = uci_core.section_objects(CONFIG_NAME, "guest_mode");
+    if (length(sections) == 0)
+        return null;
+    let s = object_or_empty(sections[0]);
+    if (!bool_option(s, "enabled", false))
+        return null;
+    let time_limit = int_option(s, "daily_time_limit", 0);
+    let traffic_limit = int_option(s, "daily_traffic_limit", 0);
+    if (time_limit <= 0 && traffic_limit <= 0)
+        return null;
+    return {
+        mode: str_option(s, "mode", "selected"),
+        time_limit,
+        traffic_limit,
+        guest_devices: list_option(s, "guest_devices"),
+        trusted_devices: list_option(s, "trusted_devices"),
+        notify: bool_option(s, "notify", true)
+    };
+}
+
+function guest_quota_active() {
+    return guest_mode_config() != null;
+}
+
+function all_active_neighbors() {
+    let result = [];
+    for (let line in split(command_output_from_args([ "ip", "neigh", "show" ]), "\n")) {
+        line = trim(as_string(line));
+        if (line == "") continue;
+        if (match(line, /(REACHABLE|STALE|DELAY|PROBE|PERMANENT)/) != null) {
+            let parts = split(line, " ");
+            let ip = parts[0];
+            let mac = null;
+            for (let i = 0; i < length(parts) - 1; i++) {
+                if (parts[i] == "lladdr") {
+                    mac = lc(parts[i + 1]);
+                    break;
+                }
+            }
+            push(result, { ip, mac });
+        }
+    }
+    return result;
+}
+
+function read_guest_traffic_bytes() {
+    let output = command_output_from_args([ "nft", "list", "chain", "inet", NFT_TABLE_NAME, "guest_forward" ]) || "";
+    let result = {};
+    for (let line in split(output, "\n")) {
+        let m = match(line, /bytes\s+([0-9]+)\s+comment\s+"tachyon-guest-byte:([^"]+)"/);
+        if (m) {
+            let bytes = int(m[1]);
+            let ident = lc(m[2]);
+            result[ident] = bytes;
+        }
+    }
+    return result;
+}
+
 function read_state() {
     let raw = fs.readfile(STATE_FILE);
     if (raw == null || trim(as_string(raw)) == "")
-        return { day: "", devices: {} };
+        return { day: "", devices: {}, guest_devices: {} };
     let parsed = object_or_empty(json(raw));
     return {
         day: as_string(parsed["day"] || ""),
-        devices: object_or_empty(parsed["devices"])
+        devices: object_or_empty(parsed["devices"]),
+        guest_devices: object_or_empty(parsed["guest_devices"])
     };
 }
 
@@ -268,10 +343,9 @@ function remove_cron() {
 }
 
 function install_cron() {
-    // Only install the cron tick if there is at least one schedule with a
-    // daily_quota_minutes limit. Without quotas the job produces nft stderr
-    // which crond logs as cron.err every minute — pure noise.
-    if (length(quota_schedules()) == 0)
+    // Only install the cron tick if there is at least one schedule or guest mode
+    // with daily limits. Without quotas the job produces nft stderr which crond logs as cron.err.
+    if (length(quota_schedules()) == 0 && !guest_quota_active())
         return remove_cron();
 
     let line = cron_line();
@@ -285,11 +359,20 @@ function install_cron() {
 }
 
 function blocked_lists(state) {
-    // MAC/IP idents currently over quota. On day rollover nothing stays
+    // MAC/IP idents currently over quota (parental + guest). On day rollover nothing stays
     // blocked because counters start fresh.
     let macs = [];
     let ips = [];
     for (let ident, entry in state.devices) {
+        entry = object_or_empty(entry);
+        if (entry.blocked != true)
+            continue;
+        if (match(ident, MAC_RE) != null)
+            push(macs, ident);
+        else
+            push(ips, ident);
+    }
+    for (let ident, entry in state.guest_devices) {
         entry = object_or_empty(entry);
         if (entry.blocked != true)
             continue;
@@ -303,18 +386,21 @@ function blocked_lists(state) {
 
 function tick() {
     let schedules = quota_schedules();
-    if (length(schedules) == 0) {
-        // No quota schedules configured — skip all nft operations so crond
-        // does not produce cron.err noise from chains that don't exist.
+    let gm_cfg = guest_mode_config();
+
+    if (length(schedules) == 0 && gm_cfg == null) {
+        // No quota schedules configured and no guest quotas active
         return 0;
     }
 
     let today = today_str();
     let state = read_state();
     if (as_string(state.day) != today)
-        state = { day: today, devices: {} };
+        state = { day: today, devices: {}, guest_devices: {} };
     let devices = object_or_empty(state.devices);
+    let guest_devices = object_or_empty(state.guest_devices);
 
+    // 1. Parental Control schedules
     for (let schedule in schedules) {
         for (let device in schedule.devices) {
             let ident = device.ident;
@@ -335,7 +421,66 @@ function tick() {
         }
     }
 
+    // 2. Guest Mode quotas
+    if (gm_cfg != null) {
+        let target_guests = [];
+        if (gm_cfg.mode == "inverted") {
+            let trusted_set = {};
+            for (let dev in gm_cfg.trusted_devices)
+                trusted_set[lc(trim(as_string(dev)))] = true;
+
+            let neighbors = all_active_neighbors();
+            for (let neigh in neighbors) {
+                let is_trusted = trusted_set[neigh.ip] || (neigh.mac != null && trusted_set[neigh.mac]);
+                if (!is_trusted) {
+                    let ident = neigh.mac || neigh.ip;
+                    push(target_guests, { ident, is_mac: neigh.mac != null, active: true });
+                }
+            }
+        } else {
+            for (let dev in gm_cfg.guest_devices) {
+                dev = trim(as_string(dev));
+                if (dev == "") continue;
+                let ident = lc(dev);
+                let is_mac = match(ident, MAC_RE) != null;
+                push(target_guests, { ident, is_mac, active: device_active(ident) });
+            }
+        }
+
+        let traffic_bytes_map = read_guest_traffic_bytes();
+
+        for (let guest in target_guests) {
+            let ident = guest.ident;
+            let entry = object_or_empty(guest_devices[ident]);
+            let minutes = int(entry.minutes || 0);
+            let bytes = int(traffic_bytes_map[ident] || entry.bytes || 0);
+            let was_blocked = entry.blocked == true;
+
+            if (!was_blocked) {
+                if (guest.active)
+                    minutes++;
+
+                let time_exceeded = gm_cfg.time_limit > 0 && minutes >= gm_cfg.time_limit;
+                let traffic_mb = int(bytes / (1024 * 1024));
+                let traffic_exceeded = gm_cfg.traffic_limit > 0 && traffic_mb >= gm_cfg.traffic_limit;
+
+                if (time_exceeded || traffic_exceeded) {
+                    let reason = time_exceeded ? (as_string(gm_cfg.time_limit) + " мин") : (as_string(gm_cfg.traffic_limit) + " МБ");
+                    guest_devices[ident] = { minutes, bytes, blocked: true, reason };
+                    log_message("guest device " + ident + " hit quota (" + reason + "); blocking until midnight", "info");
+                    if (gm_cfg.notify)
+                        send_notification("🚫 *Guest Mode*: устройство `" + ident + "` исчерпало дневную квоту (" + reason + "), доступ заблокирован до полуночи.");
+                } else {
+                    guest_devices[ident] = { minutes, bytes, blocked: false };
+                }
+            } else {
+                guest_devices[ident] = { minutes, bytes, blocked: true, reason: entry.reason };
+            }
+        }
+    }
+
     state.devices = devices;
+    state.guest_devices = guest_devices;
     write_state(state);
 
     let lists = blocked_lists(state);
@@ -345,15 +490,33 @@ function tick() {
 
 function status_json() {
     let schedules = quota_schedules();
+    let gm_cfg = guest_mode_config();
     let state = read_state();
     let tracked = {};
     for (let ident, entry in object_or_empty(state.devices)) {
         entry = object_or_empty(entry);
         tracked[ident] = { minutes: int(entry.minutes || 0), blocked: entry.blocked == true };
     }
+    let guest_tracked = {};
+    for (let ident, entry in object_or_empty(state.guest_devices)) {
+        entry = object_or_empty(entry);
+        guest_tracked[ident] = {
+            minutes: int(entry.minutes || 0),
+            bytes: int(entry.bytes || 0),
+            blocked: entry.blocked == true,
+            reason: as_string(entry.reason || "")
+        };
+    }
     write_json({
-        configured: length(schedules) > 0,
+        configured: length(schedules) > 0 || gm_cfg != null,
         schedules: length(schedules),
+        guest_mode: gm_cfg != null ? {
+            enabled: true,
+            mode: gm_cfg.mode,
+            time_limit: gm_cfg.time_limit,
+            traffic_limit: gm_cfg.traffic_limit,
+            devices: guest_tracked
+        } : { enabled: false },
         day: as_string(state.day || ""),
         devices: tracked
     });

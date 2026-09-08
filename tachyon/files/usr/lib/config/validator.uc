@@ -1864,11 +1864,57 @@ function validate_profile(profile, profiles) {
     }
 }
 
+function validate_guest_mode(guest_mode) {
+    if (!section_enabled(guest_mode))
+        return;
+    let name = section_name(guest_mode);
+
+    let mode = option(guest_mode, "mode", "selected");
+    if (mode != "selected" && mode != "inverted")
+        fail_validation("Guest mode '" + name + "' has invalid mode '" + mode + "'. Expected 'selected' or 'inverted'. Aborted.");
+
+    let guest_devs = list_option(guest_mode, "guest_devices");
+    for (let dev in guest_devs) {
+        let clean = trim(as_string(dev));
+        let is_mac = match(clean, /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/) != null;
+        if (clean != "" && !core_ip.valid_ip_or_cidr(clean) && !is_mac)
+            fail_validation("Guest mode '" + name + "' has invalid guest device '" + clean + "'. Aborted.");
+    }
+
+    let trusted_devs = list_option(guest_mode, "trusted_devices");
+    for (let dev in trusted_devs) {
+        let clean = trim(as_string(dev));
+        let is_mac = match(clean, /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/) != null;
+        if (clean != "" && !core_ip.valid_ip_or_cidr(clean) && !is_mac)
+            fail_validation("Guest mode '" + name + "' has invalid trusted device '" + clean + "'. Aborted.");
+    }
+
+    let time_limit_raw = trim(as_string(option(guest_mode, "daily_time_limit", "") || ""));
+    if (time_limit_raw != "") {
+        let limit = int(time_limit_raw);
+        if (limit < 0 || limit > 1440 || match(time_limit_raw, /^[0-9]+$/) == null)
+            fail_validation("Guest mode '" + name + "' has invalid daily_time_limit '" + time_limit_raw + "'. Use a number of minutes between 0 and 1440. Aborted.");
+    }
+
+    let traffic_limit_raw = trim(as_string(option(guest_mode, "daily_traffic_limit", "") || ""));
+    if (traffic_limit_raw != "") {
+        let limit = int(traffic_limit_raw);
+        if (limit < 0 || match(traffic_limit_raw, /^[0-9]+$/) == null)
+            fail_validation("Guest mode '" + name + "' has invalid daily_traffic_limit '" + traffic_limit_raw + "'. Use a positive number in megabytes. Aborted.");
+    }
+
+    let start_time = option(guest_mode, "start_time", "");
+    let end_time = option(guest_mode, "end_time", "");
+    validate_time_format(start_time, "guest_mode." + name + ".start_time");
+    validate_time_format(end_time, "guest_mode." + name + ".end_time");
+}
+
 function validate_runtime_config(context) {
     let settings = settings_section();
     let sections = sections_by_type("section");
     let schedules = sections_by_type("schedule");
     let profiles = sections_by_type("profile");
+    let guest_modes = sections_by_type("guest_mode");
 
     validate_runtime_mark_ranges_context(context);
 
@@ -1925,6 +1971,9 @@ function validate_runtime_config(context) {
 
     for (let schedule in schedules)
         validate_schedule(schedule, sections, profiles);
+
+    for (let guest_mode in guest_modes)
+        validate_guest_mode(guest_mode);
 }
 
 function context_from_runtime() {

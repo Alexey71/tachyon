@@ -1016,6 +1016,13 @@ function createMenuTabsOrderWidget(option, section_id) {
       fixed: false,
     },
     {
+      id: "guest_mode",
+      label: _("Guest Mode"),
+      desc: _("Guest network isolation and device quotas"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
       id: "monitoring",
       label: _("Monitoring"),
       desc: _("Traffic statistics and active connections"),

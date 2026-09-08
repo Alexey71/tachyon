@@ -443,6 +443,7 @@ const EntryPoint = {
       "server",
       "profile",
       "schedule",
+      "guest_mode",
       "monitoring",
       "diagnostic",
       "updates",
@@ -573,6 +574,21 @@ const EntryPoint = {
           _("Add a schedule rule"),
         );
         parental.createParentalContent(s);
+        return s;
+      },
+      guest_mode: () => {
+        const s = tachyonMap.section(
+          form.NamedSection,
+          "guest_mode",
+          "guest_mode",
+          _("Guest Mode"),
+          _(
+            "Guest mode isolates guest devices from local LAN and router administration, while allowing internet access with daily quotas and schedules.",
+          ),
+        );
+        s.anonymous = false;
+        s.addremove = false;
+        parental.createGuestModeContent(s);
         return s;
       },
       monitoring: () => {

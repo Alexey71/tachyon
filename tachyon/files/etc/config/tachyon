@@ -291,4 +291,22 @@ config telegram 'telegram'
 #        list days 'thursday'
 #        list days 'friday'
 
+config guest_mode 'guest_mode'
+        option enabled '0'
+        option mode 'selected'
+        # mode: 'selected' (explicit guest_devices) or 'inverted' (all devices except trusted_devices)
+        #list guest_devices '192.168.1.201'
+        #list guest_devices 'AA:BB:CC:DD:EE:01'
+        #list trusted_devices '192.168.1.100'
+        #list trusted_devices 'AA:BB:CC:DD:EE:FE'
+        option isolate_lan '1'
+        option block_router_admin '1'
+        option daily_time_limit '0'
+        option daily_traffic_limit '0'
+        #option start_time '08:00'
+        #option end_time '23:00'
+        #list days 'monday'
+        option notify '1'
+
+
 

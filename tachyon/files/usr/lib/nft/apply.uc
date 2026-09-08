@@ -439,6 +439,10 @@ function nft_create_ifname_set(table, name) {
     return nft_create_set(table, name, "{ type ifname; flags interval; }");
 }
 
+function nft_create_ether_set(table, name) {
+    return nft_create_set(table, name, "{ type ether_addr; flags interval; }");
+}
+
 function nft_add_set_elements(table, set_name, elements) {
     let stamp = clock();
     let tmp_path = sprintf("/tmp/nft_elements.%d.%d.tmp", stamp[0], stamp[1]);
@@ -1227,6 +1231,180 @@ function nft_add_dns_block_rules_from_uci(table) {
     return nft_add_dns_block_rules_from_schedules(uci_sections("schedule"), table, uci_sections("profile"));
 }
 
+// ─── Guest Mode (LAN Isolation & Protection) ─────────────────────────────────
+// Guest devices can only access WAN (Internet). Access to local private subnets
+// (RFC1918 & IPv6 local ranges) and router administration ports is blocked.
+// Mode 'selected': explicitly listed guest_devices are restricted.
+// Mode 'inverted': all LAN devices are guests EXCEPT trusted_devices.
+
+function nft_add_guest_mode_rules(guest_sections, table, interface_set, localv4_set, localv6_set) {
+    if (length(guest_sections) == 0)
+        return true;
+    let s = object_or_empty(guest_sections[0]);
+    if (!bool_option(s, "enabled", false))
+        return true;
+
+    let mode = option(s, "mode", "selected");
+    let isolate_lan = bool_option(s, "isolate_lan", true);
+    let block_router_admin = bool_option(s, "block_router_admin", true);
+
+    // Create guest_input chain for router admin protection (hook input priority -140)
+    if (!nft_create_chain(table, "guest_input", "{ type filter hook input priority -140; policy accept; }"))
+        return false;
+
+    // Essential network services: guests must be able to get DHCP and resolve DNS
+    nft_add_rule(table, "guest_input", [ "udp", "dport", "{ 67, 68 }", "accept" ]);
+    nft_add_rule(table, "guest_input", [ "udp", "dport", "53", "accept" ]);
+    nft_add_rule(table, "guest_input", [ "tcp", "dport", "53", "accept" ]);
+    nft_add_rule(table, "guest_input", [ "icmp", "type", "echo-request", "accept" ]);
+    nft_add_rule(table, "guest_input", [ "icmpv6", "type", "{ echo-request, nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert }", "accept" ]);
+
+    let guest_macs = [];
+    let guest_ips = [];
+    let guest_ip6s = [];
+
+    if (mode == "inverted") {
+        // Mode 2: Inverted (All LAN devices are guests EXCEPT trusted devices)
+        let trusted_devs = list_option(s, "trusted_devices");
+        let trusted_macs = [];
+        let trusted_ips = [];
+        let trusted_ip6s = [];
+        for (let dev in trusted_devs) {
+            dev = trim(as_string(dev));
+            if (dev == "") continue;
+            if (match(dev, /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/)) {
+                push(trusted_macs, lc(replace(dev, "-", ":")));
+            } else if (core_ip.ip_family(dev) == 6) {
+                push(trusted_ip6s, dev);
+            } else {
+                push(trusted_ips, dev);
+            }
+        }
+
+        if (length(trusted_macs) > 0) {
+            nft_create_ether_set(table, "tachyon_trusted_mac");
+            nft_add_set_elements(table, "tachyon_trusted_mac", join(",", trusted_macs));
+            nft_add_rule(table, "guest_input", [ "ether", "saddr", "@tachyon_trusted_mac", "return" ]);
+            nft_add_rule(table, "guest_forward", [ "ether", "saddr", "@tachyon_trusted_mac", "return" ]);
+        }
+        if (length(trusted_ips) > 0) {
+            nft_create_ipv4_set(table, "tachyon_trusted_ip");
+            nft_add_set_elements(table, "tachyon_trusted_ip", join(",", trusted_ips));
+            nft_add_rule(table, "guest_input", [ "ip", "saddr", "@tachyon_trusted_ip", "return" ]);
+            nft_add_rule(table, "guest_forward", [ "ip", "saddr", "@tachyon_trusted_ip", "return" ]);
+        }
+        if (length(trusted_ip6s) > 0) {
+            nft_create_ipv6_set(table, "tachyon_trusted_ip6");
+            nft_add_set_elements(table, "tachyon_trusted_ip6", join(",", trusted_ip6s));
+            nft_add_rule(table, "guest_input", [ "ip6", "saddr", "@tachyon_trusted_ip6", "return" ]);
+            nft_add_rule(table, "guest_forward", [ "ip6", "saddr", "@tachyon_trusted_ip6", "return" ]);
+        }
+
+        // All non-trusted LAN devices:
+        // 1. Block access to router management ports
+        if (block_router_admin) {
+            nft_add_rule(table, "guest_input", [ "iifname", "@" + as_string(interface_set), "counter", "drop", "comment", "\"tachyon-guest-admin-drop\"" ]);
+        }
+        // 2. Block access to private LAN subnets
+        if (isolate_lan) {
+            nft_add_rule(table, "guest_forward", [ "iifname", "@" + as_string(interface_set), "ip", "daddr", "@" + as_string(localv4_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+            nft_add_rule(table, "guest_forward", [ "iifname", "@" + as_string(interface_set), "ip6", "daddr", "@" + as_string(localv6_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+        }
+        // 3. Traffic accounting
+        nft_add_rule(table, "guest_forward", [ "iifname", "@" + as_string(interface_set), "counter", "comment", "\"tachyon-guest-traffic\"" ]);
+    } else {
+        // Mode 1: Selected (Explicitly listed guest devices)
+        let guest_devs = list_option(s, "guest_devices");
+        for (let dev in guest_devs) {
+            dev = trim(as_string(dev));
+            if (dev == "") continue;
+            if (match(dev, /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/)) {
+                push(guest_macs, lc(replace(dev, "-", ":")));
+            } else if (core_ip.ip_family(dev) == 6) {
+                push(guest_ip6s, dev);
+            } else {
+                push(guest_ips, dev);
+            }
+        }
+
+        if (length(guest_macs) > 0) {
+            nft_create_ether_set(table, "tachyon_guest_mac");
+            nft_add_set_elements(table, "tachyon_guest_mac", join(",", guest_macs));
+        }
+        if (length(guest_ips) > 0) {
+            nft_create_ipv4_set(table, "tachyon_guest_ip");
+            nft_add_set_elements(table, "tachyon_guest_ip", join(",", guest_ips));
+        }
+        if (length(guest_ip6s) > 0) {
+            nft_create_ipv6_set(table, "tachyon_guest_ip6");
+            nft_add_set_elements(table, "tachyon_guest_ip6", join(",", guest_ip6s));
+        }
+
+        // 1. Block access to router management ports
+        if (block_router_admin) {
+            if (length(guest_macs) > 0)
+                nft_add_rule(table, "guest_input", [ "ether", "saddr", "@tachyon_guest_mac", "counter", "drop", "comment", "\"tachyon-guest-admin-drop\"" ]);
+            if (length(guest_ips) > 0)
+                nft_add_rule(table, "guest_input", [ "ip", "saddr", "@tachyon_guest_ip", "counter", "drop", "comment", "\"tachyon-guest-admin-drop\"" ]);
+            if (length(guest_ip6s) > 0)
+                nft_add_rule(table, "guest_input", [ "ip6", "saddr", "@tachyon_guest_ip6", "counter", "drop", "comment", "\"tachyon-guest-admin-drop\"" ]);
+        }
+
+        // 2. Block access to local LAN subnets
+        if (isolate_lan) {
+            if (length(guest_macs) > 0) {
+                nft_add_rule(table, "guest_forward", [ "ether", "saddr", "@tachyon_guest_mac", "ip", "daddr", "@" + as_string(localv4_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+                nft_add_rule(table, "guest_forward", [ "ether", "saddr", "@tachyon_guest_mac", "ip6", "daddr", "@" + as_string(localv6_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+            }
+            if (length(guest_ips) > 0) {
+                nft_add_rule(table, "guest_forward", [ "ip", "saddr", "@tachyon_guest_ip", "ip", "daddr", "@" + as_string(localv4_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+                nft_add_rule(table, "guest_forward", [ "ip", "saddr", "@tachyon_guest_ip", "ip6", "daddr", "@" + as_string(localv6_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+            }
+            if (length(guest_ip6s) > 0) {
+                nft_add_rule(table, "guest_forward", [ "ip6", "saddr", "@tachyon_guest_ip6", "ip6", "daddr", "@" + as_string(localv6_set), "counter", "drop", "comment", "\"tachyon-guest-lan-drop\"" ]);
+            }
+        }
+
+        // 3. Per-device accounting counter rules for quota tracking
+        for (let m in guest_macs) {
+            nft_add_rule(table, "guest_forward", [ "ether", "saddr", m, "counter", "comment", "\"tachyon-guest-byte:" + m + "\"" ]);
+        }
+        for (let ip in guest_ips) {
+            nft_add_rule(table, "guest_forward", [ "ip", "saddr", ip, "counter", "comment", "\"tachyon-guest-byte:" + ip + "\"" ]);
+        }
+    }
+
+    // Schedule restriction (time window / days)
+    let start_time = option(s, "start_time", "");
+    let end_time = option(s, "end_time", "");
+    if (start_time != "" && end_time != "" && (start_time != "00:00" || end_time != "23:59")) {
+        let intervals = nft_schedule_time_intervals(start_time, end_time);
+        let days_args = nft_schedule_days_match_args(s);
+        for (let interval in intervals) {
+            let win_rule = [ "meta", "hour", sprintf("\"%s\"-\"%s\"", interval[0], interval[1]) ];
+            append_array(win_rule, days_args);
+            append_array(win_rule, [ "return" ]);
+            nft_add_rule(table, "guest_forward", win_rule);
+        }
+        if (mode == "inverted") {
+            nft_add_rule(table, "guest_forward", [ "iifname", "@" + as_string(interface_set), "counter", "drop", "comment", "\"guest-time-window-closed\"" ]);
+        } else {
+            if (length(guest_macs) > 0)
+                nft_add_rule(table, "guest_forward", [ "ether", "saddr", "@tachyon_guest_mac", "counter", "drop", "comment", "\"guest-time-window-closed\"" ]);
+            if (length(guest_ips) > 0)
+                nft_add_rule(table, "guest_forward", [ "ip", "saddr", "@tachyon_guest_ip", "counter", "drop", "comment", "\"guest-time-window-closed\"" ]);
+            if (length(guest_ip6s) > 0)
+                nft_add_rule(table, "guest_forward", [ "ip6", "saddr", "@tachyon_guest_ip6", "counter", "drop", "comment", "\"guest-time-window-closed\"" ]);
+        }
+    }
+
+    return true;
+}
+
+function nft_add_guest_mode_rules_from_uci(table, interface_set, localv4_set, localv6_set) {
+    return nft_add_guest_mode_rules(uci_sections("guest_mode"), table, interface_set, localv4_set, localv6_set);
+}
+
 function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_port_set, interface_set, source_interfaces, fakeip_mark, outbound_mark, fakeip_range, tproxy_port, exclude_ntp, localv6_set, common6_set, ip_port6_set, fakeip6_range, tproxy6_address) {
     localv6_set = default_arg(localv6_set, "localv6");
     common6_set = default_arg(common6_set, "tachyon_subnets6");
@@ -1259,6 +1437,7 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
         !nft_create_priority_chains(table) ||
         !nft_create_chain(table, "parental_control", "{ }") ||
         !nft_create_chain(table, "parental_forward", "{ }") ||
+        !nft_create_chain(table, "guest_forward", "{ }") ||
         !nft_create_chain(table, "dns_block", "{ type nat hook prerouting priority -101; policy accept; }") ||
         !nft_create_chain(table, "proxy", "{ type filter hook prerouting priority -100; policy accept; }"))
         return false;
@@ -1343,6 +1522,7 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
         return false;
 
     if (!nft_create_chain(table, "mangle_forward", "{ type filter hook forward priority -150; policy accept; }") ||
+        !nft_add_rule(table, "mangle_forward", [ "jump", "guest_forward" ]) ||
         !nft_add_rule(table, "mangle_forward", [ "jump", "parental_forward" ]))
         return false;
 
@@ -2122,7 +2302,22 @@ function nft_profile_signature_body(body, profile) {
     return body;
 }
 
-function nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles) {
+function nft_guest_mode_signature_body(body, guest_mode) {
+    if (!guest_mode) return body;
+    let name = as_string(guest_mode[".name"] || "guest_mode");
+    body = signature_add_value(body, "guest_mode." + name + ".enabled", bool_option(guest_mode, "enabled", false) ? "1" : "0");
+    body = signature_add_value(body, "guest_mode." + name + ".mode", option(guest_mode, "mode", "selected"));
+    body = signature_add_value(body, "guest_mode." + name + ".guest_devices", join(",", list_option(guest_mode, "guest_devices")));
+    body = signature_add_value(body, "guest_mode." + name + ".trusted_devices", join(",", list_option(guest_mode, "trusted_devices")));
+    body = signature_add_value(body, "guest_mode." + name + ".isolate_lan", bool_option(guest_mode, "isolate_lan", true) ? "1" : "0");
+    body = signature_add_value(body, "guest_mode." + name + ".block_router_admin", bool_option(guest_mode, "block_router_admin", true) ? "1" : "0");
+    body = signature_add_value(body, "guest_mode." + name + ".start_time", option(guest_mode, "start_time", ""));
+    body = signature_add_value(body, "guest_mode." + name + ".end_time", option(guest_mode, "end_time", ""));
+    body = signature_add_value(body, "guest_mode." + name + ".days", join(",", list_option(guest_mode, "days")));
+    return body;
+}
+
+function nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles, guest_modes) {
     let body = "";
 
     body = signature_add_value(body, "settings.source_network_interfaces", option(settings, "source_network_interfaces", "br-lan"));
@@ -2139,11 +2334,16 @@ function nft_runtime_signature_from_settings_and_sections(settings, sections, sc
     for (let schedule in schedules)
         body = nft_schedule_signature_body(body, object_or_empty(schedule));
 
+    if (guest_modes) {
+        for (let gm in guest_modes)
+            body = nft_guest_mode_signature_body(body, object_or_empty(gm));
+    }
+
     return signature_hash(body);
 }
 
-function print_nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles) {
-    let hash = nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles);
+function print_nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles, guest_modes) {
+    let hash = nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles, guest_modes);
     if (hash == "")
         return false;
 
@@ -2192,6 +2392,7 @@ function nft_create_full_runtime_from_uci(rt_table, table, localv4_set, common_s
         nft_add_section_priority_rules_from_sections(uci_sections("section"), table, interface_set, localv4_set, localv6_set, fakeip_mark) &&
         nft_add_schedule_rules_from_uci(table, uci_sections("section")) &&
         nft_add_dns_block_rules_from_uci(table) &&
+        nft_add_guest_mode_rules_from_uci(table, interface_set, localv4_set, localv6_set) &&
         nft_add_profile_doh_block_rules(uci_sections("profile"), table) &&
         nft_create_provider_output_rules_from_uci(table, "zapret", zapret_bin, zapret_route_mark_base, zapret_queue_base, zapret_desync_mark, zapret_desync_mark_postnat) &&
         nft_create_provider_output_rules_from_uci(table, "zapret2", zapret2_bin, zapret2_route_mark_base, zapret2_queue_base, zapret2_desync_mark, zapret2_desync_mark_postnat) &&
@@ -2220,7 +2421,8 @@ function nft_runtime_signature_from_uci() {
         uci_settings(),
         uci_sections("section"),
         uci_sections("schedule"),
-        uci_sections("profile")
+        uci_sections("profile"),
+        uci_sections("guest_mode")
     );
 }
 
@@ -2241,7 +2443,8 @@ function nft_runtime_signature_from_fixture(path) {
         fixture_settings(data),
         fixture_section_list(data, "section"),
         fixture_section_list(data, "schedule"),
-        fixture_section_list(data, "profile")
+        fixture_section_list(data, "profile"),
+        fixture_section_list(data, "guest_mode")
     );
 }
 
@@ -2560,6 +2763,10 @@ else if (mode == "nft-add-schedule-rules-fixture")
     exit(nft_add_schedule_rules_from_schedules(fixture_section_list(object_or_empty(common_read_json_file(ARGV[1])), "schedule"), fixture_section_list(object_or_empty(common_read_json_file(ARGV[1])), "section"), ARGV[2], fixture_section_list(object_or_empty(common_read_json_file(ARGV[1])), "profile")) ? 0 : 1);
 else if (mode == "nft-add-dns-block-rules-fixture")
     exit(nft_add_dns_block_rules_from_schedules(fixture_section_list(object_or_empty(common_read_json_file(ARGV[1])), "schedule"), ARGV[2], fixture_section_list(object_or_empty(common_read_json_file(ARGV[1])), "profile")) ? 0 : 1);
+else if (mode == "nft-add-guest-mode-rules-from-uci")
+    exit(nft_add_guest_mode_rules_from_uci(ARGV[1], ARGV[2], ARGV[3], ARGV[4]) ? 0 : 1);
+else if (mode == "nft-add-guest-mode-rules-fixture")
+    exit(nft_add_guest_mode_rules(fixture_section_list(object_or_empty(common_read_json_file(ARGV[1])), "guest_mode"), ARGV[2], ARGV[3], ARGV[4], ARGV[5]) ? 0 : 1);
 else if (mode == "nft-create-full-runtime-from-uci")
     exit(nft_create_full_runtime_from_uci(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5], ARGV[6], ARGV[7], ARGV[8], ARGV[9], ARGV[10], ARGV[11], ARGV[12], ARGV[13], ARGV[14], ARGV[15], ARGV[16], ARGV[17], ARGV[18], ARGV[19], ARGV[20], ARGV[21], ARGV[22], ARGV[23], ARGV[24], ARGV[25], ARGV[26]) ? 0 : 1);
 else if (mode == "nft-rebuild-runtime-from-uci")

@@ -1297,9 +1297,183 @@ function createParentalContent(section) {
   o.rmempty = false;
 }
 
+// ─── Guest Mode Section ───────────────────────────────────────────────────────
+
+function createGuestModeContent(section) {
+  // Enabled switch
+  let o = section.option(form.Flag, "enabled", _("Enable Guest Mode"));
+  o.default = "0";
+  o.rmempty = false;
+
+  // Policy Mode: selected vs inverted
+  o = section.option(
+    form.ListValue,
+    "mode",
+    _("Policy Mode"),
+    _(
+      "Selected: specified devices become guests. Inverted: all devices on the network become guests EXCEPT the trusted ones (Zero-Trust).",
+    ),
+  );
+  o.default = "selected";
+  o.value("selected", _("Selected Devices are Guests (Explicit list)"));
+  o.value("inverted", _("All Devices are Guests EXCEPT Trusted (Zero-Trust)"));
+
+  // Guest devices (for selected mode)
+  o = section.option(
+    form.DynamicList,
+    "guest_devices",
+    _("Guest Devices (MAC / IP)"),
+    _(
+      "Devices that are isolated as guests. Enter IP or MAC addresses, or pick from active LAN devices.",
+    ),
+  );
+  o.rmempty = true;
+  o.placeholder = "192.168.1.150 or AA:BB:CC:DD:EE:FF";
+  o.validate = validateDevice;
+  o.depends("mode", "selected");
+  o.renderWidget = function (sectionId, optionIndex, cfgvalue) {
+    return local_devices.createLocalDeviceDynamicListWidget(
+      this,
+      sectionId,
+      cfgvalue,
+    );
+  };
+
+  // Trusted devices (for inverted mode)
+  o = section.option(
+    form.DynamicList,
+    "trusted_devices",
+    _("Trusted Master Devices (MAC / IP)"),
+    _(
+      "Master and family devices with full LAN and router access. Any device NOT in this list will be treated as a guest.",
+    ),
+  );
+  o.rmempty = true;
+  o.placeholder = "192.168.1.100 or AA:BB:CC:DD:EE:FF";
+  o.validate = validateDevice;
+  o.depends("mode", "inverted");
+  o.renderWidget = function (sectionId, optionIndex, cfgvalue) {
+    return local_devices.createLocalDeviceDynamicListWidget(
+      this,
+      sectionId,
+      cfgvalue,
+    );
+  };
+
+  // LAN Isolation
+  o = section.option(
+    form.Flag,
+    "isolate_lan",
+    _("Isolate Local LAN"),
+    _(
+      "Prevent guest devices from accessing other local network devices (RFC1918 and IPv6 local subnets).",
+    ),
+  );
+  o.default = "1";
+  o.rmempty = false;
+
+  // Block Router Admin
+  o = section.option(
+    form.Flag,
+    "block_router_admin",
+    _("Block Router Administration"),
+    _(
+      "Prevent guest devices from accessing router management services (LuCI Web UI, SSH, Clash API). DHCP and DNS remain accessible.",
+    ),
+  );
+  o.default = "1";
+  o.rmempty = false;
+
+  // Daily Time Quota (minutes)
+  o = section.option(
+    form.Value,
+    "daily_time_limit",
+    _("Daily Time Limit (minutes)"),
+    _(
+      "Maximum allowed online time per guest device per day. When reached, access is blocked until midnight. Enter 0 for unlimited.",
+    ),
+  );
+  o.default = "0";
+  o.placeholder = "0";
+  o.rmempty = true;
+  o.validate = function (_sectionId, value) {
+    if (value === "" || value === null || value === undefined) return true;
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 0 || n > 1440)
+      return _("Enter a whole number of minutes between 0 and 1440");
+    return true;
+  };
+
+  // Daily Traffic Quota (MB)
+  o = section.option(
+    form.Value,
+    "daily_traffic_limit",
+    _("Daily Traffic Limit (MB)"),
+    _(
+      "Maximum allowed download and upload traffic per guest device per day in megabytes. Enter 0 for unlimited.",
+    ),
+  );
+  o.default = "0";
+  o.placeholder = "0";
+  o.rmempty = true;
+  o.validate = function (_sectionId, value) {
+    if (value === "" || value === null || value === undefined) return true;
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 0)
+      return _("Enter a positive whole number in megabytes");
+    return true;
+  };
+
+  // Schedule Active Window (start_time, end_time)
+  o = section.option(
+    form.Value,
+    "start_time",
+    _("Allowed Start Time"),
+    _("Start of allowed daily access window in HH:MM format (24-hour clock)."),
+  );
+  o.placeholder = "08:00";
+  o.rmempty = true;
+  o.validate = validateTime;
+
+  o = section.option(
+    form.Value,
+    "end_time",
+    _("Allowed End Time"),
+    _("End of allowed daily access window in HH:MM format (24-hour clock)."),
+  );
+  o.placeholder = "22:00";
+  o.rmempty = true;
+  o.validate = validateTime;
+
+  // Days of week
+  o = section.option(
+    form.MultiValue,
+    "days",
+    _("Allowed Days of Week"),
+    _("Select days when guest access is permitted. Leave empty for all days."),
+  );
+  o.rmempty = true;
+  Object.entries(DAY_LABELS).forEach(([val, label]) => {
+    o.value(val, label);
+  });
+
+  // Telegram notification
+  o = section.option(
+    form.Flag,
+    "notify",
+    _("Telegram Alerts"),
+    _(
+      "Send Telegram notification when a guest device hits its daily time or traffic quota.",
+    ),
+  );
+  o.default = "1";
+  o.rmempty = false;
+}
+
 const EntryPoint = {
   createProfileContent,
   createParentalContent,
+  createGuestModeContent,
 };
 
 return baseclass.extend(EntryPoint);

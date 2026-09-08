@@ -16,6 +16,9 @@ const OFFSET_FILE = "/var/run/tachyon_telegram_offset";
 
 let as_string = common.as_string;
 let option = common.option;
+let bool_option = common.bool_option;
+let int_option = common.int_option;
+let list_option = common.list_option;
 let shell_quote = common.shell_quote;
 let object_or_empty = common.object_or_empty;
 let command_status = common.command_status;
@@ -688,6 +691,8 @@ function view_settings_menu(token, chat_id, msg_id) {
         [{ text: t("menu_servers_short"), callback_data: "/set_list server" }],
         [{ text: t("menu_dns_presets"), callback_data: "/dns_presets" }],
         [{ text: t("menu_quiet_hours"), callback_data: "/qh" }],
+        [{ text: t("menu_guest"), callback_data: "/guest" }],
+        [{ text: t("menu_language"), callback_data: "/lang" }],
         [{ text: t("menu_test_rule"), callback_data: "/test_rule" }],
         [{ text: t("menu_export_config"), callback_data: "/export_config" }],
         [{ text: t("nav_back"), callback_data: "/menu" }]
@@ -1990,15 +1995,43 @@ function view_help(token, chat_id, msg_id) {
     else send_message(token, chat_id, text, "HTML", keyboard);
 }
 
-// ─── Phase 4: Language, Quiet Hours, Rule Test, Export ───────────────────────
+// ─── Phase 4: Language, Quiet Hours, Rule Test, Export, Guest Mode ─────────
+
+function register_bot_commands(token) {
+    if (!token) return;
+    let commands = [
+        { command: "menu",      description: t("cmd_menu") },
+        { command: "status",    description: t("cmd_status") },
+        { command: "runtime",   description: t("cmd_runtime") },
+        { command: "outbounds", description: t("cmd_outbounds") },
+        { command: "sections",  description: t("cmd_sections") },
+        { command: "instances", description: t("cmd_instances") },
+        { command: "guest",     description: t("cmd_guest") },
+        { command: "speed",     description: t("cmd_speed") },
+        { command: "ping",      description: t("cmd_ping") },
+        { command: "test",      description: t("cmd_test") },
+        { command: "logs",      description: t("cmd_logs") },
+        { command: "info",      description: t("cmd_info") },
+        { command: "connections", description: t("cmd_connections") },
+        { command: "test_rule", description: t("cmd_test_rule") },
+        { command: "help",      description: t("cmd_help") },
+        { command: "check_updates", description: t("cmd_check_updates") },
+        { command: "close_connections", description: t("cmd_close_connections") },
+        { command: "doctor",    description: t("cmd_doctor") },
+        { command: "restart",   description: t("cmd_restart") },
+        { command: "lang",      description: t("cmd_lang") }
+    ];
+    tg_request(token, "setMyCommands", { commands: commands });
+}
 
 function view_language(token, chat_id, msg_id) {
     let c = uci_core.cursor();
     c.load(CONFIG_NAME);
     let current_lang = option(c.get_all(CONFIG_NAME, "telegram"), "language", "en");
     let langs = i18n.available_languages(current_lang);
+    let lang_label = (current_lang == "ru") ? "Русский" : "English";
 
-    let text = t("choose_language") + "\n\n" + t("lang_current", current_lang);
+    let text = t("choose_language") + "\n\n" + t("lang_current", lang_label);
     let keyboard = [];
     let row = [];
     for (let i = 0; i < length(langs); i++) {
@@ -2020,8 +2053,89 @@ function handle_lang_set(token, chat_id, msg_id, lang) {
     c.load(CONFIG_NAME);
     c.set(CONFIG_NAME, "telegram", "language", lang);
     c.commit(CONFIG_NAME);
-    return send_message(token, chat_id, t("lang_saved") + " " + t("lang_current", lang), "HTML",
-        [[{ text: t("nav_back"), callback_data: "/settings" }]]);
+    t = i18n.bind(lang);
+    register_bot_commands(token);
+    let lang_label = (lang == "ru") ? "Русский" : "English";
+    let text = "✅ <b>" + t("lang_saved") + "</b>\n\n" + t("lang_current", lang_label);
+    let keyboard = [[{ text: t("nav_back"), callback_data: "/settings" }]];
+    if (msg_id) return edit_message(token, chat_id, msg_id, text, "HTML", keyboard);
+    return send_message(token, chat_id, text, "HTML", keyboard);
+}
+
+function view_guest_mode(token, chat_id, msg_id) {
+    let c = uci_core.cursor();
+    c.load(CONFIG_NAME);
+    let s = object_or_empty(c.get_all(CONFIG_NAME, "guest_mode"));
+    let enabled = bool_option(s, "enabled", false);
+    let gmode = option(s, "mode", "selected");
+    let mode_label = (gmode == "inverted") ? t("guest_mode_inverted") : t("guest_mode_selected");
+    let guest_devs = list_option(s, "guest_devices");
+    let trusted_devs = list_option(s, "trusted_devices");
+    let time_limit = int_option(s, "daily_time_limit", 0);
+    let traffic_limit = int_option(s, "daily_traffic_limit", 0);
+    let isolate_lan = bool_option(s, "isolate_lan", true);
+
+    let text = "👥 <b>" + t("guest_title") + "</b>\n\n" +
+        (enabled ? t("guest_status_active") : t("guest_status_inactive")) + "\n" +
+        "📋 " + t("routing_mode") + ": <b>" + mode_label + "</b>\n";
+
+    if (gmode == "inverted") {
+        text += sprintf(t("guest_trusted_count"), length(trusted_devs)) + "\n";
+    } else {
+        text += sprintf(t("guest_devices_count"), length(guest_devs)) + "\n";
+    }
+
+    if (isolate_lan) {
+        text += "🛡 " + t("guest_lan_isolated") + "\n";
+    }
+
+    if (time_limit > 0) {
+        text += sprintf(t("guest_time_limit"), time_limit) + "\n";
+    }
+    if (traffic_limit > 0) {
+        text += sprintf(t("guest_traffic_limit"), as_string(traffic_limit) + " MB") + "\n";
+    }
+
+    let quota_state = fs.readfile("/var/run/tachyon/parental_quotas.json");
+    if (quota_state) {
+        try {
+            let q = json(quota_state);
+            let devs = object_or_empty(q.devices);
+            let active_guests = [];
+            for (let ident in keys(devs)) {
+                let dev_entry = devs[ident];
+                if (dev_entry.is_guest || dev_entry.blocked) {
+                    let st = dev_entry.blocked ? "🚫" : "⏳";
+                    let info = st + " <code>" + ident + "</code>: " + as_string(dev_entry.minutes || 0) + " мин";
+                    if (dev_entry.bytes) info += " (" + format_bytes(dev_entry.bytes) + ")";
+                    push(active_guests, info);
+                }
+            }
+            if (length(active_guests) > 0) {
+                text += "\n<b>Активность сегодня:</b>\n" + join("\n", active_guests) + "\n";
+            }
+        } catch(e) {}
+    }
+
+    let toggle_label = enabled ? ("🔴 " + t("btn_disable")) : ("🟢 " + t("btn_enable"));
+    let keyboard = [
+        [{ text: toggle_label, callback_data: "/guest_toggle" }],
+        [{ text: t("nav_back"), callback_data: "/settings" }]
+    ];
+    if (msg_id) edit_message(token, chat_id, msg_id, text, "HTML", keyboard);
+    else send_message(token, chat_id, text, "HTML", keyboard);
+}
+
+function handle_guest_toggle(token, chat_id, msg_id) {
+    let c = uci_core.cursor();
+    c.load(CONFIG_NAME);
+    let s = object_or_empty(c.get_all(CONFIG_NAME, "guest_mode"));
+    let cur = bool_option(s, "enabled", false);
+    let nxt = cur ? "0" : "1";
+    c.set(CONFIG_NAME, "guest_mode", "enabled", nxt);
+    c.commit(CONFIG_NAME);
+    command_status(command_from_args(["/usr/bin/tachyon", "reload_firewall"]));
+    return view_guest_mode(token, chat_id, msg_id);
 }
 
 function view_quiet_hours(token, chat_id, msg_id) {
@@ -2376,11 +2490,14 @@ function dispatch_command(token, chat_id, text, msg_id) {
     if (cmd == "/test") return view_quick_test(token, chat_id, msg_id);
     if (cmd == "/info") return view_system_info(token, chat_id, msg_id);
     if (cmd == "/help") return view_help(token, chat_id, msg_id);
-    if (cmd == "/lang") return view_language(token, chat_id, msg_id);
-    if (match(cmd, /^\/lang_set /)) {
-        let lang = trim(substr(cmd, 11));
+    if (cmd == "/lang" || cmd == "/language") return view_language(token, chat_id, msg_id);
+    let lang_match = match(cmd, /^\/(?:lang_set|lang|language)[ \t]+([a-zA-Z0-9_-]+)/);
+    if (lang_match) {
+        let lang = lc(trim(lang_match[1]));
         return handle_lang_set(token, chat_id, msg_id, lang);
     }
+    if (cmd == "/guest") return view_guest_mode(token, chat_id, msg_id);
+    if (cmd == "/guest_toggle") return handle_guest_toggle(token, chat_id, msg_id);
 
     if (match(cmd, /^\/logs /)) {
         let parts = split(trim(substr(cmd, 6)), " ");
@@ -3112,28 +3229,8 @@ function worker() {
     let cfg = settings();
     if (cfg.enabled != "1" || !cfg.bot_token) return 0;
 
-    let commands = [
-        { command: "menu",      description: t("cmd_menu") },
-        { command: "status",    description: t("cmd_status") },
-        { command: "runtime",   description: t("cmd_runtime") },
-        { command: "outbounds", description: t("cmd_outbounds") },
-        { command: "sections",  description: t("cmd_sections") },
-        { command: "instances", description: t("cmd_instances") },
-        { command: "speed",     description: t("cmd_speed") },
-        { command: "ping",      description: t("cmd_ping") },
-        { command: "test",      description: t("cmd_test") },
-        { command: "logs",      description: t("cmd_logs") },
-        { command: "info",      description: t("cmd_info") },
-        { command: "connections", description: t("cmd_connections") },
-        { command: "test_rule", description: t("cmd_test_rule") },
-        { command: "help",      description: t("cmd_help") },
-        { command: "check_updates", description: t("cmd_check_updates") },
-        { command: "close_connections", description: t("cmd_close_connections") },
-        { command: "doctor",    description: t("cmd_doctor") },
-        { command: "restart",   description: t("cmd_restart") },
-        { command: "lang",      description: t("cmd_lang") }
-    ];
-    tg_request(cfg.bot_token, "setMyCommands", { commands: commands });
+    t = i18n.bind(cfg.language);
+    register_bot_commands(cfg.bot_token);
 
     // Clean up leftover payload temp-files from previous runs that were
     // interrupted (e.g. killed during a 20-second getUpdates long-poll).

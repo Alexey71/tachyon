@@ -253,6 +253,25 @@ let strings = {
         cmd_restart: "Restart Tachyon services",
         cmd_instances: "Live servers",
         cmd_lang: "Change language",
+        cmd_guest: "Guest mode",
+        menu_guest: "👥 Guest Mode",
+        guest_title: "Guest Mode",
+        guest_enabled: "Guest mode enabled",
+        guest_disabled: "Guest mode disabled",
+        guest_status_active: "🟢 Active",
+        guest_status_inactive: "⚪ Inactive",
+        guest_mode_selected: "Selected devices",
+        guest_mode_inverted: "All except trusted",
+        guest_devices_count: "Guest devices: %d",
+        guest_trusted_count: "Trusted devices: %d",
+        guest_time_limit: "Daily time limit: %d min",
+        guest_traffic_limit: "Daily traffic limit: %s",
+        guest_lan_isolated: "LAN isolation: Active (RFC1918 & router management blocked)",
+        guest_time_spent: "Time spent today: %d min",
+        guest_traffic_spent: "Traffic used today: %s",
+        guest_limit_reached_time: "⏳ Guest device %s reached daily time limit (%d min). Access blocked until midnight.",
+        guest_limit_reached_traffic: "📊 Guest device %s reached daily traffic limit (%s). Access blocked until midnight.",
+        btn_guest_toggle: "👥 Guest Mode",
 
         // ─── Misc ───
         exec_done: "<b>Done (code %s):</b>\n<pre>%s</pre>",
@@ -785,6 +804,25 @@ let strings = {
         cmd_restart: "Перезапуск служб Tachyon",
         cmd_instances: "Live серверы",
         cmd_lang: "Сменить язык",
+        cmd_guest: "Гостевой режим",
+        menu_guest: "👥 Гостевой режим",
+        guest_title: "Гостевой режим",
+        guest_enabled: "Гостевой режим включён",
+        guest_disabled: "Гостевой режим выключен",
+        guest_status_active: "🟢 Активен",
+        guest_status_inactive: "⚪ Отключен",
+        guest_mode_selected: "Выбранные устройства",
+        guest_mode_inverted: "Все, кроме доверенных",
+        guest_devices_count: "Гостевых устройств: %d",
+        guest_trusted_count: "Доверенных устройств: %d",
+        guest_time_limit: "Дневной лимит времени: %d мин",
+        guest_traffic_limit: "Дневной лимит трафика: %s",
+        guest_lan_isolated: "Изоляция LAN: Активна (доступ к локальной сети и роутеру заблокирован)",
+        guest_time_spent: "Времени сегодня: %d мин",
+        guest_traffic_spent: "Трафика сегодня: %s",
+        guest_limit_reached_time: "⏳ Гостевое устройство %s исчерпало дневной лимит времени (%d мин). Доступ заблокирован до полуночи.",
+        guest_limit_reached_traffic: "📊 Гостевое устройство %s исчерпало дневной лимит трафика (%s). Доступ заблокирован до полуночи.",
+        btn_guest_toggle: "👥 Гостевой режим",
 
         // ─── Misc ───
         exec_done: "<b>Выполнено (код %s):</b>\n<pre>%s</pre>",
@@ -1099,14 +1137,12 @@ function bind(lang) {
 // Return available languages as [{code, label, available}]
 function available_languages(cfg_lang) {
     let current = resolve_lang(cfg_lang);
-    let ru_available = (current == "ru");
     let langs = [
         { code: "en", label: "English", available: true },
-        { code: "ru", label: "Русский", available: ru_available }
+        { code: "ru", label: "Русский", available: true }
     ];
     return langs;
 }
 
 // Module exports
-if (sourcepath(1) != null && sourcepath(1) != "")
-    return { resolve_lang, bind, available_languages, strings };
+return { resolve_lang, bind, available_languages, strings };
