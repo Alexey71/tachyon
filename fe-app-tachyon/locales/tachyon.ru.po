@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-07 11:45+0300\n"
-"PO-Revision-Date: 2026-09-07 11:45+0300\n"
+"POT-Creation-Date: 2026-09-08 09:57+0300\n"
+"PO-Revision-Date: 2026-09-08 09:57+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -353,6 +353,9 @@ msgstr "Все компоненты"
 msgid "All devices"
 msgstr "Все устройства"
 
+msgid "All Devices are Guests EXCEPT Trusted (Zero-Trust)"
+msgstr "Все устройства — гости, кроме доверенных (Zero-Trust)"
+
 msgid "All Engines (Full Matrix)"
 msgstr "Все движки (Полная матрица)"
 
@@ -404,8 +407,17 @@ msgstr "Разрешать только перечисленные сайты (�
 msgid "Allow only:"
 msgstr "Только разрешённые:"
 
+msgid "Allowed Days of Week"
+msgstr "Разрешенные дни недели"
+
 msgid "Allowed domain prefixes are full:, keyword:, and regex:"
 msgstr "Допустимые префиксы доменов: full:, keyword:, и regex:"
+
+msgid "Allowed End Time"
+msgstr "Время окончания доступа"
+
+msgid "Allowed Start Time"
+msgstr "Время начала доступа"
 
 msgid "Allows access to YACD from the WAN. Make sure to open the appropriate port in your firewall."
 msgstr "Позволяет доступ к YACD из WAN. Убедитесь, что соответствующий порт открыт в файрволе."
@@ -679,6 +691,9 @@ msgstr "Блокировка доступа в интернет или опре�
 
 msgid "Block listed sites (Standard)"
 msgstr "Блокировать перечисленные сайты (стандартно)"
+
+msgid "Block Router Administration"
+msgstr "Блокировать доступ к управлению роутером"
 
 msgid "Block:"
 msgstr "Блокировать:"
@@ -1148,8 +1163,14 @@ msgstr "Дневная квота"
 msgid "Daily Screen Time Quota (minutes)"
 msgstr "Дневная квота экранного времени (минуты)"
 
+msgid "Daily Time Limit (minutes)"
+msgstr "Дневной лимит времени (минуты)"
+
 msgid "Daily time quota (minutes)"
 msgstr "Дневной лимит времени (минуты)"
+
+msgid "Daily Traffic Limit (MB)"
+msgstr "Дневной лимит трафика (МБ)"
 
 msgid "Dashboard"
 msgstr "Панель управления"
@@ -1219,6 +1240,9 @@ msgstr "Режим устройства обновлен"
 
 msgid "Devices (MAC / IP)"
 msgstr "Устройства (MAC / IP)"
+
+msgid "Devices that are isolated as guests. Enter IP or MAC addresses, or pick from active LAN devices."
+msgstr "Устройства, изолированные в качестве гостевых. Введите IP- или MAC-адреса, либо выберите из активных устройств сети."
 
 msgid "DHCP has DNS server"
 msgstr "DHCP содержит DNS сервер"
@@ -1547,6 +1571,9 @@ msgstr "Включить дедупликацию перезагрузки фа�
 msgid "Enable Graceful Degradation"
 msgstr "Включить мягкое деградирование"
 
+msgid "Enable Guest Mode"
+msgstr "Включить гостевой режим"
+
 msgid "Enable Health Metrics"
 msgstr "Включить метрики здоровья"
 
@@ -1601,6 +1628,9 @@ msgstr "Включает фоновый демон, который опраши�
 msgid "Enables the background watchdog process to monitor services and auto-recover on failures."
 msgstr "Включает фоновый процесс watchdog для мониторинга сервисов и автоматического восстановления при сбоях."
 
+msgid "End of allowed daily access window in HH:MM format (24-hour clock)."
+msgstr "Конец разрешенного ежедневного интервала доступа в формате ЧЧ:ММ (24-часовой формат)."
+
 msgid "End of the schedule interval (e.g. 08:00). Supports spans crossing midnight."
 msgstr "Конец интервала расписания (например, 08:00). Поддерживает переход через полночь."
 
@@ -1630,6 +1660,9 @@ msgstr "Введите имя уровня"
 
 msgid "Enter a number or range, e.g. 25 or 25-35"
 msgstr "Введите число или диапазон, например 25 или 25-35"
+
+msgid "Enter a positive whole number in megabytes"
+msgstr "Введите положительное целое число в мегабайтах"
 
 msgid "Enter a valid time in HH:MM format (00:00 to 23:59)"
 msgstr "Введите корректное время в формате ЧЧ:ММ (от 00:00 до 23:59)"
@@ -2093,6 +2126,18 @@ msgstr "Группируйте устройства в семейные проф
 msgid "gRPC service"
 msgstr "Сервис gRPC"
 
+msgid "Guest Devices (MAC / IP)"
+msgstr "Гостевые устройства (MAC / IP)"
+
+msgid "Guest Mode"
+msgstr "Гостевой режим"
+
+msgid "Guest mode isolates guest devices from local LAN and router administration, while allowing internet access with daily quotas and schedules."
+msgstr "Гостевой режим изолирует гостевые устройства от локальной сети и панели управления роутером, сохраняя доступ в интернет с дневными квотами и расписанием."
+
+msgid "Guest network isolation and device quotas"
+msgstr "Изоляция гостевой сети и квоты устройств"
+
 msgid "Handshake timeout"
 msgstr "Таймаут рукопожатия"
 
@@ -2438,6 +2483,9 @@ msgstr "Неверный URL Hysteria2: неподдерживаемый тип 
 msgid "Invalid IP address"
 msgstr "Неверный IP-адрес"
 
+msgid "Invalid IP or MAC address format"
+msgstr "Неверный формат IP или MAC-адреса"
+
 msgid "Invalid IP or MAC address. Expected e.g. 192.168.1.150 or AA:BB:CC:DD:EE:FF"
 msgstr "Неверный IP или MAC-адрес. Ожидается, например, 192.168.1.150 или AA:BB:CC:DD:EE:FF"
 
@@ -2518,6 +2566,9 @@ msgstr "Неверный URL SOCKS: парсинг не удался"
 
 msgid "Invalid time format. Expected HH:MM (e.g. 22:00)"
 msgstr "Неверный формат времени. Ожидается ЧЧ:ММ (например, 22:00)"
+
+msgid "Invalid time format. Use HH:MM (e.g. 08:00 or 22:30)"
+msgstr "Неверный формат времени. Используйте ЧЧ:ММ (например, 08:00 или 22:30)"
 
 msgid "Invalid Trojan URL: must not contain spaces"
 msgstr "Неверный URL Trojan: не должен содержать пробелов"
@@ -2605,6 +2656,9 @@ msgstr "недоступно"
 
 msgid "Isolate BitTorrent traffic and force it direct to prevent VPN bans"
 msgstr "Изолировать трафик BitTorrent и направить его напрямую для предотвращения блокировок VPN"
+
+msgid "Isolate Local LAN"
+msgstr "Изолировать локальную сеть"
 
 msgid "Issues"
 msgstr "Проблемы"
@@ -2843,6 +2897,9 @@ msgstr "Приватный ключ MASQUE"
 msgid "Masquerade LAN traffic into tailnet"
 msgstr "Маскарадинг LAN-трафика в тейлнет"
 
+msgid "Master and family devices with full LAN and router access. Any device NOT in this list will be treated as a guest."
+msgstr "Основные и семейные устройства с полным доступом к локальной сети и роутеру. Любое устройство не из этого списка будет считаться гостевым."
+
 msgid "Match destination IPs or subnets"
 msgstr "Сопоставлять IP-адреса или подсети назначения"
 
@@ -2860,6 +2917,12 @@ msgstr "Максимум попыток рукопожатия"
 
 msgid "Max reconnects per hour before alert (default 10)."
 msgstr "Макс. переподключений в час до оповещения (по умолчанию 10)."
+
+msgid "Maximum allowed download and upload traffic per guest device per day in megabytes. Enter 0 for unlimited."
+msgstr "Максимально допустимый суммарный трафик на гостевое устройство в день в мегабайтах. Введите 0 для отсутствия ограничений."
+
+msgid "Maximum allowed online time per guest device per day. When reached, access is blocked until midnight. Enter 0 for unlimited."
+msgstr "Максимально допустимое время доступа в интернет на одно гостевое устройство в день. При исчерпании доступ блокируется до полуночи. Введите 0 для отсутствия ограничений."
 
 msgid "Maximum size of junk packets"
 msgstr "Максимальный размер мусорных пакетов"
@@ -3407,6 +3470,9 @@ msgstr "Обычные UDP DNS-серверы, используемые как �
 msgid "Please specify strategy name and arguments"
 msgstr "Пожалуйста, укажите имя стратегии и аргументы"
 
+msgid "Policy Mode"
+msgstr "Режим политики"
+
 msgid "Polling Interval (seconds)"
 msgstr "Интервал опроса (секунды)"
 
@@ -3469,6 +3535,12 @@ msgstr "Подготовка стратегий и изолированной о
 
 msgid "Preshared Key"
 msgstr "Предварительный общий ключ"
+
+msgid "Prevent guest devices from accessing other local network devices (RFC1918 and IPv6 local subnets)."
+msgstr "Запретить гостевым устройствам доступ к другим устройствам локальной сети (RFC1918 и локальные подсети IPv6)."
+
+msgid "Prevent guest devices from accessing router management services (LuCI Web UI, SSH, Clash API). DHCP and DNS remain accessible."
+msgstr "Запретить гостевым устройствам доступ к службам управления роутером (LuCI Web UI, SSH, Clash API). DHCP и DNS остаются доступными."
 
 msgid "Prevents multiple reload_firewall calls within 120 seconds to avoid connection drops."
 msgstr "Предотвращает множественные вызовы reload_firewall в течение 120 секунд для избежания разрыва соединений."
@@ -4013,6 +4085,9 @@ msgstr "Выберите промежуточную секцию"
 msgid "Select and order the sections through which blocked domains are tested. Checked sections are tried top-to-bottom."
 msgstr "Выберите и упорядочите секции, через которые тестируются заблокированные домены. Отмеченные секции проверяются сверху вниз."
 
+msgid "Select days when guest access is permitted. Leave empty for all days."
+msgstr "Выберите дни, когда гостевой доступ разрешен. Оставьте пустым для доступа во все дни."
+
 msgid "Select DNS protocol to use"
 msgstr "Выберите протокол DNS"
 
@@ -4067,8 +4142,14 @@ msgstr "Выберите, какая вкладка открывается ав�
 msgid "Selected"
 msgstr "Выбран"
 
+msgid "Selected Devices are Guests (Explicit list)"
+msgstr "Выбранные устройства — гости (явный список)"
+
 msgid "Selected section"
 msgstr "Выбранная секция"
+
+msgid "Selected: specified devices become guests. Inverted: all devices on the network become guests EXCEPT the trusted ones (Zero-Trust)."
+msgstr "Выборочный: указанные устройства становятся гостевыми. Инвертированный: все устройства в сети считаются гостевыми, КРОМЕ доверенных (Zero-Trust)."
 
 msgid "Selector and URLTest outbounds must contain a non-empty outbounds array"
 msgstr "Selector и URLTest outbound должны содержать непустой массив outbounds"
@@ -4099,6 +4180,9 @@ msgstr "Отправлять уведомление в Telegram при успе�
 
 msgid "Send Telegram alerts to parents when daily screen time is exhausted or blocked sites are accessed."
 msgstr "Отправлять уведомления родителям в Telegram при исчерпании экранного времени или попытке открыть заблокированные сайты."
+
+msgid "Send Telegram notification when a guest device hits its daily time or traffic quota."
+msgstr "Отправлять уведомление в Telegram при исчерпании гостевым устройством лимита времени или трафика."
 
 msgid "Sequence Overlaps (seqovl)"
 msgstr "Перекрытия последовательностей (seqovl)"
@@ -4390,6 +4474,9 @@ msgstr "Начать тест"
 
 msgid "Start bot"
 msgstr "Запустить бота"
+
+msgid "Start of allowed daily access window in HH:MM format (24-hour clock)."
+msgstr "Начало разрешенного ежедневного интервала доступа в формате ЧЧ:ММ (24-часовой формат)."
 
 msgid "Start sing-box"
 msgstr "Запустить sing-box"
@@ -4876,6 +4963,9 @@ msgstr "Путь транспорта должен начинаться с /"
 
 msgid "Troubleshooting"
 msgstr "Устранение неполадок"
+
+msgid "Trusted Master Devices (MAC / IP)"
+msgstr "Доверенные основные устройства (MAC / IP)"
 
 msgid "Try compatible User-Agent profiles automatically when downloading this subscription"
 msgstr "Пробовать совместимые профили User-Agent автоматически при загрузке этой подписки"

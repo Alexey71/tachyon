@@ -1299,6 +1299,23 @@ function createParentalContent(section) {
 
 // ─── Guest Mode Section ───────────────────────────────────────────────────────
 
+function validateGuestDevice(_sectionId, value) {
+  if (value === "" || value === null || value === undefined) return true;
+  const v = String(value).trim();
+  const isMac = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(v);
+  const isIpv4 = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(v);
+  const isIpv6 = /^[0-9a-fA-F:]+(\/\d{1,3})?$/.test(v);
+  if (isMac || isIpv4 || isIpv6) return true;
+  return _("Invalid IP or MAC address format");
+}
+
+function validateGuestTime(_sectionId, value) {
+  if (value === "" || value === null || value === undefined) return true;
+  const v = String(value).trim();
+  if (/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) return true;
+  return _("Invalid time format. Use HH:MM (e.g. 08:00 or 22:30)");
+}
+
 function createGuestModeContent(section) {
   // Enabled switch
   let o = section.option(form.Flag, "enabled", _("Enable Guest Mode"));
@@ -1329,7 +1346,7 @@ function createGuestModeContent(section) {
   );
   o.rmempty = true;
   o.placeholder = "192.168.1.150 or AA:BB:CC:DD:EE:FF";
-  o.validate = validateDevice;
+  o.validate = validateGuestDevice;
   o.depends("mode", "selected");
   o.renderWidget = function (sectionId, optionIndex, cfgvalue) {
     return local_devices.createLocalDeviceDynamicListWidget(
@@ -1350,7 +1367,7 @@ function createGuestModeContent(section) {
   );
   o.rmempty = true;
   o.placeholder = "192.168.1.100 or AA:BB:CC:DD:EE:FF";
-  o.validate = validateDevice;
+  o.validate = validateGuestDevice;
   o.depends("mode", "inverted");
   o.renderWidget = function (sectionId, optionIndex, cfgvalue) {
     return local_devices.createLocalDeviceDynamicListWidget(
@@ -1433,7 +1450,7 @@ function createGuestModeContent(section) {
   );
   o.placeholder = "08:00";
   o.rmempty = true;
-  o.validate = validateTime;
+  o.validate = validateGuestTime;
 
   o = section.option(
     form.Value,
@@ -1443,7 +1460,7 @@ function createGuestModeContent(section) {
   );
   o.placeholder = "22:00";
   o.rmempty = true;
-  o.validate = validateTime;
+  o.validate = validateGuestTime;
 
   // Days of week
   o = section.option(

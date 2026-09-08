@@ -2491,9 +2491,9 @@ function dispatch_command(token, chat_id, text, msg_id) {
     if (cmd == "/info") return view_system_info(token, chat_id, msg_id);
     if (cmd == "/help") return view_help(token, chat_id, msg_id);
     if (cmd == "/lang" || cmd == "/language") return view_language(token, chat_id, msg_id);
-    let lang_match = match(cmd, /^\/(?:lang_set|lang|language)[ \t]+([a-zA-Z0-9_-]+)/);
+    let lang_match = match(cmd, /^\/(lang_set|lang|language)[ \t]+([a-zA-Z0-9_-]+)/);
     if (lang_match) {
-        let lang = lc(trim(lang_match[1]));
+        let lang = lc(trim(lang_match[2]));
         return handle_lang_set(token, chat_id, msg_id, lang);
     }
     if (cmd == "/guest") return view_guest_mode(token, chat_id, msg_id);

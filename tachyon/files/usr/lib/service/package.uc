@@ -303,10 +303,19 @@ function remove_component_update_cache() {
             unlink_if_exists(path);
 }
 
+function ensure_guest_mode_section() {
+    if (path_exists("/etc/config/" + CONFIG_NAME) && !uci_core.exists(CONFIG_NAME + ".guest_mode")) {
+        uci_core.set_section(CONFIG_NAME + ".guest_mode", "guest_mode");
+        uci_core.set(CONFIG_NAME + ".guest_mode.enabled", "0");
+        uci_core.commit(CONFIG_NAME);
+    }
+}
+
 function luci_postinst() {
     remove_luci_index_cache();
     remove_component_update_cache();
     if (!PACKAGE_TEST_MODE) {
+        ensure_guest_mode_section();
         if (path_exists("/etc/init.d/rpcd"))
             command_success_from_args([ "/etc/init.d/rpcd", "reload" ]);
         command_success_from_args([ "logger", "-t", "tachyon", "[info] Package defaults applied" ]);

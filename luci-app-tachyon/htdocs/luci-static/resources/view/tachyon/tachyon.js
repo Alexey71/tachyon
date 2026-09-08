@@ -386,6 +386,9 @@ const EntryPoint = {
         if (!uci.get(self.config, "telegram")) {
           uci.add(self.config, "telegram", "telegram");
         }
+        if (!uci.get(self.config, "guest_mode")) {
+          uci.add(self.config, "guest_mode", "guest_mode");
+        }
         return form.Map.prototype.load.call(self);
       });
     };
@@ -578,16 +581,18 @@ const EntryPoint = {
       },
       guest_mode: () => {
         const s = tachyonMap.section(
-          form.NamedSection,
-          "guest_mode",
+          form.TypedSection,
           "guest_mode",
           _("Guest Mode"),
           _(
             "Guest mode isolates guest devices from local LAN and router administration, while allowing internet access with daily quotas and schedules.",
           ),
         );
-        s.anonymous = false;
+        s.anonymous = true;
         s.addremove = false;
+        s.cfgsections = function () {
+          return ["guest_mode"];
+        };
         parental.createGuestModeContent(s);
         return s;
       },

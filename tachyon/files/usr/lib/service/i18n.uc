@@ -1118,16 +1118,13 @@ function resolve_lang(cfg_lang) {
 // Strings with %s placeholders use sprintf for substitution.
 function bind(lang) {
     lang = resolve_lang(lang);
-    return function(key) {
+    return function(key, ...args) {
         let table = strings[lang];
         let val = table ? table[key] : null;
         if (val == null) val = strings.en[key];
         if (val == null) return key;
         // sprintf-style substitution: pass extra args to t("key", arg1, arg2)
-        if (length(arguments) > 1) {
-            let args = [];
-            for (let i = 1; i < length(arguments); i++)
-                push(args, arguments[i]);
+        if (length(args) > 0) {
             try { return sprintf(val, ...args); } catch(e) { return val; }
         }
         return val;

@@ -24,7 +24,7 @@ if grep -E 'lang.*substr\(cmd, 11\)' "$TG"; then
 fi
 
 # 3. /lang_set matching must capture the full language code
-grep -Fq 'lang_match = match(cmd, /^\/(?:lang_set|lang|language)' "$TG" ||
+grep -Fq 'lang_match = match(cmd, /^\/(lang_set|lang|language)' "$TG" ||
   fail "telegram.uc must robustly match /lang_set and /lang commands with arguments"
 
 # 4. handle_lang_set must rebind t immediately
@@ -45,7 +45,7 @@ grep -Fq 'if (cmd == "/guest")' "$TG" ||
 grep -Fq 'if (cmd == "/guest_toggle")' "$TG" ||
   fail "dispatch_command must route /guest_toggle"
 
-# 7. Run ucode evaluation test of i18n language resolution and strings
+# 7. Run ucode evaluation test of i18n language resolution, sprintf args, and regex
 ucode -e '
 let i18n = loadfile("'"$I18N"'")();
 if (i18n.resolve_lang("ru") != "ru") exit(1);
@@ -54,11 +54,17 @@ if (i18n.resolve_lang("invalid") != "en") exit(3);
 let t_ru = i18n.bind("ru");
 if (t_ru("lang_saved") != "Язык сохранён!") exit(4);
 if (t_ru("cmd_guest") != "Гостевой режим") exit(5);
+if (t_ru("lang_current", "Русский") != "Текущий язык: Русский") exit(6);
 let t_en = i18n.bind("en");
-if (t_en("lang_saved") != "Language saved!") exit(6);
-if (t_en("cmd_guest") != "Guest mode") exit(7);
+if (t_en("lang_saved") != "Language saved!") exit(7);
+if (t_en("cmd_guest") != "Guest mode") exit(8);
+if (t_en("lang_current", "English") != "Current language: English") exit(9);
 let langs = i18n.available_languages("en");
-if (length(langs) != 2 || !langs[0].available || !langs[1].available) exit(8);
+if (length(langs) != 2 || !langs[0].available || !langs[1].available) exit(10);
+let m1 = match("/lang_set ru", /^\/(lang_set|lang|language)[ \t]+([a-zA-Z0-9_-]+)/);
+if (!m1 || m1[2] != "ru") exit(11);
+let m2 = match("/lang en", /^\/(lang_set|lang|language)[ \t]+([a-zA-Z0-9_-]+)/);
+if (!m2 || m2[2] != "en") exit(12);
 ' || fail "ucode i18n evaluation failed"
 
 printf 'telegram language and guest route checks passed\n'
