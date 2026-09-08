@@ -1237,6 +1237,10 @@ function outbound_supports_udp(config, tag_name, visited) {
             return true;
         }
     }
+    for (let ep in (config.endpoints || [])) {
+        if (as_string(ep.tag) == tag_name)
+            return true;
+    }
     return false;
 }
 

@@ -116,7 +116,12 @@ cat >"$WORK_DIR/awg_fixture.json" <<'JSON'
       "awg_local_address": ["10.0.0.2/32"],
       "awg_keepalive": "25-35",
       "awg_random_trailers": "1",
-      "awg_disable_cookies": "1"
+      "awg_disable_cookies": "1",
+      "mixed_proxy_enabled": "1",
+      "mixed_proxy_port": "2085",
+      "mixed_proxy_auth_enabled": "1",
+      "mixed_proxy_username": "awguser",
+      "mixed_proxy_password": "awgpass"
     }
   ]
 }
@@ -137,6 +142,19 @@ grep -q '"tag": "server-my_awg_server-in"' "$out_json" || fail "sing-box config 
 grep -q '"jc": 5' "$out_json" || fail "sing-box config missing amnezia jc parameter"
 grep -q '"s1": 15' "$out_json" || fail "sing-box config missing amnezia s1 parameter"
 grep -q '"h1": 100' "$out_json" || fail "sing-box config missing amnezia h1 parameter"
+
+# Check AWG mixed proxy inbound and route
+grep -q '"tag": "my_awg_section-mixed-in"' "$out_json" || fail "sing-box config missing my_awg_section-mixed-in tag"
+grep -q '"listen_port": 2085' "$out_json" || fail "sing-box config missing mixed proxy port 2085"
+grep -q '"username": "awguser"' "$out_json" || fail "sing-box config missing mixed proxy username"
+grep -q '"password": "awgpass"' "$out_json" || fail "sing-box config missing mixed proxy password"
+grep -q '"inbound": "my_awg_section-mixed-in"' "$out_json" || fail "sing-box config missing route rule for mixed proxy"
+grep -q '"outbound": "my_awg_section-out"' "$out_json" || fail "sing-box config missing route target for mixed proxy"
+
+# Ensure UDP is NOT rejected for AWG mixed proxy (AWG is an endpoint with UDP capability)
+if grep -q '"inbound": "my_awg_section-mixed-in"' "$out_json" | grep -q '"action": "reject"'; then
+  fail "AWG mixed proxy must not have UDP rejected"
+fi
 
 # Check AWG 3.0 server inbound
 grep -q '"tag": "server-my_awg30_server-in"' "$out_json" || fail "sing-box config missing server-my_awg30_server-in tag"
@@ -164,5 +182,6 @@ ucode -L "$TACHYON_LIB" "$TACHYON_LIB/singbox/generator.uc" generate-config-fixt
   "$WORK_DIR/awg_fixture.json" "$out_json" "127.0.0.1" 0 0
 
 grep -q '"persistent_keepalive_interval": 25' "$out_json" || fail "Non-lx AWG outbound must safely fallback to integer keepalive"
+grep -q '"tag": "my_awg_section-mixed-in"' "$out_json" || fail "Non-lx AWG missing mixed inbound"
 
 printf 'AWG 2.0, 3.0, and 3.1 server and outbound configuration checks passed\n'

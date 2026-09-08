@@ -9917,6 +9917,7 @@ function createSectionContent(section) {
   o.default = "0";
   o.rmempty = false;
   o.depends("action", "connection");
+  o.depends("action", "awg");
   o.depends("action", "byedpi");
   o.depends("action", "zapret");
   o.depends("action", "zapret2");
@@ -9931,6 +9932,7 @@ function createSectionContent(section) {
   );
   o.rmempty = false;
   o.depends({ action: "connection", mixed_proxy_enabled: "1" });
+  o.depends({ action: "awg", mixed_proxy_enabled: "1" });
   o.depends({ action: "byedpi", mixed_proxy_enabled: "1" });
   o.depends({ action: "zapret", mixed_proxy_enabled: "1" });
   o.depends({ action: "zapret2", mixed_proxy_enabled: "1" });
@@ -9958,6 +9960,7 @@ function createSectionContent(section) {
   o.default = "0";
   o.rmempty = false;
   o.depends({ action: "connection", mixed_proxy_enabled: "1" });
+  o.depends({ action: "awg", mixed_proxy_enabled: "1" });
   o.depends({ action: "byedpi", mixed_proxy_enabled: "1" });
   o.depends({ action: "zapret", mixed_proxy_enabled: "1" });
   o.depends({ action: "zapret2", mixed_proxy_enabled: "1" });
@@ -9972,6 +9975,11 @@ function createSectionContent(section) {
   o.rmempty = false;
   o.depends({
     action: "connection",
+    mixed_proxy_enabled: "1",
+    mixed_proxy_auth_enabled: "1",
+  });
+  o.depends({
+    action: "awg",
     mixed_proxy_enabled: "1",
     mixed_proxy_auth_enabled: "1",
   });
@@ -10008,6 +10016,11 @@ function createSectionContent(section) {
   o.rmempty = false;
   o.depends({
     action: "connection",
+    mixed_proxy_enabled: "1",
+    mixed_proxy_auth_enabled: "1",
+  });
+  o.depends({
+    action: "awg",
     mixed_proxy_enabled: "1",
     mixed_proxy_auth_enabled: "1",
   });
