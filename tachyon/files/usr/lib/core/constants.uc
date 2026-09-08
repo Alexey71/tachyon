@@ -184,7 +184,12 @@ function constants_map() {
     c.ZAPRET_DEFAULT_NFQWS_OPT = env("ZAPRET_DEFAULT_NFQWS_OPT", "--filter-tcp=80 --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=badsum --new --filter-tcp=443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=1,midsld --dpi-desync-repeats=11 --dpi-desync-fooling=badsum --dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com --new --filter-udp=443 --dpi-desync=fake --dpi-desync-repeats=11 --dpi-desync-fake-quic=/opt/zapret/files/fake/quic_initial_www_google_com.bin --ctrack-timeouts=30:600:30:30");
 
     c.ZAPRET2_PROVIDER_BASE_DIR = env("ZAPRET2_PROVIDER_BASE_DIR", "/opt/zapret2");
-    c.ZAPRET2_PROVIDER_NFQWS2_BIN = env("ZAPRET2_PROVIDER_NFQWS2_BIN", c.ZAPRET2_PROVIDER_BASE_DIR + "/nfq2/nfqws2");
+    let default_nfqws2_bin = c.ZAPRET2_PROVIDER_BASE_DIR + "/nfq2/nfqws2";
+    if (fs.stat(default_nfqws2_bin) == null && fs.stat(c.ZAPRET2_PROVIDER_BASE_DIR + "/nfq/nfqws2") != null)
+        default_nfqws2_bin = c.ZAPRET2_PROVIDER_BASE_DIR + "/nfq/nfqws2";
+    else if (fs.stat(default_nfqws2_bin) == null && fs.stat("/usr/bin/nfqws2") != null)
+        default_nfqws2_bin = "/usr/bin/nfqws2";
+    c.ZAPRET2_PROVIDER_NFQWS2_BIN = env("ZAPRET2_PROVIDER_NFQWS2_BIN", default_nfqws2_bin);
     c.ZAPRET2_PROVIDER_FILES_DIR = env("ZAPRET2_PROVIDER_FILES_DIR", c.ZAPRET2_PROVIDER_BASE_DIR + "/files");
     c.ZAPRET2_PROVIDER_IPSET_DIR = env("ZAPRET2_PROVIDER_IPSET_DIR", c.ZAPRET2_PROVIDER_BASE_DIR + "/ipset");
     c.ZAPRET2_PROVIDER_LUA_DIR = env("ZAPRET2_PROVIDER_LUA_DIR", c.ZAPRET2_PROVIDER_BASE_DIR + "/lua");

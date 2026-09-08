@@ -1062,6 +1062,54 @@ function getProxyUrlName(url) {
   }
 }
 
+// src/helpers/formatOutboundType.ts
+function formatOutboundType(type, transport) {
+  const cleanType = (type || "").trim();
+  const cleanTransport = (transport || "").trim().toUpperCase();
+  if (!cleanType) {
+    return cleanTransport ? `(${cleanTransport})` : "";
+  }
+  if (!cleanTransport) {
+    return cleanType;
+  }
+  if (cleanType.toUpperCase().includes(`(${cleanTransport})`)) {
+    return cleanType;
+  }
+  return `${cleanType} (${cleanTransport})`;
+}
+
+// src/helpers/getProxyUrlTransport.ts
+function getProxyUrlTransport(url) {
+  if (!url || typeof url !== "string") {
+    return void 0;
+  }
+  try {
+    const trimmed = url.trim();
+    if (trimmed.startsWith("vmess://")) {
+      const b64 = trimmed.slice(8).split("#")[0];
+      if (typeof atob === "function") {
+        const jsonStr = atob(b64.replace(/[\r\n]/g, ""));
+        const obj = JSON.parse(jsonStr);
+        if (obj && typeof obj.net === "string" && obj.net.trim()) {
+          return obj.net.trim().toLowerCase();
+        }
+      }
+    }
+    const [base] = trimmed.split("#");
+    const queryIdx = base.indexOf("?");
+    if (queryIdx !== -1) {
+      const query = base.slice(queryIdx + 1);
+      const params = new URLSearchParams(query);
+      const transport = params.get("type");
+      if (transport && transport.trim()) {
+        return transport.trim().toLowerCase();
+      }
+    }
+  } catch {
+  }
+  return void 0;
+}
+
 // src/tachyon/tabs/dashboard/partials/renderFlagEmojis.ts
 var FLAG_EMOJI_PATTERN = /([\u{1f1e6}-\u{1f1ff}]{2}|\u{1f3f4}[\u{e0061}-\u{e007a}]+\u{e007f})/gu;
 var EXACT_FLAG_EMOJI_PATTERN = /^([\u{1f1e6}-\u{1f1ff}]{2}|\u{1f3f4}[\u{e0061}-\u{e007a}]+\u{e007f})$/u;
@@ -1421,54 +1469,6 @@ function insertIf(condition, elements) {
 var COPYABLE_PROXY_URI_RE = /^(vless|vmess|trojan|ss|ssr|hysteria2|hy2|tuic|socks4|socks4a|socks5|http|https):\/\//i;
 function isCopyableProxyLink(link) {
   return COPYABLE_PROXY_URI_RE.test((link || "").trim());
-}
-
-// src/helpers/formatOutboundType.ts
-function formatOutboundType(type, transport) {
-  const cleanType = (type || "").trim();
-  const cleanTransport = (transport || "").trim().toUpperCase();
-  if (!cleanType) {
-    return cleanTransport ? `(${cleanTransport})` : "";
-  }
-  if (!cleanTransport) {
-    return cleanType;
-  }
-  if (cleanType.toUpperCase().includes(`(${cleanTransport})`)) {
-    return cleanType;
-  }
-  return `${cleanType} (${cleanTransport})`;
-}
-
-// src/helpers/getProxyUrlTransport.ts
-function getProxyUrlTransport(url) {
-  if (!url || typeof url !== "string") {
-    return void 0;
-  }
-  try {
-    const trimmed = url.trim();
-    if (trimmed.startsWith("vmess://")) {
-      const b64 = trimmed.slice(8).split("#")[0];
-      if (typeof atob === "function") {
-        const jsonStr = atob(b64.replace(/[\r\n]/g, ""));
-        const obj = JSON.parse(jsonStr);
-        if (obj && typeof obj.net === "string" && obj.net.trim()) {
-          return obj.net.trim().toLowerCase();
-        }
-      }
-    }
-    const [base] = trimmed.split("#");
-    const queryIdx = base.indexOf("?");
-    if (queryIdx !== -1) {
-      const query = base.slice(queryIdx + 1);
-      const params = new URLSearchParams(query);
-      const transport = params.get("type");
-      if (transport && transport.trim()) {
-        return transport.trim().toLowerCase();
-      }
-    }
-  } catch {
-  }
-  return void 0;
 }
 
 // src/icons/renderLoaderCircleIcon24.ts
@@ -22002,8 +22002,10 @@ return baseclass.extend({
   applyUiStateToStore,
   bulkValidate,
   coreService,
+  formatOutboundType,
   getClashUIUrl,
   getProxyUrlName,
+  getProxyUrlTransport,
   injectGlobalStyles,
   parseValueList,
   renderDnsBenchmarkModal,

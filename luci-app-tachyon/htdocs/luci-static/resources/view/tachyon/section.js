@@ -494,12 +494,147 @@ let actionProvidersAvailabilityPromise = null;
 let actionProvidersAvailabilityLoader = null;
 const outboundNameChoicesCache = new Map();
 const outboundNameChoicesInflight = new Map();
+const outboundTypeByNameCache = new Map();
 const outboundNameSourceOptions = new Map();
 const sectionGroupSourceOptions = new Map();
 const dashboardFilterChoiceRefreshers = new Map();
 const perRuleDnsTypeState = new Map();
 const perRuleDnsWidgets = new Map();
 const SECTION_CACHE_DIR = "/var/run/tachyon/section-cache";
+
+function normalizeProtocolName(protocol) {
+  if (!protocol) {
+    return "";
+  }
+  const p = `${protocol}`.trim().toLowerCase();
+  switch (p) {
+    case "vless":
+      return "VLESS";
+    case "vmess":
+      return "VMess";
+    case "shadowsocks":
+    case "ss":
+      return "Shadowsocks";
+    case "trojan":
+      return "Trojan";
+    case "wireguard":
+    case "wg":
+      return "WireGuard";
+    case "hysteria2":
+    case "hy2":
+      return "Hysteria2";
+    case "hysteria":
+      return "Hysteria";
+    case "tuic":
+      return "TUIC";
+    case "socks":
+    case "socks5":
+      return "SOCKS5";
+    case "http":
+      return "HTTP";
+    case "direct":
+      return "Direct";
+    case "block":
+      return "Block";
+    default:
+      return p.charAt(0).toUpperCase() + p.slice(1);
+  }
+}
+
+function normalizeTransportName(transport) {
+  if (!transport) {
+    return "";
+  }
+  const t = `${transport}`.trim().toLowerCase();
+  switch (t) {
+    case "xhttp":
+      return "XHTTP";
+    case "ws":
+    case "websocket":
+      return "WS";
+    case "grpc":
+      return "gRPC";
+    case "http":
+    case "h2":
+      return "HTTP";
+    case "tcp":
+    case "raw":
+      return "TCP";
+    case "quic":
+      return "QUIC";
+    case "upgrade":
+    case "httpupgrade":
+      return "HTTPUpgrade";
+    default:
+      return t.toUpperCase();
+  }
+}
+
+function formatOutboundTypeLabel(protocol, transport) {
+  const normProto = normalizeProtocolName(protocol);
+  const normTrans = normalizeTransportName(transport);
+
+  if (!normProto && !normTrans) {
+    return "";
+  }
+  if (!normProto) {
+    return normTrans;
+  }
+  if (!normTrans) {
+    return normProto;
+  }
+  if (normProto.toUpperCase().includes(normTrans.toUpperCase())) {
+    return normProto;
+  }
+  if (["WireGuard", "Hysteria", "Hysteria2", "TUIC"].includes(normProto)) {
+    return normProto;
+  }
+  return `${normProto} (${normTrans})`;
+}
+
+function getProxyUrlTypeLabel(url) {
+  if (!url || typeof url !== "string") {
+    return "";
+  }
+  const trimmed = url.trim();
+  const schemeMatch = trimmed.match(/^([a-zA-Z0-9_-]+):\/\//);
+  if (!schemeMatch) {
+    return "";
+  }
+  const scheme = schemeMatch[1].toLowerCase();
+
+  let proto = scheme;
+  let transport = "";
+
+  if (scheme === "vmess") {
+    proto = "VMess";
+    try {
+      const b64 = trimmed.slice(8).split("#")[0];
+      if (typeof atob === "function") {
+        const jsonStr = atob(b64.replace(/[\r\n]/g, ""));
+        const obj = JSON.parse(jsonStr);
+        if (obj && typeof obj.net === "string") {
+          transport = obj.net;
+        }
+      }
+    } catch (_e) {}
+  } else {
+    try {
+      const [base] = trimmed.split("#");
+      const queryIdx = base.indexOf("?");
+      if (queryIdx !== -1) {
+        const query = base.slice(queryIdx + 1);
+        const params = new URLSearchParams(query);
+        const t = params.get("type");
+        if (t && t.trim()) {
+          transport = t.trim();
+        }
+      }
+    } catch (_e) {}
+  }
+
+  return formatOutboundTypeLabel(proto, transport);
+}
 const COUNTRY_CODES =
   "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW XK".split(
     " ",
@@ -672,6 +807,8 @@ function filteredOutboundMetadataFromCache(cache) {
   const metadata = plainObject(plainObject(cache).outboundMetadata);
   const names = plainObject(metadata.names);
   const countries = plainObject(metadata.countries);
+  const protocols = plainObject(metadata.protocols);
+  const transports = plainObject(metadata.transports);
   const candidateTags = Array.isArray(cache.urltestCandidateTags)
     ? cache.urltestCandidateTags
     : [];
@@ -679,6 +816,8 @@ function filteredOutboundMetadataFromCache(cache) {
   const result = {
     names: {},
     countries: {},
+    protocols: {},
+    transports: {},
   };
 
   if (candidateTags.length > 0) {
@@ -692,6 +831,12 @@ function filteredOutboundMetadataFromCache(cache) {
       }
       if (countries[tag] != null) {
         result.countries[tag] = countries[tag];
+      }
+      if (protocols[tag] != null) {
+        result.protocols[tag] = protocols[tag];
+      }
+      if (transports[tag] != null) {
+        result.transports[tag] = transports[tag];
       }
     });
     return result;
@@ -707,6 +852,16 @@ function filteredOutboundMetadataFromCache(cache) {
       result.countries[tag] = country;
     }
   });
+  Object.entries(protocols).forEach(([tag, protocol]) => {
+    if (!groups[tag]) {
+      result.protocols[tag] = protocol;
+    }
+  });
+  Object.entries(transports).forEach(([tag, transport]) => {
+    if (!groups[tag]) {
+      result.transports[tag] = transport;
+    }
+  });
 
   return result;
 }
@@ -714,13 +869,23 @@ function filteredOutboundMetadataFromCache(cache) {
 function readOutboundMetadataFromSectionCache(section_id) {
   const targetId = section_id || "Main";
   if (!safeCacheSectionName(targetId)) {
-    return Promise.resolve({ names: {}, countries: {} });
+    return Promise.resolve({
+      names: {},
+      countries: {},
+      protocols: {},
+      transports: {},
+    });
   }
 
   return fs
     .read(`${SECTION_CACHE_DIR}/${targetId}.json`)
     .then((raw) => filteredOutboundMetadataFromCache(JSON.parse(raw || "{}")))
-    .catch(() => ({ names: {}, countries: {} }));
+    .catch(() => ({
+      names: {},
+      countries: {},
+      protocols: {},
+      transports: {},
+    }));
 }
 
 function loadOutboundNameChoices(section_id) {
@@ -736,6 +901,25 @@ function loadOutboundNameChoices(section_id) {
   const task = readOutboundMetadataFromSectionCache(targetId)
     .then((metadata) => {
       const names = Object.values(plainObject(metadata.names));
+
+      const typeMap = outboundTypeByNameCache.get(targetId) || new Map();
+      Object.entries(plainObject(metadata.names)).forEach(([tag, name]) => {
+        if (!name) {
+          return;
+        }
+        const proto = metadata.protocols ? metadata.protocols[tag] : "";
+        const trans = metadata.transports ? metadata.transports[tag] : "";
+        const label = formatOutboundTypeLabel(proto, trans);
+        if (label) {
+          typeMap.set(name, label);
+        }
+      });
+      outboundTypeByNameCache.set(targetId, typeMap);
+      if (targetId !== "Main") {
+        const mainTypeMap = outboundTypeByNameCache.get("Main") || new Map();
+        typeMap.forEach((v, k) => mainTypeMap.set(k, v));
+        outboundTypeByNameCache.set("Main", mainTypeMap);
+      }
 
       const choices = names
         .filter(Boolean)
@@ -1620,6 +1804,61 @@ function countryChoices() {
   })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
+function getOutboundTypeForName(section_id, name) {
+  if (!name) {
+    return "";
+  }
+  const targetId = section_id || "Main";
+
+  const typeMap = outboundTypeByNameCache.get(targetId);
+  if (typeMap && typeMap.has(name)) {
+    return typeMap.get(name);
+  }
+
+  if (targetId !== "Main") {
+    const mainMap = outboundTypeByNameCache.get("Main");
+    if (mainMap && mainMap.has(name)) {
+      return mainMap.get(name);
+    }
+  }
+
+  for (const map of outboundTypeByNameCache.values()) {
+    if (map && typeof map.get === "function" && map.has(name)) {
+      return map.get(name);
+    }
+  }
+
+  let found = "";
+  currentSourceOptionValues(section_id, "selector_proxy_links").forEach(
+    (link) => {
+      if (found) {
+        return;
+      }
+      const linkName = main.getProxyUrlName(`${link || ""}`);
+      if (linkName === name) {
+        found = getProxyUrlTypeLabel(link);
+      }
+    },
+  );
+  if (found) {
+    return found;
+  }
+
+  currentSourceOptionValues(section_id, "outbound_jsons").forEach((jsonStr) => {
+    if (found) {
+      return;
+    }
+    const parsed = parseOutboundJsonObject(jsonStr);
+    if (parsed && (parsed.tag || "") === name) {
+      const proto = parsed.type || "";
+      const trans = (parsed.transport && parsed.transport.type) || "";
+      found = formatOutboundTypeLabel(proto, trans);
+    }
+  });
+
+  return found;
+}
+
 function currentOutboundNameChoices(section_id, values) {
   if (!outboundNameChoicesCache.has(section_id)) {
     loadOutboundNameChoices(section_id);
@@ -1634,7 +1873,12 @@ function currentOutboundNameChoices(section_id, values) {
     }
 
     seen.add(value);
-    result.push({ value, label: value });
+    const typeStr = getOutboundTypeForName(section_id, value);
+    const label =
+      typeStr && !value.endsWith(`[${typeStr}]`)
+        ? `${value} [${typeStr}]`
+        : value;
+    result.push({ value, label });
   };
 
   (outboundNameChoicesCache.get(section_id) || []).forEach(append);

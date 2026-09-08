@@ -396,13 +396,39 @@ function available_package_version(package_name) {
     return opkg_package_version_from_list(package_name, command_output_from_args([ "opkg", "list", package_name ]));
 }
 
-function pkg_list_update_command() {
-    return is_apk() ? "apk update </dev/null" : "opkg update </dev/null";
+function service_proxy_address() {
+    if (!file_exists(LIB_DIR + "/singbox/runtime.uc"))
+        return "";
+    if (file_exists(LIB_DIR + "/service/state.uc") &&
+        !module_success([ LIB_DIR + "/service/state.uc", "sing-box-service-running" ]))
+        return "";
+    let addr = trim(module_output([ LIB_DIR + "/singbox/runtime.uc", "service-proxy-address", "components" ]));
+    if (addr == "")
+        addr = trim(module_output([ LIB_DIR + "/singbox/runtime.uc", "service-proxy-address", "lists" ]));
+    return addr;
 }
 
-function pkg_install_name_command(package_name) {
-    return is_apk() ? command_from_args([ "apk", "add", package_name ]) + " </dev/null" :
+function pkg_list_update_command(proxy_address) {
+    if (proxy_address == null)
+        proxy_address = service_proxy_address();
+    let cmd = is_apk() ? "apk update </dev/null" : "opkg update </dev/null";
+    if (as_string(proxy_address) != "") {
+        let p = "http://" + proxy_address;
+        cmd = command_env({ http_proxy: p, https_proxy: p, HTTP_PROXY: p, HTTPS_PROXY: p }) + " " + cmd;
+    }
+    return cmd;
+}
+
+function pkg_install_name_command(package_name, proxy_address) {
+    if (proxy_address == null)
+        proxy_address = service_proxy_address();
+    let cmd = is_apk() ? command_from_args([ "apk", "add", package_name ]) + " </dev/null" :
         command_from_args([ "opkg", "install", package_name ]) + " </dev/null";
+    if (as_string(proxy_address) != "") {
+        let p = "http://" + proxy_address;
+        cmd = command_env({ http_proxy: p, https_proxy: p, HTTP_PROXY: p, HTTPS_PROXY: p }) + " " + cmd;
+    }
+    return cmd;
 }
 
 function pkg_install_name_downgrade(package_name, package_version) {
@@ -553,15 +579,6 @@ function check_success(component, current_version, latest_version, release_url) 
 
 function read_openwrt_release_value(key) {
     return trim(helper_output("openwrt-release-value", [ "/etc/openwrt_release", key ]));
-}
-
-function service_proxy_address() {
-    if (!file_exists(LIB_DIR + "/singbox/runtime.uc"))
-        return "";
-    if (file_exists(LIB_DIR + "/service/state.uc") &&
-        !module_success([ LIB_DIR + "/service/state.uc", "sing-box-service-running" ]))
-        return "";
-    return trim(module_output([ LIB_DIR + "/singbox/runtime.uc", "service-proxy-address", "components" ]));
 }
 
 function http_get_once(url, output_path, proxy_address, timeout) {
@@ -1394,7 +1411,15 @@ function install_zapret2(action, target_tag) {
     if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ])))
         action_fail(component, action, "Failed to install " + label + " package", current_version, pkg.version, "", release.release_url || "");
 
+    for (let p in [ "/opt/zapret2/nfq2/nfqws2", "/opt/zapret2/nfq/nfqws2", "/opt/zapret2/nfqws2", "/usr/bin/nfqws2" ]) {
+        if (file_exists(p))
+            command_status_from_args([ "chmod", "0755", p ]);
+    }
+    if (file_exists("/opt/zapret2"))
+        command_status_from_args([ "chmod", "-R", "a+rX", "/opt/zapret2" ]);
+
     disable_standalone_service(component);
+    command_status_from_args([ "nft", "delete", "table", "inet", "zapret2" ]);
     restart_tachyon_after_successful_change();
     clear_version_caches();
     current_version = provider_package_version(runtime_module);
@@ -1456,10 +1481,14 @@ function install_tailscale(action) {
         check_success(component, installed_package_version("tailscale"), available_package_version("tailscale"), TAILSCALE_PACKAGE_URL);
     }
 
-    if (!run_logged("Refreshing package index", pkg_list_update_command()))
+    let proxy_address = service_proxy_address();
+    if (!run_logged("Refreshing package index", pkg_list_update_command(proxy_address)))
         updates_log("Package index refresh failed; trying to install from the cached index", "warn");
-    if (!run_logged("Installing " + label + " package", pkg_install_name_command("tailscale")))
+    if (!run_logged("Installing " + label + " package", pkg_install_name_command("tailscale", proxy_address))) {
+        if (proxy_address == "")
+            updates_log("Upstream package download failed. If downloads.openwrt.org is blocked by your ISP, configure a proxy section and enable 'Download components via proxy' in Settings", "warn");
         action_fail(component, "install", "Failed to install " + label + " package from the feed");
+    }
     disable_standalone_service("tailscale");
     restart_tachyon_after_successful_change();
     clear_version_caches();

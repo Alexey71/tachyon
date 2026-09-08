@@ -30,27 +30,57 @@ function config(ctx) {
         "/usr/lib/zapret/lua",
         lib_dir + "/providers/zapret2/lua"
     ];
-    let resolved_lua_dir = provider_lua_dir;
-    for (let dir in candidate_dirs) {
-        if (dir && (fs.stat(dir + "/zapret-lib.lua") != null || fs.stat(dir + "/zapret-lib.lua.gz") != null)) {
-            resolved_lua_dir = dir;
+
+    let base_args = [
+        "--fwmark=" + desync_mark
+    ];
+    let lua_scripts = [
+        "zapret-lib.lua",
+        "zapret-antidpi.lua",
+        "zapret-auto.lua"
+    ];
+    for (let script in lua_scripts) {
+        let found = null;
+        for (let dir in candidate_dirs) {
+            if (!dir)
+                continue;
+            let p = dir + "/" + script;
+            if (fs.stat(p) != null) {
+                found = p;
+                break;
+            }
+            if (fs.stat(p + ".gz") != null) {
+                found = p + ".gz";
+                break;
+            }
+        }
+        if (found != null)
+            push(base_args, "--lua-init=@" + found);
+    }
+
+    let candidate_bins = [
+        getenv("ZAPRET2_NFQWS2_BIN"),
+        getenv("ZAPRET2_PROVIDER_NFQWS2_BIN"),
+        runtime_constants.ZAPRET2_PROVIDER_NFQWS2_BIN,
+        "/opt/zapret2/nfq2/nfqws2",
+        "/opt/zapret2/nfq/nfqws2",
+        "/opt/zapret2/nfqws2",
+        "/usr/bin/nfqws2"
+    ];
+    let resolved_bin = runtime_constants.ZAPRET2_PROVIDER_NFQWS2_BIN;
+    for (let b in candidate_bins) {
+        if (b && fs.stat(b) != null) {
+            resolved_bin = b;
             break;
         }
     }
-
-    let base_args = [
-        "--fwmark=" + desync_mark,
-        "--lua-init=@" + resolved_lua_dir + "/zapret-lib.lua",
-        "--lua-init=@" + resolved_lua_dir + "/zapret-antidpi.lua",
-        "--lua-init=@" + resolved_lua_dir + "/zapret-auto.lua"
-    ];
 
     return {
         kind: "zapret2",
         action: "zapret2",
         binary_name: "nfqws2",
-        binary: getenv("ZAPRET2_NFQWS2_BIN") || runtime_constants.ZAPRET2_NFQWS2_BIN,
-        provider_bin: getenv("ZAPRET2_PROVIDER_NFQWS2_BIN") || runtime_constants.ZAPRET2_PROVIDER_NFQWS2_BIN,
+        binary: resolved_bin,
+        provider_bin: resolved_bin,
         provider_files_dir: getenv("ZAPRET2_PROVIDER_FILES_DIR") || runtime_constants.ZAPRET2_PROVIDER_FILES_DIR,
         provider_ipset_dir: getenv("ZAPRET2_PROVIDER_IPSET_DIR") || runtime_constants.ZAPRET2_PROVIDER_IPSET_DIR,
         provider_lua_dir,
