@@ -1507,6 +1507,16 @@ function installer_post_install() {
             warn("Failed to start Tachyon after upgrade.\n");
     }
 
+    // Fresh installs must end up in a pristine default state: wipe leftover
+    // caches and runtime state from previous installations and rewrite the
+    // config from the bundled default. Upgrades and legacy migrations keep
+    // the user configuration untouched.
+    if (env("TACHYON_WAS_INSTALLED", "0") != "1" &&
+        env("TACHYON_LEGACY_DETECTED", "0") != "1") {
+        if (!run_args([ "timeout", "60", INSTALLER_TACHYON_BIN, "reset_settings", "no-start" ]))
+            warn("Failed to reset Tachyon settings to defaults after a fresh install.\n");
+    }
+
     return true;
 }
 

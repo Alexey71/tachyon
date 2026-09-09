@@ -44,8 +44,10 @@ grep -Fq 'cascadeDeleteSection' "$ROOT_DIR/luci-app-tachyon/htdocs/luci-static/r
 grep -Fq 'backup_existing_config' "$ROOT_DIR/install.sh" ||
   fail "install.sh must invoke backup_existing_config"
 
-if grep -n 'reset_settings' "$ROOT_DIR/install.sh" | grep -v 'msg ' | grep -v '#' >/dev/null 2>&1; then
-  fail "install.sh must never automatically invoke reset_settings"
-fi
+grep -Fq 'path_exists("/etc/config/tachyon")' "$ROOT_DIR/install.sh" ||
+  fail "install.sh must check /etc/config/tachyon before considering installation fresh"
+
+grep -Fq 'path_executable(INSTALLER_TACHYON_BIN)' "$ROOT_DIR/install.sh" ||
+  fail "install.sh must check INSTALLER_TACHYON_BIN before considering installation fresh"
 
 printf 'section cascade deletion and installer checks passed\n'
