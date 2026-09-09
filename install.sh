@@ -1285,7 +1285,9 @@ function installer_release_init_lock() {
 }
 
 function installer_cleanup_legacy() {
-    let tachyon_installed = installer_package_installed("tachyon");
+    let tachyon_installed = installer_package_installed("tachyon") ||
+        path_exists("/etc/config/tachyon") ||
+        path_executable(INSTALLER_TACHYON_BIN);
     let legacy_installed = LEGACY_BRAND != "" && installer_package_installed(LEGACY_BACKEND_PACKAGE);
     let active_init = legacy_installed ? INSTALLER_LEGACY_INIT : INSTALLER_TACHYON_INIT;
     let active_bin = legacy_installed ? INSTALLER_LEGACY_BIN : INSTALLER_TACHYON_BIN;
@@ -1503,16 +1505,6 @@ function installer_post_install() {
         if (!run_args([ "timeout", "30", INSTALLER_TACHYON_INIT, "start" ]) &&
             !run_args([ "timeout", "30", INSTALLER_TACHYON_INIT, "restart" ]))
             warn("Failed to start Tachyon after upgrade.\n");
-    }
-
-    // Fresh installs must end up in a pristine default state: wipe leftover
-    // caches and runtime state from previous installations and rewrite the
-    // config from the bundled default. Upgrades and legacy migrations keep
-    // the user configuration untouched.
-    if (env("TACHYON_WAS_INSTALLED", "0") != "1" &&
-        env("TACHYON_LEGACY_DETECTED", "0") != "1") {
-        if (!run_args([ "timeout", "60", INSTALLER_TACHYON_BIN, "reset_settings", "no-start" ]))
-            warn("Failed to reset Tachyon settings to defaults after a fresh install.\n");
     }
 
     return true;
@@ -2531,6 +2523,22 @@ install_zram_if_requested() {
     fi
 }
 
+backup_existing_config() {
+    [ "$DRY_RUN" -eq 1 ] && return 0
+    if [ -s /etc/config/tachyon ]; then
+        _ts="$(date +%Y%m%d_%H%M%S 2>/dev/null || date +%s 2>/dev/null || echo "0")"
+        _backup_file="/etc/config/tachyon.backup-${_ts}"
+        if cp -af /etc/config/tachyon "$_backup_file" 2>/dev/null; then
+            chmod 0600 "$_backup_file" 2>/dev/null || true
+            cp -af /etc/config/tachyon /etc/config/tachyon.bak 2>/dev/null || true
+            chmod 0600 /etc/config/tachyon.bak 2>/dev/null || true
+            log_line "INFO  Safety backup of /etc/config/tachyon created at $_backup_file"
+        else
+            warn "Failed to create safety backup of /etc/config/tachyon"
+        fi
+    fi
+}
+
 cleanup_legacy_installation() {
     if [ "$DRY_RUN" -eq 1 ]; then
         msg "[dry-run] would stop/disable and remove legacy or conflicting packages"
@@ -2834,6 +2842,7 @@ main() {
     detect_fetcher
     detect_installer_language
     check_system
+    backup_existing_config
 
     # Print TUI banner
     if [ "$QUIET" -eq 0 ] && command -v tui_banner >/dev/null 2>&1; then

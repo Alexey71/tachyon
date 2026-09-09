@@ -88,6 +88,47 @@ function configureGridSection(sectionRef, type, title, addTitle) {
     return renderSectionAdd(sectionRef, extra_class);
   };
 
+  if (type === "section") {
+    const origRemove = sectionRef.remove;
+    sectionRef.remove = function (section_id) {
+      if (section && typeof section.cascadeDeleteSection === "function") {
+        section.cascadeDeleteSection(section_id);
+      }
+      return origRemove
+        ? origRemove.apply(this, arguments)
+        : form.GridSection.prototype.remove.apply(this, arguments);
+    };
+
+    const origAdd = sectionRef.handleAdd;
+    sectionRef.handleAdd = function (ev, name) {
+      let sectionName =
+        typeof name === "string" && name.trim() ? name.trim() : null;
+      if (!sectionName && ev && ev.target) {
+        const container = ev.target.closest
+          ? ev.target.closest(".cbi-section-create")
+          : null;
+        const input = container
+          ? container.querySelector(".cbi-section-create-name")
+          : this.map
+            ? document.querySelector(".cbi-section-create-name")
+            : null;
+        if (input && input.value) {
+          sectionName = input.value.trim();
+        }
+      }
+      if (
+        sectionName &&
+        section &&
+        typeof section.cascadeDeleteSection === "function"
+      ) {
+        section.cascadeDeleteSection(sectionName);
+      }
+      return origAdd
+        ? origAdd.apply(this, arguments)
+        : form.GridSection.prototype.handleAdd.apply(this, arguments);
+    };
+  }
+
   sectionRef.renderRowActions = function (section_id) {
     const els = form.TableSection.prototype.renderRowActions.call(
       this,

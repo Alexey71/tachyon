@@ -67,6 +67,7 @@ function show_help() {
     print("    disable                 Disable Tachyon autostart\n");
     print("    reset_settings [no-start]\n");
     print("                            Reset Tachyon settings to factory defaults\n");
+    print("    delete_section <name>   Cascade-delete a section and all its child configs\n");
     print("    uninstall               Remove Tachyon files installed outside opkg/apk\n");
     print("    main                    Run main Tachyon process\n");
     print("    list_update             Update remote lists\n");
@@ -181,6 +182,7 @@ function command_spec(command) {
         disable: [ "service/lifecycle.uc", "disable", 0 ],
         uninstall: [ "service/uninstall.uc", "uninstall", 1 ],
         reset_settings: [ "service/reset.uc", "reset-settings", 1 ],
+        delete_section: [ "config/connections.uc", "delete-section", 1 ],
         dnsmasq_restore: [ "service/lifecycle.uc", "dnsmasq-restore", 0 ],
         restore_dnsmasq: [ "service/lifecycle.uc", "dnsmasq-restore", 0 ],
         main: [ "service/lifecycle.uc", "main", 0 ],

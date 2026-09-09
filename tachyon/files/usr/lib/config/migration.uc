@@ -42,7 +42,9 @@ const SERVER_COUNTRY_METHOD_COUNTRY_IS = "country_is";
 const CHILD_ITEM_TYPES = [
     "subscription_url",
     "section_interface",
-    "urltest"
+    "urltest",
+    "priority_group",
+    "priority_level"
 ];
 
 function shell_quote(value) {
@@ -1439,13 +1441,24 @@ function migrate_orphan_section_interfaces(ctx) {
     for (let section in ctx.model.sections)
         owners[section_name(section)] = true;
 
+    let group_owners = {};
+    for (let group in ctx.model.priority_group || [])
+        group_owners[section_name(group)] = true;
+
     let child_types = [ "subscription_url", "section_interface", "urltest", "priority_group", "priority_level" ];
     for (let type_name in child_types) {
         let kept = [];
         let changed = false;
         for (let child in ctx.model[type_name] || []) {
             let owner = option(child, "section", "");
-            if (owner != "" && !owners[owner]) {
+            let group = option(child, "group", "");
+            let is_orphan = false;
+            if (owner != "" && !owners[owner])
+                is_orphan = true;
+            if (type_name == "priority_level" && group != "" && !group_owners[group])
+                is_orphan = true;
+
+            if (is_orphan) {
                 record_operation(ctx, { op: "delete_section", section: section_name(child) });
                 changed = true;
                 continue;

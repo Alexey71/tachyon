@@ -7370,7 +7370,8 @@ var DOMAIN_LIST_HINTS = {
   russia_inside: "youtube.com, instagram.com, twitter.com, ...",
   russia_outside: "gosuslugi.ru, ozon.ru, rzd.ru, ...",
   ukraine_inside: "ukr.net, pravda.com.ua, suspilne.media, ...",
-  geoblock: "Домены, заблокированные снаружи России (геоблокировка зарубежными сервисами)",
+  geoblock:
+    "Домены, заблокированные снаружи России (геоблокировка зарубежными сервисами)",
   block: "Домены, заблокированные внутри России (полный реестр блокировок РКН)",
   porn: "Pornhub, xvideos, xhamster, ...",
   news: "meduza.io, bbc.com, pravda.com.ua, ...",
@@ -8460,12 +8461,13 @@ function createSectionContent(section) {
 
         const tdUrl = E("td", {
           class: "cbi-section-table-cell",
-          style: "word-break:break-all;overflow-wrap:anywhere;font-size:12px;line-height:1.3;max-width:320px;",
+          style:
+            "word-break:break-all;overflow-wrap:anywhere;font-size:12px;line-height:1.3;max-width:320px;",
         });
         let displayUrl = url;
         try {
           displayUrl = decodeURIComponent(url);
-        } catch(e) {}
+        } catch (e) {}
         const urlSpan = E(
           "span",
           {
@@ -8546,8 +8548,14 @@ function createSectionContent(section) {
           click: function () {
             let val = (input.value || "").trim();
             if (!val) return;
-            val = val.replace(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/, "https://raw.githubusercontent.com/$1/$2/$3");
-            val = val.replace(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/raw\/(.+)$/, "https://raw.githubusercontent.com/$1/$2/$3");
+            val = val.replace(
+              /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/,
+              "https://raw.githubusercontent.com/$1/$2/$3",
+            );
+            val = val.replace(
+              /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/raw\/(.+)$/,
+              "https://raw.githubusercontent.com/$1/$2/$3",
+            );
             let u = getUrls();
             if (u.includes(val)) {
               input.value = "";
@@ -8593,23 +8601,33 @@ function createSectionContent(section) {
                     const data = JSON.parse(res.stdout || "{}");
                     if (data.success) {
                       ok = true;
-                      msg = _("Successfully updated %d hosts entries").format(data.entries);
+                      msg = _("Successfully updated %d hosts entries").format(
+                        data.entries,
+                      );
                     } else {
-                      msg = _("Update failed: ") + (data.error || res.stderr || "");
+                      msg =
+                        _("Update failed: ") + (data.error || res.stderr || "");
                     }
                   } catch (e) {
-                    msg = res.stdout || res.stderr || _("Finished with code ") + res.code;
+                    msg =
+                      res.stdout ||
+                      res.stderr ||
+                      _("Finished with code ") + res.code;
                   }
                   ui.addNotification(
                     null,
                     E("p", {}, msg),
-                    ok ? "info" : "danger"
+                    ok ? "info" : "danger",
                   );
                 })
                 .catch(function (err) {
                   updateBtn.disabled = false;
                   updateBtn.textContent = _("Update Lists Now");
-                  ui.addNotification(null, E("p", {}, err.message || err), "danger");
+                  ui.addNotification(
+                    null,
+                    E("p", {}, err.message || err),
+                    "danger",
+                  );
                 });
             },
           },
@@ -8869,15 +8887,17 @@ function createSectionContent(section) {
 
           setState("success", _("Generated!"));
           resetAfter(2500);
-          let successMsg = _("AmneziaWG (Cloudflare WARP) configuration generated and loaded successfully!");
-          if (currentVersion !== "2.0") {
-            successMsg += "\n\n" + _("Notice: Cloudflare WARP edge servers only support AmneziaWG 2.0 (WireGuard). The profile has been automatically set to 2.0 so the connection works properly. Versions 3.0 and 3.1 require an AmneziaWG server via 'Import .conf'.");
-          }
-          showStatusModal(
-            _("Success"),
-            successMsg,
-            false,
+          let successMsg = _(
+            "AmneziaWG (Cloudflare WARP) configuration generated and loaded successfully!",
           );
+          if (currentVersion !== "2.0") {
+            successMsg +=
+              "\n\n" +
+              _(
+                "Notice: Cloudflare WARP edge servers only support AmneziaWG 2.0 (WireGuard). The profile has been automatically set to 2.0 so the connection works properly. Versions 3.0 and 3.1 require an AmneziaWG server via 'Import .conf'.",
+              );
+          }
+          showStatusModal(_("Success"), successMsg, false);
         } catch (err) {
           setState("error", _("Error"));
           resetAfter(2500);
@@ -8958,7 +8978,9 @@ function createSectionContent(section) {
       if (val === undefined || val === null) return;
       const str = String(val);
       const el =
-        document.getElementById(`widget.cbid.${UCI_PACKAGE}.${section_id}.${opt}`) ||
+        document.getElementById(
+          `widget.cbid.${UCI_PACKAGE}.${section_id}.${opt}`,
+        ) ||
         document.getElementById(`cbid.${UCI_PACKAGE}.${section_id}.${opt}`);
       const w =
         el &&
@@ -9055,7 +9077,8 @@ function createSectionContent(section) {
         const mtu = getConfVal("MTU");
         if (mtu !== undefined) setVal("awg_mtu", mtu);
 
-        const keepalive = getConfVal("PersistentKeepalive") || getConfVal("Keepalive");
+        const keepalive =
+          getConfVal("PersistentKeepalive") || getConfVal("Keepalive");
         if (keepalive !== undefined) setVal("awg_keepalive", keepalive);
 
         const jc = getConfVal("Jc");
@@ -9129,9 +9152,17 @@ function createSectionContent(section) {
         const randomTrailers = getConfVal("RandomTrailers") || "";
         const disableCookies = getConfVal("DisableCookies") || "";
 
-        const isV31 = !!(rka || rkt || rja || kpt || mha || randomTrailers || disableCookies);
+        const isV31 = !!(
+          rka ||
+          rkt ||
+          rja ||
+          kpt ||
+          mha ||
+          randomTrailers ||
+          disableCookies
+        );
         const isV30 = !isV31 && !!(hpk || cpa);
-        const detectedVersion = isV31 ? "3.1" : (isV30 ? "3.0" : "2.0");
+        const detectedVersion = isV31 ? "3.1" : isV30 ? "3.0" : "2.0";
 
         setVal("awg_version", detectedVersion);
 
@@ -9151,8 +9182,22 @@ function createSectionContent(section) {
           setVal("awg_reject_after_time", rja);
           setVal("awg_keepalive_timeout", kpt);
           setVal("awg_max_handshake_attempts", mha);
-          uci.set(UCI_PACKAGE, section_id, "awg_random_trailers", /^(1|true|yes|on)$/i.test(String(randomTrailers).trim()) ? "1" : "0");
-          uci.set(UCI_PACKAGE, section_id, "awg_disable_cookies", /^(1|true|yes|on)$/i.test(String(disableCookies).trim()) ? "1" : "0");
+          uci.set(
+            UCI_PACKAGE,
+            section_id,
+            "awg_random_trailers",
+            /^(1|true|yes|on)$/i.test(String(randomTrailers).trim())
+              ? "1"
+              : "0",
+          );
+          uci.set(
+            UCI_PACKAGE,
+            section_id,
+            "awg_disable_cookies",
+            /^(1|true|yes|on)$/i.test(String(disableCookies).trim())
+              ? "1"
+              : "0",
+          );
         } else {
           setVal("awg_rekey_after_time", "");
           setVal("awg_rekey_timeout", "");
@@ -9169,10 +9214,12 @@ function createSectionContent(section) {
         }
 
         // --- [Peer] ---
-        const pub = getConfVal("PublicKey") || getConfVal("awg_peer_public_key");
+        const pub =
+          getConfVal("PublicKey") || getConfVal("awg_peer_public_key");
         if (pub) setVal("awg_peer_public_key", pub);
 
-        const psk = getConfVal("PresharedKey") || getConfVal("awg_preshared_key");
+        const psk =
+          getConfVal("PresharedKey") || getConfVal("awg_preshared_key");
         if (psk) setVal("awg_preshared_key", psk);
 
         const ep = getConfVal("Endpoint");
@@ -9303,7 +9350,9 @@ function createSectionContent(section) {
     form.ListValue,
     "awg_version",
     _("AmneziaWG Version"),
-    _("Protocol version: 2.0 (standard headers, WARP compatible), 3.0 (header protection key, padding ranges), or 3.1 (header protection key, padding ranges, advanced timers)"),
+    _(
+      "Protocol version: 2.0 (standard headers, WARP compatible), 3.0 (header protection key, padding ranges), or 3.1 (header protection key, padding ranges, advanced timers)",
+    ),
   );
   o.modalonly = true;
   o.rmempty = false;
@@ -9397,16 +9446,47 @@ function createSectionContent(section) {
     return opt;
   };
 
-  addAwgV3Param("awg_header_protection_key", _("Header Protection Key"), _("AmneziaWG 3.0 / 3.1 header protection key"));
-  addAwgV3Param("awg_content_padding_addition", _("Content Padding Addition"), _("AmneziaWG 3.0 / 3.1 content padding range, e.g. 38-104"));
-  addAwgV31Param("awg_rekey_after_time", _("Rekey After Time"), _("AmneziaWG 3.1 rekey after time"));
-  addAwgV31Param("awg_rekey_timeout", _("Rekey Timeout"), _("AmneziaWG 3.1 rekey timeout"));
-  addAwgV31Param("awg_reject_after_time", _("Reject After Time"), _("AmneziaWG 3.1 reject after time"));
-  addAwgV31Param("awg_keepalive_timeout", _("Keepalive Timeout"), _("AmneziaWG 3.1 keepalive timeout"));
-  addAwgV31Param("awg_max_handshake_attempts", _("Max Handshake Attempts"), _("AmneziaWG 3.1 max handshake attempts"));
+  addAwgV3Param(
+    "awg_header_protection_key",
+    _("Header Protection Key"),
+    _("AmneziaWG 3.0 / 3.1 header protection key"),
+  );
+  addAwgV3Param(
+    "awg_content_padding_addition",
+    _("Content Padding Addition"),
+    _("AmneziaWG 3.0 / 3.1 content padding range, e.g. 38-104"),
+  );
+  addAwgV31Param(
+    "awg_rekey_after_time",
+    _("Rekey After Time"),
+    _("AmneziaWG 3.1 rekey after time"),
+  );
+  addAwgV31Param(
+    "awg_rekey_timeout",
+    _("Rekey Timeout"),
+    _("AmneziaWG 3.1 rekey timeout"),
+  );
+  addAwgV31Param(
+    "awg_reject_after_time",
+    _("Reject After Time"),
+    _("AmneziaWG 3.1 reject after time"),
+  );
+  addAwgV31Param(
+    "awg_keepalive_timeout",
+    _("Keepalive Timeout"),
+    _("AmneziaWG 3.1 keepalive timeout"),
+  );
+  addAwgV31Param(
+    "awg_max_handshake_attempts",
+    _("Max Handshake Attempts"),
+    _("AmneziaWG 3.1 max handshake attempts"),
+  );
 
   o = section.taboption(
-    "settings", form.Flag, "awg_random_trailers", _("Random Trailers"),
+    "settings",
+    form.Flag,
+    "awg_random_trailers",
+    _("Random Trailers"),
     _("AmneziaWG 3.1 random packet trailers"),
   );
   o.modalonly = true;
@@ -9415,14 +9495,16 @@ function createSectionContent(section) {
   o.depends({ action: "awg", awg_version: "3.1" });
 
   o = section.taboption(
-    "settings", form.Flag, "awg_disable_cookies", _("Disable Cookies"),
+    "settings",
+    form.Flag,
+    "awg_disable_cookies",
+    _("Disable Cookies"),
     _("AmneziaWG 3.1 disable cookie replies"),
   );
   o.modalonly = true;
   o.rmempty = false;
   o.default = "0";
   o.depends({ action: "awg", awg_version: "3.1" });
-
 
   // ── WARP (Cloudflare WARP via sing-box-extended) ──────────────────────────
 
@@ -11009,12 +11091,24 @@ async function performTrace(query) {
   }
 
   // Check DNS Detour from settings if enabled
-  const dnsDetourEnabled = uci.get(UCI_PACKAGE, "settings", "dns_detour_enabled");
+  const dnsDetourEnabled = uci.get(
+    UCI_PACKAGE,
+    "settings",
+    "dns_detour_enabled",
+  );
   if (dnsDetourEnabled === "1") {
-    const detourSection = uci.get(UCI_PACKAGE, "settings", "dns_detour_section");
+    const detourSection = uci.get(
+      UCI_PACKAGE,
+      "settings",
+      "dns_detour_section",
+    );
     if (detourSection) {
-      const dnsServers = normalizeOptionValues(uci.get(UCI_PACKAGE, "settings", "dns_server"));
-      const fallbackServers = normalizeOptionValues(uci.get(UCI_PACKAGE, "settings", "dns_fallback_server"));
+      const dnsServers = normalizeOptionValues(
+        uci.get(UCI_PACKAGE, "settings", "dns_server"),
+      );
+      const fallbackServers = normalizeOptionValues(
+        uci.get(UCI_PACKAGE, "settings", "dns_fallback_server"),
+      );
       const allDns = [...dnsServers, ...fallbackServers];
       const detourIps = [];
       const detourDomains = [];
@@ -11027,11 +11121,14 @@ async function performTrace(query) {
           detourDomains.push(s);
         }
       }
-      const isDnsMatch = (type === "ip" && detourIps.includes(queryForMatching)) ||
-                         (type === "domain" && detourDomains.includes(queryForMatching));
+      const isDnsMatch =
+        (type === "ip" && detourIps.includes(queryForMatching)) ||
+        (type === "domain" && detourDomains.includes(queryForMatching));
       if (isDnsMatch) {
-        const label = uci.get(UCI_PACKAGE, detourSection, "label") || detourSection;
-        const action = uci.get(UCI_PACKAGE, detourSection, "action") || "connection";
+        const label =
+          uci.get(UCI_PACKAGE, detourSection, "label") || detourSection;
+        const action =
+          uci.get(UCI_PACKAGE, detourSection, "action") || "connection";
         return {
           matched: true,
           sectionName: detourSection,
@@ -11612,6 +11709,132 @@ function showSectionRulesModal(section_id) {
   );
 }
 
+function cascadeDeleteSection(section_id) {
+  if (!section_id) return;
+
+  // 1. Remove child sections: priority_group, priority_level, subscription_url, section_interface, urltest
+  try {
+    const priorityGroups = (
+      uci.sections(UCI_PACKAGE, "priority_group") || []
+    ).filter((item) => item.section === section_id);
+
+    priorityGroups.forEach((group) => {
+      const groupId = group[".name"];
+      (uci.sections(UCI_PACKAGE, "priority_level") || [])
+        .filter(
+          (level) => level.group === groupId || level.section === section_id,
+        )
+        .forEach((level) => {
+          uci.remove(UCI_PACKAGE, level[".name"]);
+        });
+      uci.remove(UCI_PACKAGE, groupId);
+    });
+
+    (uci.sections(UCI_PACKAGE, "priority_level") || [])
+      .filter((level) => level.section === section_id)
+      .forEach((level) => {
+        uci.remove(UCI_PACKAGE, level[".name"]);
+      });
+
+    ["subscription_url", "section_interface", "urltest"].forEach((typeName) => {
+      (uci.sections(UCI_PACKAGE, typeName) || [])
+        .filter((item) => item.section === section_id)
+        .forEach((item) => {
+          uci.remove(UCI_PACKAGE, item[".name"]);
+        });
+    });
+  } catch (_e) {}
+
+  // 2. Clean references in settings
+  try {
+    const smartDetect = uci.get(
+      UCI_PACKAGE,
+      "settings",
+      "smart_detect_sections",
+    );
+    if (Array.isArray(smartDetect)) {
+      const filtered = smartDetect.filter((sec) => sec !== section_id);
+      if (filtered.length !== smartDetect.length) {
+        uci.set(UCI_PACKAGE, "settings", "smart_detect_sections", filtered);
+      }
+    } else if (
+      typeof smartDetect === "string" &&
+      smartDetect.trim() === section_id
+    ) {
+      uci.set(UCI_PACKAGE, "settings", "smart_detect_sections", []);
+    }
+
+    [
+      "dns_detour_section",
+      "download_lists_via_proxy_section",
+      "download_components_via_proxy_section",
+      "warp_proxy_section",
+    ].forEach((opt) => {
+      if (uci.get(UCI_PACKAGE, "settings", opt) === section_id) {
+        uci.set(UCI_PACKAGE, "settings", opt, "");
+      }
+    });
+  } catch (_e) {}
+
+  // 3. Clean references in other sections
+  try {
+    (uci.sections(UCI_PACKAGE, "section") || []).forEach((sec) => {
+      const sName = sec[".name"];
+      if (sName === section_id) return;
+      if (sec.outbound_detour_section === section_id) {
+        uci.set(UCI_PACKAGE, sName, "outbound_detour_section", "");
+        uci.set(UCI_PACKAGE, sName, "outbound_detour_enabled", "0");
+      }
+      if (sec.dns_detour_section === section_id) {
+        uci.set(UCI_PACKAGE, sName, "dns_detour_section", "");
+        uci.set(UCI_PACKAGE, sName, "dns_detour_enabled", "0");
+      }
+    });
+  } catch (_e) {}
+
+  // 4. Clean references in servers
+  try {
+    (uci.sections(UCI_PACKAGE, "server") || []).forEach((srv) => {
+      const srvName = srv[".name"];
+      if (srv.routing_section === section_id) {
+        uci.set(UCI_PACKAGE, srvName, "routing_section", "");
+        if (srv.routing_mode === "section") {
+          uci.set(UCI_PACKAGE, srvName, "routing_mode", "rules");
+        }
+      }
+    });
+  } catch (_e) {}
+
+  // 5. Clean disk caches
+  try {
+    if (typeof fs !== "undefined") {
+      if (typeof fs.remove === "function") {
+        fs.remove(`/var/run/tachyon/section-cache/${section_id}.json`).catch(
+          () => null,
+        );
+        fs.remove(`/etc/tachyon/subscription-cache/${section_id}.json`).catch(
+          () => null,
+        );
+        fs.remove(`/etc/tachyon/subscription-cache/${section_id}.yaml`).catch(
+          () => null,
+        );
+        fs.remove(`/etc/tachyon/subscription-cache/${section_id}.txt`).catch(
+          () => null,
+        );
+      }
+      if (typeof fs.exec === "function") {
+        fs.exec("/bin/rm", [
+          "-f",
+          `/var/run/tachyon/section-cache/${section_id}.json`,
+          `/etc/tachyon/subscription-cache/${section_id}.json`,
+          `/etc/tachyon/subscription-cache/${section_id}.yaml`,
+          `/etc/tachyon/subscription-cache/${section_id}.txt`,
+        ]).catch(() => null);
+      }
+    }
+  } catch (_e) {}
+}
+
 function configureSectionSection(sectionRef, options = {}) {
   setActionProvidersAvailabilityLoader(options.loadActionProvidersAvailability);
 
@@ -11623,6 +11846,39 @@ function configureSectionSection(sectionRef, options = {}) {
     // The table renders only non-modal fields; the cloned Add/Edit modal loads
     // action/provider details when the user opens it.
     return loadSectionTableOptions(this);
+  };
+
+  const originalRemove = sectionRef.remove;
+  sectionRef.remove = function (section_id) {
+    cascadeDeleteSection(section_id);
+    return originalRemove
+      ? originalRemove.apply(this, arguments)
+      : form.GridSection.prototype.remove.apply(this, arguments);
+  };
+
+  const originalAdd = sectionRef.handleAdd;
+  sectionRef.handleAdd = function (ev, name) {
+    let sectionName =
+      typeof name === "string" && name.trim() ? name.trim() : null;
+    if (!sectionName && ev && ev.target) {
+      const container = ev.target.closest
+        ? ev.target.closest(".cbi-section-create")
+        : null;
+      const input = container
+        ? container.querySelector(".cbi-section-create-name")
+        : this.map
+          ? document.querySelector(".cbi-section-create-name")
+          : null;
+      if (input && input.value) {
+        sectionName = input.value.trim();
+      }
+    }
+    if (sectionName) {
+      cascadeDeleteSection(sectionName);
+    }
+    return originalAdd
+      ? originalAdd.apply(this, arguments)
+      : form.GridSection.prototype.handleAdd.apply(this, arguments);
   };
 
   const originalRender = sectionRef.render;
@@ -11638,6 +11894,7 @@ function configureSectionSection(sectionRef, options = {}) {
 }
 
 const EntryPoint = {
+  cascadeDeleteSection,
   configureSectionSection,
   createSectionContent,
   setActionProvidersAvailabilityLoader,

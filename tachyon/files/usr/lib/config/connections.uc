@@ -1242,10 +1242,39 @@ function subscription_download_target_port(sections, target, base_port) {
 }
 
 // Cascade-delete all child sections (subscription_url, urltest, etc.) that
-// belong to the given parent section.  Returns the number of children removed.
+// belong to the given parent section, along with cross-references and disk caches.
+// Returns the number of children removed.
 function cascade_delete_section(cursor, config_name, parent_name) {
     let removed = 0;
-    for (let type_name in ITEM_TYPES) {
+    config_name = as_string(config_name || CONFIG_NAME);
+    parent_name = as_string(parent_name || "");
+    if (parent_name == "")
+        return 0;
+
+    // 1. Delete priority_level belonging to priority_group in this section
+    try {
+        let group_names = [];
+        cursor.foreach(config_name, "priority_group", function(section) {
+            if (option(section, "section", "") == parent_name)
+                push(group_names, section_name(section));
+        });
+        for (let gname in group_names) {
+            let level_names = [];
+            cursor.foreach(config_name, "priority_level", function(section) {
+                if (option(section, "group", "") == gname || option(section, "section", "") == parent_name)
+                    push(level_names, section_name(section));
+            });
+            for (let lname in level_names) {
+                cursor.delete(config_name, lname);
+                removed++;
+            }
+            cursor.delete(config_name, gname);
+            removed++;
+        }
+    } catch (e) {}
+
+    // 2. Delete all other child sections (subscription_url, section_interface, urltest, priority_level)
+    for (let type_name in [ "subscription_url", "section_interface", "urltest", "priority_level" ]) {
         try {
             let to_delete = [];
             cursor.foreach(config_name, type_name, function(section) {
@@ -1258,8 +1287,92 @@ function cascade_delete_section(cursor, config_name, parent_name) {
             }
         } catch (e) {}
     }
+
+    // 3. Clean references in settings
+    try {
+        let smart_detect = cursor.get(config_name, "settings", "smart_detect_sections");
+        if (type(smart_detect) == "array") {
+            let filtered = [];
+            for (let sec in smart_detect) {
+                if (as_string(sec) != parent_name)
+                    push(filtered, sec);
+            }
+            if (length(filtered) != length(smart_detect))
+                cursor.set(config_name, "settings", "smart_detect_sections", filtered);
+        } else if (as_string(smart_detect) == parent_name) {
+            cursor.delete(config_name, "settings", "smart_detect_sections");
+        }
+
+        for (let opt in [ "dns_detour_section", "download_lists_via_proxy_section", "download_components_via_proxy_section", "warp_proxy_section" ]) {
+            if (as_string(cursor.get(config_name, "settings", opt)) == parent_name)
+                cursor.delete(config_name, "settings", opt);
+        }
+    } catch (e) {}
+
+    // 4. Clean references in other sections
+    try {
+        cursor.foreach(config_name, "section", function(sec) {
+            let sname = section_name(sec);
+            if (sname == parent_name) return;
+            if (option(sec, "outbound_detour_section", "") == parent_name) {
+                cursor.delete(config_name, sname, "outbound_detour_section");
+                cursor.set(config_name, sname, "outbound_detour_enabled", "0");
+            }
+            if (option(sec, "dns_detour_section", "") == parent_name) {
+                cursor.delete(config_name, sname, "dns_detour_section");
+                cursor.set(config_name, sname, "dns_detour_enabled", "0");
+            }
+        });
+    } catch (e) {}
+
+    // 5. Clean references in servers
+    try {
+        cursor.foreach(config_name, "server", function(srv) {
+            let sname = section_name(srv);
+            if (option(srv, "routing_section", "") == parent_name) {
+                cursor.delete(config_name, sname, "routing_section");
+                if (option(srv, "routing_mode", "") == "section")
+                    cursor.set(config_name, sname, "routing_mode", "rules");
+            }
+        });
+    } catch (e) {}
+
+    // 6. Delete section cache files
+    try {
+        command_success_from_args([ "rm", "-f",
+            "/var/run/tachyon/section-cache/" + parent_name + ".json",
+            "/etc/tachyon/subscription-cache/" + parent_name + ".json",
+            "/etc/tachyon/subscription-cache/" + parent_name + ".yaml",
+            "/etc/tachyon/subscription-cache/" + parent_name + ".txt"
+        ]);
+    } catch (e) {}
+
     return removed;
 }
+
+function cli_delete_section(sec_name) {
+    sec_name = trim(as_string(sec_name));
+    if (sec_name == "") {
+        warn("Usage: tachyon delete_section <section_name>\n");
+        return 1;
+    }
+    let c = uci_core.cursor();
+    c.load(CONFIG_NAME);
+    let s = c.get_all(CONFIG_NAME, sec_name);
+    if (!s) {
+        warn("Section '" + sec_name + "' not found\n");
+        return 1;
+    }
+    cascade_delete_section(c, CONFIG_NAME, sec_name);
+    c.delete(CONFIG_NAME, sec_name);
+    c.commit(CONFIG_NAME);
+    print(sprintf("{\"success\":true,\"deleted\":%J}\n", sec_name));
+    return 0;
+}
+
+let cli_mode = as_string(ARGV[0]);
+if (cli_mode == "delete-section")
+    exit(cli_delete_section(ARGV[1]));
 
 return {
     option,
@@ -1405,5 +1518,6 @@ return {
     subscription_download_targets,
     subscription_download_target_port,
     has_dns_matchers,
-    item_index_from_cursor
+    item_index_from_cursor,
+    cli_delete_section
 };
