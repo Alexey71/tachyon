@@ -13,6 +13,11 @@ const TRANSIENT_RPC_ERROR_PATTERNS = [
   'service unavailable',
   'ubus error',
   'ipc error',
+  'access denied',
+  'доступ запрещён',
+  'доступ запрещен',
+  'permission denied',
+  'unauthorized',
 ];
 
 export function isTransientRpcError(message?: string | null) {

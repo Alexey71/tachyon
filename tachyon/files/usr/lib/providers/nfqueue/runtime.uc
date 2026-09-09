@@ -343,6 +343,10 @@ function supervisor_command(cfg, queue, raw_opt, child_pidfile) {
     let args = [ cfg.binary, "--qnum=" + as_string(queue) ];
     for (let arg in base_args(cfg))
         push(args, arg);
+    if (type(cfg.prepare_strategy_args) == "function") {
+        for (let extra in cfg.prepare_strategy_args(raw_opt))
+            push(args, extra);
+    }
     for (let word in strategy_words(raw_opt))
         push(args, word);
 

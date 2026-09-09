@@ -461,9 +461,13 @@ EOF
 [ -n "${IPKG_INSTROOT}" ] && exit 0
 [ "$1" = "upgrade" ] && exit 0
 [ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
+if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+    exit 0
+fi
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
 rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
-rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+rm -rf /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+rm -rf /var/run/tachyon/section-cache /var/run/tachyon/ui-state 2>/dev/null || true
 [ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart >/dev/null 2>&1 || true
 [ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
 exit 0
@@ -519,6 +523,9 @@ EOF
 [ -n "${IPKG_INSTROOT}" ] && exit 0
 [ "$1" = "upgrade" ] && exit 0
 [ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
+if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+    exit 0
+fi
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
 [ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 exit 0
@@ -797,9 +804,13 @@ EOF
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
 [ -f /usr/bin/tachyon ] && exit 0
+if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+    exit 0
+fi
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
 rm -f /usr/share/nftables.d/chain-pre/input/10-tachyon.nft 2>/dev/null || true
-rm -rf /var/run/tachyon* /tmp/tachyon* /tmp/sing-box /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+rm -rf /tmp/ai_doctor* /tmp/tg_* /tmp/warp_* 2>/dev/null || true
+rm -rf /var/run/tachyon/section-cache /var/run/tachyon/ui-state 2>/dev/null || true
 [ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart >/dev/null 2>&1 || true
 [ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
 exit 0

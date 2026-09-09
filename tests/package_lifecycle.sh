@@ -319,11 +319,11 @@ grep -Fq 'procd_tachyon' "$PACKAGE_UC" ||
 
 # Verify that write_backend_ipk_control includes autostart enable and package_postinst
 sed -n '/^write_backend_ipk_control() {/,/^write_app_ipk_control() {/p' "$BUILD_SCRIPT" |
-  grep -Fq '/usr/bin/tachyon package_postinst' ||
+  grep -F '/usr/bin/tachyon package_postinst' >/dev/null ||
   fail "backend IPK postinst must call /usr/bin/tachyon package_postinst"
 
 sed -n '/^write_backend_ipk_control() {/,/^write_app_ipk_control() {/p' "$BUILD_SCRIPT" |
-  grep -Fq '/etc/init.d/tachyon enable' ||
+  grep -F '/etc/init.d/tachyon enable' >/dev/null ||
   fail "backend IPK postinst must ensure service autostart is enabled"
 
 # Verify all postrm scripts guard against upgrade

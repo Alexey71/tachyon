@@ -3462,7 +3462,12 @@ var TRANSIENT_RPC_ERROR_PATTERNS = [
   "bad gateway",
   "service unavailable",
   "ubus error",
-  "ipc error"
+  "ipc error",
+  "access denied",
+  "\u0434\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D",
+  "\u0434\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0435\u043D",
+  "permission denied",
+  "unauthorized"
 ];
 function isTransientRpcError(message) {
   if (!message) {
@@ -4053,7 +4058,7 @@ var TachyonShellMethods = {
   },
   waitComponentActionJob: async (jobId, component, action, expectedLatestVersion) => {
     const jobStartedAt = Date.now();
-    const isSelfUpdate = component === "tachyon" && (action === "install" || action === "reinstall");
+    const isSelfUpdate = component === "tachyon" && (action === "install" || action === "reinstall" || action === "install_version");
     const targetVersion = expectedLatestVersion || "";
     let baselineVersion = "";
     if (isSelfUpdate) {

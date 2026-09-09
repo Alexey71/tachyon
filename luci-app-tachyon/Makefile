@@ -40,6 +40,10 @@ define Package/$(PKG_NAME)/postrm
 [ "$$1" = "upgrade" ] && exit 0
 [ "$$1" != "remove" ] && [ "$$1" != "purge" ] && [ -n "$$1" ] && exit 0
 
+if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+	exit 0
+fi
+
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
 [ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 

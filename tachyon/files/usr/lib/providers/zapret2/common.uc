@@ -12,6 +12,68 @@ function validator() {
     return validator_module;
 }
 
+const KNOWN_BLOB_FILES = {
+    tls_max: { file: "tls_clienthello_max_ru.bin", size: 654 },
+    tls_google: { file: "tls_clienthello_www_google_com.bin", size: 681 },
+    tls_gosuslugi: { file: "tls_clienthello_gosuslugi_ru.bin", size: 517 },
+    tls_sber: { file: "tls_clienthello_sberbank_ru.bin", size: 517 },
+    tls_iana: { file: "tls_clienthello_iana_org.bin", size: 517 },
+    tls_vk: { file: "tls_clienthello_vk_com.bin", size: 517 },
+    tls_onetrust: { file: "tls_clienthello_www_onetrust_com.bin", size: 664 },
+    quic_google: { file: "quic_initial_www_google_com.bin", size: 1200 },
+    quic_yt1: { file: "quic_initial_rr1---sn-xguxaxjvh-n8me_googlevideo_com_kyber_1.bin", size: 1230 },
+    quic_vk: { file: "quic_initial_vk_com.bin", size: 1357 },
+    stun_fake: { file: "stun.bin", size: 100 },
+    discord_udp: { file: "stun.bin", size: 100 }
+};
+
+function get_blob_dir() {
+    let candidate_dirs = [
+        getenv("ZAPRET2_PROVIDER_FILES_DIR") ? (getenv("ZAPRET2_PROVIDER_FILES_DIR") + "/fake") : null,
+        "/opt/zapret2/files/fake",
+        "/usr/share/zapret2/files/fake",
+        "/etc/zapret2/files/fake",
+        "/opt/zapret/files/fake",
+        "/usr/share/zapret/files/fake"
+    ];
+    for (let d in candidate_dirs) {
+        if (d && fs.stat(d) != null) return d;
+    }
+    return "/opt/zapret2/files/fake";
+}
+
+function resolve_blobs(args_str) {
+    if (!args_str || args_str == "") return [];
+    let bdir = get_blob_dir();
+    let result = [];
+    for (let name, info in KNOWN_BLOB_FILES) {
+        if ((index(args_str, "blob=" + name) >= 0 || index(args_str, "seqovl_pattern=" + name) >= 0) &&
+            index(args_str, "--blob=" + name + ":") < 0) {
+            let blob_path = bdir + "/" + info.file;
+            if (fs.stat(blob_path) != null || fs.stat("/opt/zapret2/files/fake/" + info.file) != null) {
+                let actual_path = fs.stat(blob_path) != null ? blob_path : ("/opt/zapret2/files/fake/" + info.file);
+                push(result, sprintf("--blob=%s:@%s", name, actual_path));
+            }
+        }
+    }
+    return result;
+}
+
+function prepare_strategy_args(raw_opt) {
+    let raw_str = as_string(raw_opt);
+    let extra_args = resolve_blobs(raw_str);
+    let filter_prefix = [];
+    if (index(raw_str, "--filter-tcp") < 0 && index(raw_str, "--filter-l7") < 0) {
+        push(filter_prefix, "--filter-tcp=443");
+        push(filter_prefix, "--filter-l7=tls");
+        push(filter_prefix, "--payload=tls_client_hello");
+    }
+    let words = [];
+    for (let arg in extra_args) push(words, arg);
+    for (let f in filter_prefix) push(words, f);
+    return words;
+}
+
 function config(ctx) {
     let runtime_constants = (ctx && ctx.constants) || constants;
     let lib_dir = (ctx && ctx.lib_dir) || LIB_DIR;
@@ -111,7 +173,8 @@ function config(ctx) {
         hostlist_dir: "",
         status_label: "zapret2",
         check_prefix: "zapret2",
-        base_args
+        base_args,
+        prepare_strategy_args
     };
 }
 

@@ -1408,6 +1408,10 @@ function install_zapret2(action, target_tag) {
     if (pkg == null)
         action_fail(component, action, "Failed to download " + label + " package", current_version, release.version, "", release.release_url || "");
 
+    let hosts_content = read_file("/etc/hosts") || "";
+    if (index(hosts_content, "::1") < 0)
+        command_success("printf '\\n::1 localhost ip6-localhost ip6-loopback\\n' >> /etc/hosts");
+
     if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ])))
         action_fail(component, action, "Failed to install " + label + " package", current_version, pkg.version, "", release.release_url || "");
 
@@ -1418,8 +1422,11 @@ function install_zapret2(action, target_tag) {
     if (file_exists("/opt/zapret2"))
         command_status_from_args([ "chmod", "-R", "a+rX", "/opt/zapret2" ]);
 
+    command_success_from_args([ "killall", "-9", "nfqws2" ]);
     disable_standalone_service(component);
     command_status_from_args([ "nft", "delete", "table", "inet", "zapret2" ]);
+    command_status_from_args([ "nft", "delete", "table", "ip", "zapret2" ]);
+    command_status_from_args([ "nft", "delete", "table", "ip6", "zapret2" ]);
     restart_tachyon_after_successful_change();
     clear_version_caches();
     current_version = provider_package_version(runtime_module);
@@ -2662,7 +2669,7 @@ function reinstall_tachyon() {
         (release.i18n_url != "" && !download_with_retry(release.i18n_url, i18n_file, release.i18n_name)))
         action_fail("tachyon", "reinstall", "Failed to download Tachyon release packages", TACHYON_VERSION, latest_version);
 
-    let reinstall_files = [ app_file, backend_file ];
+    let reinstall_files = [ backend_file, app_file ];
     if (i18n_file != "")
         push(reinstall_files, i18n_file);
     if (!run_logged_retrying("Reinstalling Tachyon packages", pkg_install_files_command(reinstall_files, true)))
@@ -2706,7 +2713,7 @@ function install_tachyon() {
         (release.i18n_url != "" && !download_with_retry(release.i18n_url, i18n_file, release.i18n_name)))
         action_fail("tachyon", "install", "Failed to download Tachyon release packages", TACHYON_VERSION, latest_version);
 
-    let install_files = [ app_file, backend_file ];
+    let install_files = [ backend_file, app_file ];
     if (i18n_file != "")
         push(install_files, i18n_file);
     // Installing the same tag means a rebuild of the current release; opkg skips
@@ -2750,7 +2757,7 @@ function install_tachyon_version(target_tag) {
         (release.i18n_url != "" && !download_with_retry(release.i18n_url, i18n_file, release.i18n_name)))
         action_fail("tachyon", "install_version", "Failed to download Tachyon release packages", TACHYON_VERSION, target_tag);
 
-    let install_files = [ app_file, backend_file ];
+    let install_files = [ backend_file, app_file ];
     if (i18n_file != "")
         push(install_files, i18n_file);
 

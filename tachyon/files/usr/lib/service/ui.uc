@@ -47,7 +47,11 @@ const RT_TABLE_NAME = getenv("RT_TABLE_NAME") || "tachyon";
 const NFT_FAKEIP_MARK = getenv("NFT_FAKEIP_MARK") || "0x04000000";
 const SB_DNS_INBOUND_ADDRESS = getenv("SB_DNS_INBOUND_ADDRESS") || "127.0.0.42";
 const ZAPRET_PROVIDER_NFQWS_BIN = getenv("ZAPRET_PROVIDER_NFQWS_BIN") || "/opt/zapret/nfq/nfqws";
-const ZAPRET2_PROVIDER_NFQWS2_BIN = getenv("ZAPRET2_PROVIDER_NFQWS2_BIN") || "/opt/zapret2/nfq2/nfqws2";
+let default_zapret2_bin = "/opt/zapret2/nfq2/nfqws2";
+for (let b in [ "/opt/zapret2/nfq2/nfqws2", "/opt/zapret2/nfq/nfqws2", "/opt/zapret2/nfqws2", "/usr/bin/nfqws2" ]) {
+    if (fs.stat(b) != null) { default_zapret2_bin = b; break; }
+}
+const ZAPRET2_PROVIDER_NFQWS2_BIN = getenv("ZAPRET2_PROVIDER_NFQWS2_BIN") || default_zapret2_bin;
 const BYEDPI_BIN = getenv("BYEDPI_BIN") || "/usr/bin/ciadpi";
 
 let read_json_file = common.read_json_file;

@@ -774,7 +774,9 @@ export const TachyonShellMethods = {
     const jobStartedAt = Date.now();
     const isSelfUpdate =
       component === 'tachyon' &&
-      (action === 'install' || action === 'reinstall');
+      (action === 'install' ||
+        action === 'reinstall' ||
+        action === 'install_version');
     const targetVersion = expectedLatestVersion || '';
     // Version before the update started: confirms an install even when the
     // expected target version is unknown.
