@@ -1208,7 +1208,17 @@ function installer_backend_status_running(bin_path) {
 }
 
 function select_dns_owner(legacy) {
-    if (legacy) {
+    if (legacy == "forkop" || legacy == "forkop_plus") {
+        dns_owner_config = "forkop";
+        dns_owner_section = "forkop";
+        dns_owner_option_prefix = "forkop_";
+    }
+    else if (legacy == "netshift") {
+        dns_owner_config = "netshift";
+        dns_owner_section = "netshift";
+        dns_owner_option_prefix = "netshift_";
+    }
+    else if (legacy) {
         dns_owner_config = LEGACY_BACKEND_PACKAGE;
         dns_owner_section = LEGACY_CONFIG_PACKAGE_ALT;
         dns_owner_option_prefix = LEGACY_BRAND + "_";
@@ -1288,11 +1298,54 @@ function installer_cleanup_legacy() {
     let tachyon_installed = installer_package_installed("tachyon") ||
         path_exists("/etc/config/tachyon") ||
         path_executable(INSTALLER_TACHYON_BIN);
-    let legacy_installed = LEGACY_BRAND != "" && installer_package_installed(LEGACY_BACKEND_PACKAGE);
+    let legacy_installed = (LEGACY_BRAND != "" && (
+            installer_package_installed(LEGACY_BACKEND_PACKAGE) ||
+            installer_package_installed(LEGACY_BRAND) ||
+            installer_package_installed("luci-app-" + LEGACY_BRAND) ||
+            installer_package_installed("luci-app-" + LEGACY_BACKEND_PACKAGE) ||
+            path_exists("/etc/config/" + LEGACY_BRAND) ||
+            path_exists("/etc/config/" + LEGACY_BACKEND_PACKAGE) ||
+            path_exists("/etc/config/" + LEGACY_CONFIG_PACKAGE_ALT) ||
+            path_executable(INSTALLER_LEGACY_INIT) ||
+            path_executable(INSTALLER_LEGACY_BASE_INIT)
+        )) ||
+        installer_package_installed("forkop") ||
+        installer_package_installed("luci-app-forkop") ||
+        installer_package_installed("netshift") ||
+        installer_package_installed("luci-app-netshift") ||
+        path_exists("/etc/config/forkop") ||
+        path_exists("/etc/config/forkop_plus") ||
+        path_exists("/etc/config/netshift") ||
+        path_executable("/etc/init.d/forkop") ||
+        path_executable("/usr/bin/forkop") ||
+        path_executable("/etc/init.d/netshift") ||
+        path_executable("/usr/bin/netshift") ||
+        env("TACHYON_LEGACY_DETECTED", "0") == "1";
     let active_init = legacy_installed ? INSTALLER_LEGACY_INIT : INSTALLER_TACHYON_INIT;
     let active_bin = legacy_installed ? INSTALLER_LEGACY_BIN : INSTALLER_TACHYON_BIN;
     let was_enabled = installer_service_enabled(active_init);
     let was_running = installer_service_running(active_init) || installer_backend_status_running(active_bin);
+
+    for (let legacy_init in [
+        INSTALLER_LEGACY_BASE_INIT,
+        "/etc/init.d/forkop",
+        "/etc/init.d/netshift"
+    ]) {
+        if (path_executable(legacy_init)) {
+            if (installer_service_enabled(legacy_init))
+                was_enabled = true;
+            if (installer_service_running(legacy_init))
+                was_running = true;
+        }
+    }
+    for (let legacy_bin in [
+        INSTALLER_LEGACY_BASE_BIN,
+        "/usr/bin/forkop",
+        "/usr/bin/netshift"
+    ]) {
+        if (path_executable(legacy_bin) && installer_backend_status_running(legacy_bin))
+            was_running = true;
+    }
 
     if (!installer_confirm_remove_https_dns_proxy())
         return false;
@@ -1307,10 +1360,19 @@ function installer_cleanup_legacy() {
         installer_release_init_lock();
     }
 
+    if (path_executable("/etc/init.d/forkop")) {
+        run_args([ "timeout", "10", "/etc/init.d/forkop", "stop" ]);
+        installer_restore_dnsmasq("/usr/bin/forkop", "forkop");
+        run_args([ "timeout", "10", "/etc/init.d/forkop", "disable" ]);
+        installer_release_init_lock();
+    }
+
     if (path_executable("/etc/init.d/netshift")) {
         if (installer_service_running("/etc/init.d/netshift"))
             run_args([ "timeout", "10", "/etc/init.d/netshift", "stop" ]);
+        installer_restore_dnsmasq("/usr/bin/netshift", "netshift");
         run_args([ "timeout", "10", "/etc/init.d/netshift", "disable" ]);
+        installer_release_init_lock();
     }
 
     let packages_removed = true;
@@ -1329,22 +1391,47 @@ function installer_cleanup_legacy() {
             packages_removed = false;
     }
 
-    if (installer_package_installed("forkop")) {
+    if (installer_package_installed("forkop") ||
+        installer_package_installed("luci-app-forkop") ||
+        path_exists("/etc/config/forkop") ||
+        path_exists("/etc/config/forkop_plus") ||
+        path_executable("/usr/bin/forkop") ||
+        path_executable("/etc/init.d/forkop")) {
         if (!installer_remove_package_prefix("luci-i18n-forkop"))
             packages_removed = false;
         if (!installer_remove_package("luci-app-forkop"))
             packages_removed = false;
         if (!installer_remove_package("forkop"))
             packages_removed = false;
+        remove_path("/usr/lib/forkop");
+        remove_path("/usr/bin/forkop");
+        remove_path("/etc/init.d/forkop");
+        remove_path("/etc/uci-defaults/50_luci-forkop");
+        remove_path("/www/luci-static/resources/view/forkop");
+        remove_path("/usr/share/luci/menu.d/luci-app-forkop.json");
+        remove_path("/usr/share/rpcd/acl.d/luci-app-forkop.json");
+        remove_path("/tmp/forkop");
+        remove_path("/var/run/forkop");
     }
 
-    if (installer_package_installed("netshift")) {
+    if (installer_package_installed("netshift") ||
+        installer_package_installed("luci-app-netshift") ||
+        path_exists("/etc/config/netshift") ||
+        path_executable("/usr/bin/netshift") ||
+        path_executable("/etc/init.d/netshift")) {
         if (!installer_remove_package_prefix("luci-i18n-netshift"))
             packages_removed = false;
         if (!installer_remove_package("luci-app-netshift"))
             packages_removed = false;
         if (!installer_remove_package("netshift"))
             packages_removed = false;
+        remove_path("/usr/lib/netshift");
+        remove_path("/usr/bin/netshift");
+        remove_path("/etc/init.d/netshift");
+        remove_path("/etc/uci-defaults/50_luci-netshift");
+        remove_path("/www/luci-static/resources/view/netshift");
+        remove_path("/usr/share/luci/menu.d/luci-app-netshift.json");
+        remove_path("/usr/share/rpcd/acl.d/luci-app-netshift.json");
         remove_path("/tmp/netshift");
         remove_path("/var/run/netshift");
         remove_path("/etc/netshift");
@@ -1401,29 +1488,33 @@ function installer_finalize_legacy() {
     if (LEGACY_BRAND == "")
         return false;
 
-    let legacy_tailscale_dir = INSTALLER_LEGACY_PERSISTENT_DIR + "/tailscale";
-    if (path_exists(legacy_tailscale_dir)) {
-        let entries = fs.lsdir(legacy_tailscale_dir);
-        let tachyon_tailscale_dir = INSTALLER_TACHYON_PERSISTENT_DIR + "/tailscale";
-        if (type(entries) != "array" || !run_args([ "mkdir", "-p", tachyon_tailscale_dir ])) {
-            warn("Failed to prepare legacy Tailscale state migration; the legacy directory was preserved.\n");
-            return false;
-        }
-
-        for (let entry in entries) {
-            entry = as_string(entry);
-            let source = legacy_tailscale_dir + "/" + entry;
-            let target = tachyon_tailscale_dir + "/" + entry;
-            if (path_exists(target))
-                continue;
-
-            let temporary = tachyon_tailscale_dir + "/." + entry + ".tachyon-migrate";
-            if (!remove_path(temporary) ||
-                !run_args([ "cp", "-a", source, temporary ]) ||
-                !run_args([ "mv", temporary, target ])) {
-                remove_path(temporary);
-                warn("Failed to migrate legacy Tailscale state; the legacy directory was preserved.\n");
+    for (let legacy_ts_dir in [
+        INSTALLER_LEGACY_PERSISTENT_DIR + "/tailscale",
+        "/etc/forkop/tailscale"
+    ]) {
+        if (path_exists(legacy_ts_dir)) {
+            let entries = fs.lsdir(legacy_ts_dir);
+            let tachyon_tailscale_dir = INSTALLER_TACHYON_PERSISTENT_DIR + "/tailscale";
+            if (type(entries) != "array" || !run_args([ "mkdir", "-p", tachyon_tailscale_dir ])) {
+                warn("Failed to prepare legacy Tailscale state migration; the legacy directory was preserved.\n");
                 return false;
+            }
+
+            for (let entry in entries) {
+                entry = as_string(entry);
+                let source = legacy_ts_dir + "/" + entry;
+                let target = tachyon_tailscale_dir + "/" + entry;
+                if (path_exists(target))
+                    continue;
+
+                let temporary = tachyon_tailscale_dir + "/." + entry + ".tachyon-migrate";
+                if (!remove_path(temporary) ||
+                    !run_args([ "cp", "-a", source, temporary ]) ||
+                    !run_args([ "mv", temporary, target ])) {
+                    remove_path(temporary);
+                    warn("Failed to migrate legacy Tailscale state; the legacy directory was preserved.\n");
+                    return false;
+                }
             }
         }
     }
@@ -1435,7 +1526,16 @@ function installer_finalize_legacy() {
         INSTALLER_LEGACY_PERSISTENT_DIR,
         INSTALLER_LEGACY_RUNTIME_DIR,
         INSTALLER_LEGACY_TMP_DIR,
-        INSTALLER_LEGACY_TMP_ALT_DIR
+        INSTALLER_LEGACY_TMP_ALT_DIR,
+        "/etc/config/forkop",
+        "/etc/config/forkop_plus",
+        "/etc/forkop",
+        "/var/run/forkop",
+        "/tmp/forkop",
+        "/etc/config/netshift",
+        "/etc/netshift",
+        "/var/run/netshift",
+        "/tmp/netshift"
     ])
         if (!remove_path(path))
             cleaned = false;
@@ -1465,7 +1565,16 @@ function installer_finalize_legacy() {
         INSTALLER_LEGACY_BASE_LUCI_VIEW,
         INSTALLER_LEGACY_BASE_MENU_JSON,
         INSTALLER_LEGACY_BASE_ACL_JSON,
-        INSTALLER_LEGACY_BASE_I18N
+        INSTALLER_LEGACY_BASE_I18N,
+        "/etc/config/forkop",
+        "/etc/config/forkop_plus",
+        "/etc/forkop",
+        "/var/run/forkop",
+        "/tmp/forkop",
+        "/etc/config/netshift",
+        "/etc/netshift",
+        "/var/run/netshift",
+        "/tmp/netshift"
     ])
         if (!remove_glob(prefix + "*"))
             cleaned = false;
@@ -1736,6 +1845,9 @@ install_json_ucode() {
     TACHYON_INSTALLER_LEGACY_BACKEND="$LEGACY_BACKEND_PACKAGE" \
     TACHYON_INSTALLER_LEGACY_CONFIG_ALT="$LEGACY_CONFIG_PACKAGE_ALT" \
     TACHYON_INSTALLER_ASSUME_YES="$ASSUME_YES" \
+    TACHYON_LEGACY_DETECTED="$TACHYON_LEGACY_DETECTED" \
+    TACHYON_FORKOP_MIGRATION="$TACHYON_FORKOP_MIGRATION" \
+    TACHYON_NETSHIFT_MIGRATION="$TACHYON_NETSHIFT_MIGRATION" \
         ucode "$(install_json_helper_path)" "$@"
 }
 
@@ -2555,6 +2667,7 @@ cleanup_legacy_installation() {
         return 0
     fi
 
+    local legacy_detected_before="$TACHYON_LEGACY_DETECTED"
     state_file="$TMP_DIR/install-state.env"
 
     install_json_ucode installer-cleanup-legacy >"$state_file" ||
@@ -2562,6 +2675,10 @@ cleanup_legacy_installation() {
 
     # shellcheck disable=SC1090
     . "$state_file"
+
+    if [ "$legacy_detected_before" -eq 1 ]; then
+        TACHYON_LEGACY_DETECTED=1
+    fi
 }
 
 detect_legacy_installation() {
@@ -2570,17 +2687,25 @@ detect_legacy_installation() {
     TACHYON_NETSHIFT_MIGRATION=0
     LEGACY_CONFIG_BACKUP=""
 
-    if pkg_is_installed "forkop" || pkg_is_installed "luci-app-forkop"; then
+    if pkg_is_installed "forkop" || pkg_is_installed "luci-app-forkop" || \
+       [ -x "/etc/init.d/forkop" ] || [ -x "/usr/bin/forkop" ] || [ -d "/usr/lib/forkop" ]; then
         TACHYON_LEGACY_DETECTED=1
         TACHYON_FORKOP_MIGRATION=1
     fi
 
-    if pkg_is_installed "netshift" || pkg_is_installed "luci-app-netshift"; then
+    if pkg_is_installed "netshift" || pkg_is_installed "luci-app-netshift" || \
+       [ -x "/etc/init.d/netshift" ] || [ -x "/usr/bin/netshift" ] || [ -d "/usr/lib/netshift" ]; then
         TACHYON_LEGACY_DETECTED=1
         TACHYON_NETSHIFT_MIGRATION=1
     fi
 
-    for legacy_config_path in "/etc/config/netshift" "/etc/config/forkop" "/etc/config/forkop_plus"; do
+    for legacy_config_path in \
+        "/etc/config/netshift" \
+        "/etc/config/forkop" \
+        "/etc/config/forkop_plus" \
+        "/etc/config/$LEGACY_BACKEND_PACKAGE" \
+        "/etc/config/$LEGACY_CONFIG_PACKAGE_ALT" \
+        "/etc/config/$LEGACY_BRAND"; do
         if [ -r "$legacy_config_path" ]; then
             LEGACY_CONFIG_BACKUP="$TMP_DIR/legacy-config.backup"
             cp "$legacy_config_path" "$LEGACY_CONFIG_BACKUP" ||
@@ -2588,7 +2713,7 @@ detect_legacy_installation() {
             TACHYON_LEGACY_DETECTED=1
             if [ "$legacy_config_path" = "/etc/config/netshift" ]; then
                 TACHYON_NETSHIFT_MIGRATION=1
-            else
+            elif [ "$legacy_config_path" = "/etc/config/forkop" ] || [ "$legacy_config_path" = "/etc/config/forkop_plus" ]; then
                 TACHYON_FORKOP_MIGRATION=1
             fi
             break
@@ -2596,20 +2721,18 @@ detect_legacy_installation() {
     done
 
     if [ "$TACHYON_LEGACY_DETECTED" -eq 0 ]; then
-        if pkg_is_installed "$LEGACY_BACKEND_PACKAGE"; then
+        if pkg_is_installed "$LEGACY_BACKEND_PACKAGE" || \
+           pkg_is_installed "$LEGACY_BRAND" || \
+           pkg_is_installed "luci-app-$LEGACY_BRAND" || \
+           pkg_is_installed "luci-app-$LEGACY_BACKEND_PACKAGE" || \
+           [ -x "/etc/init.d/$LEGACY_BACKEND_PACKAGE" ] || \
+           [ -x "/etc/init.d/$LEGACY_BRAND" ] || \
+           [ -x "/usr/bin/$LEGACY_BACKEND_PACKAGE" ] || \
+           [ -x "/usr/bin/$LEGACY_BRAND" ] || \
+           [ -d "/usr/lib/$LEGACY_BACKEND_PACKAGE" ] || \
+           [ -d "/usr/lib/$LEGACY_BRAND" ]; then
             TACHYON_LEGACY_DETECTED=1
         fi
-        for legacy_config_path in \
-            "/etc/config/$LEGACY_BACKEND_PACKAGE" \
-            "/etc/config/$LEGACY_CONFIG_PACKAGE_ALT"; do
-            if [ -r "$legacy_config_path" ]; then
-                LEGACY_CONFIG_BACKUP="$TMP_DIR/legacy-config.backup"
-                cp "$legacy_config_path" "$LEGACY_CONFIG_BACKUP" ||
-                    fail "Failed to back up the legacy configuration"
-                TACHYON_LEGACY_DETECTED=1
-                break
-            fi
-        done
     fi
 
     if [ "$TACHYON_LEGACY_DETECTED" -eq 1 ]; then
@@ -2628,11 +2751,17 @@ decide_i18n_installation() {
         return 0
     fi
 
-    if [ "$TACHYON_LEGACY_DETECTED" -eq 1 ] &&
-        pkg_is_installed "luci-i18n-${LEGACY_BACKEND_PACKAGE}-ru"; then
-        TACHYON_I18N_REQUESTED=1
-        msg "$(installer_text i18n_installed)"
-        return 0
+    if [ "$TACHYON_LEGACY_DETECTED" -eq 1 ]; then
+        if pkg_is_installed "luci-i18n-${LEGACY_BACKEND_PACKAGE}-ru" || \
+           pkg_is_installed "luci-i18n-${LEGACY_BRAND}-ru" || \
+           pkg_is_installed "luci-i18n-forkop-ru" || \
+           pkg_is_installed "luci-i18n-forkop" || \
+           pkg_is_installed "luci-i18n-netshift-ru" || \
+           pkg_is_installed "luci-i18n-netshift"; then
+            TACHYON_I18N_REQUESTED=1
+            msg "$(installer_text i18n_installed)"
+            return 0
+        fi
     fi
 
     case "$luci_lang" in
@@ -2769,7 +2898,22 @@ migrate_legacy_configuration() {
         return 0
     fi
 
-    if [ -n "$LEGACY_CONFIG_BACKUP" ]; then
+    if [ -z "$LEGACY_CONFIG_BACKUP" ] || [ ! -f "$LEGACY_CONFIG_BACKUP" ]; then
+        for cand in \
+            "/etc/config/netshift" \
+            "/etc/config/forkop" \
+            "/etc/config/forkop_plus" \
+            "/etc/config/$LEGACY_BACKEND_PACKAGE" \
+            "/etc/config/$LEGACY_CONFIG_PACKAGE_ALT" \
+            "/etc/config/$LEGACY_BRAND"; do
+            if [ -s "$cand" ]; then
+                LEGACY_CONFIG_BACKUP="$cand"
+                break
+            fi
+        done
+    fi
+
+    if [ -n "$LEGACY_CONFIG_BACKUP" ] && [ -f "$LEGACY_CONFIG_BACKUP" ]; then
         cp "$LEGACY_CONFIG_BACKUP" /etc/config/tachyon ||
             fail "Failed to restore the legacy configuration for migration"
         chmod 0644 /etc/config/tachyon ||
