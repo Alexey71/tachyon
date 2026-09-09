@@ -157,9 +157,11 @@ define Package/tachyon/postrm
 
 [ -n "$${IPKG_INSTROOT}" ] && exit 0
 [ "$$1" = "upgrade" ] && exit 0
-[ "$$1" != "remove" ] && [ "$$1" != "purge" ] && [ -n "$$1" ] && exit 0
+if [ "$$1" != "remove" ] && [ "$$1" != "purge" ]; then
+	exit 0
+fi
 
-if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+if [ -e /var/run/tachyon/component-action.lock ] || [ -e /tmp/run/tachyon/component-action.lock ] || [ -e /var/run/tachyon/component-actions/action.lock ] || [ -e /tmp/run/tachyon/component-actions/action.lock ]; then
 	exit 0
 fi
 

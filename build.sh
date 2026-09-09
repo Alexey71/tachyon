@@ -460,8 +460,10 @@ EOF
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
 [ "$1" = "upgrade" ] && exit 0
-[ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
-if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+if [ "$1" != "remove" ] && [ "$1" != "purge" ]; then
+    exit 0
+fi
+if [ -e /var/run/tachyon/component-action.lock ] || [ -e /tmp/run/tachyon/component-action.lock ] || [ -e /var/run/tachyon/component-actions/action.lock ] || [ -e /tmp/run/tachyon/component-actions/action.lock ]; then
     exit 0
 fi
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
@@ -522,8 +524,10 @@ EOF
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
 [ "$1" = "upgrade" ] && exit 0
-[ "$1" != "remove" ] && [ "$1" != "purge" ] && [ -n "$1" ] && exit 0
-if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+if [ "$1" != "remove" ] && [ "$1" != "purge" ]; then
+    exit 0
+fi
+if [ -e /var/run/tachyon/component-action.lock ] || [ -e /tmp/run/tachyon/component-action.lock ] || [ -e /var/run/tachyon/component-actions/action.lock ] || [ -e /tmp/run/tachyon/component-actions/action.lock ]; then
     exit 0
 fi
 rm -f /var/luci-indexcache* /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
@@ -804,7 +808,7 @@ EOF
 #!/bin/sh
 [ -n "${IPKG_INSTROOT}" ] && exit 0
 [ -f /usr/bin/tachyon ] && exit 0
-if [ -f /var/run/tachyon/component-actions/action.lock ] || [ -f /tmp/run/tachyon/component-actions/action.lock ]; then
+if [ -e /var/run/tachyon/component-action.lock ] || [ -e /tmp/run/tachyon/component-action.lock ] || [ -e /var/run/tachyon/component-actions/action.lock ] || [ -e /tmp/run/tachyon/component-actions/action.lock ]; then
     exit 0
 fi
 rm -f /www/cgi-bin/tachyon-agent /etc/hotplug.d/iface/99-tachyon-wan-monitor 2>/dev/null || true
