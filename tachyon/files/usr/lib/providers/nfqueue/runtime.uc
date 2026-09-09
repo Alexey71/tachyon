@@ -453,6 +453,16 @@ function start_runtime(cfg) {
     if (length(sections) == 0 || !provider_available(cfg))
         return;
 
+    if (standalone_service_running(cfg)) {
+        log_message("Stopping standalone " + cfg.status_label + " service before starting Tachyon-managed runtime", "info");
+        command_success_from_args([ cfg.service_init, "stop" ]);
+        command_success_from_args([ "sleep", "1" ]);
+    }
+    if (standalone_service_enabled(cfg)) {
+        log_message("Disabling standalone " + cfg.status_label + " service autostart to avoid conflicts with Tachyon", "info");
+        command_success_from_args([ cfg.service_init, "disable" ]);
+    }
+
     cleanup_legacy_runtime(cfg);
     if (!ensure_runtime_dirs(cfg)) {
         log_message("Failed to prepare the Tachyon " + cfg.status_label + " state directory in " + cfg.state_dir + ". Aborted.", "fatal");

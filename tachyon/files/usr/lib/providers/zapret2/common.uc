@@ -1,8 +1,11 @@
 #!/usr/bin/env ucode
 
+let common = require("core.common");
 let constants = require("core.constants");
 let fs = require("fs");
 let validator_module = null;
+
+let as_string = common.as_string;
 
 const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 

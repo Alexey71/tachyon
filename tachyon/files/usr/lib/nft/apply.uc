@@ -619,7 +619,8 @@ function section_has_source_ip_matchers(section) {
 }
 
 function section_has_subnet_update_sources(section) {
-    return rule_config.has_community_subnet_list(connections.community_lists_value(section)) ||
+    let has_community = bool_option(section, "community_subnets", true) && rule_config.has_community_subnet_list(connections.community_lists_value(section));
+    return has_community ||
         length(connections.rule_sets_with_subnets(section)) > 0 ||
         option(section, "domain_ip_lists", "") != "";
 }
@@ -2266,7 +2267,8 @@ function nft_rule_signature_body(body, section) {
     body = signature_add_value(body, "rule." + section_name + ".excluded_ips", option(section, "excluded_ips", ""));
     body = signature_add_value(body, "rule." + section_name + ".excluded_protocol", option(section, "excluded_protocol", ""));
     body = signature_add_value(body, "rule." + section_name + ".protocol", option(section, "protocol", ""));
-    body = signature_add_value(body, "rule." + section_name + ".community_subnet_lists", filter_community_subnet_lists_value(connections.community_lists_value(section)));
+    let comm_subnets = bool_option(section, "community_subnets", true) ? filter_community_subnet_lists_value(connections.community_lists_value(section)) : "";
+    body = signature_add_value(body, "rule." + section_name + ".community_subnet_lists", comm_subnets);
     body = signature_add_value(body, "rule." + section_name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
     body = signature_add_value(body, "rule." + section_name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));
     body = signature_add_value(body, "rule." + section_name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
@@ -2490,16 +2492,18 @@ function nft_populate_runtime_set_for_section(section, deferred_sections, table,
         // Load cached community subnet files into nftables (populated at list-update and persisted)
         // Note: call nft_add_file_chunks_to_family_sets directly because ucode does not hoist
         // function declarations, and nft_add_subnet_file_for_section is defined below this function.
-        for (let community in connections.community_lists(section)) {
-            let service = as_string(community);
-            let cached_paths = [
-                "/tmp/sing-box/rulesets/community-subnets-" + service + ".lst",
-                "/etc/tachyon/rulesets/community-subnets-" + service + ".lst"
-            ];
-            for (let path in cached_paths) {
-                if (helpers.file_is_usable(path, 50)) {
-                    nft_add_file_chunks_to_family_sets(path, table, sets.subnets, sets.subnets6, "ips", "", "5000");
-                    break;
+        if (bool_option(section, "community_subnets", true)) {
+            for (let community in connections.community_lists(section)) {
+                let service = as_string(community);
+                let cached_paths = [
+                    "/tmp/sing-box/rulesets/community-subnets-" + service + ".lst",
+                    "/etc/tachyon/rulesets/community-subnets-" + service + ".lst"
+                ];
+                for (let path in cached_paths) {
+                    if (helpers.file_is_usable(path, 50)) {
+                        nft_add_file_chunks_to_family_sets(path, table, sets.subnets, sets.subnets6, "ips", "", "5000");
+                        break;
+                    }
                 }
             }
         }
@@ -2575,6 +2579,9 @@ function nft_add_json_ruleset_subnets_for_section(section, json_path, label, tab
 }
 
 function nft_add_community_subnet_file_for_section(section, service, filepath, table, common_set, ip_port_set, interface_set, discord_set, mark, chunk_size_text, common6_set, ip_port6_set, discord6_set) {
+    if (!bool_option(section, "community_subnets", true))
+        return true;
+
     if (section_needs_priority_sets(section))
         return nft_add_subnet_file_for_section(section, filepath, table, common_set, ip_port_set, chunk_size_text, common6_set, ip_port6_set);
 

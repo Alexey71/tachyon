@@ -1336,7 +1336,7 @@ function load_community_subnet_cidrs(community) {
             let cidrs = [];
             for (let line in split(as_string(content), "\n")) {
                 line = trim(replace(as_string(line), /\r/g, ""));
-                if (line != "" && substr(line, 0, 1) != "#")
+                if (line != "" && substr(line, 0, 1) != "#" && match(line, /^[0-9a-fA-F:.]+(\/[0-9]+)?$/) && !match(line, /\.$/))
                     push(cidrs, line);
             }
             if (length(cidrs) > 0)
@@ -1363,13 +1363,16 @@ function add_combined_route_for_section(config, section) {
     add_fully_routed_ips_rule(config, section);
 
 
+    let include_community_subnets = bool_option(section, "community_subnets", true);
     for (let community in connections.community_lists(section)) {
         let service = as_string(community);
         let ensured = ensure_community_ruleset(config, section_name, service);
         push(rule_set_tags, ensured.tag);
         push(dns_rule_set_tags, ensured.tag);
-        for (let cidr in load_community_subnet_cidrs(community))
-            push(ip_cidr, cidr);
+        if (include_community_subnets) {
+            for (let cidr in load_community_subnet_cidrs(community))
+                push(ip_cidr, cidr);
+        }
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));

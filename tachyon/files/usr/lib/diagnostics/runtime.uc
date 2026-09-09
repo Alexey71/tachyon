@@ -3946,9 +3946,9 @@ function apply_quick_fix(codes_str) {
             status = (rc == 0);
             msg = status ? "Network service restarted" : "Network restart failed (exit " + rc + ")";
         } else if (c == "restart_zapret") {
-            let rc = command_status("/etc/init.d/zapret restart 2>/dev/null; /etc/init.d/zapret2 restart 2>/dev/null; /etc/init.d/byedpi restart 2>/dev/null");
+            let rc = command_status("/etc/init.d/zapret stop >/dev/null 2>&1; /etc/init.d/zapret disable >/dev/null 2>&1; /etc/init.d/zapret2 stop >/dev/null 2>&1; /etc/init.d/zapret2 disable >/dev/null 2>&1; /etc/init.d/byedpi stop >/dev/null 2>&1; /etc/init.d/byedpi disable >/dev/null 2>&1; ucode -L " + LIB_DIR + " " + LIB_DIR + "/providers/zapret/runtime.uc start-runtime >/dev/null 2>&1; ucode -L " + LIB_DIR + " " + LIB_DIR + "/providers/zapret2/runtime.uc start-runtime >/dev/null 2>&1; ucode -L " + LIB_DIR + " " + LIB_DIR + "/providers/byedpi/runtime.uc start-runtime >/dev/null 2>&1");
             status = (rc == 0);
-            msg = status ? "Zapret/ByeDPI engines restarted" : "Zapret/ByeDPI restart failed (exit " + rc + ")";
+            msg = status ? "Zapret/ByeDPI standalone services stopped and Tachyon engines restarted" : "Zapret/ByeDPI restart failed (exit " + rc + ")";
         } else if (c == "optimize_memory") {
             let rc = command_status("sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null; rm -rf /tmp/sing-box/*.tmp 2>/dev/null; /etc/init.d/sing-box restart >/dev/null 2>&1");
             status = (rc == 0);

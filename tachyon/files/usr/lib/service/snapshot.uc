@@ -32,7 +32,7 @@ function normalize_status(status) {
 let command_status = common.command_status;
 
 function command_success_from_args(args) {
-    return command_status(command_from_args(args)) == 0;
+    return normalize_status(system(command_from_args(args) + " >/dev/null 2>&1")) == 0;
 }
 
 let command_output = common.command_output;

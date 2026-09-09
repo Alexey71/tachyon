@@ -10503,6 +10503,20 @@ function createSectionContent(section) {
     }
   };
 
+  const communitySubnetsOption = section.taboption(
+    "conditions",
+    form.Flag,
+    "community_subnets",
+    _("Route community list subnets (IP/CIDR)"),
+    _(
+      "Route IP subnets associated with built-in community lists (e.g. Discord voice/media). Disable this if community subnets overlap with CDN/Anycast networks (such as Cloudflare/Google Cloud) and interfere with unrelated services (e.g. game launchers).",
+    ),
+  );
+  communitySubnetsOption.modalonly = true;
+  communitySubnetsOption.default = "1";
+  communitySubnetsOption.rmempty = false;
+  dependsOnRoutingAction(communitySubnetsOption);
+
   const ruleSetOption = section.taboption(
     "conditions",
     SettingsDynamicList,
@@ -11126,23 +11140,27 @@ async function performTrace(query) {
       }
 
       // Check community list rulesets for matching IPs
-      const communityLists = normalizeOptionValues(
-        uci.get(UCI_PACKAGE, secName, "community_lists"),
-      );
-      for (const community of communityLists) {
-        if (
-          await matchCommunityList(secName, community, queryForMatching, type)
-        ) {
-          return {
-            matched: true,
-            sectionName: secName,
-            label: label,
-            action: action,
-            ruleType: "Community List (" + community + ")",
-            pattern: queryForMatching,
-            priority: i + 1,
-            totalSections: totalSections,
-          };
+      const communitySubnetsEnabled =
+        uci.get(UCI_PACKAGE, secName, "community_subnets") !== "0";
+      if (communitySubnetsEnabled) {
+        const communityLists = normalizeOptionValues(
+          uci.get(UCI_PACKAGE, secName, "community_lists"),
+        );
+        for (const community of communityLists) {
+          if (
+            await matchCommunityList(secName, community, queryForMatching, type)
+          ) {
+            return {
+              matched: true,
+              sectionName: secName,
+              label: label,
+              action: action,
+              ruleType: "Community List (" + community + ")",
+              pattern: queryForMatching,
+              priority: i + 1,
+              totalSections: totalSections,
+            };
+          }
         }
       }
     }

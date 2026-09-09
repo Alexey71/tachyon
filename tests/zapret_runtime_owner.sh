@@ -149,4 +149,11 @@ printf 'table inet x { chain y { queue num 4301 bypass } }\n' |
   ucode -L "$TACHYON_LIB" "$ZAPRET2_CHECK" nft-queue-overlap TachyonTable 4300 4555 >/dev/null ||
   fail "providers/zapret2/check.uc must own zapret2 queue overlap checks"
 
+ucode -L "$TACHYON_LIB" -e '
+let zapret2 = require("providers.zapret2.common");
+let cfg = zapret2.config();
+let args = cfg.prepare_strategy_args("--dpi-desync=fake");
+if (length(args) == 0) exit(1);
+' || fail "providers/zapret2/common.uc prepare_strategy_args must execute without error"
+
 printf 'zapret runtime ownership checks passed\n'

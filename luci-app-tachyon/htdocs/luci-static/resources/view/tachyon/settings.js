@@ -534,7 +534,9 @@ function createSnapshotsWidget() {
     return fs.exec("/usr/bin/tachyon", args).then(function (res) {
       let ok = false;
       try {
-        ok = JSON.parse((res && res.stdout) || "").success !== false;
+        let stdout = ((res && res.stdout) || "").trim();
+        let match = stdout.match(/\{[\s\S]*\}/);
+        ok = JSON.parse(match ? match[0] : stdout).success !== false;
       } catch (e) {
         ok = false;
       }

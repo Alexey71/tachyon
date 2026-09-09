@@ -452,7 +452,7 @@ function pkg_install_name_downgrade(package_name, package_version) {
 // published under the same tag would silently not be applied. apk always writes
 // the file it is handed, so its argument list stays untouched.
 function pkg_install_files_command(files, force_reinstall) {
-    let args = is_apk() ? [ "apk", "add", "--allow-untrusted" ] : [ "opkg", "install", "--force-overwrite", "--force-downgrade" ];
+    let args = is_apk() ? [ "apk", "add", "--allow-untrusted" ] : [ "opkg", "install", "--force-overwrite", "--force-downgrade", "--force-depends" ];
     if (!is_apk() && force_reinstall)
         push(args, "--force-reinstall");
     for (let file in files)
@@ -464,7 +464,7 @@ function pkg_install_files(files, force_reinstall) {
     return command_success(pkg_install_files_command(files, force_reinstall));
 }
 
-// Like run_logged but retries up to 10 times on APK database lock (exit code 227)
+// Like run_logged but retries up to 10 times on package manager database lock (exit code 227 for APK, lock file contention for opkg)
 function run_logged_retrying(description, command) {
     init_tmp_dir();
     let output_file = make_tmp_file("command");
@@ -476,17 +476,24 @@ function run_logged_retrying(description, command) {
     let max_attempts = 10;
     for (let attempt = 0; attempt < max_attempts; attempt++) {
         if (attempt > 0) {
-            updates_log(description + ": APK database locked, retrying in 3s (attempt " + (attempt + 1) + "/" + max_attempts + ")");
+            let mgr_name = is_apk() ? "APK" : "opkg";
+            updates_log(description + ": " + mgr_name + " database locked, retrying in 3s (attempt " + (attempt + 1) + "/" + max_attempts + ")");
             command_success("sleep 3");
         }
         status = command_status(as_string(command) + " >" + shell_quote(output_file) + " 2>&1");
-        if (status != 227)
+        let output_text = read_file(output_file);
+        let is_locked = status == 227 || (status == 255 && match(output_text, /Could not lock|opkg\.lock|Resource temporarily unavailable/i) != null);
+        if (!is_locked)
             break;
     }
-    for (let line in split(read_file(output_file), "\n"))
-        if (trim(as_string(line)) != "")
-            updates_log(line);
+    let output_content = read_file(output_file);
     remove_file(output_file);
+    let log_level = status != 0 ? "warn" : "info";
+    for (let line in split(output_content, "\n")) {
+        line = trim(as_string(line));
+        if (line != "")
+            updates_log(line, log_level);
+    }
     if (status != 0)
         updates_log(description + " failed with exit code " + status, "warn");
     return status == 0;
