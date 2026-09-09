@@ -269,7 +269,7 @@ function snapshot_restore(file) {
 
     log_message("Config snapshot restored: " + file);
     print(sprintf("%J\n", { success: true }));
-    command_success_from_args([ BIN_PATH, "restart" ]);
+    system(common.background_command(command_from_args([ BIN_PATH, "restart" ])));
     return 0;
 }
 

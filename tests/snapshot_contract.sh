@@ -133,6 +133,10 @@ printf '%s\n' 'changed-data' >"$WORK_DIR/tachyon/data"
 run_uc snapshot-restore "$SAVED_FILE" >"$WORK_DIR/result.json"
 grep -Fq '"success": true' "$WORK_DIR/result.json" ||
   fail "snapshot-restore must report success"
+for _ in $(seq 1 30); do
+  grep -Fxq 'restart' "$WORK_DIR/bin.log" 2>/dev/null && break
+  sleep 0.1
+done
 grep -Fxq 'restart' "$WORK_DIR/bin.log" ||
   fail "snapshot-restore must restart the service through the backend entrypoint"
 grep -Fq "option dns '8.8.8.8'" "$WORK_DIR/config/tachyon" ||
