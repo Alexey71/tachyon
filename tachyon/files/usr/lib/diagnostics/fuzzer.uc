@@ -18,6 +18,7 @@ let object_or_empty = common.object_or_empty;
 let array_or_empty = common.array_or_empty;
 
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
+const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const STATE_DIR = getenv("TACHYON_FUZZER_STATE_DIR") || "/var/run/tachyon";
 const STATE_FILE = STATE_DIR + "/fuzzer-state.json";
 const PID_FILE = STATE_DIR + "/fuzzer-worker.pid";
@@ -69,34 +70,42 @@ function get_zapret2_lua_flags(args_str) {
 
     let candidate_dirs = [
         getenv("ZAPRET2_PROVIDER_LUA_DIR"),
+        LIB_DIR + "/providers/zapret2/lua",
+        "/usr/lib/tachyon/providers/zapret2/lua",
         "/opt/zapret2/lua",
-        "/usr/share/zapret2/lua",
-        "/etc/zapret2/lua",
         "/opt/zapret/lua",
-        "/usr/share/zapret/lua"
+        "/usr/share/zapret2/lua",
+        "/usr/share/zapret/lua",
+        "/etc/zapret2/lua",
+        "/etc/zapret/lua",
+        "/usr/lib/zapret2/lua",
+        "/usr/lib/zapret/lua"
+    ];
+
+    let lua_scripts = [
+        "zapret-lib.lua",
+        "zapret-antidpi.lua",
+        "zapret-auto.lua"
     ];
 
     let flags = "";
-    for (let d in candidate_dirs) {
-        if (!d || fs.stat(d) == null)
-            continue;
-        let lib_lua = d + "/zapret-lib.lua";
-        let antidpi_lua = d + "/zapret-antidpi.lua";
-        let auto_lua = d + "/zapret-auto.lua";
-        let l_actual = fs.stat(lib_lua) != null ? lib_lua : (fs.stat(lib_lua + ".gz") != null ? (lib_lua + ".gz") : null);
-        let a_actual = fs.stat(antidpi_lua) != null ? antidpi_lua : (fs.stat(antidpi_lua + ".gz") != null ? (antidpi_lua + ".gz") : null);
-        let au_actual = fs.stat(auto_lua) != null ? auto_lua : (fs.stat(auto_lua + ".gz") != null ? (auto_lua + ".gz") : null);
-        if (l_actual) flags += sprintf("--lua-init=@%s ", l_actual);
-        if (a_actual) flags += sprintf("--lua-init=@%s ", a_actual);
-        if (au_actual) flags += sprintf("--lua-init=@%s ", au_actual);
-        if (flags != "")
-            break;
-    }
-    if (flags == "" && fs.stat("/opt/zapret2/lua") != null) {
-        let l_opt = fs.stat("/opt/zapret2/lua/zapret-lib.lua.gz") != null ? "/opt/zapret2/lua/zapret-lib.lua.gz" : "/opt/zapret2/lua/zapret-lib.lua";
-        let a_opt = fs.stat("/opt/zapret2/lua/zapret-antidpi.lua.gz") != null ? "/opt/zapret2/lua/zapret-antidpi.lua.gz" : "/opt/zapret2/lua/zapret-antidpi.lua";
-        let au_opt = fs.stat("/opt/zapret2/lua/zapret-auto.lua.gz") != null ? "/opt/zapret2/lua/zapret-auto.lua.gz" : "/opt/zapret2/lua/zapret-auto.lua";
-        flags = sprintf("--lua-init=@%s --lua-init=@%s --lua-init=@%s ", l_opt, a_opt, au_opt);
+    for (let script in lua_scripts) {
+        let found = null;
+        for (let d in candidate_dirs) {
+            if (!d || fs.stat(d) == null)
+                continue;
+            let p = d + "/" + script;
+            if (fs.stat(p) != null) {
+                found = p;
+                break;
+            }
+            if (fs.stat(p + ".gz") != null) {
+                found = p + ".gz";
+                break;
+            }
+        }
+        if (found != null)
+            flags += sprintf("--lua-init=@%s ", found);
     }
     return flags;
 }
@@ -237,10 +246,13 @@ function get_zapret2_blob_dir() {
     let candidate_dirs = [
         getenv("ZAPRET2_PROVIDER_FILES_DIR") ? (getenv("ZAPRET2_PROVIDER_FILES_DIR") + "/fake") : null,
         "/opt/zapret2/files/fake",
-        "/usr/share/zapret2/files/fake",
-        "/etc/zapret2/files/fake",
         "/opt/zapret/files/fake",
-        "/usr/share/zapret/files/fake"
+        "/usr/share/zapret2/files/fake",
+        "/usr/share/zapret/files/fake",
+        "/etc/zapret2/files/fake",
+        "/etc/zapret/files/fake",
+        LIB_DIR + "/providers/zapret2/files/fake",
+        "/usr/lib/tachyon/providers/zapret2/files/fake"
     ];
     for (let d in candidate_dirs) {
         if (d && fs.stat(d) != null) return d;
@@ -250,14 +262,31 @@ function get_zapret2_blob_dir() {
 
 function resolve_zapret2_blobs(args_str) {
     if (!args_str || args_str == "") return "";
-    let bdir = get_zapret2_blob_dir();
+    let candidate_dirs = [
+        getenv("ZAPRET2_PROVIDER_FILES_DIR") ? (getenv("ZAPRET2_PROVIDER_FILES_DIR") + "/fake") : null,
+        "/opt/zapret2/files/fake",
+        "/opt/zapret/files/fake",
+        "/usr/share/zapret2/files/fake",
+        "/usr/share/zapret/files/fake",
+        "/etc/zapret2/files/fake",
+        "/etc/zapret/files/fake",
+        LIB_DIR + "/providers/zapret2/files/fake",
+        "/usr/lib/tachyon/providers/zapret2/files/fake"
+    ];
     let blob_flags = "";
     for (let name, info in KNOWN_BLOB_FILES) {
         if ((index(args_str, "blob=" + name) >= 0 || index(args_str, "seqovl_pattern=" + name) >= 0) &&
             index(args_str, "--blob=" + name + ":") < 0) {
-            let blob_path = bdir + "/" + info.file;
-            if (fs.stat(blob_path) != null || fs.stat("/opt/zapret2/files/fake/" + info.file) != null) {
-                let actual_path = fs.stat(blob_path) != null ? blob_path : ("/opt/zapret2/files/fake/" + info.file);
+            let actual_path = null;
+            for (let d in candidate_dirs) {
+                if (!d || fs.stat(d) == null) continue;
+                let p = d + "/" + info.file;
+                if (fs.stat(p) != null) {
+                    actual_path = p;
+                    break;
+                }
+            }
+            if (actual_path != null) {
                 blob_flags += sprintf("--blob=%s:@%s ", name, actual_path);
             }
         }
@@ -2400,7 +2429,7 @@ function run_probe(engine, args_str, target_key, custom_url) {
                 fwmark_flag = sprintf("--dpi-desync-fwmark=%s ", FUZZER_FWMARK);
         }
         
-        let spawn_cmd = sprintf("cd /tmp && %s --qnum=%d %s%s%s%s%s --pidfile=%s --daemon 2>%s", bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, args_str, pid_path, shell_quote(stderr_log));
+        let spawn_cmd = sprintf("cd /tmp && %s --qnum=%d %s%s%s%s%s --pidfile=%s --daemon >%s 2>&1", bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, args_str, pid_path, shell_quote(stderr_log));
         system(common.background_command(spawn_cmd));
         
         let pid_running = false;
@@ -2424,8 +2453,18 @@ function run_probe(engine, args_str, target_key, custom_url) {
             let err_content = fs.readfile(stderr_log);
             let err_msg = err_content ? trim(as_string(err_content)) : "";
             if (err_msg != "") {
-                let first_line = split(err_msg, "\n")[0];
-                result.error = sprintf("Daemon failed to start: %s", first_line);
+                let lines = split(err_msg, "\n");
+                let err_line = "";
+                for (let i = length(lines) - 1; i >= 0; i--) {
+                    let l = trim(lines[i]);
+                    if (l == "") continue;
+                    if (index(l, "version") < 0 && index(l, "Running as") < 0 && index(l, "LUA v") < 0 && index(l, "JIT:") < 0 && index(l, "we have") < 0 && index(l, "initializing") < 0) {
+                        err_line = l;
+                        break;
+                    }
+                }
+                if (err_line == "") err_line = split(err_msg, "\n")[0];
+                result.error = sprintf("Daemon failed to start: %s", err_line);
             } else {
                 result.error = sprintf("Daemon %s failed to start (invalid arguments or missing Lua library)", is_z2 ? "nfqws2" : "nfqws");
             }

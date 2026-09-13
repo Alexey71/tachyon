@@ -146,4 +146,32 @@ if (!Array.isArray(val.byedpi) || val.byedpi.length < 20) {
 console.log("Generated matrix: Zapret2=" + val.zapret2.length + ", Zapret=" + val.zapret.length + ", ByeDPI=" + val.byedpi.length);
 NODE
 
+# 6. Check zapret2 Lua library resolution from LIB_DIR
+lua_res="$(TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" -e '
+let fs = require("fs");
+let LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
+let candidate_dirs = [
+    getenv("ZAPRET2_PROVIDER_LUA_DIR"),
+    LIB_DIR + "/providers/zapret2/lua",
+    "/usr/lib/tachyon/providers/zapret2/lua"
+];
+let lua_scripts = [ "zapret-lib.lua", "zapret-antidpi.lua", "zapret-auto.lua" ];
+let flags = "";
+for (let script in lua_scripts) {
+    let found = null;
+    for (let d in candidate_dirs) {
+        if (!d || fs.stat(d) == null) continue;
+        let p = d + "/" + script;
+        if (fs.stat(p) != null) { found = p; break; }
+        if (fs.stat(p + ".gz") != null) { found = p + ".gz"; break; }
+    }
+    if (found != null) flags += sprintf("--lua-init=@%s ", found);
+}
+print(flags);
+')"
+echo "$lua_res" | grep -q 'zapret-lib.lua' || fail "missing zapret-lib.lua in resolved lua flags"
+echo "$lua_res" | grep -q 'zapret-antidpi.lua' || fail "missing zapret-antidpi.lua in resolved lua flags"
+echo "$lua_res" | grep -q 'zapret-auto.lua' || fail "missing zapret-auto.lua in resolved lua flags"
+
 printf 'PASS: fuzzer_strategy_cli\n'
+

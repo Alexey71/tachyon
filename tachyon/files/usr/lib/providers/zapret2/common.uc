@@ -34,10 +34,13 @@ function get_blob_dir() {
     let candidate_dirs = [
         getenv("ZAPRET2_PROVIDER_FILES_DIR") ? (getenv("ZAPRET2_PROVIDER_FILES_DIR") + "/fake") : null,
         "/opt/zapret2/files/fake",
-        "/usr/share/zapret2/files/fake",
-        "/etc/zapret2/files/fake",
         "/opt/zapret/files/fake",
-        "/usr/share/zapret/files/fake"
+        "/usr/share/zapret2/files/fake",
+        "/usr/share/zapret/files/fake",
+        "/etc/zapret2/files/fake",
+        "/etc/zapret/files/fake",
+        LIB_DIR + "/providers/zapret2/files/fake",
+        "/usr/lib/tachyon/providers/zapret2/files/fake"
     ];
     for (let d in candidate_dirs) {
         if (d && fs.stat(d) != null) return d;
@@ -47,14 +50,31 @@ function get_blob_dir() {
 
 function resolve_blobs(args_str) {
     if (!args_str || args_str == "") return [];
-    let bdir = get_blob_dir();
+    let candidate_dirs = [
+        getenv("ZAPRET2_PROVIDER_FILES_DIR") ? (getenv("ZAPRET2_PROVIDER_FILES_DIR") + "/fake") : null,
+        "/opt/zapret2/files/fake",
+        "/opt/zapret/files/fake",
+        "/usr/share/zapret2/files/fake",
+        "/usr/share/zapret/files/fake",
+        "/etc/zapret2/files/fake",
+        "/etc/zapret/files/fake",
+        LIB_DIR + "/providers/zapret2/files/fake",
+        "/usr/lib/tachyon/providers/zapret2/files/fake"
+    ];
     let result = [];
     for (let name, info in KNOWN_BLOB_FILES) {
         if ((index(args_str, "blob=" + name) >= 0 || index(args_str, "seqovl_pattern=" + name) >= 0) &&
             index(args_str, "--blob=" + name + ":") < 0) {
-            let blob_path = bdir + "/" + info.file;
-            if (fs.stat(blob_path) != null || fs.stat("/opt/zapret2/files/fake/" + info.file) != null) {
-                let actual_path = fs.stat(blob_path) != null ? blob_path : ("/opt/zapret2/files/fake/" + info.file);
+            let actual_path = null;
+            for (let d in candidate_dirs) {
+                if (!d || fs.stat(d) == null) continue;
+                let p = d + "/" + info.file;
+                if (fs.stat(p) != null) {
+                    actual_path = p;
+                    break;
+                }
+            }
+            if (actual_path != null) {
                 push(result, sprintf("--blob=%s:@%s", name, actual_path));
             }
         }
