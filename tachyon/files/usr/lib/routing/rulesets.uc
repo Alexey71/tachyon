@@ -117,10 +117,13 @@ function patch_source(path, key, value_text) {
 }
 
 function normalize_plain_ruleset_value(value, kind) {
-    if (kind == "domains")
+    if (kind == "domains") {
+        if (ip.valid_ip_or_cidr(value))
+            return null;
         return domain_config.suffix_to_ascii(value);
+    }
     if (kind == "subnets")
-        return ip.nft_ip_or_cidr(value) ? value : null;
+        return ip.valid_ip_or_cidr(value) ? value : null;
 
     return null;
 }
@@ -472,6 +475,7 @@ function module_exports() {
         patch_source,
         patch_source_values,
         import_plain_list,
+        normalize_plain_ruleset_value,
         extract_ip_cidr,
         extract_ip_cidr_nft_elements,
         has_domain_matchers,
@@ -482,7 +486,7 @@ function module_exports() {
     };
 }
 
-if (sourcepath(1) != null && sourcepath(1) != "")
+if ((sourcepath(1) != null && sourcepath(1) != "") || ARGV[0] == null)
     return module_exports();
 
 let mode = ARGV[0] || "";

@@ -801,19 +801,25 @@ function controller(bus, opts) {
 
     function get_default_route_dev() {
         let data = fs.readfile("/proc/net/route");
-        if (data == null || data == "")
-            return null;
-        let lines = split(data, "\n");
-        for (let i = 1; i < length(lines); i++) {
-            let line = trim(lines[i]);
-            if (line == "") continue;
-            let fields = split(line, /[ \t]+/);
-            if (length(fields) >= 4 && fields[1] == "00000000") {
-                let flags = int("0x" + fields[3]);
-                if ((flags & 1) != 0) { // RTF_UP
-                    return fields[0];
+        if (data != null && data != "") {
+            let lines = split(data, "\n");
+            for (let i = 1; i < length(lines); i++) {
+                let line = trim(lines[i]);
+                if (line == "") continue;
+                let fields = split(line, /[ \t]+/);
+                if (length(fields) >= 4 && fields[1] == "00000000") {
+                    let flags = int("0x" + fields[3]);
+                    if ((flags & 1) != 0) { // RTF_UP
+                        return fields[0];
+                    }
                 }
             }
+        }
+        let rt = command_capture("ip -4 route show default 2>/dev/null").output;
+        if (!rt || rt == "") rt = command_capture("ip route show table all default 2>/dev/null").output;
+        if (rt && rt != "") {
+            let m = match(rt, /dev\s+([^\s]+)/);
+            if (m && m[1]) return m[1];
         }
         return null;
     }
@@ -920,15 +926,42 @@ function controller(bus, opts) {
             }
         }
 
+        // Check bridge / LAN interfaces for client / AP / bridge-station modes
+        if (no_address) {
+            let check_devs = def_dev != null ? [ def_dev, "br-lan", "lan" ] : [ "br-lan", "lan" ];
+            for (let _, d in check_devs) {
+                let addr_out = command_capture("ip -4 addr show " + shell_quote(d) + " 2>/dev/null").output;
+                if (index(addr_out, "inet ") >= 0) {
+                    no_address = false;
+                    if (iface == "" || iface == "eth0") iface = d;
+                    break;
+                }
+            }
+        }
+
         // 3. Final fallback: verify that a default route exists in routing table
         if (no_gateway) {
             let route_out = command_capture("ip -4 route show default 2>/dev/null").output;
             if (index(route_out, "default") >= 0) {
                 no_gateway = false;
             } else {
-                let route_all = command_capture("ip route 2>/dev/null").output;
+                let route_all = command_capture("ip route show table all default 2>/dev/null").output;
+                if (!route_all || route_all == "") route_all = command_capture("ip route 2>/dev/null").output;
                 if (index(route_all, "default") >= 0)
                     no_gateway = false;
+            }
+        }
+
+        // Fast internet connectivity probe before declaring WAN failure
+        if (no_address || no_gateway) {
+            let direct_ok = command_success_from_args([
+                "curl", "-s", "-o", "/dev/null",
+                "--connect-timeout", "2", "--max-time", "3",
+                "http://connectivitycheck.gstatic.com/generate_204"
+            ]);
+            if (direct_ok) {
+                no_address = false;
+                no_gateway = false;
             }
         }
 

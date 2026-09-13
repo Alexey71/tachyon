@@ -915,6 +915,12 @@ function heal_wan_and_gateway(ev) {
     if (settings().recovery_bypass == "1") return;
     if (settings().ai_heal_wan_enabled == "0") return;
 
+    let direct_alive = (system("curl -s -o /dev/null --connect-timeout 2 --max-time 3 http://connectivitycheck.gstatic.com/generate_204") == 0);
+    if (direct_alive) {
+        log("Watchdog: heal_wan_and_gateway suppressed — direct connectivity is alive", "info");
+        return;
+    }
+
     let tcfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "telegram"));
     if (tcfg.notify_crash != "0") {
         send_telegram_notification("⚠️ *Watchdog:* WAN/Gateway проблема. Попытка обновления сетевого интерфейса...", "heal_wan_and_gateway", 600);

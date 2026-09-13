@@ -360,7 +360,7 @@ function plain_domain_ip_list_reference_valid(reference) {
 
     return reference == "" ||
         remote_reference(reference) ||
-        absolute_reference_with_extension(reference, ".lst", null);
+        absolute_reference_with_extension(reference, ".lst", ".txt");
 }
 
 function valid_outbound() {

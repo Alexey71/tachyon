@@ -261,8 +261,11 @@ function domain_subnet_line_values(data) {
 
 function normalize_domain_subnet_value(value, kind) {
     kind = as_string(kind);
-    if (kind == "domains")
+    if (kind == "domains") {
+        if (core_ip.valid_ip_or_cidr(value))
+            return null;
         return domain_config.suffix_to_ascii(value);
+    }
     if (kind == "subnets")
         return core_ip.valid_ip_or_cidr(value) ? value : null;
 
@@ -345,11 +348,13 @@ function split_domain_subnet_file(path, domains_path, subnets_path) {
     let subnets = [];
 
     for (let value in domain_subnet_line_values(data)) {
-        let domain = normalize_domain_subnet_value(value, "domains");
-        if (domain != null)
-            push(domains, domain);
-        else if (core_ip.valid_ip_or_cidr(value))
+        if (core_ip.valid_ip_or_cidr(value))
             push(subnets, value);
+        else {
+            let domain = normalize_domain_subnet_value(value, "domains");
+            if (domain != null)
+                push(domains, domain);
+        }
     }
 
     if (!write_text_file(domains_path, length(domains) > 0 ? join("\n", domains) + "\n" : ""))
@@ -2740,6 +2745,91 @@ function nft_populate_runtime_set_for_section(section, deferred_sections, table,
                         nft_add_community_subnet_file_to_family_sets(path, table, sets.subnets, sets.subnets6, service, "5000", sets.ip_ports, sets.ip6_ports);
                         break;
                     }
+                }
+            }
+        }
+
+        // Load subnets from domain_ip_lists into nftables (local files and compiled rulesets)
+        let sec_name = as_string(section[".name"]);
+        for (let ref in list_option(section, "domain_ip_lists")) {
+            ref = as_string(ref);
+            if (ref == "" || substr(ref, 0, 1) != "/") continue;
+            if (!helpers.file_is_usable(ref, 0)) continue;
+            let data = fs.readfile(ref);
+            if (data == null || data == "") continue;
+            let subnets = [];
+            for (let val in domain_subnet_line_values(data)) {
+                if (core_ip.valid_ip_or_cidr(val))
+                    push(subnets, val);
+            }
+            if (length(subnets) > 0) {
+                if (ports != "")
+                    nft_add_values_to_family_sets(subnets, table, sets.ip_ports, sets.ip6_ports, "ip-port-from-ip", ports, "5000");
+                else
+                    nft_add_values_to_family_sets(subnets, table, sets.subnets, sets.subnets6, "ips", "", "5000");
+            }
+        }
+        let list_json_paths = [
+            "/tmp/sing-box/rulesets/lists-" + sec_name + ".json",
+            "/etc/tachyon/rulesets/lists-" + sec_name + ".json"
+        ];
+        for (let jpath in list_json_paths) {
+            if (helpers.file_is_usable(jpath, 10)) {
+                let jdata = fs.readfile(jpath);
+                let jobj = null;
+                try { jobj = json(jdata); } catch (e) {}
+                if (type(jobj) == "object" && type(jobj.rules) == "array") {
+                    let jsubnets = [];
+                    for (let r in jobj.rules) {
+                        if (type(r) == "object" && type(r.ip_cidr) == "array") {
+                            for (let cidr in r.ip_cidr) {
+                                if (core_ip.valid_ip_or_cidr(cidr))
+                                    push(jsubnets, cidr);
+                            }
+                        }
+                    }
+                    if (length(jsubnets) > 0) {
+                        if (ports != "")
+                            nft_add_values_to_family_sets(jsubnets, table, sets.ip_ports, sets.ip6_ports, "ip-port-from-ip", ports, "5000");
+                        else
+                            nft_add_values_to_family_sets(jsubnets, table, sets.subnets, sets.subnets6, "ips", "", "5000");
+                    }
+                }
+                break;
+            }
+        }
+
+        // Load subnets from rule_sets_with_subnets into nftables (local JSON and cached rulesets)
+        for (let ref in connections.rule_sets_with_subnets(section)) {
+            ref = as_string(ref);
+            if (ref == "") continue;
+            let check_paths = (substr(ref, 0, 1) == "/") ? [ ref ] : [
+                "/tmp/sing-box/rulesets/custom-" + sec_name + ".json",
+                "/etc/tachyon/rulesets/custom-" + sec_name + ".json"
+            ];
+            for (let jpath in check_paths) {
+                if (match(jpath, /\.json$/) != null && helpers.file_is_usable(jpath, 10)) {
+                    let jdata = fs.readfile(jpath);
+                    let jobj = null;
+                    try { jobj = json(jdata); } catch (e) {}
+                    if (type(jobj) == "object" && type(jobj.rules) == "array") {
+                        let jsubnets = [];
+                        for (let r in jobj.rules) {
+                            if (type(r) == "object" && type(r.ip_cidr) == "array") {
+                                for (let cidr in r.ip_cidr) {
+                                    if (core_ip.valid_ip_or_cidr(cidr))
+                                        push(jsubnets, cidr);
+                                }
+                            }
+                        }
+                        if (length(jsubnets) > 0) {
+                            if (ports != "")
+                                nft_add_values_to_family_sets(jsubnets, table, sets.ip_ports, sets.ip6_ports, "ip-port-from-ip", ports, "5000");
+                            else
+                                nft_add_values_to_family_sets(jsubnets, table, sets.subnets, sets.subnets6, "ips", "", "5000");
+                        }
+                    }
+                    break;
                 }
             }
         }

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-13 10:03+0300\n"
-"PO-Revision-Date: 2026-09-13 10:03+0300\n"
+"POT-Creation-Date: 2026-09-13 20:39+0300\n"
+"PO-Revision-Date: 2026-09-13 20:39+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -257,11 +257,11 @@ msgstr "Добавить ключевое слово"
 msgid "Add prefix to nodes"
 msgstr "Добавить префикс к узлам"
 
-msgid "Add URLs or local paths to .lst lists containing domains and subnets."
-msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены и подсети."
+msgid "Add URLs or local paths to .lst / .txt lists containing domains and subnets."
+msgstr ""
 
-msgid "Add URLs or local paths to .lst lists containing domains. IP entries are ignored."
-msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены. IP-записи игнорируются."
+msgid "Add URLs or local paths to .lst / .txt lists containing domains. IP entries are ignored."
+msgstr ""
 
 msgid "Add URLs or local paths to .srs / .json lists. Only domain rules are supported."
 msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Поддерживаются только правила доменов."
@@ -2978,8 +2978,8 @@ msgstr "Обнаружены устаревшие пути zapret, требуе�
 msgid "Level name"
 msgstr "Имя уровня"
 
-msgid "List must be an HTTP(S) URL or a local .lst path"
-msgstr "Список должен быть HTTP(S) URL или локальным путём .lst"
+msgid "List must be an HTTP(S) URL or a local .lst / .txt path"
+msgstr ""
 
 msgid "List of domains automatically detected and the section they were added to. To edit or remove them, open the routing rules of the respective section."
 msgstr "Список автоматически определённых доменов и секций, в которые они были добавлены. Для редактирования или удаления откройте правила маршрутизации соответствующей секции."
@@ -4826,6 +4826,9 @@ msgstr "Хранить автоопределённые домены в /etc в�
 msgid "Strategy & Parameters"
 msgstr "Стратегия и параметры"
 
+msgid "Strategy applied successfully and service reloaded!"
+msgstr ""
+
 msgid "Strategy benchmark started"
 msgstr "Бенчмарк стратегий запущен"
 
@@ -4846,6 +4849,9 @@ msgstr "STUN (P2P-звонки)"
 
 msgid "Subnet %s belongs to a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section."
 msgstr "Подсеть %s входит в публичный Anycast/CDN-диапазон (%s). Сторонние сайты, размещенные на этом CDN, также будут направляться через эту секцию."
+
+msgid "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19302, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct."
+msgstr ""
 
 msgid "Subnet %s is a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section."
 msgstr "Подсеть %s является публичным Anycast/CDN-диапазоном (%s). Сторонние сайты, размещенные на этом CDN, также будут направляться через эту секцию."
@@ -5860,6 +5866,15 @@ msgstr "Правила маршрутизации sing-box для Zapret2 нас
 
 msgid "Zapret2 sing-box route rules are not configured"
 msgstr "Правила маршрутизации sing-box для Zapret2 не настроены"
+
+msgid "Add URLs or local paths to .lst lists containing domains and subnets."
+msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены и подсети."
+
+msgid "Add URLs or local paths to .lst lists containing domains. IP entries are ignored."
+msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены. IP-записи игнорируются."
+
+msgid "List must be an HTTP(S) URL or a local .lst path"
+msgstr "Список должен быть HTTP(S) URL или локальным путём .lst"
 
 msgid "All Internet (Complete internet cutoff)"
 msgstr "Весь интернет (Полное отключение)"

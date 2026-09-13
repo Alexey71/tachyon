@@ -103,7 +103,7 @@ cat >"$WORK_DIR/valid.json" <<'JSON'
       "community_lists": [ "discord" ],
       "rule_set": [ "https://example.com/rules.srs" ],
       "rule_set_with_subnets": [ "/tmp/local.json" ],
-      "domain_ip_lists": [ "https://example.com/mixed.lst" ],
+      "domain_ip_lists": [ "https://example.com/mixed.lst", "/etc/tachyon/list.txt" ],
       "outbound_detour_enabled": "1",
       "outbound_detour_section": "detour"
     },

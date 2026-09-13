@@ -2087,10 +2087,7 @@ function isDownloadThroughTargetSection(section, currentSectionId) {
   const sectionName = getUciSectionName(section);
   const action = (section && section.action) || "";
 
-  if (
-    !sectionName ||
-    section.enabled === "0"
-  ) {
+  if (!sectionName || section.enabled === "0") {
     return false;
   }
 
@@ -5813,13 +5810,24 @@ function appendUniqueDomainTextValues(textValue, values) {
 
 function stripDomainFullPrefix(val) {
   if (!val) return "";
-  const lines = typeof val === "string" ? val.split("\n") : Array.isArray(val) ? val : [String(val)];
+  const lines =
+    typeof val === "string"
+      ? val.split("\n")
+      : Array.isArray(val)
+        ? val
+        : [String(val)];
   return lines
     .map((line) => {
       const trimmed = String(line || "").trim();
       if (trimmed.startsWith("full:")) {
         const body = trimmed.substring(5).trim();
-        if (body && !body.includes("/") && !body.includes(":") && !body.includes(" ") && !body.includes(",")) {
+        if (
+          body &&
+          !body.includes("/") &&
+          !body.includes(":") &&
+          !body.includes(" ") &&
+          !body.includes(",")
+        ) {
           return body;
         }
       }
@@ -7573,8 +7581,8 @@ function validateCustomRulesetReference(value) {
 function validatePlainListReference(value) {
   return validateFileReference(
     value,
-    [".lst"],
-    _("List must be an HTTP(S) URL or a local .lst path"),
+    [".lst", ".txt"],
+    _("List must be an HTTP(S) URL or a local .lst / .txt path"),
     { allowRemoteWithoutExtension: true },
   );
 }
@@ -7944,12 +7952,7 @@ function createSectionContent(section) {
   o.depends("action", "wdtt");
   o.modalonly = true;
 
-  o = section.taboption(
-    "settings",
-    form.Value,
-    "warp_flow_mtu",
-    _("WDTT MTU"),
-  );
+  o = section.taboption("settings", form.Value, "warp_flow_mtu", _("WDTT MTU"));
   o.depends("action", "wdtt");
   o.modalonly = true;
 
@@ -11125,7 +11128,9 @@ function createSectionContent(section) {
     form.Flag,
     "routed_dns_enabled",
     _("Routed DNS"),
-    _("Resolve matched domains through an encrypted DNS server of this section instead of FakeIP. DNS queries traverse the same proxy as the section's outbound."),
+    _(
+      "Resolve matched domains through an encrypted DNS server of this section instead of FakeIP. DNS queries traverse the same proxy as the section's outbound.",
+    ),
   );
   dependsOnRoutingAction(routedDnsEnabledOption);
   routedDnsEnabledOption.default = "0";
@@ -11360,7 +11365,7 @@ function ipMatchesCidr(ip, cidr) {
     const subnetBig = ipv6ToBigInt(subnet);
     if (ipBig === null || subnetBig === null) return false;
     const shift = 128n - BigInt(bits);
-    return (ipBig >> shift) === (subnetBig >> shift);
+    return ipBig >> shift === subnetBig >> shift;
   } else {
     const bits = bitsStr !== undefined ? parseInt(bitsStr, 10) : 32;
     if (isNaN(bits) || bits < 0 || bits > 32) return false;
@@ -11673,9 +11678,7 @@ async function resolveDomainToIps(domain) {
 
   // 2. Fallback: nslookup via /usr/bin/nslookup
   try {
-    const res = await fs
-      .exec("/usr/bin/nslookup", [domain])
-      .catch(() => null);
+    const res = await fs.exec("/usr/bin/nslookup", [domain]).catch(() => null);
     if (res && res.stdout) {
       const ips = [];
       const lines = res.stdout.split("\n");
@@ -11874,7 +11877,8 @@ async function performTrace(query) {
           const subnets = await readSubnetListFile(community);
           const matchedCidr = matchIpInCidrs(queryForMatching, subnets);
           if (matchedCidr) {
-            const isDiscordCfVoice = community === "discord" && isCloudflareSharedCidr(matchedCidr);
+            const isDiscordCfVoice =
+              community === "discord" && isCloudflareSharedCidr(matchedCidr);
             return {
               matched: true,
               sectionName: secName,
