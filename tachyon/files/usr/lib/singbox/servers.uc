@@ -569,25 +569,6 @@ function add_server(config, section) {
     add_dns_bypass(config, section);
 }
 
-function add_sniff_rule(config, section) {
-    let rules = array_or_empty(config.route.rules);
-    let rule = {
-        action: "sniff",
-        inbound: runtime_constants.server_inbound_tag(section[".name"])
-    };
-    let insert_at = 0;
-    while (insert_at < length(rules) && type(rules[insert_at]) == "object" && rules[insert_at].action == "sniff")
-        insert_at++;
-
-    let result = [];
-    for (let i = 0; i < insert_at; i++)
-        push(result, rules[i]);
-    push(result, rule);
-    for (let i = insert_at; i < length(rules); i++)
-        push(result, rules[i]);
-    config.route.rules = result;
-}
-
 function clone(value) {
     try {
         return json(sprintf("%J", value));
@@ -607,12 +588,40 @@ function value_contains(value, item) {
     return value == item;
 }
 
+function add_sniff_rule(config, section) {
+    let tag = runtime_constants.server_inbound_tag(section[".name"]);
+    if (type(config.route) == "object" && type(config.route.rules) == "array" &&
+        length(config.route.rules) > 0 && config.route.rules[0].action == "sniff" &&
+        type(config.route.rules[0].inbound) == "array") {
+        if (!value_contains(config.route.rules[0].inbound, tag))
+            push(config.route.rules[0].inbound, tag);
+        return;
+    }
+
+    let rules = array_or_empty(config.route.rules);
+    let rule = {
+        action: "sniff",
+        inbound: tag
+    };
+    let insert_at = 0;
+    while (insert_at < length(rules) && type(rules[insert_at]) == "object" && rules[insert_at].action == "sniff")
+        insert_at++;
+
+    let result = [];
+    for (let i = 0; i < insert_at; i++)
+        push(result, rules[i]);
+    push(result, rule);
+    for (let i = insert_at; i < length(rules); i++)
+        push(result, rules[i]);
+    config.route.rules = result;
+}
+
 function clone_rules_for_inbound(config, source_inbound, target_inbound, skip_domain) {
     let cloned_rules = [];
     for (let rule in array_or_empty(config.route.rules)) {
         if (type(rule) != "object")
             continue;
-        if (rule.action != "route" && rule.action != "reject")
+        if (rule.action != "route" && rule.action != "reject" && rule.action != "resolve")
             continue;
         if (!value_contains(rule.inbound, source_inbound))
             continue;

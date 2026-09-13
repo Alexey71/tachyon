@@ -573,6 +573,16 @@ function priority_outbound_tag(section_name, group_id) {
     return outbound_tag(section_name + "-priority-" + as_string(group_id));
 }
 
+function is_extended_variant_detected() {
+    let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
+    let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
+    if (sb_variant_val == "extended" || sb_variant_val == "extended-compressed")
+        return true;
+    let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
+    let sb_version_val = trim(fs.readfile(sb_version_file) || "");
+    return index(sb_version_val, "extended") >= 0;
+}
+
 function add_urltest_outbound(config, section, urltest_id, urltest_candidate_tags, state) {
     let section_name = section[".name"];
     let urltest_outbounds = urltest_filtered_outbounds(section, urltest_id, urltest_candidate_tags, state);
@@ -587,6 +597,8 @@ function add_urltest_outbound(config, section, urltest_id, urltest_candidate_tag
         tolerance: int(connections.urltest_tolerance(section, urltest_id), 10),
         interrupt_exist_connections: connections.urltest_interrupt_exist_connections(section, urltest_id)
     };
+    if (is_extended_variant_detected() && length(urltest_outbounds) > 0)
+        urltest_outbound.default = urltest_outbounds[0];
     let idle_timeout = urltest_idle_timeout(section, urltest_id);
     if (idle_timeout != "")
         urltest_outbound.idle_timeout = idle_timeout;
@@ -1993,6 +2005,26 @@ function add_server_routes(config, servers, sections) {
             if (length(isolated_subnets) > 0)
                 isolate_rule.ip_cidr = isolated_subnets;
             push(config.route.rules, isolate_rule);
+        }
+
+        push(config.route.rules, {
+            action: "hijack-dns",
+            inbound: inbound,
+            port: 53
+        });
+        push(config.route.rules, {
+            action: "hijack-dns",
+            inbound: inbound,
+            protocol: "dns"
+        });
+
+        if (!isolate_lan) {
+            push(config.route.rules, {
+                action: "route",
+                inbound: inbound,
+                ip_is_private: true,
+                outbound: runtime_constants.DIRECT_OUTBOUND_TAG
+            });
         }
 
         let custom_rules = list_option(server, "custom_route_rules");

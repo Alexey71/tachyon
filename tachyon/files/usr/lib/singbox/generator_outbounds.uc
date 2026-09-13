@@ -959,6 +959,16 @@ function add_connection_manual_links(config, state, section, taken, selector_tag
     }
 }
 
+function is_extended_variant_detected() {
+    let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
+    let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
+    if (sb_variant_val == "extended" || sb_variant_val == "extended-compressed")
+        return true;
+    let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
+    let sb_version_val = trim(fs.readfile(sb_version_file) || "");
+    return index(sb_version_val, "extended") >= 0;
+}
+
 function add_connection_text_urltest(config, state, section, taken, selector_tags, urltest_candidate_tags, index_offset) {
     let section_name = section[".name"];
     if (index(connections.urltests(section), "urltest") >= 0)
@@ -998,6 +1008,8 @@ function add_connection_text_urltest(config, state, section, taken, selector_tag
         tolerance,
         interrupt_exist_connections: interrupt
     };
+    if (is_extended_variant_detected() && length(text_tags) > 0)
+        outbound.default = text_tags[0];
     runtime_subscription.remember_outbound_metadata(state, urltest_tag, "Fastest", outbound);
     runtime_subscription.remember_urltest_group_config(state, urltest_tag, {
         displayName: "Fastest",

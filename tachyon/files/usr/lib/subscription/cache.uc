@@ -1483,16 +1483,17 @@ function sing_box_version_from_output(output) {
 }
 
 function get_sing_box_version() {
-    if (trim(as_string(fs.readfile(SB_VARIANT_STATE_FILE))) == "extended-compressed") {
-        let version_state = trim(as_string(fs.readfile(SB_VERSION_STATE_FILE)));
-        if (version_state != "")
-            return version_state;
-    }
+    let version_state = trim(as_string(fs.readfile(SB_VERSION_STATE_FILE)));
+    if (version_state != "")
+        return version_state;
 
     if (!command_success_from_args([ "sh", "-c", "command -v sing-box" ]))
         return "";
 
-    return sing_box_version_from_output(command_output_from_args([ "sing-box", "version" ]));
+    let v = sing_box_version_from_output(command_output_from_args([ "sing-box", "version" ]));
+    if (v != "")
+        fs.writefile(SB_VERSION_STATE_FILE, v + "\n");
+    return v;
 }
 
 function get_subscription_user_agent(custom_user_agent) {

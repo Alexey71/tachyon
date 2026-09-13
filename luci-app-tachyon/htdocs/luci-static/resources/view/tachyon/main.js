@@ -14517,10 +14517,26 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       selectedRuleSection
     );
     if (res.success) {
-      showToast(
-        `${_("Applied")} "${item.name}" -> ${selectedRuleSection || _("Global Default")}`,
-        "success"
-      );
+      if (typeof ui?.addNotification === "function") {
+        ui.addNotification(
+          _("Tachyon"),
+          E(
+            "p",
+            {},
+            `${_("Strategy applied successfully and service reloaded!")} (${item.name} -> ${selectedRuleSection || _("Global Default")})`
+          ),
+          "info"
+        );
+      } else {
+        showToast(
+          `${_("Applied")} "${item.name}" -> ${selectedRuleSection || _("Global Default")}`,
+          "success"
+        );
+      }
+      if (typeof ui?.hideModal === "function") ui.hideModal();
+      if (typeof window !== "undefined" && typeof window.location?.reload === "function") {
+        window.location.reload();
+      }
     } else {
       showToast(_("Failed to apply strategy"), "error");
     }

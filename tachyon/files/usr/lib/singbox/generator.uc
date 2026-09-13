@@ -585,11 +585,11 @@ function base_config(settings, service_address, runtime_context) {
     }
     let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
     let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
-    let is_extended_variant = sb_variant_val == "extended" || sb_variant_val == "extended-compressed";
+    let is_extended_variant = sb_variant_val == "extended" || sb_variant_val == "extended-compressed" || index(sb_version_val, "extended") >= 0;
 
-    let use_legacy_rdrc = sb_version_val != ""
+    let use_legacy_rdrc = is_extended_variant || (sb_version_val != ""
         ? (match(sb_version_val, /^v?1\.1[0-3]\./) != null)
-        : !is_extended_variant;
+        : false);
 
     let is_sb_1_14_plus = is_sb_1_14_plus_detected(sb_version_val);
 
