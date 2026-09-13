@@ -11394,6 +11394,19 @@ function getSharedCdnWarning(cidr) {
   return null;
 }
 
+function isCloudflareSharedCidr(cidr) {
+  if (!cidr) return false;
+  const normalized = cidr.trim();
+  for (const cfCidr of CLOUDFLARE_SHARED_CIDRS) {
+    if (normalized === cfCidr) return true;
+  }
+  const ipOnly = normalized.split("/")[0];
+  for (const cfCidr of CLOUDFLARE_SHARED_CIDRS) {
+    if (ipMatchesCidr(ipOnly, cfCidr)) return true;
+  }
+  return false;
+}
+
 let _subnetListCache = {};
 
 async function readSubnetListFile(service) {
@@ -11861,17 +11874,24 @@ async function performTrace(query) {
           const subnets = await readSubnetListFile(community);
           const matchedCidr = matchIpInCidrs(queryForMatching, subnets);
           if (matchedCidr) {
+            const isDiscordCfVoice = community === "discord" && isCloudflareSharedCidr(matchedCidr);
             return {
               matched: true,
               sectionName: secName,
               label: label,
               action: action,
-              ruleType: "Community Subnets (" + community + ")",
+              ruleType: isDiscordCfVoice
+                ? "Community Subnets (" + community + " Voice UDP)"
+                : "Community Subnets (" + community + ")",
               pattern: matchedCidr,
               matchedIp: queryForMatching,
               priority: i + 1,
               totalSections: totalSections,
-              sharedCdnWarning: getSharedCdnWarning(matchedCidr),
+              sharedCdnWarning: isDiscordCfVoice
+                ? _(
+                    "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19302, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.",
+                  ).format(matchedCidr)
+                : getSharedCdnWarning(matchedCidr),
             };
           }
           if (
@@ -12105,7 +12125,10 @@ async function performTrace(query) {
           }
 
           for (const community of communityLists) {
-            const subnets = await readSubnetListFile(community);
+            let subnets = await readSubnetListFile(community);
+            if (community === "discord") {
+              subnets = subnets.filter((s) => !isCloudflareSharedCidr(s));
+            }
             const matchedCommunityCidr = matchIpInCidrs(ip, subnets);
             if (matchedCommunityCidr) {
               return {

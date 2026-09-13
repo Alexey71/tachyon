@@ -1467,29 +1467,41 @@ function add_protocol_matchers(rule, section) {
 }
 
 
-function load_community_subnet_cidrs(community) {
+function load_community_subnet_cidrs(community, filter_mode) {
     let service = as_string(community);
     let paths = [
         "/tmp/sing-box/rulesets/community-subnets-" + service + ".lst",
         "/etc/tachyon/rulesets/community-subnets-" + service + ".lst",
         (ctx.runtime_ruleset_folder || runtime_ruleset_folder || "/tmp/sing-box/rulesets") + "/community-subnets-" + service + ".lst"
     ];
+    let cidrs = [];
     for (let path in paths) {
         let content = fs.readfile(path);
         if (content != null && content != "") {
-            let cidrs = [];
             for (let line in split(as_string(content), "\n")) {
                 line = trim(replace(as_string(line), /\r/g, ""));
                 if (line != "" && substr(line, 0, 1) != "#" && match(line, /^[0-9a-fA-F:.]+(\/[0-9]+)?$/) && !match(line, /\.$/)) {
-                    if (service == "discord" && core_ip.is_cloudflare_shared_cidr(line))
-                        continue;
-                    push(cidrs, line);
+                    let is_cf = core_ip.is_cloudflare_shared_cidr(line);
+                    if (filter_mode == "only_cloudflare") {
+                        if (service == "discord" && is_cf)
+                            push(cidrs, line);
+                    } else if (filter_mode == "exclude_cloudflare" || filter_mode == null) {
+                        if (service == "discord" && is_cf)
+                            continue;
+                        push(cidrs, line);
+                    } else {
+                        push(cidrs, line);
+                    }
                 }
             }
             if (length(cidrs) > 0)
                 return cidrs;
         }
     }
+
+    if (service == "discord" && filter_mode == "only_cloudflare" && length(cidrs) == 0)
+        return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+
     return [];
 }
 
@@ -1511,14 +1523,19 @@ function add_combined_route_for_section(config, section) {
 
 
     let include_community_subnets = bool_option(section, "community_subnets", true);
+    let discord_cf_subnets = [];
     for (let community in connections.community_lists(section)) {
         let service = as_string(community);
         let ensured = ensure_community_ruleset(config, section_name, service);
         push(rule_set_tags, ensured.tag);
         push(dns_rule_set_tags, ensured.tag);
         if (include_community_subnets) {
-            for (let cidr in load_community_subnet_cidrs(community))
+            for (let cidr in load_community_subnet_cidrs(community, "exclude_cloudflare"))
                 push(ip_cidr, cidr);
+            if (service == "discord") {
+                for (let cidr in load_community_subnet_cidrs(community, "only_cloudflare"))
+                    push(discord_cf_subnets, cidr);
+            }
         }
     }
     for (let reference in connections.rule_sets(section)) {
@@ -1605,6 +1622,14 @@ function add_combined_route_for_section(config, section) {
         push_section_route_rule(config, ip_rule, target.outbound);
     }
 
+    if (length(discord_cf_subnets) > 0) {
+        let voice_rule = create_section_route_rule();
+        voice_rule.network = "udp";
+        voice_rule.ip_cidr = discord_cf_subnets;
+        voice_rule.port_range = core_ip.DISCORD_VOICE_PORT_RANGES || [ "5000:5020", "3478:3478", "19302:19302", "50000:65535" ];
+        push_section_route_rule(config, voice_rule, target.outbound);
+    }
+
     let country_list = connections.geoip_country_list(section);
     let country_mode = connections.geoip_country_mode(section);
 
@@ -1632,7 +1657,7 @@ function add_combined_route_for_section(config, section) {
         }
     }
 
-    if (!has_domain && !has_ruleset && !has_ip_cidr && length(country_list) == 0) {
+    if (!has_domain && !has_ruleset && !has_ip_cidr && length(discord_cf_subnets) == 0 && length(country_list) == 0) {
         let fallback_rule = create_section_route_rule();
         let has_any_matcher = fallback_rule.source_ip_cidr != null ||
             fallback_rule.port != null || fallback_rule.port_range != null ||

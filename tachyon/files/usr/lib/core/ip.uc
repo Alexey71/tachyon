@@ -272,6 +272,10 @@ function is_cloudflare_shared_cidr(value) {
     return false;
 }
 
+const DISCORD_VOICE_PORTS_NFT = "5000-5020, 3478, 19302, 50000-65535";
+const DISCORD_VOICE_PORT_RANGES = [ "5000:5020", "3478:3478", "19302:19302", "50000:65535" ];
+const DEFAULT_DISCORD_VOICE_SUBNETS = [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+
 return {
     valid_ipv4,
     valid_ipv4_cidr,
@@ -288,6 +292,9 @@ return {
     resolve_mac_to_ips,
     normalize_to_cidrs,
     CLOUDFLARE_SHARED_CIDRS,
-    is_cloudflare_shared_cidr
+    is_cloudflare_shared_cidr,
+    DISCORD_VOICE_PORTS_NFT,
+    DISCORD_VOICE_PORT_RANGES,
+    DEFAULT_DISCORD_VOICE_SUBNETS
 };
 
