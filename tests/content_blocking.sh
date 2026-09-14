@@ -92,7 +92,8 @@ grep -q '192.168.1.150/32' "$OUT" ||
 assert_contains "$OUT" '"action": "reject"' "always-on: DNS reject action"
 
 # Route rule fallback (always-on schedule, IP device)
-grep -o '"action": "reject"' "$OUT" | head -2 >/dev/null ||
+reject_count="$(grep -c '"action": "reject"' "$OUT" || true)"
+[ "$reject_count" -ge 2 ] ||
   fail "always-on: route reject rule missing"
 
 # ─── Fixture: whitelist (allow only) mode ────────────────────────────────────
@@ -133,8 +134,7 @@ OUT="$WORK_DIR/allow.json"
 generate_config "$WORK_DIR/fixture_allow.json" "$OUT"
 
 # Whitelist mode must invert the DNS rule
-grep -o '"invert": true' "$OUT" | head -1 >/dev/null ||
-  fail "whitelist: DNS rule must be inverted"
+assert_contains "$OUT" '"invert": true' "whitelist: DNS rule must be inverted"
 assert_contains "$OUT" '192.168.1.151/32' "whitelist: source_ip_cidr scoped"
 
 # ─── Fixture: MAC-only device (no IP in DNS rules, nft redirect only) ────────
@@ -175,7 +175,7 @@ OUT="$WORK_DIR/mac.json"
 generate_config "$WORK_DIR/fixture_mac.json" "$OUT"
 
 # MAC-only device: DNS rules must NOT carry source_ip_cidr (no IP known)
-if grep -o '"source_ip_cidr"' "$OUT" | head -1 >/dev/null; then
+if grep -q '"source_ip_cidr"' "$OUT"; then
   fail "mac-only: DNS rule must not carry source_ip_cidr for MAC-only device"
 fi
 # But dns-block-in must still exist
