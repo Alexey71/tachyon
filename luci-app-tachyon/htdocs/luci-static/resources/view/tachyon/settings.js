@@ -2472,10 +2472,10 @@ function createSettingsContent(section, capabilities) {
     "qos_priority_engine",
     _("QoS Priority Engine (DSCP)"),
     _(
-      "Prioritizes interactive DNS, VoIP/WebRTC, gaming and TCP ACK packets via DSCP marking in nftables. In Auto mode, automatically yields if OpenWrt SQM (CAKE/FQ_CoDel) is detected to prevent bufferbloat degradation.",
+      "Prioritizes interactive DNS, VoIP/WebRTC and gaming via DSCP marking in nftables. Works cooperatively with OpenWrt SQM (CAKE/FQ_CoDel) without bufferbloat degradation.",
     ),
   );
-  o.value("", _("Auto (yields if SQM is active)"));
+  o.value("", _("Auto (cooperative with SQM/CAKE)"));
   o.value("1", _("Enabled (always prioritize)"));
   o.value("0", _("Disabled"));
   o.default = "";

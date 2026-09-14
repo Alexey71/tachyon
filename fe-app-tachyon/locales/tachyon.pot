@@ -949,7 +949,7 @@ msgid "Auto"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2478
-msgid "Auto (yields if SQM is active)"
+msgid "Auto (cooperative with SQM/CAKE)"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:13637
@@ -6123,7 +6123,7 @@ msgid "Primary DNS"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2474
-msgid "Prioritizes interactive DNS, VoIP/WebRTC, gaming and TCP ACK packets via DSCP marking in nftables. In Auto mode, automatically yields if OpenWrt SQM (CAKE/FQ_CoDel) is detected to prevent bufferbloat degradation."
+msgid "Prioritizes interactive DNS, VoIP/WebRTC and gaming via DSCP marking in nftables. Works cooperatively with OpenWrt SQM (CAKE/FQ_CoDel) without bufferbloat degradation."
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10513

@@ -1700,7 +1700,8 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
 
     // QoS Low-Latency Gaming & Voice Acceleration Engine
     let qos_setting = uci_settings().qos_priority_engine;
-    let qos_enabled = (qos_setting == "1" || (qos_setting != "0" && !sqm_service_enabled()));
+    let sqm_active = sqm_service_enabled();
+    let qos_enabled = (qos_setting == "1" || qos_setting != "0");
 
     if (qos_enabled) {
         // Voice & Discord RTC (DSCP EF 0x2e)
@@ -1711,8 +1712,12 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
         nft_add_rule(table, "mangle_forward", [ "udp", "dport", "{ 3074, 7000-9000, 27000-27050, 28960 }", "ip", "dscp", "set", "0x22" ]);
         nft_add_rule(table, "mangle_output", [ "udp", "dport", "{ 3074, 7000-9000, 27000-27050, 28960 }", "ip", "dscp", "set", "0x22" ]);
 
-        // Pure TCP ACK Acceleration (DSCP CS2) - only small packets without payload
-        nft_add_rule(table, "mangle_forward", [ "tcp", "flags", "&", "(fin|syn|rst|ack)", "==", "ack", "meta", "length", "<=", "64", "ip", "dscp", "set", "cs2" ]);
+        // Pure TCP ACK Acceleration (DSCP CS2) - only small packets without payload.
+        // When SQM (CAKE) is active, CAKE's built-in ack-filter handles ACKs natively,
+        // and setting CS2 on ACKs pollutes CAKE's Video tin (Tin 2) in diffserv4.
+        if (!sqm_active) {
+            nft_add_rule(table, "mangle_forward", [ "tcp", "flags", "&", "(fin|syn|rst|ack)", "==", "ack", "meta", "length", "<=", "64", "ip", "dscp", "set", "cs2" ]);
+        }
     }
 
     return true;

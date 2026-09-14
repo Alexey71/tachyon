@@ -2774,6 +2774,67 @@ function run_doctor_checks_impl(repair) {
         }
     }
 
+    // 4b3. SQM (Smart Queue Management) & Bufferbloat compatibility
+    let sqm_queues = uci_core.section_objects("sqm", "queue");
+    let sqm_enabled_count = 0;
+    let sqm_lan_bridge_conflict = null;
+    let lan_bridge_ports = [];
+    let br_lan_ports = uci_core.get("network.br_lan.ports") || uci_core.get("network.lan.ports") || [];
+    if (type(br_lan_ports) == "string") br_lan_ports = split(br_lan_ports, /\s+/);
+    if (type(br_lan_ports) == "array") {
+        for (let p in br_lan_ports) push(lan_bridge_ports, as_string(p));
+    }
+    push(lan_bridge_ports, "br-lan");
+
+    if (sqm_queues && length(sqm_queues) > 0) {
+        for (let q in sqm_queues) {
+            if (q && (q.enabled == "1" || q.enabled == true)) {
+                sqm_enabled_count++;
+                let q_iface = as_string(q.interface || "");
+                for (let bp in lan_bridge_ports) {
+                    if (q_iface == bp && bp != "") {
+                        sqm_lan_bridge_conflict = q_iface;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (sqm_enabled_count > 0) {
+        let flow_offload = uci_core.get("firewall.@defaults[0].flow_offloading");
+        if (flow_offload == "1" || flow_offload == "true") {
+            issues++;
+            if (!DOCTOR_REPAIR_MODE) {
+                doc_plan("uci set firewall.@defaults[0].flow_offloading='0' + firewall reload");
+                doc_check("⚠️", "SQM / Flow Offloading", "conflict (flow offload bypasses SQM queues)",
+                    "→ WILL FIX (doctor --fix): отключение flow_offloading для устранения bufferbloat");
+            } else {
+                doc_set("firewall.@defaults[0].flow_offloading", "0");
+                doc_commit("firewall");
+                command_status("/etc/init.d/firewall reload >/dev/null 2>&1");
+                command_status("sleep 1");
+                let fo2 = uci_core.get("firewall.@defaults[0].flow_offloading");
+                if (fo2 != "1" && fo2 != "true") {
+                    doc_check("❌", "SQM / Flow Offloading", "conflict", "→ FIXED: flow_offloading=0 (SQM bufferbloat восстановлен)");
+                    fixed++;
+                } else {
+                    doc_check("❌", "SQM / Flow Offloading", "conflict", "→ не удалось отключить flow_offloading");
+                }
+            }
+        } else {
+            doc_check("✅", "SQM / Flow Offloading", "compatible (flow_offloading=0)", "");
+        }
+
+        if (sqm_lan_bridge_conflict != null) {
+            issues++;
+            doc_check("⚠️", "SQM interface (" + sqm_lan_bridge_conflict + ")", "misconfigured on LAN bridge",
+                "→ Привяжите очередь SQM к WAN интерфейсу (pppoe-wan/wan)");
+        } else {
+            doc_check("✅", "SQM (CAKE/fq_codel)", "active (QoS cooperative mode)", "");
+        }
+    }
+
     // 4c. Resolv.conf symlink
     let resolv_link = "";
     // Throws when /etc/resolv.conf is a regular file rather than a symlink,

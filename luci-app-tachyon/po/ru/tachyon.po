@@ -590,8 +590,8 @@ msgstr "Auth Digest"
 msgid "Auto"
 msgstr "Авто"
 
-msgid "Auto (yields if SQM is active)"
-msgstr "Авто (уступает, если активен SQM)"
+msgid "Auto (cooperative with SQM/CAKE)"
+msgstr "Авто (кооперация с SQM/CAKE)"
 
 msgid "Auto Modes (--auto)"
 msgstr "Авто-режимы (--auto)"
@@ -3785,8 +3785,8 @@ msgstr "Предотвращает множественные вызовы reloa
 msgid "Primary DNS"
 msgstr "Основной DNS"
 
-msgid "Prioritizes interactive DNS, VoIP/WebRTC, gaming and TCP ACK packets via DSCP marking in nftables. In Auto mode, automatically yields if OpenWrt SQM (CAKE/FQ_CoDel) is detected to prevent bufferbloat degradation."
-msgstr "Приоритизирует интерактивный DNS, VoIP/WebRTC, игровой трафик и пакеты TCP ACK через DSCP-маркировку в nftables. В режиме Авто автоматически уступает приоритет при обнаружении OpenWrt SQM (CAKE/FQ_CoDel) для предотвращения ухудшения bufferbloat."
+msgid "Prioritizes interactive DNS, VoIP/WebRTC and gaming via DSCP marking in nftables. Works cooperatively with OpenWrt SQM (CAKE/FQ_CoDel) without bufferbloat degradation."
+msgstr "Приоритизирует интерактивный DNS, VoIP/WebRTC и игровой трафик через DSCP-маркировку в nftables. Работает в кооперации с OpenWrt SQM (CAKE/FQ_CoDel) без ухудшения bufferbloat."
 
 msgid "Priority"
 msgstr "Приоритет"
