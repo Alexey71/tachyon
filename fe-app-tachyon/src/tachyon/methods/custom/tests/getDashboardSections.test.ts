@@ -1258,4 +1258,52 @@ describe('getDashboardSections', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mocks.getClashApiProxies).toHaveBeenCalledTimes(1);
   });
+
+  it('resolves outbound prefix and cleans displayName from metadata and subscription settings', async () => {
+    const sec = proxySection();
+    sec.subscription_urls = ['https://example.com/sub.txt'];
+    sec.subscription_url_settings = JSON.stringify({
+      'https://example.com/sub.txt': {
+        prefix_nodes: '1',
+        node_prefix: 'Geodema Network',
+      },
+    });
+
+    mocks.getConfigSections.mockResolvedValue([sec]);
+    mocks.getClashApiProxies.mockResolvedValue({
+      success: true,
+      data: {
+        proxies: {
+          ...clashProxies,
+          'main-3-out': proxy('VLESS', {
+            name: 'Geodema Network 🇫🇷 France',
+            history: [{ time: '2026-05-27T00:00:00Z', delay: 158 }],
+          }),
+        },
+      },
+    });
+    mocks.fsRead.mockResolvedValue(
+      JSON.stringify({
+        outboundMetadata: {
+          names: {
+            'main-3-out': 'Geodema Network 🇫🇷 France',
+          },
+          prefixes: {
+            'main-3-out': 'Geodema Network',
+          },
+        },
+      }),
+    );
+
+    const result = await getDashboardSections();
+    const [section] = result.data;
+    const outbound = section.outbounds.find(
+      (item) => item.code === 'main-3-out',
+    );
+
+    expect(result.success).toBe(true);
+    expect(outbound).toBeDefined();
+    expect(outbound?.prefix).toBe('Geodema Network');
+    expect(outbound?.displayName).toBe('🇫🇷 France');
+  });
 });

@@ -177,6 +177,42 @@ grep -q "198.51.100.88 . 443" "$NFT_LOG" || fail "sec_lst_ports scoped ip-port m
 if grep -q "domain-in-subnets.com" "$NFT_LOG"; then
   fail "domain name unexpectedly placed in nft ip set"
 fi
+mkdir -p /tmp/sing-box/rulesets
+cat >/tmp/sing-box/rulesets/sec_compiled-lists-ruleset.json <<'JSON'
+{
+  "version": 1,
+  "rules": [
+    {
+      "ip_cidr": [ "198.51.100.99", "2001:db8::99" ]
+    }
+  ]
+}
+JSON
+
+cat >"$WORK_DIR/test-compiled-fixture.json" <<JSON
+{
+  "settings": {
+    "source_network_interfaces": [ "br-lan" ]
+  },
+  "section": [
+    {
+      ".name": "sec_compiled",
+      ".type": "section",
+      "enabled": "1",
+      "action": "proxy"
+    }
+  ]
+}
+JSON
+
+: > "$NFT_LOG"
+ucode -L "$TACHYON_LIB" "$TACHYON_LIB/nft/apply.uc" nft-populate-runtime-sets-fixture \
+  "$WORK_DIR/test-compiled-fixture.json" 1 "" TachyonTable tachyon_subnets tachyon_ports tachyon_ip_ports tachyon_interfaces localv4 0x00100000
+
+grep -q "tachyon_rule_sec_compiled_subnets.*198.51.100.99" "$NFT_LOG" || fail "sec_compiled IPv4 subnets from compiled ruleset missing in nft set"
+grep -q "tachyon_rule_sec_compiled_subnets6.*2001:db8::99" "$NFT_LOG" || fail "sec_compiled IPv6 subnets from compiled ruleset missing in nft set"
+
+rm -rf /tmp/sing-box/rulesets/sec_compiled-lists-ruleset.json
 
 export PATH="$OLD_PATH"
 

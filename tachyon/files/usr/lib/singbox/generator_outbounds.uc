@@ -1191,7 +1191,8 @@ function add_subscription_source_with_state(config, section, source_index, sourc
             outbound.tag,
             display_names[i],
             outbound,
-            source_links[i]
+            source_links[i],
+            node_prefix
         );
         if (hidden_flags[i] !== true) {
             push(selector_tags, outbound.tag);

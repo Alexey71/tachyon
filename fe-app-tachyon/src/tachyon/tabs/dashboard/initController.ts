@@ -1017,18 +1017,32 @@ function getDetectedCountryFlag(country?: string) {
 
 function renderDetailsMemberName(member: Tachyon.UrlTestMember) {
   const countryFlag = getDetectedCountryFlag(member.country);
-  if (!countryFlag) {
-    return renderFlagEmojis(member.displayName);
+  const elements = countryFlag
+    ? [
+        E(
+          'span',
+          { class: 'tachyon_dashboard-page__urltest-details__country-badge' },
+          countryFlag,
+        ),
+        ...renderFlagEmojis(member.displayName),
+      ]
+    : renderFlagEmojis(member.displayName);
+
+  if (member.prefix) {
+    return [
+      ...elements,
+      E(
+        'span',
+        {
+          class: 'tachyon_dashboard-page__outbound-grid__item__prefix-badge',
+          style: 'margin-left: 6px;',
+        },
+        renderFlagEmojis(member.prefix),
+      ),
+    ];
   }
 
-  return [
-    E(
-      'span',
-      { class: 'tachyon_dashboard-page__urltest-details__country-badge' },
-      countryFlag,
-    ),
-    ...renderFlagEmojis(member.displayName),
-  ];
+  return elements;
 }
 
 function renderUrlTestSelectedValue(info: Tachyon.UrlTestInfo) {

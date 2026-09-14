@@ -543,6 +543,16 @@ function renderDefaultState({
                 },
                 renderFlagEmojis(outbound.displayName),
               ),
+              outbound.prefix
+                ? E(
+                    'span',
+                    {
+                      class:
+                        'tachyon_dashboard-page__outbound-grid__item__prefix-badge',
+                    },
+                    renderFlagEmojis(outbound.prefix),
+                  )
+                : '',
               E(
                 'span',
                 {
@@ -648,7 +658,26 @@ function renderDefaultState({
           'div',
           { class: 'tachyon_dashboard-page__outbound-grid__item__header' },
           [
-            E('b', {}, renderFlagEmojis(outbound.displayName)),
+            E(
+              'div',
+              {
+                class:
+                  'tachyon_dashboard-page__outbound-grid__item__title-wrapper',
+              },
+              [
+                E('b', {}, renderFlagEmojis(outbound.displayName)),
+                outbound.prefix
+                  ? E(
+                      'span',
+                      {
+                        class:
+                          'tachyon_dashboard-page__outbound-grid__item__prefix-badge',
+                      },
+                      renderFlagEmojis(outbound.prefix),
+                    )
+                  : '',
+              ],
+            ),
             ...(canCopyLink
               ? [
                   E(

@@ -879,21 +879,84 @@ function getPriorityGroups(dashboardCache?: DashboardSectionCache) {
   return groups;
 }
 
-function getOutboundDisplayName(
-  code: string,
-  entry: ClashProxyEntry | undefined,
-  link: string,
-  outboundMetadata?: Tachyon.GetOutboundMetadata,
-  preferMetadata = false,
-) {
-  const metadataName = outboundMetadata?.names?.[code];
+function getConfiguredSubscriptionPrefixes(
+  section: Tachyon.ConfigSection,
+): string[] {
+  const settings = itemSettingsMap(section.subscription_url_settings);
+  const prefixes: string[] = [];
+  for (const url of Object.keys(settings)) {
+    const item = settings[url];
+    if (item && item.prefix_nodes === '1') {
+      const p =
+        typeof item.node_prefix === 'string' ? item.node_prefix.trim() : '';
+      if (p && !prefixes.includes(p)) {
+        prefixes.push(p);
+      }
+    }
+  }
+  return prefixes;
+}
 
-  return (
+function resolveOutboundNameAndPrefix({
+  code,
+  entry,
+  link,
+  outboundMetadata,
+  preferMetadata = false,
+  configuredPrefixes = [],
+}: {
+  code: string;
+  entry?: ClashProxyEntry;
+  link: string;
+  outboundMetadata?: Tachyon.GetOutboundMetadata;
+  preferMetadata?: boolean;
+  configuredPrefixes?: string[];
+}): { displayName: string; prefix?: string } {
+  const metadataName = outboundMetadata?.names?.[code];
+  const rawName =
     (preferMetadata ? metadataName : getProxyUrlName(link)) ||
     (preferMetadata ? getProxyUrlName(link) : metadataName) ||
     entry?.value?.name ||
-    code
-  );
+    code;
+
+  let prefix = outboundMetadata?.prefixes?.[code]?.trim() || '';
+
+  if (!prefix && configuredPrefixes.length > 0) {
+    for (const p of configuredPrefixes) {
+      if (!p) continue;
+      if (
+        rawName.startsWith(p + ' ') ||
+        rawName.startsWith(p + '-') ||
+        code.startsWith(p + ' ') ||
+        code.startsWith(p + '-') ||
+        entry?.value?.name?.startsWith(p + ' ') ||
+        entry?.value?.name?.startsWith(p + '-')
+      ) {
+        prefix = p;
+        break;
+      }
+    }
+  }
+
+  let displayName = rawName;
+  if (prefix) {
+    if (displayName.startsWith(prefix + ' ')) {
+      const stripped = displayName.slice(prefix.length + 1).trim();
+      if (stripped) {
+        displayName = stripped;
+      }
+    } else if (displayName.startsWith(prefix + '-')) {
+      const stripped = displayName.slice(prefix.length + 1).trim();
+      if (stripped) {
+        displayName = stripped;
+      }
+    }
+  }
+
+  return {
+    displayName,
+    prefix: prefix || undefined,
+  };
 }
 
 function buildUrlTestInfo({
@@ -908,6 +971,7 @@ function buildUrlTestInfo({
   showDetectedCountries,
   selectorNow,
   selectorCodes = [],
+  configuredPrefixes = [],
 }: {
   code: string;
   displayName: string;
@@ -920,6 +984,7 @@ function buildUrlTestInfo({
   showDetectedCountries: boolean;
   selectorNow?: string;
   selectorCodes?: string[];
+  configuredPrefixes?: string[];
 }): Tachyon.UrlTestInfo {
   const childCodes = uniqueCodes(
     groupCache?.outbounds?.length
@@ -945,17 +1010,20 @@ function buildUrlTestInfo({
         cachedProxyLinks.get(childCode) ||
         '';
       const canCopyLink = isCopyableProxyLink(link);
+      const resolved = resolveOutboundNameAndPrefix({
+        code: childCode,
+        entry: childEntry,
+        link,
+        outboundMetadata,
+        preferMetadata: cachedProxyLinks.has(childCode),
+        configuredPrefixes,
+      });
 
       return [
         {
           code: childCode,
-          displayName: getOutboundDisplayName(
-            childCode,
-            childEntry,
-            link,
-            outboundMetadata,
-            cachedProxyLinks.has(childCode),
-          ),
+          displayName: resolved.displayName,
+          prefix: resolved.prefix,
           latency: childEntry?.value?.history?.[0]?.delay || 0,
           type: childEntry?.value?.type || '',
           transport:
@@ -1001,6 +1069,7 @@ function buildPriorityInfo({
   showDetectedCountries,
   selectorNow,
   selectorCodes = [],
+  configuredPrefixes = [],
 }: {
   config: PriorityConfig;
   entry?: ClashProxyEntry;
@@ -1012,6 +1081,7 @@ function buildPriorityInfo({
   showDetectedCountries: boolean;
   selectorNow?: string;
   selectorCodes?: string[];
+  configuredPrefixes?: string[];
 }): Tachyon.PriorityInfo {
   const cacheLevels = Array.isArray(groupCache?.levels)
     ? groupCache.levels
@@ -1078,16 +1148,19 @@ function buildPriorityInfo({
         cachedProxyLinks.get(childCode) ||
         '';
       const canCopyLink = isCopyableProxyLink(link);
+      const resolved = resolveOutboundNameAndPrefix({
+        code: childCode,
+        entry: childEntry,
+        link,
+        outboundMetadata,
+        preferMetadata: cachedProxyLinks.has(childCode),
+        configuredPrefixes,
+      });
 
       return {
         code: childCode,
-        displayName: getOutboundDisplayName(
-          childCode,
-          childEntry,
-          link,
-          outboundMetadata,
-          cachedProxyLinks.has(childCode),
-        ),
+        displayName: resolved.displayName,
+        prefix: resolved.prefix,
         latency: childEntry?.value?.history?.[0]?.delay || 0,
         type: childEntry?.value?.type || '',
         transport:
@@ -1158,6 +1231,7 @@ function buildProxyGroupOutbounds(
   cachedProxyLinks: Map<string, string> = new Map(),
 ) {
   const sectionName = section['.name'];
+  const configuredPrefixes = getConfiguredSubscriptionPrefixes(section);
   const proxyByCode = getProxyEntryByCode(proxies);
   const selectorTag = getOutboundTagBySection(sectionName);
   const selector = proxyByCode.get(selectorTag);
@@ -1210,16 +1284,20 @@ function buildProxyGroupOutbounds(
 
     const link = manualLinkByCode.get(code) || cachedProxyLinks.get(code) || '';
     const canCopyLink = isCopyableProxyLink(link);
+    const resolved = resolveOutboundNameAndPrefix({
+      code,
+      entry: item,
+      link,
+      outboundMetadata,
+      preferMetadata: cachedProxyLinks.has(code),
+      configuredPrefixes,
+    });
     const displayName =
       priorityConfig?.displayName ||
       urlTestConfig?.displayName ||
-      getOutboundDisplayName(
-        code,
-        item,
-        link,
-        outboundMetadata,
-        cachedProxyLinks.has(code),
-      );
+      resolved.displayName;
+    const prefix =
+      priorityConfig || urlTestConfig ? undefined : resolved.prefix;
     const isRuntimeUrlTest = isUrlTestProxyEntry(item);
 
     const urlTestInfo =
@@ -1237,6 +1315,7 @@ function buildProxyGroupOutbounds(
               urlTestConfig?.showDetectedCountries || showDetectedCountries,
             selectorNow,
             selectorCodes,
+            configuredPrefixes,
           })
         : undefined;
 
@@ -1252,6 +1331,7 @@ function buildProxyGroupOutbounds(
           showDetectedCountries: priorityConfig.showDetectedCountries,
           selectorNow,
           selectorCodes,
+          configuredPrefixes,
         })
       : undefined;
 
@@ -1296,6 +1376,7 @@ function buildProxyGroupOutbounds(
       {
         code,
         displayName,
+        prefix,
         latency,
         type: priorityConfig ? 'Priority' : item?.value.type || 'URLTest',
         transport: isGroupType

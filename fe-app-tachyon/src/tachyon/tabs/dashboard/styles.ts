@@ -459,10 +459,34 @@ export const styles = `
     min-width: 0;
 }
 
+.tachyon_dashboard-page__outbound-grid__item__title-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
 .tachyon_dashboard-page__outbound-grid__item__header b {
     min-width: 0;
     line-height: 1.25;
     overflow-wrap: anywhere;
+}
+
+.tachyon_dashboard-page__outbound-grid__item__prefix-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(128, 128, 128, 0.2);
+    color: var(--text-color-medium, #999);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .tachyon_dashboard-page .btn.tachyon_dashboard-page__outbound-grid__item__copy-button {

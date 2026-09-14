@@ -2224,6 +2224,13 @@ function renderDefaultState({
                 },
                 renderFlagEmojis(outbound.displayName)
               ),
+              outbound.prefix ? E(
+                "span",
+                {
+                  class: "tachyon_dashboard-page__outbound-grid__item__prefix-badge"
+                },
+                renderFlagEmojis(outbound.prefix)
+              ) : "",
               E(
                 "span",
                 {
@@ -2309,7 +2316,22 @@ function renderDefaultState({
           "div",
           { class: "tachyon_dashboard-page__outbound-grid__item__header" },
           [
-            E("b", {}, renderFlagEmojis(outbound.displayName)),
+            E(
+              "div",
+              {
+                class: "tachyon_dashboard-page__outbound-grid__item__title-wrapper"
+              },
+              [
+                E("b", {}, renderFlagEmojis(outbound.displayName)),
+                outbound.prefix ? E(
+                  "span",
+                  {
+                    class: "tachyon_dashboard-page__outbound-grid__item__prefix-badge"
+                  },
+                  renderFlagEmojis(outbound.prefix)
+                ) : ""
+              ]
+            ),
             ...canCopyLink ? [
               E(
                 "button",
@@ -5001,9 +5023,58 @@ function getPriorityGroups(dashboardCache) {
   }
   return groups;
 }
-function getOutboundDisplayName(code, entry, link, outboundMetadata, preferMetadata = false) {
+function getConfiguredSubscriptionPrefixes(section) {
+  const settings = itemSettingsMap(section.subscription_url_settings);
+  const prefixes = [];
+  for (const url of Object.keys(settings)) {
+    const item = settings[url];
+    if (item && item.prefix_nodes === "1") {
+      const p = typeof item.node_prefix === "string" ? item.node_prefix.trim() : "";
+      if (p && !prefixes.includes(p)) {
+        prefixes.push(p);
+      }
+    }
+  }
+  return prefixes;
+}
+function resolveOutboundNameAndPrefix({
+  code,
+  entry,
+  link,
+  outboundMetadata,
+  preferMetadata = false,
+  configuredPrefixes = []
+}) {
   const metadataName = outboundMetadata?.names?.[code];
-  return (preferMetadata ? metadataName : getProxyUrlName(link)) || (preferMetadata ? getProxyUrlName(link) : metadataName) || entry?.value?.name || code;
+  const rawName = (preferMetadata ? metadataName : getProxyUrlName(link)) || (preferMetadata ? getProxyUrlName(link) : metadataName) || entry?.value?.name || code;
+  let prefix = outboundMetadata?.prefixes?.[code]?.trim() || "";
+  if (!prefix && configuredPrefixes.length > 0) {
+    for (const p of configuredPrefixes) {
+      if (!p) continue;
+      if (rawName.startsWith(p + " ") || rawName.startsWith(p + "-") || code.startsWith(p + " ") || code.startsWith(p + "-") || entry?.value?.name?.startsWith(p + " ") || entry?.value?.name?.startsWith(p + "-")) {
+        prefix = p;
+        break;
+      }
+    }
+  }
+  let displayName = rawName;
+  if (prefix) {
+    if (displayName.startsWith(prefix + " ")) {
+      const stripped = displayName.slice(prefix.length + 1).trim();
+      if (stripped) {
+        displayName = stripped;
+      }
+    } else if (displayName.startsWith(prefix + "-")) {
+      const stripped = displayName.slice(prefix.length + 1).trim();
+      if (stripped) {
+        displayName = stripped;
+      }
+    }
+  }
+  return {
+    displayName,
+    prefix: prefix || void 0
+  };
 }
 function buildUrlTestInfo({
   code,
@@ -5016,7 +5087,8 @@ function buildUrlTestInfo({
   outboundMetadata,
   showDetectedCountries,
   selectorNow,
-  selectorCodes = []
+  selectorCodes = [],
+  configuredPrefixes = []
 }) {
   const childCodes = uniqueCodes(
     groupCache?.outbounds?.length ? groupCache.outbounds : entry?.value.all || []
@@ -5031,16 +5103,19 @@ function buildUrlTestInfo({
       const childEntry = proxyByCode.get(childCode);
       const link = manualLinkByCode.get(childCode) || cachedProxyLinks.get(childCode) || "";
       const canCopyLink = isCopyableProxyLink(link);
+      const resolved = resolveOutboundNameAndPrefix({
+        code: childCode,
+        entry: childEntry,
+        link,
+        outboundMetadata,
+        preferMetadata: cachedProxyLinks.has(childCode),
+        configuredPrefixes
+      });
       return [
         {
           code: childCode,
-          displayName: getOutboundDisplayName(
-            childCode,
-            childEntry,
-            link,
-            outboundMetadata,
-            cachedProxyLinks.has(childCode)
-          ),
+          displayName: resolved.displayName,
+          prefix: resolved.prefix,
           latency: childEntry?.value?.history?.[0]?.delay || 0,
           type: childEntry?.value?.type || "",
           transport: outboundMetadata?.transports?.[childCode] || getProxyUrlTransport(link),
@@ -5077,7 +5152,8 @@ function buildPriorityInfo({
   outboundMetadata,
   showDetectedCountries,
   selectorNow,
-  selectorCodes = []
+  selectorCodes = [],
+  configuredPrefixes = []
 }) {
   const cacheLevels = Array.isArray(groupCache?.levels) ? groupCache.levels : [];
   const configLevelById = new Map(
@@ -5118,15 +5194,18 @@ function buildPriorityInfo({
       const childEntry = proxyByCode.get(childCode);
       const link = manualLinkByCode.get(childCode) || cachedProxyLinks.get(childCode) || "";
       const canCopyLink = isCopyableProxyLink(link);
+      const resolved = resolveOutboundNameAndPrefix({
+        code: childCode,
+        entry: childEntry,
+        link,
+        outboundMetadata,
+        preferMetadata: cachedProxyLinks.has(childCode),
+        configuredPrefixes
+      });
       return {
         code: childCode,
-        displayName: getOutboundDisplayName(
-          childCode,
-          childEntry,
-          link,
-          outboundMetadata,
-          cachedProxyLinks.has(childCode)
-        ),
+        displayName: resolved.displayName,
+        prefix: resolved.prefix,
         latency: childEntry?.value?.history?.[0]?.delay || 0,
         type: childEntry?.value?.type || "",
         transport: outboundMetadata?.transports?.[childCode] || getProxyUrlTransport(link),
@@ -5167,6 +5246,7 @@ function buildPriorityInfo({
 }
 function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGroups = {}, priorityGroups = {}, cachedProxyLinks = /* @__PURE__ */ new Map()) {
   const sectionName = section[".name"];
+  const configuredPrefixes = getConfiguredSubscriptionPrefixes(section);
   const proxyByCode = getProxyEntryByCode(proxies);
   const selectorTag = getOutboundTagBySection(sectionName);
   const selector = proxyByCode.get(selectorTag);
@@ -5213,13 +5293,16 @@ function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGro
     }
     const link = manualLinkByCode.get(code) || cachedProxyLinks.get(code) || "";
     const canCopyLink = isCopyableProxyLink(link);
-    const displayName = priorityConfig?.displayName || urlTestConfig?.displayName || getOutboundDisplayName(
+    const resolved = resolveOutboundNameAndPrefix({
       code,
-      item,
+      entry: item,
       link,
       outboundMetadata,
-      cachedProxyLinks.has(code)
-    );
+      preferMetadata: cachedProxyLinks.has(code),
+      configuredPrefixes
+    });
+    const displayName = priorityConfig?.displayName || urlTestConfig?.displayName || resolved.displayName;
+    const prefix = priorityConfig || urlTestConfig ? void 0 : resolved.prefix;
     const isRuntimeUrlTest = isUrlTestProxyEntry(item);
     const urlTestInfo = urlTestConfig || isRuntimeUrlTest ? buildUrlTestInfo({
       code,
@@ -5232,7 +5315,8 @@ function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGro
       outboundMetadata,
       showDetectedCountries: urlTestConfig?.showDetectedCountries || showDetectedCountries,
       selectorNow,
-      selectorCodes
+      selectorCodes,
+      configuredPrefixes
     }) : void 0;
     const priorityInfo = priorityConfig ? buildPriorityInfo({
       config: priorityConfig,
@@ -5244,7 +5328,8 @@ function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGro
       outboundMetadata,
       showDetectedCountries: priorityConfig.showDetectedCountries,
       selectorNow,
-      selectorCodes
+      selectorCodes,
+      configuredPrefixes
     }) : void 0;
     const isUrlTestChildSelected = Boolean(
       urlTestInfo?.isManualSelection && urlTestInfo?.selectedCode && urlTestInfo.outbounds.some((m) => m.code === selectorNow)
@@ -5268,6 +5353,7 @@ function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGro
       {
         code,
         displayName,
+        prefix,
         latency,
         type: priorityConfig ? "Priority" : item?.value.type || "URLTest",
         transport: isGroupType ? void 0 : outboundMetadata?.transports?.[code] || getProxyUrlTransport(link),
@@ -8114,17 +8200,28 @@ function getDetectedCountryFlag(country) {
 }
 function renderDetailsMemberName(member) {
   const countryFlag = getDetectedCountryFlag(member.country);
-  if (!countryFlag) {
-    return renderFlagEmojis(member.displayName);
-  }
-  return [
+  const elements = countryFlag ? [
     E(
       "span",
       { class: "tachyon_dashboard-page__urltest-details__country-badge" },
       countryFlag
     ),
     ...renderFlagEmojis(member.displayName)
-  ];
+  ] : renderFlagEmojis(member.displayName);
+  if (member.prefix) {
+    return [
+      ...elements,
+      E(
+        "span",
+        {
+          class: "tachyon_dashboard-page__outbound-grid__item__prefix-badge",
+          style: "margin-left: 6px;"
+        },
+        renderFlagEmojis(member.prefix)
+      )
+    ];
+  }
+  return elements;
 }
 function renderUrlTestSelectedValue(info) {
   const selectedMember = info.outbounds.find((member) => member.selected);
@@ -9743,10 +9840,34 @@ var styles = `
     min-width: 0;
 }
 
+.tachyon_dashboard-page__outbound-grid__item__title-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
 .tachyon_dashboard-page__outbound-grid__item__header b {
     min-width: 0;
     line-height: 1.25;
     overflow-wrap: anywhere;
+}
+
+.tachyon_dashboard-page__outbound-grid__item__prefix-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(128, 128, 128, 0.2);
+    color: var(--text-color-medium, #999);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .tachyon_dashboard-page .btn.tachyon_dashboard-page__outbound-grid__item__copy-button {

@@ -140,6 +140,7 @@ export namespace Tachyon {
   export interface Outbound {
     code: string;
     displayName: string;
+    prefix?: string;
     latency: number;
     type: string;
     transport?: string;
@@ -155,6 +156,7 @@ export namespace Tachyon {
   export interface UrlTestMember {
     code: string;
     displayName: string;
+    prefix?: string;
     latency: number;
     type: string;
     transport?: string;
@@ -615,6 +617,7 @@ export namespace Tachyon {
     transports?: Record<string, string>;
     protocols?: Record<string, string>;
     securities?: Record<string, string>;
+    prefixes?: Record<string, string>;
   }
 
   export interface GetSingBoxStatus {

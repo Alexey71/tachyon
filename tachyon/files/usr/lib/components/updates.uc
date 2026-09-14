@@ -2322,9 +2322,13 @@ function cleanup_empty_ruleset(path) {
         }
         return true;
     }
+    if (filename != "" && routing_rulesets_module().has_rules(persistent_path)) {
+        log_message("Ruleset " + filename + " is empty; restoring from persistent cache", "info");
+        ensure_dir(TMP_RULESET_FOLDER);
+        copy_file(persistent_path, path);
+        return true;
+    }
     remove_file(path);
-    if (filename != "")
-        remove_file(persistent_path);
     return false;
 }
 
@@ -3074,23 +3078,20 @@ function reload_singbox_after_list_update() {
     if (!singbox_runtime_success([ "init-config", "0", "1", "1" ]))
         return false;
     let sing_box_config_hash_after = file_md5(sing_box_config_path);
-    if (sing_box_config_hash_before != sing_box_config_hash_after) {
-        log_message("Rulesets updated on disk; reloading sing-box with new configuration", "info");
-        module_success([ DNS_FAILOVER_UC, "stop-runtime" ]);
-        module_success([ PRIORITY_UC, "stop-runtime" ]);
-        let ok = service_state_success([
-            "reload-sing-box-runtime",
-            sing_box_pid,
-            sing_box_config_hash_before,
-            sing_box_config_hash_after,
-            "1"
-        ]);
-        module_success([ PRIORITY_UC, "start-runtime" ]);
-        module_success([ DNS_FAILOVER_UC, "start-runtime" ]);
-        write_current_reload_state_clean();
-        return ok;
-    }
-    return true;
+    log_message("Rulesets updated on disk; reloading sing-box with new configuration", "info");
+    module_success([ DNS_FAILOVER_UC, "stop-runtime" ]);
+    module_success([ PRIORITY_UC, "stop-runtime" ]);
+    let ok = service_state_success([
+        "reload-sing-box-runtime",
+        sing_box_pid,
+        sing_box_config_hash_before,
+        sing_box_config_hash_after,
+        "1"
+    ]);
+    module_success([ PRIORITY_UC, "start-runtime" ]);
+    module_success([ DNS_FAILOVER_UC, "start-runtime" ]);
+    write_current_reload_state_clean();
+    return ok;
 }
 
 function list_update() {

@@ -488,4 +488,43 @@ describe('renderSections', () => {
     expect(greenBadge).not.toBeNull();
     expect(greenBadge?.textContent).toBe('150ms');
   });
+
+  it('renders prefix badge when outbound.prefix is present', () => {
+    const section: any = {
+      sectionName: 'proxy',
+      displayName: 'Proxy',
+      action: 'proxy',
+      withTagSelect: true,
+      outbounds: [
+        {
+          code: 'vless-1',
+          displayName: 'France',
+          prefix: 'Geodema Network',
+          latency: 158,
+          type: 'VLESS',
+          selected: false,
+        },
+      ],
+    };
+
+    const el = renderSections({
+      loading: false,
+      failed: false,
+      section,
+      onTestLatency: vi.fn(),
+      onChooseOutbound: vi.fn(),
+      onCopyOutbound: vi.fn(),
+      onShowUrlTestInfo: vi.fn(),
+      onShowPriorityInfo: vi.fn(),
+      onUpdateSubscription: vi.fn(),
+      latencyFetching: false,
+      subscriptionUpdating: false,
+    });
+
+    const prefixBadge = el.querySelector(
+      '.tachyon_dashboard-page__outbound-grid__item__prefix-badge',
+    );
+    expect(prefixBadge).not.toBeNull();
+    expect(prefixBadge?.textContent).toBe('Geodema Network');
+  });
 });

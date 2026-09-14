@@ -188,10 +188,13 @@ function merge_source_metadata(state, section_name, source_section, source_index
         push(state.subscriptionMetadata, item);
 }
 
-function remember_outbound_metadata(state, tag_name, display_name, outbound) {
+function remember_outbound_metadata(state, tag_name, display_name, outbound, prefix) {
     if (type(state) != "object")
         return;
     state.outboundMetadata.names[tag_name] = display_name;
+    prefix = trim(as_string(prefix));
+    if (prefix != "")
+        state.outboundMetadata.prefixes[tag_name] = prefix;
     let protocol = lc(as_string(outbound.type || ""));
     if (protocol != "")
         state.outboundMetadata.protocols[tag_name] = protocol;
@@ -223,10 +226,10 @@ function remember_outbound_metadata(state, tag_name, display_name, outbound) {
         state.servers[tag_name] = server;
 }
 
-function remember_source_outbound(state, tag_name, display_name, outbound, source_link) {
+function remember_source_outbound(state, tag_name, display_name, outbound, source_link, prefix) {
     if (type(state) != "object")
         return;
-    remember_outbound_metadata(state, tag_name, display_name, outbound);
+    remember_outbound_metadata(state, tag_name, display_name, outbound, prefix);
     let outbound_type = as_string(outbound.type || "");
     if (outbound_type != "selector" && outbound_type != "urltest") {
         if (subscription_share_link.is_copyable_link(source_link))
@@ -337,7 +340,8 @@ function new_section_state(section_name) {
             countries: {},
             protocols: {},
             transports: {},
-            securities: {}
+            securities: {},
+            prefixes: {}
         },
         servers: {},
         urltestCandidateTags: [],
