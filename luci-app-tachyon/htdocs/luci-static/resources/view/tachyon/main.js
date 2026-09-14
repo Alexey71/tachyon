@@ -15082,7 +15082,7 @@ function renderLeakCheckModal() {
     resultsContainer.innerHTML = "";
     const { ip_leak, dns_leak } = data;
     const isDirectRouting = ip_leak.proxy_online && (ip_leak.leaked || ip_leak.direct_ip === ip_leak.proxy_ip);
-    const ipAlertClass = !ip_leak.proxy_online ? "alert-message info" : isDirectRouting ? "alert-message info" : "alert-message success";
+    const ipAlertClass = !ip_leak.proxy_online ? "alert-message info" : isDirectRouting ? "alert-message warning" : "alert-message success";
     const ipAlertText = !ip_leak.proxy_online ? _("Proxy outbound is inactive or not configured for local testing.") : isDirectRouting ? _(
       "ℹ️ Direct connection (WAN): Public IP matches your ISP. Under selective routing (by domains or blocklists), unblocked resources bypass the proxy — this is standard operation."
     ) : _("🛡️ SECURE: Public IP is concealed behind the proxy outbound.");
@@ -15195,38 +15195,56 @@ function renderLeakCheckModal() {
         ipTable
       ]
     );
-    const dnsAlertClass = !dns_leak.proxy_online || (dns_leak.dns_servers || []).length === 0 ? "alert-message info" : dns_leak.dns_leaked ? "alert-message warning" : "alert-message success";
-    const dnsAlertText = !dns_leak.proxy_online || (dns_leak.dns_servers || []).length === 0 ? _(
-      "No DNS resolvers captured through proxy (proxy is offline or test domain is not intercepted)."
+    const proxyDnsServers = dns_leak.dns_servers || [];
+    const directDnsServers = dns_leak.direct_dns_servers || [];
+    const hasProxyDns = proxyDnsServers.length > 0;
+    const dnsAlertClass = !hasProxyDns ? "alert-message info" : dns_leak.dns_leaked ? "alert-message warning" : "alert-message success";
+    const dnsAlertText = !hasProxyDns ? _(
+      "DNS resolvers through proxy are not captured (proxy is offline or test domain is not intercepted)."
     ) : dns_leak.dns_leaked ? _(
       "ℹ️ ISP DNS detected: DNS queries are handled by your local Internet Service Provider. If you use selective routing, this is standard behavior for direct connections."
     ) : _(
       "🛡️ SECURE: All DNS queries are resolved through independent secure DNS servers."
     );
-    const dnsTableRows = (dns_leak.dns_servers || []).map(
-      (s) => E("tr", { class: "tr cbi-section-table-row" }, [
-        E("td", { class: "td" }, [E("code", {}, s.ip)]),
-        E("td", { class: "td" }, s.country || "—"),
-        E("td", { class: "td" }, s.isp || "—"),
-        E("td", { class: "td", style: "text-align: center;" }, [
-          s.is_isp ? E(
-            "span",
-            {
-              class: "badge",
-              style: "background: #fd7e14; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px;"
-            },
-            _("ISP DNS")
-          ) : E(
-            "span",
-            {
-              class: "badge",
-              style: "background: #28a745; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px;"
-            },
-            _("SAFE")
-          )
-        ])
-      ])
+    const makeDnsRow = (s, pathLabel) => E("tr", { class: "tr cbi-section-table-row" }, [
+      E("td", { class: "td" }, [E("code", {}, s.ip)]),
+      E("td", { class: "td" }, s.country || "—"),
+      E("td", { class: "td" }, s.isp || "—"),
+      E(
+        "td",
+        { class: "td", style: "text-align: center;" },
+        s.is_isp ? E(
+          "span",
+          {
+            class: "badge",
+            style: "background: #fd7e14; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px;"
+          },
+          _("ISP DNS")
+        ) : E(
+          "span",
+          {
+            class: "badge",
+            style: "background: #28a745; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px;"
+          },
+          _("SAFE")
+        )
+      ),
+      E(
+        "td",
+        {
+          class: "td",
+          style: "font-size: 10px; color: var(--text-color-medium, #6c757d);"
+        },
+        pathLabel
+      )
+    ]);
+    const proxyDnsRows = proxyDnsServers.map(
+      (s) => makeDnsRow(s, _("via Proxy"))
     );
+    const directDnsRows = directDnsServers.map(
+      (s) => makeDnsRow(s, _("via WAN"))
+    );
+    const allDnsRows = [...proxyDnsRows, ...directDnsRows];
     const dnsTable = E(
       "table",
       {
@@ -15243,19 +15261,20 @@ function renderLeakCheckModal() {
               "th",
               { class: "th", style: "text-align: center;" },
               _("Verdict")
-            )
+            ),
+            E("th", { class: "th" }, _("Path"))
           ])
         ]),
         E(
           "tbody",
           {},
-          dnsTableRows.length > 0 ? dnsTableRows : [
+          allDnsRows.length > 0 ? allDnsRows : [
             E("tr", { class: "tr" }, [
               E(
                 "td",
                 {
                   class: "td",
-                  colSpan: 4,
+                  colSpan: 5,
                   style: "text-align: center; opacity: 0.7;"
                 },
                 _("No DNS resolvers recorded")

@@ -72,7 +72,7 @@ CONFIG="$WORK_DIR/singbox.json"
 node -e '
 const fs = require("fs");
 const cfg = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-const rules = cfg.route?.rules || [];
+const rules = (cfg.route && cfg.route.rules) || [];
 
 const hijackDnsPort = rules.find(r => r.action === "hijack-dns" && r.inbound === "server-home_node-in" && r.port === 53);
 if (!hijackDnsPort) {

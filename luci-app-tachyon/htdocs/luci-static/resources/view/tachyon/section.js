@@ -12130,9 +12130,6 @@ async function performTrace(query) {
 
           for (const community of communityLists) {
             let subnets = await readSubnetListFile(community);
-            if (community === "discord") {
-              subnets = subnets.filter((s) => !isCloudflareSharedCidr(s));
-            }
             const matchedCommunityCidr = matchIpInCidrs(ip, subnets);
             if (matchedCommunityCidr) {
               return {
