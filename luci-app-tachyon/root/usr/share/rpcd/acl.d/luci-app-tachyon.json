@@ -62,9 +62,6 @@
         ],
         "/usr/bin/nslookup": [
           "exec"
-        ],
-        "/bin/busybox": [
-          "exec"
         ]
       },
       "ubus": {

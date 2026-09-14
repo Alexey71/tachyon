@@ -1,6 +1,8 @@
 fe-app-tachyon/node_modules
 fe-app-tachyon/.yarn/
 fe-app-tachyon/.env
+fe-app-tachyon/.vitest/
+fe-app-tachyon/coverage/
 .DS_Store
 shellcheck-v0.10.0/
 AGENTS.md

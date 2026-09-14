@@ -2044,8 +2044,12 @@ function nft_add_csv_chunks_to_family_sets(csv, table, ipv4_set, ipv6_set, kind,
 function nft_community_subnet_lines(path, service, filter_mode) {
     let data = fs.readfile(path);
     if (data == null) {
-        if (as_string(service) == "discord" && filter_mode == "only_cloudflare")
-            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+        if (as_string(service) == "discord") {
+            if (filter_mode == "only_cloudflare")
+                return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+            if (filter_mode == "exclude_cloudflare" || filter_mode == null)
+                return core_ip.DISCORD_DEDICATED_SUBNETS || [ "162.159.128.0/21" ];
+        }
         return [];
     }
 
@@ -2067,8 +2071,12 @@ function nft_community_subnet_lines(path, service, filter_mode) {
         }
     }
 
-    if (as_string(service) == "discord" && filter_mode == "only_cloudflare" && length(result) == 0)
-        return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+    if (as_string(service) == "discord") {
+        if (filter_mode == "only_cloudflare" && length(result) == 0)
+            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+        if ((filter_mode == "exclude_cloudflare" || filter_mode == null) && length(result) == 0)
+            return core_ip.DISCORD_DEDICATED_SUBNETS || [ "162.159.128.0/21" ];
+    }
 
     return result;
 }

@@ -29,9 +29,9 @@ export const styles = `
 }
 
 .tachyon_dashboard-page {
-    display: table;
-    table-layout: fixed;
+    display: block;
     width: 100%;
+    box-sizing: border-box;
     --dashboard-grid-columns: 4;
     --dashboard-grid-min-width: 180px;
 }
@@ -144,11 +144,13 @@ export const styles = `
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
 }
 
 .tachyon_dashboard-page .btn.tachyon_dashboard-page__outbound-section__subscription-update {
-    min-width: 130px;
+    min-width: 0;
+    width: auto;
     min-height: 28px;
     display: inline-flex;
     align-items: center;
@@ -169,7 +171,8 @@ export const styles = `
 }
 
 .tachyon_dashboard-page .btn.dashboard-sections-grid-item-test-latency {
-    min-width: 99px;
+    min-width: 0;
+    width: auto;
     min-height: 28px;
     display: inline-flex;
     align-items: center;

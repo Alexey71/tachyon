@@ -164,9 +164,10 @@ ${PartialStyles}
     transform: translateY(0);
 }
 
-/* Global Mobile & Responsive Layout Enhancements */
+/* Tachyon Mobile & Responsive Layout Enhancements */
 @media (max-width: 768px) {
-    .cbi-section-table {
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-section-table,
+    .tachyon-view .cbi-section-table {
         display: block;
         width: 100%;
         overflow-x: auto;
@@ -174,33 +175,41 @@ ${PartialStyles}
         border-collapse: collapse;
     }
 
-    .cbi-section-table-cell {
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-section-table-cell,
+    .tachyon-view .cbi-section-table-cell {
         min-width: 0;
         word-break: break-word;
         overflow-wrap: anywhere;
     }
 
-    .cbi-section-actions {
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-section-actions,
+    .tachyon-view .cbi-section-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
     }
 
-    .cbi-dropdown {
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-dropdown,
+    .tachyon-view .cbi-dropdown {
         max-width: 100%;
     }
 
-    .cbi-input-textarea,
-    .cbi-input-text,
-    .cbi-input-select {
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-input-textarea,
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-input-text,
+    [id^="cbi-${TACHYON_CBI_PREFIX}"] .cbi-input-select,
+    .tachyon-view .cbi-input-textarea,
+    .tachyon-view .cbi-input-text,
+    .tachyon-view .cbi-input-select {
         max-width: 100%;
         box-sizing: border-box;
     }
 
-    /* Modal responsiveness */
-    .modal,
-    .cbi-modal {
-        max-width: 96vw !important;
+    /* Modal responsiveness scoped to Tachyon */
+    .modal .fkp-server-info-modal,
+    .cbi-modal .fkp-server-info-modal,
+    .modal:has([class*="tachyon"]),
+    .cbi-modal:has([class*="tachyon"]) {
+        max-width: min(96vw, 1100px) !important;
         box-sizing: border-box;
         margin: 10px auto;
     }

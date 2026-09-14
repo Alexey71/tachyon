@@ -7,6 +7,14 @@ on:
   pull_request:
     paths:
       - 'fe-app-tachyon/**'
+      - 'luci-app-tachyon/po/**'
+      - '.github/workflows/frontend-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'fe-app-tachyon/**'
+      - 'luci-app-tachyon/po/**'
       - '.github/workflows/frontend-ci.yml'
 
 jobs:
@@ -19,17 +27,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5.0.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: fe-app-tachyon/package-lock.json
 
-      # The project uses npm (package-lock.json); yarn.lock does not exist, so
-      # a yarn install here would resolve fresh versions on every run.
       - name: Install dependencies
         run: npm ci
 
@@ -48,6 +54,24 @@ jobs:
       - name: Run tests
         run: npm test -- --run
 
+      - name: Check translation extraction
+        id: locale_extract
+        run: |
+          npm run locales:extract-calls
+          if ! git diff --exit-code -- locales/calls.json; then
+            echo "::error::Translation call index is stale. Run 'npm run locales:extract-calls' locally."
+            exit 1
+          fi
+
+      - name: Check distributed locales
+        id: locale_distribute
+        run: |
+          npm run locales:distribute
+          if ! git diff --exit-code -- ../luci-app-tachyon/po; then
+            echo "::error::LuCI locale copies are stale. Run 'npm run locales:distribute' locally."
+            exit 1
+          fi
+
       - name: Build project
         id: build
         run: |
@@ -62,8 +86,8 @@ jobs:
         run: |
           echo "## Frontend CI Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Format check: ${{ steps.format.outcome }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Lint check: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Tests: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Build: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
-          echo "![Success](https://cdn2.combot.org/boratbrat/webp/6xf09f988f.webp)" >> $GITHUB_STEP_SUMMARY
+          echo "- Format check: ${{ steps.format.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Translation extraction: ${{ steps.locale_extract.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Locale distribution: ${{ steps.locale_distribute.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Overall lint/tests status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY

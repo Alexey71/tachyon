@@ -17,7 +17,7 @@ function stripIllegalReturn(code) {
     });
 }
 
-const files = await glob([
+const rawFiles = await glob([
     'src/**/*.ts',
     'src/**/*.tsx',
     '../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/**/*.js',
@@ -29,6 +29,7 @@ const files = await glob([
     ],
     absolute: true,
 });
+const files = rawFiles.sort();
 console.log('Found files:', files.length);
 
 const results = {};
@@ -36,7 +37,7 @@ const results = {};
 for (const file of files) {
     const contentRaw = await fs.readFile(file, 'utf8');
     const content = stripIllegalReturn(contentRaw);
-    const relativePath = path.relative(process.cwd(), file).replaceAll('\\', '/');
+    const relativePath = path.relative(__dirname, file).replaceAll('\\', '/');
 
     let ast;
     try {
@@ -73,8 +74,13 @@ for (const file of files) {
     });
 }
 
-const outFile = 'locales/calls.json';
-const sorted = Object.values(results).sort((a, b) => a.key.localeCompare(b.key)); // 🔤 сортировка по ключу
+const outFile = path.resolve(__dirname, 'locales/calls.json');
+const sorted = Object.values(results)
+    .map((item) => ({
+        ...item,
+        places: Array.from(new Set(item.places)).sort(),
+    }))
+    .sort((a, b) => a.key.localeCompare(b.key)); // 🔤 сортировка по ключу
 
 await fs.mkdir(path.dirname(outFile), { recursive: true });
 await fs.writeFile(outFile, JSON.stringify(sorted, null, 2), 'utf8');

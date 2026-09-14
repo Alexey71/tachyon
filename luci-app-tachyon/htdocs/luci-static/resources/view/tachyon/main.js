@@ -5859,7 +5859,7 @@ function getCheckTitle(name) {
   return `${name} ${_("checks")}`;
 }
 
-// src/tachyon/tabs/diagnostic/checks/contstants.ts
+// src/tachyon/tabs/diagnostic/checks/constants.ts
 var DIAGNOSTICS_CHECKS = /* @__PURE__ */ ((DIAGNOSTICS_CHECKS2) => {
   DIAGNOSTICS_CHECKS2["DNS"] = "DNS";
   DIAGNOSTICS_CHECKS2["SINGBOX"] = "SINGBOX";
@@ -9411,9 +9411,9 @@ var styles = `
 }
 
 .tachyon_dashboard-page {
-    display: table;
-    table-layout: fixed;
+    display: block;
     width: 100%;
+    box-sizing: border-box;
     --dashboard-grid-columns: 4;
     --dashboard-grid-min-width: 180px;
 }
@@ -9526,11 +9526,13 @@ var styles = `
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
 }
 
 .tachyon_dashboard-page .btn.tachyon_dashboard-page__outbound-section__subscription-update {
-    min-width: 130px;
+    min-width: 0;
+    width: auto;
     min-height: 28px;
     display: inline-flex;
     align-items: center;
@@ -9551,7 +9553,8 @@ var styles = `
 }
 
 .tachyon_dashboard-page .btn.dashboard-sections-grid-item-test-latency {
-    min-width: 99px;
+    min-width: 0;
+    width: auto;
     min-height: 28px;
     display: inline-flex;
     align-items: center;
@@ -13041,7 +13044,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
     if (activeTab2 === "history") renderHistoryTab();
   };
   const controlsGrid = E("div", {
-    style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; align-items: end;"
+    style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; align-items: end;"
   });
   const engineSelect = E(
     "select",
@@ -23092,9 +23095,10 @@ ${PartialStyles}
     transform: translateY(0);
 }
 
-/* Global Mobile & Responsive Layout Enhancements */
+/* Tachyon Mobile & Responsive Layout Enhancements */
 @media (max-width: 768px) {
-    .cbi-section-table {
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-section-table,
+    .tachyon-view .cbi-section-table {
         display: block;
         width: 100%;
         overflow-x: auto;
@@ -23102,33 +23106,41 @@ ${PartialStyles}
         border-collapse: collapse;
     }
 
-    .cbi-section-table-cell {
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-section-table-cell,
+    .tachyon-view .cbi-section-table-cell {
         min-width: 0;
         word-break: break-word;
         overflow-wrap: anywhere;
     }
 
-    .cbi-section-actions {
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-section-actions,
+    .tachyon-view .cbi-section-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
     }
 
-    .cbi-dropdown {
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-dropdown,
+    .tachyon-view .cbi-dropdown {
         max-width: 100%;
     }
 
-    .cbi-input-textarea,
-    .cbi-input-text,
-    .cbi-input-select {
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-input-textarea,
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-input-text,
+    [id^="cbi-${TACHYON_UCI_PACKAGE}"] .cbi-input-select,
+    .tachyon-view .cbi-input-textarea,
+    .tachyon-view .cbi-input-text,
+    .tachyon-view .cbi-input-select {
         max-width: 100%;
         box-sizing: border-box;
     }
 
-    /* Modal responsiveness */
-    .modal,
-    .cbi-modal {
-        max-width: 96vw !important;
+    /* Modal responsiveness scoped to Tachyon */
+    .modal .fkp-server-info-modal,
+    .cbi-modal .fkp-server-info-modal,
+    .modal:has([class*="tachyon"]),
+    .cbi-modal:has([class*="tachyon"]) {
+        max-width: min(96vw, 1100px) !important;
         box-sizing: border-box;
         margin: 10px auto;
     }

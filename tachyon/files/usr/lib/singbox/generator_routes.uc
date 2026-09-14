@@ -1511,8 +1511,12 @@ function load_community_subnet_cidrs(community, filter_mode) {
         }
     }
 
-    if (service == "discord" && filter_mode == "only_cloudflare" && length(cidrs) == 0)
-        return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+    if (service == "discord") {
+        if (filter_mode == "only_cloudflare" && length(cidrs) == 0)
+            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+        if ((filter_mode == "exclude_cloudflare" || filter_mode == null) && length(cidrs) == 0)
+            return core_ip.DISCORD_DEDICATED_SUBNETS || [ "162.159.128.0/21" ];
+    }
 
     return [];
 }

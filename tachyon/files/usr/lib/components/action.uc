@@ -1825,6 +1825,31 @@ function move_file_to_backup(target_path, backup_path) {
     return move_file_portable(target_path, backup_path);
 }
 
+// Binary variants are fully extracted and validated before this helper is
+// called. On storage-constrained routers the temporary rollback copy can
+// be larger than the remaining /tmp space. If persistent component
+// backups are disabled, it is safer to free the old binary and install
+// the already validated replacement than to fail the update solely
+// because a second copy cannot be kept in RAM.
+function move_validated_file_to_backup_or_discard(target_path, backup_path, label) {
+    if (!file_exists(target_path))
+        return "";
+    if (move_file_to_backup(target_path, backup_path))
+        return backup_path;
+
+    remove_file(backup_path);
+    if (get_component_backup_enabled())
+        return null;
+
+    updates_log(
+        "Temporary rollback copy of " + as_string(label) +
+        " could not be created; component backups are disabled, removing the current file to free space for the validated replacement",
+        "warn"
+    );
+    remove_file(target_path);
+    return file_exists(target_path) ? null : "";
+}
+
 function restore_sing_box_backup(backup_binary) {
     if (as_string(backup_binary) != "" && file_nonempty(backup_binary)) {
         if (!move_file_portable(backup_binary, "/usr/bin/sing-box"))
@@ -2400,9 +2425,12 @@ function install_sing_box_extended(action, compressed, target_tag) {
     let backup_cronet = "";
     let cronet_touched = false;
     if (file_exists("/usr/bin/sing-box")) {
-        backup_binary = tmp_dir + "/sing-box.tachyon-backup";
-        if (!move_file_to_backup("/usr/bin/sing-box", backup_binary)) {
-            remove_file(backup_binary);
+        backup_binary = move_validated_file_to_backup_or_discard(
+            "/usr/bin/sing-box",
+            tmp_dir + "/sing-box.tachyon-backup",
+            "current sing-box binary"
+        );
+        if (backup_binary == null) {
             remove_file(tmp_binary);
             remove_file(tmp_cronet);
             remove_file(archive_file);
@@ -2562,9 +2590,12 @@ function install_sing_box_lx(action, target_tag) {
     let backup_cronet = "";
     let cronet_touched = false;
     if (file_exists("/usr/bin/sing-box")) {
-        backup_binary = tmp_dir + "/sing-box.tachyon-backup";
-        if (!move_file_to_backup("/usr/bin/sing-box", backup_binary)) {
-            remove_file(backup_binary);
+        backup_binary = move_validated_file_to_backup_or_discard(
+            "/usr/bin/sing-box",
+            tmp_dir + "/sing-box.tachyon-backup",
+            "current sing-box binary"
+        );
+        if (backup_binary == null) {
             remove_file(tmp_binary);
             remove_file(tmp_cronet);
             remove_file(archive_file);

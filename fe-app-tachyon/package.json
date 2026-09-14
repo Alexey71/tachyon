@@ -42,7 +42,7 @@
     "postcss": "8.5.23",
     "js-yaml": "^5.2.1"
   },
-  "dependencies": {
+  "optionalDependencies": {
     "@esbuild/win32-x64": "^0.28.2",
     "@rolldown/binding-win32-x64-msvc": "^1.2.6"
   }

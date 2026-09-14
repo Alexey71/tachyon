@@ -1,5 +1,5 @@
 import { insertIf } from '../../../../helpers';
-import { DIAGNOSTICS_CHECKS_MAP } from './contstants';
+import { DIAGNOSTICS_CHECKS_MAP } from './constants';
 import { TachyonShellMethods, RemoteFakeIPMethods } from '../../../methods';
 import { getDashboardSections } from '../../../methods/custom/getDashboardSections';
 import { store, type IDiagnosticsChecksItem } from '../../../services';

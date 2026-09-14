@@ -25,7 +25,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       commitish: ${{ steps.version.outputs.commitish }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
       - id: version
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: preparation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -63,7 +63,7 @@ jobs:
           ls -la "$PWD/filtered-bin/release"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: release-files-${{ needs.preparation.outputs.version }}
           path: ./filtered-bin/release/*
@@ -77,12 +77,12 @@ jobs:
       - preparation
       - build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Create release dir
         run: mkdir -p ./filtered-bin/release
 
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
         with:
           name: release-files-${{ needs.preparation.outputs.version }}
           path: ./filtered-bin/release
@@ -118,7 +118,7 @@ jobs:
 
       - name: Release on tag push
         if: ${{ github.event_name == 'push' }}
-        uses: softprops/action-gh-release@v2.4.0
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
           files: ./filtered-bin/release/*
           tag_name: ${{ github.ref_name }}
@@ -133,7 +133,7 @@ jobs:
 
       - name: Release on workflow dispatch
         if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: softprops/action-gh-release@v2.4.0
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
           files: ./filtered-bin/release/*
           tag_name: ${{ needs.preparation.outputs.version }}

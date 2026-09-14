@@ -468,10 +468,10 @@ function injectServerStyles() {
 #cbi-${UCI_PACKAGE}-server .cbi-section-actions > div{display:inline-flex;align-items:center;gap:4px}
 #cbi-${UCI_PACKAGE}-server .cbi-section-actions{text-align:right}
 
-.fkp-server-info-modal{display:flex;flex-direction:column;gap:14px;width:560px;max-width:100%;box-sizing:border-box}
+.fkp-server-info-modal{display:flex;flex-direction:column;gap:14px;width:min(560px,calc(100vw - 32px));max-width:100%;box-sizing:border-box}
 .fkp-server-info-modal__container{display:flex;gap:24px;align-items:flex-start;width:100%;box-sizing:border-box}
 .fkp-server-info-modal__qr-col{display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;width:180px}
-.fkp-server-info-modal__qr-image{width:180px;height:180px;display:block;image-rendering:pixelated}
+.fkp-server-info-modal__qr-image{width:180px;height:180px;max-width:min(180px,60vw);max-height:min(180px,60vw);display:block;image-rendering:pixelated}
 .fkp-server-info-modal__details-col{display:flex;flex-direction:column;gap:16px;flex-grow:1;min-width:0;box-sizing:border-box}
 .fkp-server-info-modal__details-grid{display:flex;flex-direction:column;gap:10px;background:rgba(128,128,128,0.08);padding:14px;border:1px solid rgba(128,128,128,0.15);box-sizing:border-box}
 .fkp-server-info-modal__detail-item{display:flex;justify-content:space-between;align-items:center;gap:16px}
@@ -486,9 +486,11 @@ function injectServerStyles() {
 
 @media (max-width:640px){
 .fkp-server-info-modal{width:100%}
-.fkp-server-info-modal__container{flex-direction:column;align-items:center;gap:20px}
-.fkp-server-info-modal__qr-col{width:100%;max-width:180px}
-.fkp-server-info-modal__details-col{width:100%}
+.fkp-server-info-modal__container{flex-direction:column;align-items:center;gap:16px}
+.fkp-server-info-modal__qr-col{width:100%;max-width:180px;align-items:center}
+.fkp-server-info-modal__details-col{width:100%;min-width:0}
+.fkp-server-info-modal__details-grid{padding:10px}
+.fkp-server-info-modal__detail-item{flex-wrap:wrap;gap:4px 8px}
 }
 `,
     ),

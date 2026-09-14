@@ -137,7 +137,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
 
   const controlsGrid = E('div', {
     style:
-      'display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; align-items: end;',
+      'display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; align-items: end;',
   });
 
   // 1. Engine Select
