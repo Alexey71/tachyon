@@ -1351,6 +1351,19 @@ const dictionary = {
   "CleanBrowsing Family": "CleanBrowsing (Семейный)",
   "Yandex Safe": "Yandex (Безопасный)",
   "Hide versions": "Скрыть версии",
+  "DNS resolvers through proxy are not captured (proxy is offline or test domain is not intercepted).": "DNS-резолверы через прокси не перехвачены (прокси недоступен или тестовый домен не перехватывается).",
+  "Invalid domain: %s": "Некорректный домен: %s",
+  "Path": "Маршрут",
+  "Tachyon has been installed": "Tachyon успешно установлен",
+  "via Proxy": "через Прокси",
+  "via WAN": "через WAN",
+  "List must be an HTTP(S) URL or a local .lst / .txt path": "Список должен быть HTTP(S) URL или локальным путём .lst / .txt",
+  "Prioritizes interactive DNS, VoIP/WebRTC, gaming and TCP ACK packets via DSCP marking in nftables. In Auto mode, automatically yields if OpenWrt SQM (CAKE/FQ_CoDel) is detected to prevent bufferbloat degradation.": "Приоритизирует интерактивный DNS, VoIP/WebRTC, игровой трафик и пакеты TCP ACK через DSCP-маркировку в nftables. В режиме Авто автоматически уступает приоритет при обнаружении OpenWrt SQM (CAKE/FQ_CoDel) для предотвращения ухудшения bufferbloat.",
+  "QoS Priority Engine (DSCP)": "Движок приоритета QoS (DSCP)",
+  "Strategy applied successfully and service reloaded!": "Стратегия успешно применена, сервис перезапущен!",
+  "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19302, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.": "Подсеть %s — диапазон Cloudflare Anycast, используемый Discord Voice. Только голосовой UDP-трафик (порты 50000-65535, 3478, 19302, 5000-5020) направляется через этот раздел; веб-трафик (TCP 80/443) идет напрямую.",
+  "Add URLs or local paths to .lst / .txt lists containing domains and subnets.": "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены и подсети.",
+  "Add URLs or local paths to .lst / .txt lists containing domains. IP entries are ignored.": "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены. IP-записи игнорируются.",
 };
 
 function escapePoString(str) {

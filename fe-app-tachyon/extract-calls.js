@@ -52,7 +52,10 @@ for (const file of files) {
 
     traverse.default(ast, {
         CallExpression(path) {
-            if (t.isIdentifier(path.node.callee, { name: '_' })) {
+            if (
+                t.isIdentifier(path.node.callee, { name: '_' }) ||
+                t.isIdentifier(path.node.callee, { name: 'translate' })
+            ) {
                 const arg = path.node.arguments[0];
                 if (t.isStringLiteral(arg)) {
                     const key = arg.value.trim();

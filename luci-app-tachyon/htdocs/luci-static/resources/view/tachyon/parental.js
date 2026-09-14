@@ -600,7 +600,7 @@ function createProfileContent(section) {
       if (
         !/^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(clean)
       ) {
-        return _("Invalid domain: " + line);
+        return _("Invalid domain: %s").format(line);
       }
     }
     return true;
@@ -1286,7 +1286,7 @@ function createParentalContent(section) {
       if (
         !/^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(clean)
       ) {
-        return _("Invalid domain: " + line);
+        return _("Invalid domain: %s").format(line);
       }
     }
     return true;

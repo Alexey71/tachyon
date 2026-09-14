@@ -106,6 +106,7 @@ let strings = {
         menu_categories: "🔙 Categories",
         menu_qos: "🎮 Gaming & Voice QoS",
         menu_heal: "🤖 AI Self-Healing",
+        choose_section: "Select section to manage:",
 
         // ─── Status ───
         status_version: "Version",

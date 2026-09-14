@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-13 20:39+0300\n"
-"PO-Revision-Date: 2026-09-13 20:39+0300\n"
+"POT-Creation-Date: 2026-09-14 14:18+0300\n"
+"PO-Revision-Date: 2026-09-14 14:18+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -257,11 +257,11 @@ msgstr "Добавить ключевое слово"
 msgid "Add prefix to nodes"
 msgstr "Добавить префикс к узлам"
 
-msgid "Add URLs or local paths to .lst / .txt lists containing domains and subnets."
-msgstr ""
+msgid "Add URLs or local paths to .lst lists containing domains and subnets."
+msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены и подсети."
 
-msgid "Add URLs or local paths to .lst / .txt lists containing domains. IP entries are ignored."
-msgstr ""
+msgid "Add URLs or local paths to .lst lists containing domains. IP entries are ignored."
+msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены. IP-записи игнорируются."
 
 msgid "Add URLs or local paths to .srs / .json lists. Only domain rules are supported."
 msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Поддерживаются только правила доменов."
@@ -1451,6 +1451,9 @@ msgstr "DNS-запросы через секцию"
 msgid "DNS resolution failed — likely DNS-level blocking or hijacking."
 msgstr "Сбой разрешения DNS — вероятно, блокировка или перехват на уровне DNS."
 
+msgid "DNS resolvers through proxy are not captured (proxy is offline or test domain is not intercepted)."
+msgstr "DNS-резолверы через прокси не перехвачены (прокси недоступен или тестовый домен не перехватывается)."
+
 msgid "DNS Rewrite TTL"
 msgstr "TTL DNS-записей"
 
@@ -2567,6 +2570,9 @@ msgstr "Неверный порт DNS-сервера"
 msgid "Invalid domain address"
 msgstr "Неверный домен"
 
+msgid "Invalid domain: %s"
+msgstr "Некорректный домен: %s"
+
 msgid "Invalid domain: empty prefix value"
 msgstr "Недопустимый домен: пустое значение префикса"
 
@@ -2979,7 +2985,7 @@ msgid "Level name"
 msgstr "Имя уровня"
 
 msgid "List must be an HTTP(S) URL or a local .lst / .txt path"
-msgstr ""
+msgstr "Список должен быть HTTP(S) URL или локальным путём .lst / .txt"
 
 msgid "List of domains automatically detected and the section they were added to. To edit or remove them, open the routing rules of the respective section."
 msgstr "Список автоматически определённых доменов и секций, в которые они были добавлены. Для редактирования или удаления откройте правила маршрутизации соответствующей секции."
@@ -3305,9 +3311,6 @@ msgstr "DHCP-клиенты не обнаружены"
 msgid "No diagnostic history available yet."
 msgstr "История проверок пока пуста."
 
-msgid "No DNS resolvers captured through proxy (proxy is offline or test domain is not intercepted)."
-msgstr "DNS-резолверы через прокси не зафиксированы (прокси выключен либо тестовый домен не перехватывается)."
-
 msgid "No DNS resolvers recorded"
 msgstr "DNS-резолверы не зафиксированы"
 
@@ -3614,6 +3617,9 @@ msgstr "Вставьте ссылки на прокси по одной в ст�
 msgid "Paste proxy links one per line; they form a URLTest group with automatic fastest selection"
 msgstr "Вставьте ссылки на прокси по одной в строке; они образуют группу URLTest с автоматическим выбором самого быстрого"
 
+msgid "Path"
+msgstr "Маршрут"
+
 msgid "Path cannot be empty"
 msgstr "Путь не может быть пустым"
 
@@ -3780,7 +3786,7 @@ msgid "Primary DNS"
 msgstr "Основной DNS"
 
 msgid "Prioritizes interactive DNS, VoIP/WebRTC, gaming and TCP ACK packets via DSCP marking in nftables. In Auto mode, automatically yields if OpenWrt SQM (CAKE/FQ_CoDel) is detected to prevent bufferbloat degradation."
-msgstr ""
+msgstr "Приоритизирует интерактивный DNS, VoIP/WebRTC, игровой трафик и пакеты TCP ACK через DSCP-маркировку в nftables. В режиме Авто автоматически уступает приоритет при обнаружении OpenWrt SQM (CAKE/FQ_CoDel) для предотвращения ухудшения bufferbloat."
 
 msgid "Priority"
 msgstr "Приоритет"
@@ -3882,7 +3888,7 @@ msgid "Public IP Address Isolation"
 msgstr "Изоляция публичного IP-адреса"
 
 msgid "QoS Priority Engine (DSCP)"
-msgstr ""
+msgstr "Движок приоритета QoS (DSCP)"
 
 msgid "QR code is too large"
 msgstr "QR-код слишком большой"
@@ -4827,7 +4833,7 @@ msgid "Strategy & Parameters"
 msgstr "Стратегия и параметры"
 
 msgid "Strategy applied successfully and service reloaded!"
-msgstr ""
+msgstr "Стратегия успешно применена, сервис перезапущен!"
 
 msgid "Strategy benchmark started"
 msgstr "Бенчмарк стратегий запущен"
@@ -4851,7 +4857,7 @@ msgid "Subnet %s belongs to a shared Anycast/CDN range (%s). Third-party website
 msgstr "Подсеть %s входит в публичный Anycast/CDN-диапазон (%s). Сторонние сайты, размещенные на этом CDN, также будут направляться через эту секцию."
 
 msgid "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19302, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct."
-msgstr ""
+msgstr "Подсеть %s — диапазон Cloudflare Anycast, используемый Discord Voice. Только голосовой UDP-трафик (порты 50000-65535, 3478, 19302, 5000-5020) направляется через этот раздел; веб-трафик (TCP 80/443) идет напрямую."
 
 msgid "Subnet %s is a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section."
 msgstr "Подсеть %s является публичным Anycast/CDN-диапазоном (%s). Сторонние сайты, размещенные на этом CDN, также будут направляться через эту секцию."
@@ -4945,6 +4951,9 @@ msgstr "Tachyon: Бенчмарк и автоподбор DNS"
 
 msgid "Tachyon Error"
 msgstr "Ошибка Tachyon"
+
+msgid "Tachyon has been installed"
+msgstr "Tachyon успешно установлен"
 
 msgid "Tachyon IP & DNS Leak Detection"
 msgstr "Проверка утечек IP и DNS Tachyon"
@@ -5651,6 +5660,12 @@ msgstr "Версии"
 msgid "Via country.is"
 msgstr "Через country.is"
 
+msgid "via Proxy"
+msgstr "через Прокси"
+
+msgid "via WAN"
+msgstr "через WAN"
+
 msgid "Video streaming"
 msgstr "Видео"
 
@@ -5867,11 +5882,14 @@ msgstr "Правила маршрутизации sing-box для Zapret2 нас
 msgid "Zapret2 sing-box route rules are not configured"
 msgstr "Правила маршрутизации sing-box для Zapret2 не настроены"
 
-msgid "Add URLs or local paths to .lst lists containing domains and subnets."
-msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены и подсети."
+msgid "Add URLs or local paths to .lst / .txt lists containing domains and subnets."
+msgstr "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены и подсети."
 
-msgid "Add URLs or local paths to .lst lists containing domains. IP entries are ignored."
-msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены. IP-записи игнорируются."
+msgid "Add URLs or local paths to .lst / .txt lists containing domains. IP entries are ignored."
+msgstr "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены. IP-записи игнорируются."
+
+msgid "No DNS resolvers captured through proxy (proxy is offline or test domain is not intercepted)."
+msgstr "DNS-резолверы через прокси не зафиксированы (прокси выключен либо тестовый домен не перехватывается)."
 
 msgid "List must be an HTTP(S) URL or a local .lst path"
 msgstr "Список должен быть HTTP(S) URL или локальным путём .lst"
@@ -6721,3 +6739,6 @@ msgstr "Разрешить только: "
 
 msgid "Block: "
 msgstr "Блокировать: "
+
+msgid "Traffic from these IP addresses will never be routed through this section, even if other conditions match."
+msgstr "Трафик от этих IP-адресов никогда не будет маршрутизирован через эту секцию, даже если другие условия совпадают."
