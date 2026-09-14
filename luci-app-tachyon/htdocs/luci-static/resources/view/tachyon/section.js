@@ -7509,6 +7509,7 @@ var DOMAIN_LIST_HINTS = {
   ads_hagezi_pro: "Блокировка рекламы (Hagezi Pro список)",
   supercell: "supercell.com, clashofclans.com, ...",
   github: "github.com, raw.githubusercontent.com, ...",
+  twitch: "twitch.tv, ttvnw.net, jtvnw.net, ...",
   hetzner: "IP-адреса Hetzner (ASN)",
   ovh: "IP-адреса OVH (ASN)",
   digitalocean: "IP-адреса DigitalOcean (ASN)",

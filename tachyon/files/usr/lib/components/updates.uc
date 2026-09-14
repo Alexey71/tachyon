@@ -2469,17 +2469,35 @@ function import_community_srs_file(service, settings) {
     if (tmpfile == "")
         return false;
 
-    let ok = true;
-    if (download_to_file(url, tmpfile, service_proxy_address(settings, "lists")) && file_nonempty(tmpfile) && helpers.file_is_usable(tmpfile, 100)) {
-        ensure_dir(TMP_RULESET_FOLDER);
-        copy_file(tmpfile, cached_file);
-        ensure_dir("/etc/tachyon/rulesets");
-        copy_file(tmpfile, persistent_file);
-        log_message("Successfully cached preset ruleset " + service, "info");
+    let core_url_mod = core_url_module_or_null();
+    let candidates = core_url_mod && type(core_url_mod.download_candidates) == "function" ?
+        core_url_mod.download_candidates(url) : [ url ];
+    let downloaded = false;
+
+    for (let candidate in candidates) {
+        if (download_to_file(candidate, tmpfile, service_proxy_address(settings, "lists")) &&
+            file_nonempty(tmpfile) &&
+            singbox_rulesets_module().is_valid_srs_file(tmpfile) &&
+            helpers.file_is_usable(tmpfile, 100)) {
+            ensure_dir(TMP_RULESET_FOLDER);
+            copy_file(tmpfile, cached_file);
+            ensure_dir("/etc/tachyon/rulesets");
+            copy_file(tmpfile, persistent_file);
+            log_message("Successfully cached preset ruleset " + service + (candidate != url ? " via mirror " + candidate : ""), "info");
+            downloaded = true;
+            break;
+        }
+        remove_file(tmpfile);
     }
-    else if (helpers.file_is_usable(persistent_file, 100)) {
+
+    let ok = true;
+    if (downloaded) {
+        // Cached successfully
+    }
+    else if (singbox_rulesets_module().is_valid_srs_file(persistent_file) && helpers.file_is_usable(persistent_file, 100)) {
         ensure_dir(TMP_RULESET_FOLDER);
         copy_file(persistent_file, cached_file);
+        log_message("Using persistent cached ruleset for " + service + " after download failure", "warn");
     }
     else {
         remove_file(persistent_file);

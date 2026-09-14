@@ -1255,6 +1255,7 @@ var DOMAIN_LIST_OPTIONS = {
   ads_hagezi_pro: "Ads (Hagezi Pro)",
   supercell: "Supercell",
   github: "GitHub",
+  twitch: "Twitch",
   hetzner: "Hetzner ASN",
   ovh: "OVH ASN",
   digitalocean: "Digital Ocean ASN",
