@@ -59,6 +59,7 @@ const ZAPRET2_RUNTIME_UC = LIB_DIR + "/providers/zapret2/runtime.uc";
 const BYEDPI_RUNTIME_UC = LIB_DIR + "/providers/byedpi/runtime.uc";
 const WDTT_RUNTIME_UC = LIB_DIR + "/providers/wdtt/runtime.uc";
 const OLCRTC_RUNTIME_UC = LIB_DIR + "/providers/olcrtc/runtime.uc";
+const FPTN_RUNTIME_UC = LIB_DIR + "/providers/fptn/runtime.uc";
 const TAILSCALE_RUNTIME_UC = LIB_DIR + "/providers/tailscale/runtime.uc";
 const ZAPRET_VALIDATOR_UC = LIB_DIR + "/providers/zapret/validator.uc";
 const ZAPRET2_VALIDATOR_UC = LIB_DIR + "/providers/zapret2/validator.uc";
@@ -1148,6 +1149,8 @@ function build_system_info() {
     let byedpi_version = byedpi_installed ? provider_version(BYEDPI_RUNTIME_UC) : "not installed";
     let tailscale_installed = provider_installed(TAILSCALE_RUNTIME_UC) ? 1 : 0;
     let tailscale_version = tailscale_installed ? provider_version(TAILSCALE_RUNTIME_UC) : "not installed";
+    let fptn_installed = provider_installed(FPTN_RUNTIME_UC) ? 1 : 0;
+    let fptn_version = fptn_installed ? provider_version(FPTN_RUNTIME_UC) : "not installed";
     let device_model = first_line_value("/tmp/sysinfo/model", "unknown");
 
     let direct_bypass_enabled = bool_option(settings(), "direct_bypass_enabled", false) ? 1 : 0;
@@ -1177,6 +1180,7 @@ function build_system_info() {
     let zapret2_meta = read_backup_meta("zapret2");
     let byedpi_meta = read_backup_meta("byedpi");
     let tailscale_meta = read_backup_meta("tailscale");
+    let fptn_meta = read_backup_meta("fptn");
 
     return {
         tachyon_version: TACHYON_VERSION,
@@ -1208,6 +1212,10 @@ function build_system_info() {
         tailscale_installed,
         tailscale_backup_version: tailscale_meta ? as_string(tailscale_meta.version) : "",
         tailscale_backup_time: tailscale_meta ? int(tailscale_meta.timestamp || 0) : 0,
+        fptn_version,
+        fptn_installed,
+        fptn_backup_version: fptn_meta ? as_string(fptn_meta.version) : "",
+        fptn_backup_time: fptn_meta ? int(fptn_meta.timestamp || 0) : 0,
         direct_bypass_enabled,
         direct_bypass_address,
         direct_bypass_port,

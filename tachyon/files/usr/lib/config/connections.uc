@@ -340,6 +340,10 @@ function is_olcrtc_action(action) {
     return as_string(action) == "olcrtc";
 }
 
+function is_fptn_action(action) {
+    return as_string(action) == "fptn";
+}
+
 function wdtt_sections() {
     let result = [];
     let sections = uci_core.section_objects(CONFIG_NAME, "section");
@@ -355,6 +359,16 @@ function olcrtc_sections() {
     let sections = uci_core.section_objects(CONFIG_NAME, "section");
     for (let section in sections) {
         if (bool_option(section, "enabled", true) && option(section, "action", "") == "olcrtc")
+            push(result, section);
+    }
+    return result;
+}
+
+function fptn_sections() {
+    let result = [];
+    let sections = uci_core.section_objects(CONFIG_NAME, "section");
+    for (let section in sections) {
+        if (bool_option(section, "enabled", true) && option(section, "action", "") == "fptn")
             push(result, section);
     }
     return result;
@@ -1634,6 +1648,8 @@ return {
     cli_delete_section,
     wdtt_sections,
     olcrtc_sections,
+    fptn_sections,
     is_wdtt_action,
-    is_olcrtc_action
+    is_olcrtc_action,
+    is_fptn_action
 };

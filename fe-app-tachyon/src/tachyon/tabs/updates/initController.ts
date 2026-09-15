@@ -74,6 +74,8 @@ function getComponentCardTitle(component: Tachyon.ComponentName): string {
       return 'WDTT';
     case 'olcrtc':
       return 'OlcRTC';
+    case 'fptn':
+      return 'FPTN';
     case 'tailscale':
       return 'Tailscale';
     default:
@@ -100,6 +102,8 @@ function getComponentCurrentVersion(
       return sys.wdtt_version;
     case 'olcrtc':
       return sys.olcrtc_version;
+    case 'fptn':
+      return sys.fptn_version;
     case 'tailscale':
       return sys.tailscale_version;
     default:
@@ -561,6 +565,18 @@ function patchSystemInfoAfterMutation(result: Tachyon.ComponentActionResult) {
     }
   }
 
+  if (result.component === 'fptn') {
+    nextSystemInfo.providerInfoLoaded = true;
+
+    if (result.action === 'remove') {
+      nextSystemInfo.fptn_installed = 0;
+      nextSystemInfo.fptn_version = 'not installed';
+    } else {
+      nextSystemInfo.fptn_installed = 1;
+      nextSystemInfo.fptn_version = version;
+    }
+  }
+
   if (result.component === 'direct_bypass') {
     nextSystemInfo.direct_bypass_enabled = result.action === 'enable' ? 1 : 0;
   }
@@ -582,7 +598,8 @@ function patchSystemInfoAfterMutation(result: Tachyon.ComponentActionResult) {
     result.component === 'zapret2' ||
     result.component === 'byedpi' ||
     result.component === 'wdtt' ||
-    result.component === 'olcrtc'
+    result.component === 'olcrtc' ||
+    result.component === 'fptn'
   ) {
     notifyActionProvidersAvailabilityChanged(normalizedSystemInfo);
   }
@@ -1130,6 +1147,8 @@ function getComponentBackupVersion(component: Tachyon.ComponentName): string {
       return sys.wdtt_backup_version || '';
     case 'olcrtc':
       return sys.olcrtc_backup_version || '';
+    case 'fptn':
+      return sys.fptn_backup_version || '';
     case 'tailscale':
       return sys.tailscale_backup_version || '';
     default:
@@ -1159,7 +1178,14 @@ function getOptionalComponentActions({
   removeKey,
   rollbackKey,
 }: {
-  component: 'zapret' | 'zapret2' | 'byedpi' | 'wdtt' | 'olcrtc' | 'tailscale';
+  component:
+    | 'zapret'
+    | 'zapret2'
+    | 'byedpi'
+    | 'wdtt'
+    | 'olcrtc'
+    | 'fptn'
+    | 'tailscale';
   installed: boolean;
   checkKey: UpdatesActionKey;
   installKey: UpdatesActionKey;
@@ -1197,6 +1223,7 @@ const COMPONENT_REPO_URLS: Record<Tachyon.ComponentName, string> = {
   byedpi: 'https://github.com/DPITrickster/ByeDPI-OpenWrt',
   wdtt: 'https://github.com/SpaceNeuroX/qwdtt-openwrt',
   olcrtc: 'https://github.com/alekvol/openwrt-olcrtc',
+  fptn: 'https://github.com/fptn-project/fptn',
   tailscale: 'https://openwrt.org/packages/pkgdata/tailscale',
   direct_bypass: '',
   torrserver_direct: '',
@@ -1212,6 +1239,7 @@ function getComponentCards(): ComponentCard[] {
   const byedpiInstalled = Boolean(systemInfo.byedpi_installed);
   const wdttInstalled = Boolean(systemInfo.wdtt_installed);
   const olcrtcInstalled = Boolean(systemInfo.olcrtc_installed);
+  const fptnInstalled = Boolean(systemInfo.fptn_installed);
   const tailscaleInstalled = Boolean(systemInfo.tailscale_installed);
   const singBoxInstalled = !isNotInstalled(systemInfo.sing_box_version);
   const singBoxStable =
@@ -1338,6 +1366,14 @@ function getComponentCards(): ComponentCard[] {
     installKey: 'olcrtcInstall',
     removeKey: 'olcrtcRemove',
     rollbackKey: 'olcrtcRollback',
+  });
+  const fptnActions = getOptionalComponentActions({
+    component: 'fptn',
+    installed: fptnInstalled,
+    checkKey: 'fptnCheck',
+    installKey: 'fptnInstall',
+    removeKey: 'fptnRemove',
+    rollbackKey: 'fptnRollback',
   });
   const tailscaleActions = getOptionalComponentActions({
     component: 'tailscale',
@@ -1535,6 +1571,21 @@ function getComponentCards(): ComponentCard[] {
       releaseUrl: getGitHubReleaseUrl('olcrtc'),
       repoUrl: COMPONENT_REPO_URLS.olcrtc,
       actions: olcrtcActions,
+      supportsVersions: true,
+    },
+    {
+      component: 'fptn',
+      column: 1,
+      title: 'FPTN',
+      version: systemInfoLoading
+        ? _('Loading...')
+        : fptnInstalled
+          ? systemInfo.fptn_version
+          : _('Not installed'),
+      latestVersion: getLatestVersion('fptn'),
+      releaseUrl: getGitHubReleaseUrl('fptn'),
+      repoUrl: COMPONENT_REPO_URLS.fptn,
+      actions: fptnActions,
       supportsVersions: true,
     },
     {

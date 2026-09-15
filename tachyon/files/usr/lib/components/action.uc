@@ -1417,6 +1417,43 @@ function resolve_olcrtc_release(arch, tag) {
     return null;
 }
 
+function resolve_fptn_release(arch, tag) {
+    let asset_ext = is_apk() ? "apk" : "ipk";
+    let release_series = trim(helper_output("openwrt-release-series", [ "/etc/openwrt_release" ]));
+    let releases_json = (tag != null && tag != "") ?
+        fetch_github_release_by_tag_json("fptn-project", "fptn", tag) :
+        fetch_github_releases_json("fptn-project", "fptn", "30");
+    if (releases_json != "") {
+        let resolved = trim(helper_output_input(releases_json, "fptn-select-asset", [ release_series, asset_ext, arch.candidates ]));
+        let fields = split(resolved, "\t");
+        if (length(fields) >= 4) {
+            let ver = extract_arch_package_version(fields[1], fields[0]);
+            let m = match(ver, /^([0-9]+\.[0-9]+\.[0-9]+)/);
+            if (m) ver = m[1];
+            return {
+                arch: fields[0],
+                package_name: fields[1],
+                package_url: fields[2],
+                release_url: fields[3],
+                version: ver
+            };
+        }
+    }
+    if (tag != null && tag != "") {
+        let distrib_arch = read_openwrt_release_value("DISTRIB_ARCH");
+        let tag_clean = replace(tag, /^v/, "");
+        let pkg_name = "fptn-client-" + tag_clean + "-openwrt-" + (release_series != "" ? release_series + ".x" : "24.10.x") + "-" + distrib_arch + "." + asset_ext;
+        return {
+            arch: distrib_arch,
+            package_name: pkg_name,
+            package_url: "https://github.com/fptn-project/fptn/releases/download/" + tag + "/" + pkg_name,
+            release_url: "https://github.com/fptn-project/fptn/releases/tag/" + tag,
+            version: tag_clean
+        };
+    }
+    return null;
+}
+
 function download_direct_package(release) {
     let package_file = tmp_dir + "/" + release.package_name;
     if (!download_with_retry(release.package_url, package_file, release.package_name) || !file_nonempty(package_file))
@@ -1686,6 +1723,47 @@ function install_olcrtc(action, target_tag) {
     if (current_version == "")
         current_version = pkg.version || "unknown";
     action_success("olcrtc", action, "OlcRTC package has been installed", current_version, pkg.version, 1, "latest", release.release_url || "");
+}
+
+function install_fptn(action, target_tag) {
+    init_tmp_dir() || action_fail("fptn", action, "Failed to create temporary directory");
+    let arch = resolve_arch_candidates();
+    if (arch == null)
+        action_fail("fptn", action, "Failed to detect package architecture");
+    let release = null;
+    retry_resolve("Resolving FPTN package", function() {
+        release = resolve_fptn_release(arch, target_tag);
+        return release != null;
+    });
+    if (release == null)
+        action_fail("fptn", action, "Failed to resolve FPTN package for this router architecture");
+
+    let runtime_module = LIB_DIR + "/providers/fptn/runtime.uc";
+    let installed = provider_installed(runtime_module);
+    let current_version = provider_package_version(runtime_module);
+    if (action == "check_update") {
+        if (!installed)
+            action_success("fptn", action, "FPTN is not installed", current_version, release.version, 0, "", release.release_url || "");
+        check_success("fptn", current_version, release.version, release.release_url || "");
+    }
+
+    let pkg = download_direct_package(release);
+    if (pkg == null)
+        action_fail("fptn", action, "Failed to download FPTN package");
+
+    run_logged("Updating package lists before FPTN package installation", pkg_list_update_command());
+
+    if (!run_logged("Installing FPTN package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+        action_fail("fptn", action, "Failed to install FPTN package", current_version, pkg.version);
+
+    disable_standalone_service("fptn");
+    disable_standalone_service("fptn-client");
+    restart_tachyon_after_successful_change();
+    clear_version_caches();
+    current_version = provider_package_version(runtime_module);
+    if (current_version == "")
+        current_version = pkg.version || "unknown";
+    action_success("fptn", action, "FPTN package has been installed", current_version, pkg.version, 1, "latest", release.release_url || "");
 }
 
 function install_tailscale(action) {
@@ -3071,6 +3149,8 @@ function normalize_component_name(component) {
     component = as_string(component);
     if (component == "sing-box" || component == "singbox")
         return "sing_box";
+    if (component == "fptn-client" || component == "fptn_client")
+        return "fptn";
     if (component == "tachyon")
         return "tachyon";
     if (component == "direct-bypass" || component == "directbypass" || component == "direct_proxy")
@@ -3236,6 +3316,24 @@ function create_component_backup(component) {
         write_file(meta_file, sprintf("%J\n", meta));
         return true;
     }
+    else if (component == "fptn") {
+        let bin = "/usr/bin/fptn-client-cli";
+        if (!file_exists(bin)) bin = "/usr/bin/fptn-client";
+        if (!file_exists(bin)) return true;
+        let st = fs.stat(bin);
+        let size = (st && st.size) ? st.size : 0;
+        if (!check_free_disk_space("/etc", size)) return false;
+        ensure_dir(bdir);
+        command_success_from_args([ "cp", "-p", bin, bdir + "/fptn-client-cli" ]);
+        let version = provider_package_version(LIB_DIR + "/providers/fptn/runtime.uc");
+        let meta = {
+            component: "fptn",
+            version: version,
+            timestamp: now_seconds()
+        };
+        write_file(meta_file, sprintf("%J\n", meta));
+        return true;
+    }
 
     return true;
 }
@@ -3313,6 +3411,16 @@ function rollback_component(component) {
         clear_version_caches();
         restart_tachyon_after_successful_change();
         action_success("olcrtc", "rollback", "OlcRTC rolled back to " + backup_version, backup_version, "", 1);
+    }
+    else if (component == "fptn") {
+        let backup_bin = bdir + "/fptn-client-cli";
+        if (!file_exists(backup_bin)) action_fail("fptn", "rollback", "FPTN backup binary is missing");
+        remove_file("/usr/bin/fptn-client-cli");
+        command_success_from_args([ "cp", "-p", backup_bin, "/usr/bin/fptn-client-cli" ]);
+        command_success_from_args([ "chmod", "0755", "/usr/bin/fptn-client-cli" ]);
+        clear_version_caches();
+        restart_tachyon_after_successful_change();
+        action_success("fptn", "rollback", "FPTN rolled back to " + backup_version, backup_version, "", 1);
     }
     else if (component == "zapret") {
         let backup_bin = bdir + "/nfqws";
@@ -3393,6 +3501,8 @@ function list_component_releases(component, count) {
         owner = "SpaceNeuroX"; repo = "qwdtt-openwrt";
     } else if (component == "olcrtc") {
         owner = "alekvol"; repo = "openwrt-olcrtc";
+    } else if (component == "fptn") {
+        owner = "fptn-project"; repo = "fptn";
     } else {
         print("[]\n"); return;
     }
@@ -3449,6 +3559,8 @@ function install_component_version(component, tag) {
         install_wdtt("install", tag);
     } else if (component == "olcrtc") {
         install_olcrtc("install", tag);
+    } else if (component == "fptn") {
+        install_fptn("install", tag);
     } else {
         action_fail(component, "install_version", "Component " + component + " does not support version installation");
     }
@@ -3595,6 +3707,10 @@ function component_action(component, action, extra) {
         install_olcrtc(action);
     else if (component == "olcrtc" && action == "remove")
         remove_optional_component("olcrtc", "olcrtc", "OlcRTC", LIB_DIR + "/providers/olcrtc/runtime.uc");
+    else if (component == "fptn" && (action == "check_update" || action == "install"))
+        install_fptn(action);
+    else if (component == "fptn" && action == "remove")
+        remove_optional_component("fptn", "fptn-client", "FPTN", LIB_DIR + "/providers/fptn/runtime.uc");
     else if (component == "tailscale" && (action == "check_update" || action == "install"))
         install_tailscale(action);
     else if (component == "tailscale" && action == "remove")

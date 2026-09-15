@@ -132,6 +132,7 @@ const RELOAD_STATE_FIELDS = [
     "byedpi_runtime_signature",
     "wdtt_runtime_signature",
     "olcrtc_runtime_signature",
+    "fptn_runtime_signature",
     "list_signature",
     "hosts_list_signature",
     "cron_signature",
@@ -1854,6 +1855,24 @@ function olcrtc_runtime_signature_body(sections) {
     return body;
 }
 
+function fptn_runtime_signature_body(sections) {
+    let body = "";
+
+    for (let section in sections) {
+        section = object_or_empty(section);
+        if (!section_action_is_enabled(section, "fptn"))
+            continue;
+
+        let name = section_name(section);
+        body = signature_add_value(body, "fptn." + name + ".access_token", option(section, "access_token", ""));
+        body = signature_add_value(body, "fptn." + name + ".sni", option(section, "sni", ""));
+        body = signature_add_value(body, "fptn." + name + ".bypass_method", option(section, "bypass_method", ""));
+        body = signature_add_value(body, "fptn." + name + ".preferred_server", option(section, "preferred_server", ""));
+    }
+
+    return body;
+}
+
 function reload_state_values_from_sources(format, settings, sections, servers, dnsmasq, legacy_dnsmasq_present, mwan3_active_value, schedules, profiles, guest_modes) {
     return {
         format: as_string(format),
@@ -1868,6 +1887,7 @@ function reload_state_values_from_sources(format, settings, sections, servers, d
         byedpi_runtime_signature: signature_hash(byedpi_runtime_signature_body(sections)),
         wdtt_runtime_signature: signature_hash(wdtt_runtime_signature_body(sections)),
         olcrtc_runtime_signature: signature_hash(olcrtc_runtime_signature_body(sections)),
+        fptn_runtime_signature: signature_hash(fptn_runtime_signature_body(sections)),
         list_signature: signature_hash(list_update_signature_body(sections)),
         hosts_list_signature: signature_hash(hosts_list_signature_body(sections)),
         cron_signature: signature_hash(cron_signature_body(settings, sections)),
@@ -2275,6 +2295,12 @@ else if (mode == "olcrtc-runtime-signature")
 else if (mode == "olcrtc-runtime-signature-fixture") {
     let data = fixture_data(ARGV[1]);
     exit(print_signature_hash(olcrtc_runtime_signature_body(fixture_section_list(data))) ? 0 : 1);
+}
+else if (mode == "fptn-runtime-signature")
+    exit(print_signature_hash(fptn_runtime_signature_body(uci_sections("section"))) ? 0 : 1);
+else if (mode == "fptn-runtime-signature-fixture") {
+    let data = fixture_data(ARGV[1]);
+    exit(print_signature_hash(fptn_runtime_signature_body(fixture_section_list(data))) ? 0 : 1);
 }
 else if (mode == "dont-touch-dhcp")
     print(dont_touch_dhcp_value(uci_settings()), "\n");

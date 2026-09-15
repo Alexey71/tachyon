@@ -651,6 +651,10 @@ export namespace Tachyon {
     olcrtc_installed: 0 | 1;
     tailscale_version: string;
     tailscale_installed: 0 | 1;
+    fptn_version: string;
+    fptn_installed: 0 | 1;
+    fptn_backup_version?: string;
+    fptn_backup_time?: number;
     direct_bypass_enabled?: 0 | 1;
     direct_bypass_address?: string;
     direct_bypass_port?: string;
@@ -743,6 +747,7 @@ export namespace Tachyon {
     | 'byedpi'
     | 'wdtt'
     | 'olcrtc'
+    | 'fptn'
     | 'tailscale'
     | 'direct_bypass'
     | 'torrserver_direct';

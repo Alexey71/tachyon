@@ -20,7 +20,7 @@
 
 **Tachyon** is an advanced, autonomous network routing, proxy orchestration, and anti-censorship engine designed specifically for **OpenWrt** routers (fully supporting **OpenWrt 23.05, 24.10, 25.x, and SNAPSHOT** builds). Direct fork of **[Forkop by @ushan0v](https://github.com/ushan0v/forkop)** (formerly **Podkop Plus**).
 
-Tachyon combines the power of **sing-box**, local hardware DPI bypass engines (**Zapret v1 / Zapret v2 / ByeDPI**), an interactive combinatorial **DPI Strategy Fuzzer**, a hardened **Telegram control bot**, and a cutting-edge **AI Stack** (autonomous **AI Doctor v2.5**, offline local diagnostics, **HTTP REST Agent API / OpenAPI 3.0**, and **Model Context Protocol (MCP)** server for autonomous AI agents).
+Tachyon combines the power of **sing-box**, high-speed **FPTN** (Fast Packet Tunnel Network), local hardware DPI bypass engines (**Zapret v1 / Zapret v2 / ByeDPI**), an interactive combinatorial **DPI Strategy Fuzzer**, a hardened **Telegram control bot**, and a cutting-edge **AI Stack** (autonomous **AI Doctor v2.5**, offline local diagnostics, **HTTP REST Agent API / OpenAPI 3.0**, and **Model Context Protocol (MCP)** server for autonomous AI agents).
 
 The entire backend logic is written in **ucode** — OpenWrt's native, high-performance C scripting language — delivering instant response times with minimal RAM footprint (starting from 128 MB RAM devices).
 
@@ -41,7 +41,7 @@ Tachyon intercepts network flows via kernel **nftables** and dispatches requests
 2. **Zapret v1 (`nfqws`)**: Basic TCP/UDP packet desynchronization (`fake`, `disorder`, `split2`) directly on router without VPS.
 3. **Zapret v2 (`nfqws2`)**: Advanced multi-vector DPI evasion (`multisplit`, `seqovl`, `wsize`, PAWS `tcp_ts`, authentic `blobs`) for YouTube 4K, Discord, and streaming.
 4. **ByeDPI (`ciadpi`)**: Local SOCKS5 desync engine with HTTP/TLS SNI payload fragmentation.
-5. **Encrypted Proxy Tunnel (sing-box)**: Censored endpoints and private traffic are routed through modern protocols (VLESS Reality, Hysteria2, WireGuard, AmneziaWG).
+5. **Encrypted Proxy & Tunnel (sing-box / FPTN)**: Censored endpoints and private traffic are routed through modern secure protocols (VLESS Reality, Hysteria2, WireGuard, AmneziaWG) and high-speed **FPTN** tunnel (`tun-fptn` over WebSocket/TLS with web traffic masquerading).
 6. **Smart DNS Pipeline**: Isolated DNS processing via FakeIP (`198.18.0.0/15`), DoH/DoT/DoQ with anti-hijack transparent redirection and automated failover (DNS Failover).
 
 <p align="center">
@@ -52,6 +52,10 @@ Tachyon intercepts network flows via kernel **nftables** and dispatches requests
 
 ### 🛡️ 1. Multi-Protocol Proxying & Smart DNS Stack
 * **sing-box Engine (v1.11+)**: Native support for modern proxy protocols — **VLESS (Reality / gRPC / WS)**, **VMess**, **Shadowsocks**, **Trojan**, **Hysteria2**, and **WireGuard / AmneziaWG**.
+* **High-Speed FPTN Engine (`fptn-client-cli`)**:
+  * Native integration of Fast Packet Tunnel Network: L3 packet tunneling over WebSocket/TLS with effective HTTPS camouflage to bypass restrictive protocol blocks.
+  * Dedicated `tun-fptn` interface, isolated routing table (`4249`), and seamless selective routing via nftables rules.
+  * Full managed component lifecycle: router platform autodetection, download and installation from official releases via LuCI, commit-level updates, and safe rollback support.
 * **Cloudflare WARP & AmneziaWG Generator (`generate_warp`)**: Instant generation of working WireGuard and AmneziaWG profiles directly on the router.
 * **Multi-Dimensional Selective Routing**: 
   * **By Domains & IP Subnets**: Route only target traffic through proxies or desync engines.
@@ -328,6 +332,7 @@ Tachyon stands on the shoulders of incredible open-source projects:
 * 📦 **[sing-box](https://github.com/SagerNet/sing-box)** — Universal proxy engine.
 * 🚀 **[zapret (bol-van)](https://github.com/bol-van/zapret2)** — DPI desync framework (`nfqws` / `nfqws2`).
 * 🌐 **[ByeDPI](https://github.com/hrbrmstr/byedpi)** — Local SOCKS desync proxy.
+* 🛡️ **[FPTN (fptn-project)](https://github.com/fptn-project/fptn)** — High-speed VPN & packet tunnel over WebSocket/TLS with DPI evasion.
 
 <p align="center">
   <img src="assets/readme/divider_stream.svg" width="100%" alt="divider" />

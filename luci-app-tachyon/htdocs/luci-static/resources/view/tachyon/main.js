@@ -5997,6 +5997,10 @@ var initialDiagnosticStore = {
     tailscale_installed: 0,
     tailscale_backup_version: "",
     tailscale_backup_time: 0,
+    fptn_version: "loading",
+    fptn_installed: 0,
+    fptn_backup_version: "",
+    fptn_backup_time: 0,
     server_inbounds_enabled_count: -1,
     direct_bypass_enabled: 0,
     direct_bypass_address: "",
@@ -6081,6 +6085,10 @@ var initialDiagnosticStore = {
     olcrtcInstall: { loading: false },
     olcrtcRemove: { loading: false },
     olcrtcRollback: { loading: false },
+    fptnCheck: { loading: false },
+    fptnInstall: { loading: false },
+    fptnRemove: { loading: false },
+    fptnRollback: { loading: false },
     tailscaleCheck: { loading: false },
     tailscaleInstall: { loading: false },
     tailscaleRemove: { loading: false },
@@ -6098,6 +6106,7 @@ var initialDiagnosticStore = {
     byedpi: { status: null, latest_version: "", release_url: "" },
     wdtt: { status: null, latest_version: "", release_url: "" },
     olcrtc: { status: null, latest_version: "", release_url: "" },
+    fptn: { status: null, latest_version: "", release_url: "" },
     tailscale: { status: null, latest_version: "", release_url: "" },
     direct_bypass: { status: null, latest_version: "", release_url: "" },
     torrserver_direct: { status: null, latest_version: "", release_url: "" }
@@ -6483,6 +6492,11 @@ var componentActionKeyMap = {
   "olcrtc:install_version": "olcrtcInstall",
   "olcrtc:remove": "olcrtcRemove",
   "olcrtc:rollback": "olcrtcRollback",
+  "fptn:check_update": "fptnCheck",
+  "fptn:install": "fptnInstall",
+  "fptn:install_version": "fptnInstall",
+  "fptn:remove": "fptnRemove",
+  "fptn:rollback": "fptnRollback",
   "tailscale:check_update": "tailscaleCheck",
   "tailscale:install": "tailscaleInstall",
   "tailscale:install_version": "tailscaleInstall",
@@ -6666,6 +6680,10 @@ function getEmptyUpdatesActions() {
     olcrtcInstall: { loading: false },
     olcrtcRemove: { loading: false },
     olcrtcRollback: { loading: false },
+    fptnCheck: { loading: false },
+    fptnInstall: { loading: false },
+    fptnRemove: { loading: false },
+    fptnRollback: { loading: false },
     tailscaleCheck: { loading: false },
     tailscaleInstall: { loading: false },
     tailscaleRemove: { loading: false },
@@ -11170,6 +11188,8 @@ var UNKNOWN_SYSTEM_INFO = {
   olcrtc_installed: 0,
   tailscale_version: _("unknown"),
   tailscale_installed: 0,
+  fptn_version: _("unknown"),
+  fptn_installed: 0,
   server_inbounds_enabled_count: -1,
   openwrt_version: _("unknown"),
   device_model: _("unknown")
@@ -20984,6 +21004,8 @@ function getComponentCardTitle(component) {
       return "WDTT";
     case "olcrtc":
       return "OlcRTC";
+    case "fptn":
+      return "FPTN";
     case "tailscale":
       return "Tailscale";
     default:
@@ -21007,6 +21029,8 @@ function getComponentCurrentVersion(component) {
       return sys.wdtt_version;
     case "olcrtc":
       return sys.olcrtc_version;
+    case "fptn":
+      return sys.fptn_version;
     case "tailscale":
       return sys.tailscale_version;
     default:
@@ -21327,6 +21351,16 @@ function patchSystemInfoAfterMutation(result) {
       nextSystemInfo.olcrtc_version = version;
     }
   }
+  if (result.component === "fptn") {
+    nextSystemInfo.providerInfoLoaded = true;
+    if (result.action === "remove") {
+      nextSystemInfo.fptn_installed = 0;
+      nextSystemInfo.fptn_version = "not installed";
+    } else {
+      nextSystemInfo.fptn_installed = 1;
+      nextSystemInfo.fptn_version = version;
+    }
+  }
   if (result.component === "direct_bypass") {
     nextSystemInfo.direct_bypass_enabled = result.action === "enable" ? 1 : 0;
   }
@@ -21338,7 +21372,7 @@ function patchSystemInfoAfterMutation(result) {
   store.set({
     diagnosticsSystemInfo: normalizedSystemInfo
   });
-  if (result.component === "zapret" || result.component === "zapret2" || result.component === "byedpi" || result.component === "wdtt" || result.component === "olcrtc") {
+  if (result.component === "zapret" || result.component === "zapret2" || result.component === "byedpi" || result.component === "wdtt" || result.component === "olcrtc" || result.component === "fptn") {
     notifyActionProvidersAvailabilityChanged(normalizedSystemInfo);
   }
 }
@@ -21756,6 +21790,8 @@ function getComponentBackupVersion(component) {
       return sys.wdtt_backup_version || "";
     case "olcrtc":
       return sys.olcrtc_backup_version || "";
+    case "fptn":
+      return sys.fptn_backup_version || "";
     case "tailscale":
       return sys.tailscale_backup_version || "";
     default:
@@ -21806,6 +21842,7 @@ var COMPONENT_REPO_URLS = {
   byedpi: "https://github.com/DPITrickster/ByeDPI-OpenWrt",
   wdtt: "https://github.com/SpaceNeuroX/qwdtt-openwrt",
   olcrtc: "https://github.com/alekvol/openwrt-olcrtc",
+  fptn: "https://github.com/fptn-project/fptn",
   tailscale: "https://openwrt.org/packages/pkgdata/tailscale",
   direct_bypass: "",
   torrserver_direct: ""
@@ -21820,6 +21857,7 @@ function getComponentCards() {
   const byedpiInstalled = Boolean(systemInfo.byedpi_installed);
   const wdttInstalled = Boolean(systemInfo.wdtt_installed);
   const olcrtcInstalled = Boolean(systemInfo.olcrtc_installed);
+  const fptnInstalled = Boolean(systemInfo.fptn_installed);
   const tailscaleInstalled = Boolean(systemInfo.tailscale_installed);
   const singBoxInstalled = !isNotInstalled(systemInfo.sing_box_version);
   const singBoxStable = singBoxInstalled && !systemInfo.sing_box_extended && !systemInfo.sing_box_tiny;
@@ -21933,6 +21971,14 @@ function getComponentCards() {
     installKey: "olcrtcInstall",
     removeKey: "olcrtcRemove",
     rollbackKey: "olcrtcRollback"
+  });
+  const fptnActions = getOptionalComponentActions({
+    component: "fptn",
+    installed: fptnInstalled,
+    checkKey: "fptnCheck",
+    installKey: "fptnInstall",
+    removeKey: "fptnRemove",
+    rollbackKey: "fptnRollback"
   });
   const tailscaleActions = getOptionalComponentActions({
     component: "tailscale",
@@ -22075,6 +22121,17 @@ function getComponentCards() {
       releaseUrl: getGitHubReleaseUrl("olcrtc"),
       repoUrl: COMPONENT_REPO_URLS.olcrtc,
       actions: olcrtcActions,
+      supportsVersions: true
+    },
+    {
+      component: "fptn",
+      column: 1,
+      title: "FPTN",
+      version: systemInfoLoading ? _("Loading...") : fptnInstalled ? systemInfo.fptn_version : _("Not installed"),
+      latestVersion: getLatestVersion("fptn"),
+      releaseUrl: getGitHubReleaseUrl("fptn"),
+      repoUrl: COMPONENT_REPO_URLS.fptn,
+      actions: fptnActions,
       supportsVersions: true
     },
     {
