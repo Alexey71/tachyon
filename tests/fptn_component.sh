@@ -121,3 +121,4 @@ STATUS_OUT="$(TACHYON_LIB="$TACHYON_LIB" ucode_run "$DIAGNOSTICS_UC" get-fptn-st
 echo "$STATUS_OUT" | grep -q '"ready":' || fail "get-fptn-status should return status json"
 
 echo "fptn component tests passed"
+
