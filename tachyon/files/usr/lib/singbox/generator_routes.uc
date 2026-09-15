@@ -243,9 +243,67 @@ function regex_match_set(tags, names, regexes) {
     return object_keys_set(runtime_urltest.regex_matching_tag_array(tags, names, regexes));
 }
 
-function tag_name_filter_matches(tag, names, name_filter, regex_set) {
+function format_outbound_type_label(protocol, transport) {
+    let p = lc(as_string(protocol || ""));
+    let norm_proto = "";
+    if (p == "vless") norm_proto = "VLESS";
+    else if (p == "vmess") norm_proto = "VMess";
+    else if (p == "shadowsocks" || p == "ss") norm_proto = "Shadowsocks";
+    else if (p == "trojan") norm_proto = "Trojan";
+    else if (p == "wireguard" || p == "wg") norm_proto = "WireGuard";
+    else if (p == "hysteria2" || p == "hy2") norm_proto = "Hysteria2";
+    else if (p == "hysteria") norm_proto = "Hysteria";
+    else if (p == "tuic") norm_proto = "TUIC";
+    else if (p == "socks" || p == "socks5") norm_proto = "SOCKS5";
+    else if (p == "http") norm_proto = "HTTP";
+    else if (p == "direct") norm_proto = "Direct";
+    else if (p == "block") norm_proto = "Block";
+    else if (p != "") norm_proto = uc(substr(p, 0, 1)) + substr(p, 1);
+
+    let t = lc(as_string(transport || ""));
+    let norm_trans = "";
+    if (t == "xhttp") norm_trans = "XHTTP";
+    else if (t == "ws" || t == "websocket") norm_trans = "WS";
+    else if (t == "grpc") norm_trans = "gRPC";
+    else if (t == "http" || t == "h2") norm_trans = "HTTP";
+    else if (t == "tcp" || t == "raw") norm_trans = "TCP";
+    else if (t == "quic") norm_trans = "QUIC";
+    else if (t == "upgrade" || t == "httpupgrade") norm_trans = "HTTPUpgrade";
+    else if (t != "") norm_trans = uc(t);
+
+    if (norm_proto == "" && norm_trans == "")
+        return "";
+    if (norm_proto == "")
+        return norm_trans;
+    if (norm_trans == "")
+        return norm_proto;
+    if (index(uc(norm_proto), uc(norm_trans)) >= 0)
+        return norm_proto;
+    if (norm_proto == "WireGuard" || norm_proto == "Hysteria" || norm_proto == "Hysteria2" || norm_proto == "TUIC")
+        return norm_proto;
+    return norm_proto + " (" + norm_trans + ")";
+}
+
+function tag_display_name_with_type(tag, names, metadata) {
     let name = tag_display_name(tag, names);
-    return array_contains(name_filter, name) || array_contains(name_filter, tag) || regex_set[tag];
+    let proto = object_or_empty(object_or_empty(metadata).protocols)[tag];
+    let trans = object_or_empty(object_or_empty(metadata).transports)[tag];
+    let label = format_outbound_type_label(proto, trans);
+    return label != "" ? (name + " [" + label + "]") : name;
+}
+
+function tag_name_filter_matches(tag, names, name_filter, regex_set, metadata, name_with_type_indexed) {
+    let name = tag_display_name(tag, names);
+    if (array_contains(name_filter, name) || array_contains(name_filter, tag) || regex_set[tag])
+        return true;
+    if (name_with_type_indexed != null && array_contains(name_filter, name_with_type_indexed))
+        return true;
+    if (name_with_type_indexed == null && type(metadata) == "object") {
+        let name_with_type = tag_display_name_with_type(tag, names, metadata);
+        if (name_with_type != name && array_contains(name_filter, name_with_type))
+            return true;
+    }
+    return false;
 }
 
 function tag_country_filter_matches(tag, countries, country_filter) {
@@ -305,8 +363,14 @@ function urltest_matching_candidate_outbounds(urltest_candidate_tags, names, cou
     let additional_set = object_keys_set(additional_matches);
     let result = [];
 
+    let seen_type_counts = {};
     for (let tag in array_or_empty(urltest_candidate_tags)) {
-        let base_matches = tag_name_filter_matches(tag, names, name_filter, regex_set) ||
+        let name_with_type = tag_display_name_with_type(tag, names, metadata);
+        seen_type_counts[name_with_type] = (seen_type_counts[name_with_type] || 0) + 1;
+        let count = seen_type_counts[name_with_type];
+        let name_with_type_indexed = count > 1 ? (name_with_type + " (#" + count + ")") : name_with_type;
+
+        let base_matches = tag_name_filter_matches(tag, names, name_filter, regex_set, metadata, name_with_type_indexed) ||
             tag_country_filter_matches(tag, countries, country_filter);
         let matches = additional_set[tag] || base_matches;
         if (proxy_parameters_enabled && proxy_parameters_operator == "or") {
@@ -1513,7 +1577,7 @@ function load_community_subnet_cidrs(community, filter_mode) {
 
     if (service == "discord") {
         if (filter_mode == "only_cloudflare" && length(cidrs) == 0)
-            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "104.16.0.0/12", "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
         if ((filter_mode == "exclude_cloudflare" || filter_mode == null) && length(cidrs) == 0)
             return core_ip.DISCORD_DEDICATED_SUBNETS || [ "162.159.128.0/21" ];
     }
@@ -1642,7 +1706,7 @@ function add_combined_route_for_section(config, section) {
         let voice_rule = create_section_route_rule();
         voice_rule.network = "udp";
         voice_rule.ip_cidr = discord_cf_subnets;
-        voice_rule.port_range = core_ip.DISCORD_VOICE_PORT_RANGES || [ "5000:5020", "3478:3478", "19302:19302", "50000:65535" ];
+        voice_rule.port_range = core_ip.DISCORD_VOICE_PORT_RANGES || [ "5000:5020", "3478:3478", "19294:19344", "50000:65535" ];
         push_section_route_rule(config, voice_rule, target.outbound);
     }
 

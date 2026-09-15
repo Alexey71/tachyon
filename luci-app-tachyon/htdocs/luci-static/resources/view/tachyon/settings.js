@@ -840,9 +840,17 @@ function createSmartDetectSectionsWidget(section_id) {
     "proxy",
     "outbound",
     "vpn",
-    "zapret",
-    "zapret2",
-    "byedpi",
+    "awg",
+    "warp",
+    "anytls",
+    "snell",
+    "mieru",
+    "sudoku",
+    "masque",
+    "openvpn",
+    "wdtt",
+    "olcrtc",
+    "fptn",
   ];
   const allSections = (uci.sections(UCI_PACKAGE, "section") || [])
     .filter(function (s) {

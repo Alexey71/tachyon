@@ -55,9 +55,9 @@ config settings 'settings'
         option game_console_optimizer '0'
         list game_console_ips ''
         # smart_detect: auto-detects blocked domains from logs and adds them to the first
-        # section in smart_detect_sections that works via proxy.
-        # list smart_detect_sections 'zapret-section'
+        # remote proxy section in smart_detect_sections that works via proxy.
         # list smart_detect_sections 'main-proxy'
+        # list smart_detect_sections 'backup-proxy'
         # Ordered: first section where the domain works via proxy wins.
 
         # ─── AI Watchdog settings ─────────────────────────────────────────────

@@ -278,4 +278,104 @@ if (selector.default != "proxy-urltest-ut_auto-out")
     fail("selector default must be the urltest group");
 ' "$WORK_DIR/issue89-config.json" || fail "issue89 cascade exclusion regression"
 
+mkdir -p "$WORK_DIR/sub_test/subscriptions"
+cat >"$WORK_DIR/sub_test/subscriptions/proxy-subscription-1.json" <<'JSON'
+{
+  "outbounds": [
+    { "type": "vless", "tag": "dk1", "remark": "🇩🇰 Denmark ⚡", "server": "127.0.0.1", "server_port": 1101, "uuid": "00000000-0000-4000-8000-000000000001", "transport": { "type": "tcp" } },
+    { "type": "vless", "tag": "dk2", "remark": "🇩🇰 Denmark ⚡", "server": "127.0.0.1", "server_port": 1102, "uuid": "00000000-0000-4000-8000-000000000002", "transport": { "type": "xhttp" } },
+    { "type": "vless", "tag": "dk3", "remark": "🇩🇰 Denmark ⚡", "server": "127.0.0.1", "server_port": 1103, "uuid": "00000000-0000-4000-8000-000000000003", "transport": { "type": "tcp" } }
+  ]
+}
+JSON
+printf '%s\n' 'https://dup.example/sub' >"$WORK_DIR/sub_test/subscriptions/proxy-subscription-1.url"
+: >"$WORK_DIR/sub_test/subscriptions/proxy-subscription-1.user_agent"
+
+cat >"$WORK_DIR/duplicate-names.json" <<'JSON'
+{
+  "settings": {
+    ".name": "settings",
+    ".type": "settings"
+  },
+  "section": [
+    {
+      ".name": "proxy",
+      ".type": "section",
+      "enabled": "1",
+      "action": "connection",
+      "subscription_urls": [ "https://dup.example/sub" ]
+    }
+  ],
+  "urltest": [
+    {
+      ".name": "ut_xhttp_only",
+      ".type": "urltest",
+      "section": "proxy",
+      "name": "XHTTP only",
+      "filter_mode": "include",
+      "include_outbounds": [ "🇩🇰 Denmark ⚡ [VLESS (XHTTP)]" ]
+    },
+    {
+      ".name": "ut_tcp_only",
+      ".type": "urltest",
+      "section": "proxy",
+      "name": "TCP only",
+      "filter_mode": "include",
+      "include_outbounds": [ "🇩🇰 Denmark ⚡ [VLESS (TCP)]" ]
+    },
+    {
+      ".name": "ut_tcp_second",
+      ".type": "urltest",
+      "section": "proxy",
+      "name": "TCP #2 only",
+      "filter_mode": "include",
+      "include_outbounds": [ "🇩🇰 Denmark ⚡ [VLESS (TCP)] (#2)" ]
+    },
+    {
+      ".name": "ut_both_name",
+      ".type": "urltest",
+      "section": "proxy",
+      "name": "Both by plain name",
+      "filter_mode": "include",
+      "include_outbounds": [ "🇩🇰 Denmark ⚡" ]
+    }
+  ]
+}
+JSON
+
+TMP_SUBSCRIPTION_FOLDER="$WORK_DIR/sub_test/subscriptions" \
+  generate_config "$WORK_DIR/duplicate-names.json" "$WORK_DIR/duplicate-names-config.json"
+
+ucode -e '
+let fs = require("fs");
+function fail(msg) { die(msg + "\n"); }
+function outbound_by_tag(cfg, tag) {
+    for (let o in cfg.outbounds || [])
+        if (o && o.tag == tag) return o;
+    return null;
+}
+function assert_array(val, exp, label) {
+    val = val || [];
+    if (length(val) != length(exp)) fail(label + " len mismatch: " + sprintf("%J", val) + " vs " + sprintf("%J", exp));
+    for (let i = 0; i < length(exp); i++)
+        if (val[i] != exp[i]) fail(label + " mismatch: " + sprintf("%J", val));
+}
+let cfg = json(fs.readfile(ARGV[0]));
+let ut_xhttp = outbound_by_tag(cfg, "proxy-urltest-ut_xhttp_only-out");
+let ut_tcp = outbound_by_tag(cfg, "proxy-urltest-ut_tcp_only-out");
+let ut_tcp2 = outbound_by_tag(cfg, "proxy-urltest-ut_tcp_second-out");
+let ut_both = outbound_by_tag(cfg, "proxy-urltest-ut_both_name-out");
+
+if (!ut_xhttp) fail("missing ut_xhttp");
+if (!ut_tcp) fail("missing ut_tcp");
+if (!ut_tcp2) fail("missing ut_tcp2");
+if (!ut_both) fail("missing ut_both");
+
+assert_array(ut_xhttp.outbounds, [ "dk2" ], "XHTTP only must select only the XHTTP node");
+assert_array(ut_tcp.outbounds, [ "dk1" ], "TCP only must select only the TCP node");
+assert_array(ut_tcp2.outbounds, [ "dk3" ], "TCP #2 only must select only the second TCP node");
+assert_array(ut_both.outbounds, [ "dk1", "dk2", "dk3" ], "Plain name must select all three nodes");
+' "$WORK_DIR/duplicate-names-config.json" || fail "duplicate outbound name disambiguation failed"
+
 printf 'dashboard server filter checks passed\n'
+

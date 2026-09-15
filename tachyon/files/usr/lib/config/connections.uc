@@ -329,7 +329,8 @@ function is_remote_proxy_action(action) {
     return is_connections_action(action) ||
         action == "awg" || action == "warp" ||
         action == "anytls" || action == "snell" || action == "mieru" || action == "sudoku" ||
-        action == "masque" || action == "openvpn";
+        action == "masque" || action == "openvpn" ||
+        action == "wdtt" || action == "olcrtc" || action == "fptn";
 }
 
 function is_wdtt_action(action) {

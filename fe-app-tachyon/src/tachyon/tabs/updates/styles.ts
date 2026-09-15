@@ -24,10 +24,10 @@ export const styles = `
 
 .tachyon_updates-page__components-column {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     flex-direction: column;
     gap: 10px;
-    min-width: max-content;
+    min-width: 280px;
 }
 
 @media (max-width: 760px) {
@@ -172,7 +172,7 @@ export const styles = `
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
@@ -191,7 +191,7 @@ export const styles = `
 
 .tachyon_updates-page__component__variants-buttons {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
 }
 

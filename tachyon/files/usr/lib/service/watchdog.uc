@@ -230,18 +230,17 @@ function check_auto_resume_pause() {
 
 // ─── Smart Detect — self-healing routing ─────────────────────────────────────
 function smart_detect_get_proxy_sections() {
-    let c = uci_core.cursor();
-    if (!c) return [];
-    c.load(CONFIG_NAME);
+    let sections = uci_core.section_objects(CONFIG_NAME, "section");
+    if (!sections || length(sections) == 0) return [];
     let connections = require("config.connections");
     let secs = [];
-    c.foreach(CONFIG_NAME, "section", function(s) {
-        if (s.enabled != "1") return;
+    for (let s in sections) {
+        if (s.enabled != "1") continue;
         let act = as_string(s.action || "");
-        if (act != "bypass" && act != "block" && act != "dns" && act != "") {
+        if (connections.is_remote_proxy_action(act)) {
             push(secs, s[".name"]);
         }
-    });
+    }
     return secs;
 }
 
@@ -1488,12 +1487,19 @@ function smart_detect_process_pending() {
     // No http/mixed inbound in the generated config: probing is pointless.
     if (proxy_addr == "127.0.0.1:") return;
 
+    let valid_proxy_map = {};
+    for (let s in sections) valid_proxy_map[s] = true;
+
     let detect_sections = [];
     let raw_list = cfg.smart_detect_sections;
     if (type(raw_list) == "array") {
-        detect_sections = raw_list;
+        for (let item in raw_list) {
+            let name = trim(as_string(item));
+            if (valid_proxy_map[name]) push(detect_sections, name);
+        }
     } else if (raw_list && trim(as_string(raw_list)) != "") {
-        detect_sections = [ trim(as_string(raw_list)) ];
+        let name = trim(as_string(raw_list));
+        if (valid_proxy_map[name]) detect_sections = [ name ];
     }
     if (length(detect_sections) == 0) {
         detect_sections = sections;
@@ -2276,7 +2282,12 @@ else if (mode == "smart-detect-extract-domain") {
     print(extracted + "\n");
     exit(0);
 }
+else if (mode == "smart-detect-proxy-sections") {
+    let secs = smart_detect_get_proxy_sections();
+    print(join(" ", secs) + "\n");
+    exit(0);
+}
 else {
-    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status|ai-status-full|smart-detect-extract-domain> ...\n");
+    warn("Usage: service/watchdog.uc <start-runtime|stop-runtime|worker|status|ai-heal|ai-status|ai-status-full|smart-detect-extract-domain|smart-detect-proxy-sections> ...\n");
     exit(1);
 }

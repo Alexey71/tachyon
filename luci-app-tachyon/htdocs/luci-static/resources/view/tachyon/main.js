@@ -22103,7 +22103,7 @@ function getComponentCards() {
     },
     {
       component: "wdtt",
-      column: 1,
+      column: 2,
       title: "WDTT",
       version: systemInfoLoading ? _("Loading...") : wdttInstalled ? systemInfo.wdtt_version : _("Not installed"),
       latestVersion: getLatestVersion("wdtt"),
@@ -22114,7 +22114,7 @@ function getComponentCards() {
     },
     {
       component: "olcrtc",
-      column: 1,
+      column: 2,
       title: "OlcRTC",
       version: systemInfoLoading ? _("Loading...") : olcrtcInstalled ? systemInfo.olcrtc_version : _("Not installed"),
       latestVersion: getLatestVersion("olcrtc"),
@@ -22125,7 +22125,7 @@ function getComponentCards() {
     },
     {
       component: "fptn",
-      column: 1,
+      column: 2,
       title: "FPTN",
       version: systemInfoLoading ? _("Loading...") : fptnInstalled ? systemInfo.fptn_version : _("Not installed"),
       latestVersion: getLatestVersion("fptn"),
@@ -22136,7 +22136,7 @@ function getComponentCards() {
     },
     {
       component: "tailscale",
-      column: 1,
+      column: 2,
       title: "Tailscale",
       version: systemInfoLoading ? _("Loading...") : tailscaleInstalled ? systemInfo.tailscale_version : _("Not installed"),
       latestVersion: getLatestVersion("tailscale"),
@@ -22516,21 +22516,18 @@ function renderUpdatesComponents() {
   if (!container) {
     return;
   }
-  const columns = [[], []];
+  const columns = [[], [], []];
   getComponentCards().forEach((card) => {
-    columns[card.column].push(renderComponentCard(card));
+    columns[card.column]?.push(renderComponentCard(card));
   });
   return preserveScrollForPage(() => {
     container.replaceChildren(
-      E(
-        "div",
-        { class: "tachyon_updates-page__components-column" },
-        columns[0]
-      ),
-      E(
-        "div",
-        { class: "tachyon_updates-page__components-column" },
-        columns[1]
+      ...columns.map(
+        (columnNodes) => E(
+          "div",
+          { class: "tachyon_updates-page__components-column" },
+          columnNodes
+        )
       )
     );
   });
@@ -22654,10 +22651,10 @@ var styles6 = `
 
 .tachyon_updates-page__components-column {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     flex-direction: column;
     gap: 10px;
-    min-width: max-content;
+    min-width: 280px;
 }
 
 @media (max-width: 760px) {
@@ -22802,7 +22799,7 @@ var styles6 = `
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
@@ -22821,7 +22818,7 @@ var styles6 = `
 
 .tachyon_updates-page__component__variants-buttons {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
 }
 

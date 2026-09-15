@@ -2046,7 +2046,7 @@ function nft_community_subnet_lines(path, service, filter_mode) {
     if (data == null) {
         if (as_string(service) == "discord") {
             if (filter_mode == "only_cloudflare")
-                return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+                return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "104.16.0.0/12", "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
             if (filter_mode == "exclude_cloudflare" || filter_mode == null)
                 return core_ip.DISCORD_DEDICATED_SUBNETS || [ "162.159.128.0/21" ];
         }
@@ -2073,7 +2073,7 @@ function nft_community_subnet_lines(path, service, filter_mode) {
 
     if (as_string(service) == "discord") {
         if (filter_mode == "only_cloudflare" && length(result) == 0)
-            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
+            return core_ip.DEFAULT_DISCORD_VOICE_SUBNETS || [ "104.16.0.0/12", "162.158.0.0/15", "172.64.0.0/13", "2606:4700::/32" ];
         if ((filter_mode == "exclude_cloudflare" || filter_mode == null) && length(result) == 0)
             return core_ip.DISCORD_DEDICATED_SUBNETS || [ "162.159.128.0/21" ];
     }
@@ -2098,7 +2098,7 @@ function nft_add_community_subnet_file_to_family_sets(path, table, ipv4_set, ipv
     if (as_string(service) == "discord" && ip_ports_v4) {
         let cf = nft_community_subnet_lines(path, service, "only_cloudflare");
         if (length(cf) > 0) {
-            let voice_ports = core_ip.DISCORD_VOICE_PORTS_NFT || "5000-5020, 3478, 19302, 50000-65535";
+            let voice_ports = core_ip.DISCORD_VOICE_PORTS_NFT || "5000-5020, 3478, 19294-19344, 50000-65535";
             let cf_ok = nft_add_values_to_family_sets(cf, table, ip_ports_v4, ip_ports_v6, "ip-port-from-ip", voice_ports, chunk_size_text);
             ok = ok && cf_ok;
         }

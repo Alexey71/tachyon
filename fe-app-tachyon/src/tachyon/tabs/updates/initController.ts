@@ -125,7 +125,7 @@ interface ComponentActionButton {
 
 interface ComponentCard {
   component: Tachyon.ComponentName;
-  column: 0 | 1;
+  column: 0 | 1 | 2;
   title: string;
   version: string;
   latestVersion?: string;
@@ -1545,7 +1545,7 @@ function getComponentCards(): ComponentCard[] {
     },
     {
       component: 'wdtt',
-      column: 1,
+      column: 2,
       title: 'WDTT',
       version: systemInfoLoading
         ? _('Loading...')
@@ -1560,7 +1560,7 @@ function getComponentCards(): ComponentCard[] {
     },
     {
       component: 'olcrtc',
-      column: 1,
+      column: 2,
       title: 'OlcRTC',
       version: systemInfoLoading
         ? _('Loading...')
@@ -1575,7 +1575,7 @@ function getComponentCards(): ComponentCard[] {
     },
     {
       component: 'fptn',
-      column: 1,
+      column: 2,
       title: 'FPTN',
       version: systemInfoLoading
         ? _('Loading...')
@@ -1590,7 +1590,7 @@ function getComponentCards(): ComponentCard[] {
     },
     {
       component: 'tailscale',
-      column: 1,
+      column: 2,
       title: 'Tailscale',
       version: systemInfoLoading
         ? _('Loading...')
@@ -2036,22 +2036,19 @@ function renderUpdatesComponents() {
     return;
   }
 
-  const columns = [[], []] as Node[][];
+  const columns: Node[][] = [[], [], []];
   getComponentCards().forEach((card) => {
-    columns[card.column].push(renderComponentCard(card));
+    columns[card.column]?.push(renderComponentCard(card));
   });
 
   return preserveScrollForPage(() => {
     container.replaceChildren(
-      E(
-        'div',
-        { class: 'tachyon_updates-page__components-column' },
-        columns[0],
-      ),
-      E(
-        'div',
-        { class: 'tachyon_updates-page__components-column' },
-        columns[1],
+      ...columns.map((columnNodes) =>
+        E(
+          'div',
+          { class: 'tachyon_updates-page__components-column' },
+          columnNodes,
+        ),
       ),
     );
   });

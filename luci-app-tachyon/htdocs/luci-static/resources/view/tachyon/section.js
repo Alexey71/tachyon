@@ -918,20 +918,59 @@ function loadOutboundNameChoices(section_id) {
 
   const task = readOutboundMetadataFromSectionCache(targetId)
     .then((metadata) => {
-      const names = Object.values(plainObject(metadata.names));
+      const namesMap = plainObject(metadata.names);
+      const nameCounts = new Map();
+      Object.values(namesMap).forEach((rawName) => {
+        const n = `${rawName || ""}`.trim();
+        if (n) {
+          nameCounts.set(n, (nameCounts.get(n) || 0) + 1);
+        }
+      });
 
       const typeMap = outboundTypeByNameCache.get(targetId) || new Map();
-      Object.entries(plainObject(metadata.names)).forEach(([tag, name]) => {
+      const choices = [];
+      const seenLabels = new Map();
+
+      Object.entries(namesMap).forEach(([tag, rawName]) => {
+        const name = `${rawName || ""}`.trim();
         if (!name) {
           return;
         }
         const proto = metadata.protocols ? metadata.protocols[tag] : "";
         const trans = metadata.transports ? metadata.transports[tag] : "";
-        const label = formatOutboundTypeLabel(proto, trans);
-        if (label) {
-          typeMap.set(name, label);
+        const typeLabel = formatOutboundTypeLabel(proto, trans);
+        if (typeLabel) {
+          typeMap.set(tag, typeLabel);
+          typeMap.set(name, typeLabel);
         }
+
+        const isDuplicateName = (nameCounts.get(name) || 0) > 1;
+        let choiceValue = name;
+        let choiceLabel = name;
+
+        if (typeLabel) {
+          choiceLabel = `${name} [${typeLabel}]`;
+          if (isDuplicateName) {
+            choiceValue = choiceLabel;
+          }
+        }
+
+        if (seenLabels.has(choiceLabel)) {
+          const count = seenLabels.get(choiceLabel) + 1;
+          seenLabels.set(choiceLabel, count);
+          choiceLabel = `${choiceLabel} (#${count})`;
+          choiceValue = choiceLabel;
+        } else {
+          seenLabels.set(choiceLabel, 1);
+        }
+
+        if (typeLabel) {
+          typeMap.set(choiceValue, typeLabel);
+        }
+
+        choices.push({ value: choiceValue, label: choiceLabel });
       });
+
       outboundTypeByNameCache.set(targetId, typeMap);
       if (targetId !== "Main") {
         const mainTypeMap = outboundTypeByNameCache.get("Main") || new Map();
@@ -939,10 +978,7 @@ function loadOutboundNameChoices(section_id) {
         outboundTypeByNameCache.set("Main", mainTypeMap);
       }
 
-      const choices = names
-        .filter(Boolean)
-        .filter((name, index, values) => values.indexOf(name) === index)
-        .sort((a, b) => `${a}`.localeCompare(`${b}`));
+      choices.sort((a, b) => `${a.label}`.localeCompare(`${b.label}`));
 
       outboundNameChoicesCache.set(targetId, choices);
       if (targetId !== "Main") {
@@ -1890,18 +1926,33 @@ function currentOutboundNameChoices(section_id, values) {
 
   const seen = new Set();
   const result = [];
-  const append = (name) => {
-    const value = `${name || ""}`.trim();
+  const append = (item) => {
+    if (!item) {
+      return;
+    }
+    let value = "";
+    let label = "";
+    if (typeof item === "object" && item.value != null) {
+      value = `${item.value || ""}`.trim();
+      label = `${item.label || item.value || ""}`.trim();
+    } else {
+      value = `${item || ""}`.trim();
+      label = value;
+    }
     if (!value || seen.has(value)) {
       return;
     }
 
     seen.add(value);
     const typeStr = getOutboundTypeForName(section_id, value);
-    const label =
-      typeStr && !value.endsWith(`[${typeStr}]`)
-        ? `${value} [${typeStr}]`
-        : value;
+    if (
+      typeStr &&
+      !label.includes(`[${typeStr}]`) &&
+      !value.includes(`[${typeStr}]`) &&
+      !/\[[^\]]+\]$/.test(label)
+    ) {
+      label = `${label} [${typeStr}]`;
+    }
     result.push({ value, label });
   };
 
@@ -11894,7 +11945,7 @@ async function performTrace(query) {
               totalSections: totalSections,
               sharedCdnWarning: isDiscordCfVoice
                 ? _(
-                    "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19302, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.",
+                    "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19294-19344, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.",
                   ).format(matchedCidr)
                 : getSharedCdnWarning(matchedCidr),
             };

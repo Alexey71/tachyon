@@ -88,4 +88,44 @@ do
 done
 rm -f "$SENTINEL"
 
+# --- smart_detect_get_proxy_sections filtering ---
+# Issue #56: zapret, zapret2, byedpi, bypass, block, dns must NEVER be returned as candidate proxy sections.
+# Only enabled remote proxy sections (connection, awg, warp, etc.) should be returned.
+TMP_DIR="$(mktemp -d /tmp/tachyon_smart_detect_test.XXXXXX)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+UCI_STATE_TEST="$TMP_DIR/uci.state"
+cat > "$UCI_STATE_TEST" << 'EOF'
+tachyon.sec_bypass=section
+tachyon.sec_bypass.enabled=1
+tachyon.sec_bypass.action=bypass
+tachyon.sec_zapret=section
+tachyon.sec_zapret.enabled=1
+tachyon.sec_zapret.action=zapret
+tachyon.sec_zapret2=section
+tachyon.sec_zapret2.enabled=1
+tachyon.sec_zapret2.action=zapret2
+tachyon.sec_byedpi=section
+tachyon.sec_byedpi.enabled=1
+tachyon.sec_byedpi.action=byedpi
+tachyon.sec_block=section
+tachyon.sec_block.enabled=1
+tachyon.sec_block.action=block
+tachyon.sec_dns=section
+tachyon.sec_dns.enabled=1
+tachyon.sec_dns.action=dns
+tachyon.sec_proxy=section
+tachyon.sec_proxy.enabled=1
+tachyon.sec_proxy.action=connection
+tachyon.sec_awg=section
+tachyon.sec_awg.enabled=1
+tachyon.sec_awg.action=awg
+tachyon.sec_disabled=section
+tachyon.sec_disabled.enabled=0
+tachyon.sec_disabled.action=connection
+EOF
+
+proxy_secs="$(UCI_STATE="$UCI_STATE_TEST" ucode "$WATCHDOG_UC" smart-detect-proxy-sections 2>/dev/null || true)"
+[ "$proxy_secs" = "sec_proxy sec_awg" ] || fail "smart_detect_get_proxy_sections: expected 'sec_proxy sec_awg', got '$proxy_secs'"
+
 printf 'smart_detect_domain_extraction checks passed\n'

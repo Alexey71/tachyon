@@ -131,6 +131,14 @@ for (let r in config.route.rules) {
             warn("Voice UDP rule missing port_range restriction!\n");
             exit(3);
         }
+        let has_cf_voice_ports = false;
+        for (let p in r.port_range) {
+            if (p == "19294:19344") has_cf_voice_ports = true;
+        }
+        if (!has_cf_voice_ports) {
+            warn("Voice UDP rule missing 19294:19344 port range!\n");
+            exit(6);
+        }
         found_voice_udp = true;
     }
 }
@@ -160,9 +168,17 @@ rm -f /tmp/sing-box/rulesets/community-subnets-discord.lst /tmp/sing-box/ruleset
 ucode -L "$LIB_DIR" -e '
 let generator_routes = require("singbox.generator_routes");
 let fallback_cf = generator_routes.load_community_subnet_cidrs("discord", "only_cloudflare");
-if (!fallback_cf || length(fallback_cf) < 3) {
+if (!fallback_cf || length(fallback_cf) != 4) {
     warn("Fallback voice subnets failed: " + length(fallback_cf) + "\n");
     exit(1);
+}
+let has_104 = false;
+for (let c in fallback_cf) {
+    if (c == "104.16.0.0/12") has_104 = true;
+}
+if (!has_104) {
+    warn("Fallback voice subnets missing 104.16.0.0/12\n");
+    exit(2);
 }
 ' || fail "singbox.generator_routes fallback voice subnets failed"
 

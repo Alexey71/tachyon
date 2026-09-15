@@ -1361,7 +1361,7 @@ const dictionary = {
   "Auto (cooperative with SQM/CAKE)": "Авто (кооперация с SQM/CAKE)",
   "QoS Priority Engine (DSCP)": "Движок приоритета QoS (DSCP)",
   "Strategy applied successfully and service reloaded!": "Стратегия успешно применена, сервис перезапущен!",
-  "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19302, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.": "Подсеть %s — диапазон Cloudflare Anycast, используемый Discord Voice. Только голосовой UDP-трафик (порты 50000-65535, 3478, 19302, 5000-5020) направляется через этот раздел; веб-трафик (TCP 80/443) идет напрямую.",
+  "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19294-19344, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.": "Подсеть %s — диапазон Cloudflare Anycast, используемый Discord Voice. Только голосовой UDP-трафик (порты 50000-65535, 3478, 19294-19344, 5000-5020) направляется через этот раздел; веб-трафик (TCP 80/443) идет напрямую.",
   "Add URLs or local paths to .lst / .txt lists containing domains and subnets.": "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены и подсети.",
   "Add URLs or local paths to .lst / .txt lists containing domains. IP entries are ignored.": "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены. IP-записи игнорируются.",
 };
