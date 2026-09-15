@@ -646,6 +646,7 @@ function set_running_job_pid_file(path, pid) {
 }
 
 function write_finished_action_state(path, success, message, exit_code) {
+    remove_file(ACTION_DIRS_REFRESH_STAMP_FILE);
     return write_state_file(path, finished_action_state_value(path, success, message, exit_code, now_seconds()));
 }
 
@@ -734,6 +735,20 @@ function refresh_action_dirs() {
         refresh_pid_job_state(path, "Subscription update worker exited unexpectedly");
 }
 
+const ACTION_DIRS_REFRESH_STAMP_FILE = "/var/run/tachyon_action_dirs_refresh.stamp";
+const ACTION_DIRS_REFRESH_INTERVAL_SECONDS = 30;
+
+function maybe_refresh_action_dirs(force) {
+    let now = now_seconds();
+    if (!force) {
+        let stat = fs.stat(ACTION_DIRS_REFRESH_STAMP_FILE);
+        if (stat != null && (now - int(stat.mtime || 0)) < ACTION_DIRS_REFRESH_INTERVAL_SECONDS)
+            return;
+    }
+    refresh_action_dirs();
+    write_state_file(ACTION_DIRS_REFRESH_STAMP_FILE, as_string(now) + "\n", "action dirs refresh stamp");
+}
+
 function active_service_action_default() {
     refresh_action_dirs();
     active_service_action(SERVICE_ACTION_DIR);
@@ -755,7 +770,6 @@ function action_state_from_dir(dir) {
 }
 
 function action_state_from_dirs() {
-    refresh_action_dirs();
     return {
         service: action_state_from_dir(SERVICE_ACTION_DIR),
         latency: action_state_from_dir(LATENCY_ACTION_DIR),
@@ -1094,7 +1108,7 @@ function process_memory_rss_mb(process_name) {
 }
 
 function current_ui_state_json() {
-    refresh_action_dirs();
+    maybe_refresh_action_dirs(false);
 
     let capabilities = capability_flags();
     let tachyon_is_running = tachyon_running() ? 1 : 0;

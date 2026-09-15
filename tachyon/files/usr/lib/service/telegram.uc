@@ -276,8 +276,8 @@ function tg_request_via(token, method, payload, proxy_args) {
     // getUpdates long-poll on reboot or watchdog restart).
     let body = sprintf("%J", payload);
     let is_poll = (method == "getUpdates");
-    let max_time = is_poll ? "35" : "12";
-    let conn_timeout = is_poll ? "10" : "5";
+    let max_time = is_poll ? "65" : "12";
+    let conn_timeout = is_poll ? "15" : "5";
     let args = [ "curl", "-s", "-m", max_time, "--connect-timeout", conn_timeout,
                  "-X", "POST", "-H", "Content-Type: application/json",
                  "-d", body ];
@@ -2832,7 +2832,7 @@ function dispatch_command(token, chat_id, text, msg_id) {
 
 function process_updates(token, admin_ids) {
     let offset = int(trim(fs.readfile(OFFSET_FILE) || "0"));
-    let res = tg_request(token, "getUpdates", { offset: offset, timeout: 20 });
+    let res = tg_request(token, "getUpdates", { offset: offset, timeout: 50 });
     
     if (!res || !res.ok || !res.result) return false;
     if (length(res.result) == 0) return true;
@@ -3317,9 +3317,8 @@ function worker() {
         } catch (e) {
             consecutive_failures++;
             command_success_from_args(["logger", "-t", "tachyon-telegram", "[err] Worker loop error: " + as_string(e)]);
+            sleep(poll_interval * 1000);
         }
-        
-        sleep(poll_interval * 1000);
     }
     return 0;
 }

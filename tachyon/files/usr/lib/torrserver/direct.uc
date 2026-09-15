@@ -54,10 +54,24 @@ function dedicated_cgroup(path) {
     }
     return found > 0;
 }
+let cached_pid = "";
+
 function discover() {
+    if (cached_pid != "") {
+        let cmdline_path = "/proc/" + cached_pid + "/cmdline";
+        if (is_torrserver_cmdline(read(cmdline_path))) {
+            let path = process_cgroup(cached_pid);
+            if (valid_cgroup(path) && dedicated_cgroup(path))
+                return { running: 1, available: 1, pid: cached_pid, cgroup: path };
+            return { running: 1, available: 0, pid: cached_pid, cgroup: path };
+        }
+        cached_pid = "";
+    }
+
     for (let cmdline_path in fs.glob("/proc/[0-9]*/cmdline")) {
         let pid = numeric_pid(cmdline_path);
         if (pid == "" || !is_torrserver_cmdline(read(cmdline_path))) continue;
+        cached_pid = pid;
         let path = process_cgroup(pid);
         if (valid_cgroup(path) && dedicated_cgroup(path))
             return { running: 1, available: 1, pid, cgroup: path };
@@ -129,7 +143,7 @@ function worker() {
             remove_rule();
             last_cgroup = "";
         }
-        system("sleep 60");
+        sleep(60000);
     }
     remove_rule();
 }

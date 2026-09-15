@@ -683,16 +683,6 @@ function add_mixed_proxy_for_section(config, section, service_address) {
         push(config.route.rules[0].inbound, inbound.tag);
 
     push(config.route.rules, {
-        action: "hijack-dns",
-        inbound: inbound.tag,
-        port: 53
-    });
-    push(config.route.rules, {
-        action: "hijack-dns",
-        inbound: inbound.tag,
-        protocol: "dns"
-    });
-    push(config.route.rules, {
         action: "route",
         inbound: inbound.tag,
         ip_is_private: true,
@@ -745,16 +735,6 @@ function add_direct_bypass_proxy(config, settings, service_address) {
         push(config.route.rules[0].inbound, inbound_tag);
 
     push(config.route.rules, {
-        action: "hijack-dns",
-        inbound: inbound_tag,
-        port: 53
-    });
-    push(config.route.rules, {
-        action: "hijack-dns",
-        inbound: inbound_tag,
-        protocol: "dns"
-    });
-    push(config.route.rules, {
         action: "route",
         inbound: inbound_tag,
         ip_is_private: true,
@@ -779,16 +759,6 @@ function add_service_mixed_proxy_inbound(config, tag_name, listen_port, outbound
         type(config.route.rules[0].inbound) == "array")
         push(config.route.rules[0].inbound, tag_name);
 
-    push(config.route.rules, {
-        action: "hijack-dns",
-        inbound: tag_name,
-        port: 53
-    });
-    push(config.route.rules, {
-        action: "hijack-dns",
-        inbound: tag_name,
-        protocol: "dns"
-    });
     push(config.route.rules, {
         action: "route",
         inbound: tag_name,

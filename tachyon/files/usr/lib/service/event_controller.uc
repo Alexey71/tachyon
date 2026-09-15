@@ -404,6 +404,8 @@ function controller(bus, opts) {
         dns_consecutive_fails: 0,
         dns_fail_streak: 0,
         dns_streak_stamp: 0,
+        last_proxy_probe: 0,
+        last_dns_probe: 0,
         proxy_latency_history: [],
         dns_latency_history: [],
         syslog_start_time: 0,
@@ -415,6 +417,7 @@ function controller(bus, opts) {
     };
 
     let self = { EV: EV, state: state };
+    let current_tick_ctx = null;
 
     // Keeps the last 20 samples. Bounded so a long-lived watchdog cannot grow
     // its heap through the history array.
@@ -500,22 +503,48 @@ function controller(bus, opts) {
     }
     self.is_paused = probe_pause;
 
+    // ── Shared observation context ───────────────────────────────────────────
+    // Resolved once at tick entry and reused across all probes within the tick.
+    // Eliminates redundant forks of pgrep /usr/bin/tachyon, /proc traversals,
+    // and duplicate pid lookups.
+    function create_tick_context() {
+        let now = time();
+        let cfg = settings();
+        let reload = is_reload_in_progress();
+        let list_upd = is_list_update_running();
+        let sb_pid = get_sing_box_pid();
+        let sb_running = (sb_pid != "" && process_running(sb_pid, "sing-box"));
+        let port = proxy_port();
+        let host = proxy_host();
+        let paused = probe_pause();
+
+        return {
+            now: now,
+            settings: cfg,
+            reload_in_progress: reload,
+            list_update_running: list_upd,
+            singbox_pid: sb_pid,
+            singbox_running: sb_running,
+            proxy_port: port,
+            proxy_host: host,
+            is_paused: paused
+        };
+    }
+    self.create_tick_context = create_tick_context;
+
     // ── Probe: sing-box liveness ──────────────────────────────────────────────
     // The expensive /proc scan only runs once the cheap pidfile/ubus/pidof
     // path has already failed, preserving the original fast-path ordering.
     function probe_singbox() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (setting("recovery_bypass", "0") == "1") return;
-        // An active pause means sing-box is stopped on purpose. The original
-        // check_singbox_process() consulted the pause on every fast tick, so it
-        // is consulted here too: leaving it to the normal tier alone would open
-        // a window of up to one normal interval in which a deliberate pause is
-        // reported as a stop.
-        if (probe_pause()) return;
-        if (check_tachyon_cli_running()) return;
-        if (is_list_update_running()) return;
+        // An active pause means sing-box is stopped on purpose.
+        if (ctx.is_paused) return;
+        if (ctx.reload_in_progress) return;
+        if (ctx.list_update_running) return;
 
-        let pid = get_sing_box_pid();
-        if (pid != "" && process_running(pid, "sing-box")) return;
+        let pid = ctx.singbox_pid;
+        if (pid != "" && ctx.singbox_running) return;
 
         // No configured sections means sing-box is legitimately absent.
         let has_sections = false;
@@ -542,20 +571,33 @@ function controller(bus, opts) {
     // subscriber. The probe only skips when measuring is pointless or its
     // result would be misleading.
     function probe_proxy() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (!bus.has(EV.PROXY_DOWN) && !bus.has(EV.PROXY_UP)) return;
         // A reload tears the proxy down on purpose; a sample taken now would
         // land in the latency history as a fault that never happened.
-        if (is_reload_in_progress()) return;
+        if (ctx.reload_in_progress) return;
 
-        let pid = get_sing_box_pid();
-        if (pid == "" || !process_running(pid, "sing-box")) return;
+        let pid = ctx.singbox_pid;
+        if (pid == "" || !ctx.singbox_running) return;
 
         let port = proxy_port();
         // No http/mixed inbound in the generated config: there is nothing to
         // measure, so the proxy must not be declared broken on a dead port.
         if (port == "") return;
-        let host = proxy_host();
-        let check_url = setting("ai_proxy_health_url", "https://cp.cloudflare.com/generate_204");
+        let host = ctx.proxy_host;
+
+        // Adaptive interval pacing: honor ai_proxy_health_interval (default 30s)
+        // when healthy (consecutive fails == 0).
+        // On failure, switch to fast retry on every tick (10-15s) until restored.
+        let proxy_interval = int(ctx.settings.ai_proxy_health_interval || "30");
+        if (proxy_interval < 15) proxy_interval = 15;
+
+        if (state.proxy_consecutive_fails == 0 && state.last_proxy_probe > 0 &&
+            (ctx.now - state.last_proxy_probe < proxy_interval))
+            return;
+
+        state.last_proxy_probe = ctx.now;
+        let check_url = ctx.settings.ai_proxy_health_url || "https://cp.cloudflare.com/generate_204";
 
         let started = time();
         let ok = command_success_from_args([
@@ -628,21 +670,34 @@ function controller(bus, opts) {
     // As with the proxy probe, one resolution attempt serves both DNS
     // subscribers; each carries its own enable flag and its own threshold.
     function probe_dns() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (!bus.has(EV.DNS_DOWN) && !bus.has(EV.DNS_UP)) return;
         if (setting("recovery_bypass", "0") == "1") return;
 
         // A reload restarts the resolver; failures during it are expected and
         // must not accumulate, so the streak resets exactly as before.
-        if (is_reload_in_progress()) {
+        if (ctx.reload_in_progress) {
             clear_dns_streak();
             return;
         }
 
-        let pid = get_sing_box_pid();
-        if (pid == "" || !process_running(pid, "sing-box")) {
+        let pid = ctx.singbox_pid;
+        if (pid == "" || !ctx.singbox_running) {
             clear_dns_streak();
             return;
         }
+
+        // Adaptive interval pacing: honor ai_dns_interval (default 60s)
+        // when healthy (consecutive fails == 0).
+        // On failure, switch to fast retry on every tick (10-15s) until restored.
+        let dns_interval = int(ctx.settings.ai_dns_interval || "60");
+        if (dns_interval < 15) dns_interval = 15;
+
+        if (state.dns_consecutive_fails == 0 && state.last_dns_probe > 0 &&
+            (ctx.now - state.last_dns_probe < dns_interval))
+            return;
+
+        state.last_dns_probe = ctx.now;
 
         let started = time();
         let ok = is_dns_working();
@@ -703,13 +758,14 @@ function controller(bus, opts) {
 
     // ── Probe: nftables table and QoS marks ───────────────────────────────────
     function probe_nftables() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (setting("recovery_bypass", "0") == "1") return;
         if (fs.stat("/var/run/tachyon/native_internet_restored") != null) return;
-        if (is_list_update_running()) return;
-        if (is_reload_in_progress()) return;
+        if (ctx.list_update_running) return;
+        if (ctx.reload_in_progress) return;
 
         let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
-        let routing_mode = setting("routing_mode", "nftables");
+        let routing_mode = ctx.settings.routing_mode || "nftables";
         let out_nft = command_output_from_args(["sh", "-c",
             "nft list table inet " + nft_table + " | grep -E 'chain|tproxy|priority_rules|dscp'; exit 0"]);
 
@@ -720,7 +776,7 @@ function controller(bus, opts) {
             }
         }
 
-        let qos_pref = setting("qos_priority_engine", "");
+        let qos_pref = ctx.settings.qos_priority_engine || "";
         if (qos_pref == "0") return;
         if ((index(out_nft, "dscp set 0x2e") < 0 && index(out_nft, "dscp set ef") < 0) ||
             (index(out_nft, "dscp set 0x22") < 0 && index(out_nft, "dscp set af41") < 0))
@@ -729,12 +785,13 @@ function controller(bus, opts) {
 
     // ── Probe: TPROXY port liveness ───────────────────────────────────────────
     function probe_tproxy() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (setting("recovery_bypass", "0") == "1") return;
         if (fs.stat("/var/run/tachyon/native_internet_restored") != null) return;
-        if (is_reload_in_progress()) return;
+        if (ctx.reload_in_progress) return;
 
-        let pid = get_sing_box_pid();
-        if (pid == "" || !process_running(pid, "sing-box")) return;
+        let pid = ctx.singbox_pid;
+        if (pid == "" || !ctx.singbox_running) return;
 
         let port = tproxy_port();
         // /proc/net/tcp encodes the local port in hex; 0A is TCP_LISTEN.
@@ -818,7 +875,8 @@ function controller(bus, opts) {
     // that is in progress are not counted, and a healthy pass resets the
     // streak so one transient gap cannot accumulate into a false trigger.
     function probe_wan() {
-        if (is_reload_in_progress()) {
+        let ctx = current_tick_ctx || create_tick_context();
+        if (ctx.reload_in_progress) {
             state.wan_fail_streak = 0;
             return;
         }
@@ -973,12 +1031,13 @@ function controller(bus, opts) {
 
     // ── Probe: community subnet nft sets ──────────────────────────────────────
     function probe_subnet_sets() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (setting("recovery_bypass", "0") == "1") return;
-        if (is_reload_in_progress()) return;
-        if (is_list_update_running()) return;
+        if (ctx.reload_in_progress) return;
+        if (ctx.list_update_running) return;
 
-        let pid = get_sing_box_pid();
-        if (pid == "" || !process_running(pid, "sing-box")) return;
+        let pid = ctx.singbox_pid;
+        if (pid == "" || !ctx.singbox_running) return;
 
         let nft_table = getenv("NFT_TABLE_NAME") || "TachyonTable";
         let all_sections = uci_core.get_all(CONFIG_NAME);
@@ -1033,8 +1092,9 @@ function controller(bus, opts) {
 
     // ── Probe: proxy sections with subscriptions but no usable outbounds ──────
     function probe_empty_sections() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (!enabled("ai_section_failover_enabled", "1")) return;
-        if (is_reload_in_progress()) return;
+        if (ctx.reload_in_progress) return;
 
         let connections = require("config.connections");
         let sections = common.object_or_empty(uci_core.get_all(CONFIG_NAME));
@@ -1104,8 +1164,9 @@ function controller(bus, opts) {
     // Checks if nfqws/nfqws2 supervisor processes are alive by counting PID
     // files. A mismatch means the DPI bypass engine crashed or was killed.
     function probe_nfqueue() {
+        let ctx = current_tick_ctx || create_tick_context();
         if (!bus.has(EV.NFQUEUE_DOWN) && !bus.has(EV.NFQUEUE_UP)) return;
-        if (is_reload_in_progress()) return;
+        if (ctx.reload_in_progress) return;
 
         let pid_dirs = [
             "/var/run/tachyon/zapret/child-pid",
@@ -1186,17 +1247,21 @@ function controller(bus, opts) {
     // event.
     self.handle_ubus_firewall_reload = function() {
         bus.emit(EV.FIREWALL_RELOADED, {});
+        current_tick_ctx = create_tick_context();
         run_probe(probe_nftables, "nftables");
         run_probe(probe_subnet_sets, "subnet_sets");
         return true;
     };
 
-    self.probe_fast = function() {
+    self.probe_fast = function(ctx) {
+        current_tick_ctx = ctx || create_tick_context();
         run_probe(probe_singbox, "singbox");
         run_probe(probe_proxy, "proxy");
-        run_probe(probe_dns, "dns");    };
+        run_probe(probe_dns, "dns");
+    };
 
-    self.probe_normal = function() {
+    self.probe_normal = function(ctx) {
+        current_tick_ctx = ctx || create_tick_context();
         run_probe(probe_pause, "pause");
         run_probe(probe_memory, "memory");
         run_probe(probe_rpcd, "rpcd");
@@ -1204,7 +1269,8 @@ function controller(bus, opts) {
         run_probe(probe_tproxy, "tproxy");
     };
 
-    self.probe_slow = function() {
+    self.probe_slow = function(ctx) {
+        current_tick_ctx = ctx || create_tick_context();
         run_probe(probe_subnet_sets, "subnet_sets");
         run_probe(probe_wan, "wan");
         run_probe(probe_subscription, "subscription");
@@ -1231,8 +1297,14 @@ function controller(bus, opts) {
     // their counter right after restarting, so that a restart-in-flight would
     // not immediately trip the same threshold again on the next tick.
     self.reset_dns_streak = clear_dns_streak;
-    self.reset_dns_consecutive = function() { state.dns_consecutive_fails = 0; };
-    self.reset_proxy_consecutive = function() { state.proxy_consecutive_fails = 0; };
+    self.reset_dns_consecutive = function() {
+        state.dns_consecutive_fails = 0;
+        state.last_dns_probe = 0;
+    };
+    self.reset_proxy_consecutive = function() {
+        state.proxy_consecutive_fails = 0;
+        state.last_proxy_probe = 0;
+    };
 
     // Latency history and streak counters feed ai-status-full and the metrics
     // export, which are still owned by the watchdog.

@@ -1885,16 +1885,17 @@ function worker() {
 
     let log_pipe = setup_syslog_listener();
     let ubus_conn = setup_ubus_listener();
+    let current_ctx = null;
 
     function perform_fast_checks() {
-        controller.probe_fast();
+        controller.probe_fast(current_ctx);
         // After the probes, so a recovery observed on this very tick closes its
         // watch before the deadline is tested against it.
         safe_call(settle_expired_recoveries, "settle_expired_recoveries");
     }
 
     function perform_normal_checks() {
-        controller.probe_normal();
+        controller.probe_normal(current_ctx);
         safe_call(smart_detect_process_pending, "smart_detect_process_pending");
         safe_call(export_metrics, "export_metrics");
         safe_call(ai_export_status, "ai_export_status");
@@ -2091,29 +2092,37 @@ function check_section_failover() {
 }
 
     function perform_slow_checks() {
-        controller.probe_slow();
+        controller.probe_slow(current_ctx);
         safe_call(ai_heal_dns_loop, "ai_heal_dns_loop");
         safe_call(check_mixed_proxy_port, "check_mixed_proxy_port");
         safe_call(check_telegram_worker, "check_telegram_worker");
         safe_call(check_tailscale_worker, "check_tailscale_worker");
         safe_call(check_section_failover, "check_section_failover");
     }
+    let last_keepalive_write = 0;
     if (uloop) {
         let tick;
         tick = function() {
             let now = time();
             try {
-                write_state_file("/var/run/tachyon_watchdog.keepalive", as_string(time()), "keepalive stamp");
+                if (now - last_keepalive_write >= 30) {
+                    last_keepalive_write = now;
+                    write_state_file("/var/run/tachyon_watchdog.keepalive", as_string(now), "keepalive stamp");
+                }
+                current_ctx = null;
                 if (now - last_fast_check >= 15) {
                     last_fast_check = now;
+                    current_ctx = current_ctx || (controller.create_tick_context ? controller.create_tick_context() : null);
                     perform_fast_checks();
                 }
                 if (now - last_normal_check >= controller.adaptive_normal_interval()) {
                     last_normal_check = now;
+                    current_ctx = current_ctx || (controller.create_tick_context ? controller.create_tick_context() : null);
                     perform_normal_checks();
                 }
                 if (now - last_slow_check >= 300) {
                     last_slow_check = now;
+                    current_ctx = current_ctx || (controller.create_tick_context ? controller.create_tick_context() : null);
                     perform_slow_checks();
                 }
             } catch (e) {
@@ -2132,6 +2141,7 @@ function check_section_failover() {
         signal("SIGTERM", function(sig) { log_message("SIGTERM received, shutting down", "info"); stop_runtime(); exit(0); });
         signal("SIGINT", function(sig) { log_message("SIGINT received, shutting down", "info"); stop_runtime(); exit(0); });
         while (true) {
+            current_ctx = controller.create_tick_context ? controller.create_tick_context() : null;
             perform_fast_checks();
             perform_normal_checks();
             perform_slow_checks();
