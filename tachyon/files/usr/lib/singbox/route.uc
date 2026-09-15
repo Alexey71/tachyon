@@ -78,6 +78,8 @@ function config(settings, runtime) {
     if (type(runtime) == "object" && type(runtime.dns_health_inbounds) == "array")
         for (let inbound in runtime.dns_health_inbounds)
             push(dns_hijack_inbounds, inbound);
+    if (bool_option(settings, "route_router_traffic", false) && option(settings, "route_router_traffic_section", "") != "")
+        push(sniff_inbounds, runtime_constants.REDIRECT_INBOUND_TAG);
     let rules = [
         { action: "sniff", inbound: sniff_inbounds },
         { action: "hijack-dns", inbound: dns_hijack_inbounds }

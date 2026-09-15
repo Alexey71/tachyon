@@ -926,6 +926,8 @@ function start_main() {
         return status;
     }
 
+    module_status(NFT_UC, [ "nft-sync-router-output-intercept", NFT_TABLE_NAME, NFT_LOCALV4_SET_NAME, NFT_OUTBOUND_MARK ]);
+
     status = module_status(PRIORITY_UC, [ "start-runtime" ]);
     if (status != 0) {
         log_message("Failed to start Priority runtime. Aborted.", "fatal");
@@ -1038,6 +1040,8 @@ function stop_main() {
         log_message("Tailscale stop failed (non-fatal)", "warn");
     module_success(PARENTAL_QUOTA_UC, [ "remove-cron" ]);
     module_success(TELEGRAM_UC, [ "stop-runtime" ]);
+
+    module_success(NFT_UC, [ "nft-disable-router-output-intercept", NFT_TABLE_NAME ]);
 
     if (command_success_from_args([ "nft", "list", "table", "inet", NFT_TABLE_NAME ])) {
         if (!command_success_from_args([ "nft", "delete", "table", "inet", NFT_TABLE_NAME ]))
@@ -1538,6 +1542,8 @@ function reload(reason) {
     // Minute-tick cron for parental daily time quotas (idempotent install).
     module_success(PARENTAL_QUOTA_UC, [ "install-cron" ]);
     module_success(PARENTAL_QUOTA_UC, [ "tick" ]);
+
+    module_status(NFT_UC, [ "nft-sync-router-output-intercept", NFT_TABLE_NAME, NFT_LOCALV4_SET_NAME, NFT_OUTBOUND_MARK ]);
 
     if (plan.needs_dnsmasq_configure == 1) {
         status = dnsmasq_configure(true);

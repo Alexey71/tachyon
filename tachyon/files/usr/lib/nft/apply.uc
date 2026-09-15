@@ -2570,6 +2570,63 @@ function nft_guest_mode_signature_body(body, guest_mode) {
     return body;
 }
 
+function router_output_intercept_enabled(settings) {
+    if (type(settings) != "object")
+        settings = uci_settings();
+    return bool_option(settings, "route_router_traffic", false) &&
+        option(settings, "route_router_traffic_section", "") != "";
+}
+
+function nft_disable_router_output_intercept(table) {
+    run_args_quiet([ "nft", "delete", "chain", "inet", as_string(table), "output_redirect" ]);
+    return true;
+}
+
+function nft_enable_router_output_intercept(table, localv4_set, outbound_mark, exclude_ntp) {
+    table = as_string(table);
+    localv4_set = as_string(localv4_set || "localv4");
+    outbound_mark = as_string(outbound_mark || runtime_constants.OUTBOUND_MARK);
+    let port = as_string(runtime_constants.REDIRECT_INBOUND_PORT);
+
+    if (!run_args_quiet([ "nft", "flush", "chain", "inet", table, "output_redirect" ])) {
+        if (!nft_create_chain(table, "output_redirect", "{ type nat hook output priority -100; policy accept; }"))
+            return false;
+    }
+
+    if (!nft_add_rule(table, "output_redirect", [ "ct", "status", "dnat", "return" ]))
+        return false;
+    if (!nft_add_rule(table, "output_redirect", [ "meta", "l4proto", "icmp", "return" ]))
+        return false;
+    if (!nft_add_rule(table, "output_redirect", [ "ip", "daddr", "@" + localv4_set, "return" ]))
+        return false;
+    if (!nft_add_rule(table, "output_redirect", [ "tcp", "dport", "53", "return" ]))
+        return false;
+    if (!nft_add_rule(table, "output_redirect", [ "udp", "dport", "53", "return" ]))
+        return false;
+    if (arg_bool(exclude_ntp) && !nft_add_rule(table, "output_redirect", [ "udp", "dport", "123", "return" ]))
+        return false;
+    if (outbound_mark != "" && !nft_add_rule(table, "output_redirect", [ "meta", "mark", outbound_mark, "return" ]))
+        return false;
+    return nft_add_rule(table, "output_redirect", [
+        "meta", "l4proto", "tcp", "counter", "redirect", "to", ":" + port
+    ]);
+}
+
+function nft_sync_router_output_intercept(table, localv4_set, outbound_mark) {
+    table = as_string(table || "tachyon");
+    localv4_set = as_string(localv4_set || "localv4");
+    outbound_mark = as_string(outbound_mark || runtime_constants.OUTBOUND_MARK);
+    let settings = uci_settings();
+    if (!router_output_intercept_enabled(settings))
+        return nft_disable_router_output_intercept(table);
+    return nft_enable_router_output_intercept(
+        table,
+        localv4_set,
+        outbound_mark,
+        option(settings, "exclude_ntp", "0")
+    );
+}
+
 function nft_runtime_signature_from_settings_and_sections(settings, sections, schedules, profiles, guest_modes) {
     let body = "";
 
@@ -2580,6 +2637,8 @@ function nft_runtime_signature_from_settings_and_sections(settings, sections, sc
     body = signature_add_value(body, "settings.game_console_ips", option(settings, "game_console_ips", ""));
     body = signature_add_value(body, "settings.excluded_clients", option(settings, "excluded_clients", ""));
     body = signature_add_value(body, "settings.excluded_ips", option(settings, "excluded_ips", ""));
+    body = signature_add_value(body, "settings.route_router_traffic", bool_option(settings, "route_router_traffic", false) ? "1" : "0");
+    body = signature_add_value(body, "settings.route_router_traffic_section", option(settings, "route_router_traffic_section", ""));
 
     for (let section in sections)
         body = nft_rule_signature_body(body, object_or_empty(section));
@@ -3248,6 +3307,12 @@ else if (mode == "tproxy-route-rule-present")
     exit(tproxy_route_rule_present(ARGV[1], ARGV[2]) ? 0 : 1);
 else if (mode == "ensure-bridge-netfilter-disabled")
     exit(ensure_bridge_netfilter_disabled() ? 0 : 1);
+else if (mode == "nft-enable-router-output-intercept")
+    exit(nft_enable_router_output_intercept(ARGV[1], ARGV[2], ARGV[3], ARGV[4]) ? 0 : 1);
+else if (mode == "nft-disable-router-output-intercept")
+    exit(nft_disable_router_output_intercept(ARGV[1]) ? 0 : 1);
+else if (mode == "nft-sync-router-output-intercept")
+    exit(nft_sync_router_output_intercept(ARGV[1], ARGV[2], ARGV[3]) ? 0 : 1);
 else {
     warn("Usage: nft/apply.uc <operation> ...\n");
     exit(1);

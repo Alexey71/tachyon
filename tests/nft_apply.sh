@@ -687,6 +687,10 @@ br-lan tun0
 
 [settings.excluded_ips]
 
+[settings.route_router_traffic]
+0
+[settings.route_router_traffic_section]
+
 [rule.text_rule.action]
 bypass
 [rule.text_rule.ip_cidr]
@@ -795,6 +799,10 @@ br-lan tun0
 
 [settings.excluded_ips]
 
+[settings.route_router_traffic]
+0
+[settings.route_router_traffic_section]
+
 [rule.enabled.action]
 bypass
 [rule.enabled.ip_cidr]
@@ -852,6 +860,10 @@ br-lan
 [settings.excluded_clients]
 
 [settings.excluded_ips]
+
+[settings.route_router_traffic]
+0
+[settings.route_router_traffic_section]
 
 EOF_EXPECTED
 expected_signature="$(md5sum "$WORK_DIR/signature-defaults-expected.txt" | awk '{print $1}')"

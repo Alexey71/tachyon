@@ -827,6 +827,42 @@ function add_service_mixed_proxy(config, settings, sections) {
         runtime_generate_unsupported("download components via proxy section is not set");
 }
 
+function router_traffic_section(settings) {
+    if (!bool_option(settings, "route_router_traffic", false))
+        return "";
+    return option(settings, "route_router_traffic_section", "");
+}
+
+function add_router_traffic_redirect(config, settings) {
+    let section_name = router_traffic_section(settings);
+    if (section_name == "")
+        return;
+
+    push(config.inbounds, {
+        type: "redirect",
+        tag: runtime_constants.REDIRECT_INBOUND_TAG,
+        listen: runtime_constants.REDIRECT_INBOUND_ADDRESS,
+        listen_port: runtime_constants.REDIRECT_INBOUND_PORT
+    });
+
+    let sec_out = outbound_tag(section_name);
+    if (sec_out != "") {
+        let target_idx = 0;
+        if (type(config.route) == "object" && type(config.route.rules) == "array") {
+            for (let i = 0; i < length(config.route.rules); i++) {
+                let r = config.route.rules[i];
+                if (r.action == "sniff" || r.action == "hijack-dns")
+                    target_idx = i + 1;
+            }
+            splice(config.route.rules, target_idx, 0, {
+                action: "route",
+                inbound: [ runtime_constants.REDIRECT_INBOUND_TAG ],
+                outbound: sec_out
+            });
+        }
+    }
+}
+
 // ─── Content blocking (parental control domains) ─────────────────────────────
 // Each enabled `config schedule` with blocked_domains generates:
 //   1. DNS rules (on the dedicated dns-block-in inbound) that reject the
@@ -1368,6 +1404,7 @@ function generate_config(output_path, service_address, mwan3_active, supports_xh
     add_service_mixed_proxy(config, settings, sections);
     for (let section in sections)
         add_mixed_proxy_for_section(config, section, service_address);
+    add_router_traffic_redirect(config, settings);
 
     add_content_blocking(config);
 

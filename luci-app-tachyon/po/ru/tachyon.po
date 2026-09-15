@@ -6742,3 +6742,15 @@ msgstr "Блокировать: "
 
 msgid "Traffic from these IP addresses will never be routed through this section, even if other conditions match."
 msgstr "Трафик от этих IP-адресов никогда не будет маршрутизирован через эту секцию, даже если другие условия совпадают."
+
+msgid "Route Router's Own Traffic"
+msgstr "Маршрутизировать собственный трафик роутера"
+
+msgid "Route local traffic originating directly from the router (e.g. wget, curl, opkg, torrent clients on the router) through Tachyon."
+msgstr "Направлять локальный трафик, исходящий непосредственно с роутера (например, wget, curl, opkg, торрент-клиент на роутере), через Tachyon."
+
+msgid "Router Traffic Target Section"
+msgstr "Секция для трафика роутера"
+
+msgid "Select the section to route router's own traffic through."
+msgstr "Выберите секцию для маршрутизации трафика роутера."

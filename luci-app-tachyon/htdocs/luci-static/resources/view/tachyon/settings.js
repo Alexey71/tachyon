@@ -1807,6 +1807,31 @@ function createSettingsContent(section, capabilities) {
   };
 
   o = section.taboption(
+    "network",
+    form.Flag,
+    "route_router_traffic",
+    _("Route Router's Own Traffic"),
+    _(
+      "Route local traffic originating directly from the router (e.g. wget, curl, opkg, torrent clients on the router) through Tachyon.",
+    ),
+  );
+  configureDownloadViaProxyFlag(o, "route_router_traffic_section");
+
+  o = section.taboption(
+    "network",
+    form.ListValue,
+    "route_router_traffic_section",
+    _("Router Traffic Target Section"),
+    _("Select the section to route router's own traffic through."),
+  );
+  o.depends("route_router_traffic", "1");
+  configureDownloadSectionOption(
+    o,
+    "route_router_traffic_section",
+    capabilities,
+  );
+
+  o = section.taboption(
     "services",
     form.Flag,
     "enable_yacd",

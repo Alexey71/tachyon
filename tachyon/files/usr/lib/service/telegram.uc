@@ -611,6 +611,8 @@ let setting_schema = {
         isolate_p2p: "isolate_p2p",
         log_level: "log_level",
         exclude_ntp: "exclude_ntp",
+        route_router_traffic: "route_router_traffic",
+        route_router_traffic_section: "route_router_traffic_section",
         shutdown_correctly: "shutdown_correctly",
         smart_detect: "smart_detect",
         smart_detect_sections: "smart_detect_sections"
@@ -671,7 +673,7 @@ function is_boolean_key(key) {
              "dns_detour_enabled", "enable_output_network_interface", "enable_badwan_interface_monitoring",
              "enable_yacd", "disable_quic", "block_doh", "list_update_enabled", "component_update_check_enabled",
              "download_lists_via_proxy", "download_components_via_proxy", "dont_touch_dhcp",
-             "isolate_p2p", "exclude_ntp", "shutdown_correctly", "smart_detect",
+             "isolate_p2p", "exclude_ntp", "route_router_traffic", "shutdown_correctly", "smart_detect",
              "notify_crash", "notify_restart", "notify_server_switch", "notify_subscription", "notify_cert", "notify_dns_leak",
              "daily_report_enabled", "quiet_hours_enabled"];
     for (let x in b) if (x == key) return true;
