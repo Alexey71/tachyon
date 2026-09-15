@@ -2183,9 +2183,10 @@ function import_settings_cli(source_path) {
     system("chmod 0600 " + shell_quote(target_config) + " 2>/dev/null");
     print("  ✓ Configuration successfully migrated and verified.\n\n");
 
-    if (fs.stat("/etc/init.d/tachyon") != null) {
+    let is_system_config = (target_config == "/etc/config/" + CONFIG_NAME) && (getenv("TACHYON_CONFIG_FILE") == null || getenv("TACHYON_CONFIG_FILE") == ("/etc/config/" + CONFIG_NAME));
+    if (is_system_config && !bool_option(getenv("TACHYON_SKIP_RESTART"), false) && fs.stat("/etc/init.d/tachyon") != null) {
         print("Restarting Tachyon service...\n");
-        system("/usr/bin/tachyon restart >/dev/null 2>&1");
+        system("/usr/bin/tachyon restart </dev/null >/dev/null 2>&1");
         print("  ✓ Tachyon restarted with imported configuration.\n\n");
     }
 

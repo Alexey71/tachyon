@@ -58,12 +58,16 @@ tachyon.youtube.proxy_config_type=url
 tachyon.youtube.proxy_string=vless://user@1.2.3.4:443?security=tls#node1
 EOF_STATE
 
-OUTPUT="$(TACHYON_LIB="$TACHYON_LIB" \
+export TACHYON_SKIP_RESTART="1"
+
+OUTPUT="$(env \
+  TACHYON_LIB="$TACHYON_LIB" \
   TACHYON_CONFIG_FILE="$MOCK_ETC/config/tachyon" \
   TACHYON_CONFIG_DIR="$MOCK_ETC/config" \
   TACHYON_UCI_STATE_FILE="$WORK_DIR/test_import.state" \
   TACHYON_UCI_LOG_FILE="$WORK_DIR/test_import.log" \
   TACHYON_INTERNAL_CONFIG_TRIGGER_GUARD="$WORK_DIR/internal-config-change" \
+  TACHYON_SKIP_RESTART="1" \
   ucode -L "$TACHYON_LIB" "$MIGRATION" import-settings "$MOCK_ETC/config/forkop")"
 
 echo "$OUTPUT" | grep -Fq 'SUCCESS: Settings successfully imported' ||
@@ -73,24 +77,28 @@ echo "$OUTPUT" | grep -Fq 'Legacy Forkop / Podkop' ||
   fail "import_settings must recognize legacy format"
 
 # 3. Test auto-scan in mock directory
-SCAN_OUTPUT="$(TACHYON_LIB="$TACHYON_LIB" \
+SCAN_OUTPUT="$(env \
+  TACHYON_LIB="$TACHYON_LIB" \
   TACHYON_CONFIG_FILE="$MOCK_ETC/config/tachyon" \
   TACHYON_CONFIG_DIR="$MOCK_ETC/config" \
   TACHYON_UCI_STATE_FILE="$WORK_DIR/test_import.state" \
   TACHYON_UCI_LOG_FILE="$WORK_DIR/test_import.log" \
   TACHYON_INTERNAL_CONFIG_TRIGGER_GUARD="$WORK_DIR/internal-config-change" \
+  TACHYON_SKIP_RESTART="1" \
   ucode -L "$TACHYON_LIB" "$MIGRATION" import-settings)"
 
 echo "$SCAN_OUTPUT" | grep -Fq 'SUCCESS: Settings successfully imported' ||
   fail "import_settings auto-scan must import legacy file"
 
 # 4. Test non-existent file path error handling
-ERR_OUTPUT="$(TACHYON_LIB="$TACHYON_LIB" \
+ERR_OUTPUT="$(env \
+  TACHYON_LIB="$TACHYON_LIB" \
   TACHYON_CONFIG_FILE="$MOCK_ETC/config/tachyon" \
   TACHYON_CONFIG_DIR="$MOCK_ETC/config" \
   TACHYON_UCI_STATE_FILE="$WORK_DIR/test_import.state" \
   TACHYON_UCI_LOG_FILE="$WORK_DIR/test_import.log" \
   TACHYON_INTERNAL_CONFIG_TRIGGER_GUARD="$WORK_DIR/internal-config-change" \
+  TACHYON_SKIP_RESTART="1" \
   ucode -L "$TACHYON_LIB" "$MIGRATION" import-settings "$WORK_DIR/nonexistent.conf" 2>&1 || true)"
 echo "$ERR_OUTPUT" | grep -Fq 'does not exist' ||
   fail "import_settings must handle missing file with error"

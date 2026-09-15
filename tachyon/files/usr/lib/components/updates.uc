@@ -3096,20 +3096,23 @@ function reload_singbox_after_list_update() {
     if (!singbox_runtime_success([ "init-config", "0", "1", "1" ]))
         return false;
     let sing_box_config_hash_after = file_md5(sing_box_config_path);
-    log_message("Rulesets updated on disk; reloading sing-box with new configuration", "info");
-    module_success([ DNS_FAILOVER_UC, "stop-runtime" ]);
-    module_success([ PRIORITY_UC, "stop-runtime" ]);
-    let ok = service_state_success([
-        "reload-sing-box-runtime",
-        sing_box_pid,
-        sing_box_config_hash_before,
-        sing_box_config_hash_after,
-        "1"
-    ]);
-    module_success([ PRIORITY_UC, "start-runtime" ]);
-    module_success([ DNS_FAILOVER_UC, "start-runtime" ]);
-    write_current_reload_state_clean();
-    return ok;
+    if (sing_box_config_hash_before != sing_box_config_hash_after) {
+        log_message("Rulesets updated on disk; reloading sing-box with new configuration", "info");
+        module_success([ DNS_FAILOVER_UC, "stop-runtime" ]);
+        module_success([ PRIORITY_UC, "stop-runtime" ]);
+        let ok = service_state_success([
+            "reload-sing-box-runtime",
+            sing_box_pid,
+            sing_box_config_hash_before,
+            sing_box_config_hash_after,
+            "1"
+        ]);
+        module_success([ PRIORITY_UC, "start-runtime" ]);
+        module_success([ DNS_FAILOVER_UC, "start-runtime" ]);
+        write_current_reload_state_clean();
+        return ok;
+    }
+    return true;
 }
 
 function list_update() {
@@ -3552,6 +3555,8 @@ else if (mode == "list-update-if-due")
     list_update_if_due();
 else if (mode == "stop-list-update")
     stop_list_update();
+else if (mode == "reload-singbox-after-list-update")
+    exit(reload_singbox_after_list_update() ? 0 : 1);
 else if (mode == "list-update-due-status")
     uci_list_update_due_status(ARGV[1], ARGV[2]);
 else if (mode == "list-update-due-status-fixture")
