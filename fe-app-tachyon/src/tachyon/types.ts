@@ -71,6 +71,7 @@ export namespace Tachyon {
     GET_BYEDPI_STATUS = 'get_byedpi_status',
     GET_WDTT_STATUS = 'get_wdtt_status',
     GET_OLCRTC_STATUS = 'get_olcrtc_status',
+    GET_FPTN_STATUS = 'get_fptn_status',
     CLASH_API = 'clash_api',
     ENABLE = 'enable',
     DISABLE = 'disable',
@@ -204,7 +205,7 @@ export namespace Tachyon {
   }
 
   export interface ServiceStatus {
-    serviceType: 'zapret' | 'zapret2' | 'byedpi' | 'wdtt' | 'olcrtc';
+    serviceType: 'zapret' | 'zapret2' | 'byedpi' | 'wdtt' | 'olcrtc' | 'fptn';
     configured: boolean;
     ready: boolean;
     conflict: boolean;
@@ -281,6 +282,7 @@ export namespace Tachyon {
     | 'byedpi'
     | 'wdtt'
     | 'olcrtc'
+    | 'fptn'
     | 'awg'
     | 'warp'
     | 'anytls'
@@ -361,6 +363,11 @@ export namespace Tachyon {
     olcrtc_socks_port?: string;
     olcrtc_dns_server?: string;
     olcrtc_subscription_links?: string[];
+
+    access_token?: string;
+    sni?: string;
+    bypass_method?: string;
+    preferred_server?: string;
 
     selector_proxy_links?: string[];
     subscription_urls?: string[];
@@ -981,6 +988,21 @@ export namespace Tachyon {
     ready: 0 | 1;
     conflict: 0 | 1;
     status_message: string;
+  }
+
+  export interface GetFptnStatus {
+    installed: boolean;
+    configured: boolean;
+    enabled_rule_count: number;
+    service_running: boolean;
+    pid?: number | null;
+    version?: string;
+    binary?: string;
+    tun_interface?: string;
+    route_table?: string;
+    log_file?: string;
+    ready: boolean;
+    status_message?: string;
   }
 
   export interface ByedpiCheckResult {

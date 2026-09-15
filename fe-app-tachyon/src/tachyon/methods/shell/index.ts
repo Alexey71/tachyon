@@ -330,6 +330,13 @@ export const TachyonShellMethods = {
       '/usr/bin/tachyon',
       { allowNonZeroWithStdout: true },
     ),
+  getFptnStatus: async () =>
+    callBaseMethod<Tachyon.GetFptnStatus>(
+      Tachyon.AvailableMethods.GET_FPTN_STATUS,
+      [],
+      '/usr/bin/tachyon',
+      { allowNonZeroWithStdout: true },
+    ),
   getClashApiProxies: async () =>
     callBaseMethod<ClashAPI.Proxies>(Tachyon.AvailableMethods.CLASH_API, [
       Tachyon.AvailableClashAPIMethods.GET_PROXIES,

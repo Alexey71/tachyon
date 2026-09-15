@@ -5320,6 +5320,8 @@ else if (mode == "get-wdtt-status")
     exit(module_passthrough(WDTT_RUNTIME_UC, [ "status" ]));
 else if (mode == "get-olcrtc-status")
     exit(module_passthrough(OLCRTC_RUNTIME_UC, [ "status" ]));
+else if (mode == "get-fptn-status")
+    exit(module_passthrough(FPTN_RUNTIME_UC, [ "status" ]));
 else if (mode == "get-tailscale-status")
     exit(module_passthrough(TAILSCALE_RUNTIME_UC, [ "status" ]));
 else if (mode == "get-tailscale-peers")

@@ -404,6 +404,7 @@ const ACTION_DISPLAY_NAMES: Record<string, string> = {
   sudoku: 'Sudoku',
   masque: 'MASQUE',
   openvpn: 'OpenVPN',
+  fptn: 'FPTN',
 };
 
 function isConnectionAction(action?: string) {
@@ -417,7 +418,9 @@ function isConnectionAction(action?: string) {
 function isServiceAction(action?: string) {
   return Boolean(
     action &&
-      ['zapret', 'zapret2', 'byedpi', 'wdtt', 'olcrtc'].includes(action),
+      ['zapret', 'zapret2', 'byedpi', 'wdtt', 'olcrtc', 'fptn'].includes(
+        action,
+      ),
   );
 }
 
@@ -1606,7 +1609,7 @@ export async function getDashboardSections(
   >();
 
   const getServiceStatus = (
-    serviceType: 'zapret' | 'zapret2' | 'byedpi' | 'wdtt' | 'olcrtc',
+    serviceType: 'zapret' | 'zapret2' | 'byedpi' | 'wdtt' | 'olcrtc' | 'fptn',
   ) => {
     if (!serviceStatusCache.has(serviceType)) {
       serviceStatusCache.set(
@@ -1691,6 +1694,23 @@ export async function getDashboardSections(
                   restartCount: s.restart_count,
                   unstable: Boolean(s.runtime_unstable),
                   statusMessage: s.status_message,
+                };
+              }
+            } else if (serviceType === 'fptn') {
+              const result = await TachyonShellMethods.getFptnStatus();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: 'fptn',
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: false,
+                  runningProcesses: s.service_running ? 1 : 0,
+                  expectedProcesses: s.configured ? 1 : 0,
+                  restartCount: 0,
+                  unstable: false,
+                  statusMessage:
+                    s.status_message || (s.ready ? _('Running') : _('Stopped')),
                 };
               }
             }
@@ -1829,7 +1849,8 @@ export async function getDashboardSections(
         }
 
         if (isServiceAction(sectionAction)) {
-          const serviceType = sectionAction as 'zapret' | 'zapret2' | 'byedpi';
+          const serviceType =
+            sectionAction as Tachyon.ServiceStatus['serviceType'];
           const serviceStatus = await getServiceStatus(serviceType);
 
           const statusLabel = serviceStatus

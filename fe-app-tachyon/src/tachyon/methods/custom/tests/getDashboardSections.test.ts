@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getConfigSections: vi.fn(),
   getClashApiProxies: vi.fn(),
+  getFptnStatus: vi.fn(),
   canUseDirectClashApi: vi.fn(),
   fsRead: vi.fn(),
 }));
@@ -14,6 +15,7 @@ vi.mock('../getConfigSections', () => ({
 vi.mock('../../shell', () => ({
   TachyonShellMethods: {
     getClashApiProxies: mocks.getClashApiProxies,
+    getFptnStatus: mocks.getFptnStatus,
   },
 }));
 
@@ -1305,5 +1307,37 @@ describe('getDashboardSections', () => {
     expect(outbound).toBeDefined();
     expect(outbound?.prefix).toBe('Geodema Network');
     expect(outbound?.displayName).toBe('🇫🇷 France');
+  });
+
+  it('returns FPTN service section with running status on dashboard', async () => {
+    mocks.getConfigSections.mockResolvedValue([
+      {
+        '.name': 'fptn_sec',
+        '.type': 'section',
+        enabled: '1',
+        action: 'fptn',
+        access_token: 'test_token',
+      },
+    ]);
+    mocks.getFptnStatus.mockResolvedValue({
+      success: true,
+      data: {
+        installed: true,
+        configured: true,
+        service_running: true,
+        ready: true,
+        status_message: 'FPTN is running',
+      },
+    });
+
+    const result = await getDashboardSections();
+
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].sectionName).toBe('fptn_sec');
+    expect(result.data[0].action).toBe('fptn');
+    expect(result.data[0].serviceStatus?.serviceType).toBe('fptn');
+    expect(result.data[0].serviceStatus?.ready).toBe(true);
+    expect(result.data[0].outbounds[0].displayName).toBe('Running');
   });
 });

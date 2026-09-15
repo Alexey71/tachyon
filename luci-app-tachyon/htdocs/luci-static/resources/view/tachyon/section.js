@@ -25,6 +25,7 @@ const ROUTING_ACTIONS = [
   "byedpi",
   "wdtt",
   "olcrtc",
+  "fptn",
   "awg",
   "warp",
   "anytls",
@@ -491,6 +492,7 @@ const actionProvidersAvailabilityState = {
   byedpiInstalled: false,
   wdttInstalled: false,
   olcrtcInstalled: false,
+  fptnInstalled: false,
   torInstalled: false,
   singBoxExtended: false,
 };
@@ -685,6 +687,12 @@ function updateActionProvidersAvailabilityState(nextState) {
     );
   }
 
+  if (typeof nextState.fptnInstalled !== "undefined") {
+    actionProvidersAvailabilityState.fptnInstalled = Boolean(
+      nextState.fptnInstalled,
+    );
+  }
+
   if (typeof nextState.singBoxExtended !== "undefined") {
     actionProvidersAvailabilityState.singBoxExtended = Boolean(
       nextState.singBoxExtended,
@@ -711,6 +719,7 @@ function updateActionProvidersAvailabilityFromSystemInfo(systemInfo) {
     byedpiInstalled: Boolean(systemInfo.byedpi_installed),
     wdttInstalled: Boolean(systemInfo.wdtt_installed),
     olcrtcInstalled: Boolean(systemInfo.olcrtc_installed),
+    fptnInstalled: Boolean(systemInfo.fptn_installed),
     singBoxExtended: Boolean(systemInfo.sing_box_extended),
     torInstalled: Boolean(systemInfo.tor_installed),
   });
@@ -2179,6 +2188,10 @@ function isDownloadThroughTargetSection(section, currentSectionId) {
 
   if (action === "olcrtc") {
     return isOlcrtcInstalledForUi();
+  }
+
+  if (action === "fptn") {
+    return isFptnInstalledForUi();
   }
 
   return false;
@@ -4625,6 +4638,10 @@ function isOlcrtcInstalledForUi() {
   return actionProvidersAvailabilityState.olcrtcInstalled;
 }
 
+function isFptnInstalledForUi() {
+  return actionProvidersAvailabilityState.fptnInstalled;
+}
+
 function isSingBoxExtendedForUi() {
   return actionProvidersAvailabilityState.singBoxExtended;
 }
@@ -4660,6 +4677,8 @@ function getActionOptionLabel(action) {
       return "WDTT";
     case "olcrtc":
       return "OlcRTC";
+    case "fptn":
+      return "FPTN";
 
     case "awg":
       return "AmneziaWG";
@@ -4708,6 +4727,10 @@ function getRuleActionDisplayValue(section_id) {
 
   if (action === "olcrtc") {
     return "OlcRTC";
+  }
+
+  if (action === "fptn") {
+    return "FPTN";
   }
 
   if (action === "awg") {
@@ -4781,6 +4804,9 @@ function populateActionOptionValues(option) {
   }
   if (isOlcrtcInstalledForUi()) {
     option.value("olcrtc", getActionOptionLabel("olcrtc"));
+  }
+  if (isFptnInstalledForUi()) {
+    option.value("fptn", getActionOptionLabel("fptn"));
   }
   option.value("hosts", getActionOptionLabel("hosts"));
 }
@@ -7763,6 +7789,10 @@ function createSectionContent(section) {
   o.load = function (section_id) {
     return ensureActionProvidersAvailabilityLoaded().then(() => {
       populateActionOptionValues(this);
+      const configured = getRuleConfiguredAction(section_id);
+      if (configured && !this.keylist.includes(configured)) {
+        this.value(configured, getActionOptionLabel(configured));
+      }
       return this.cfgvalue(section_id);
     });
   };
@@ -8166,6 +8196,52 @@ function createSectionContent(section) {
     _("OlcRTC Subscription Links"),
   );
   o.depends("action", "olcrtc");
+  o.modalonly = true;
+
+  // ─── FPTN Fields ───────────────────────────────────────────────────────
+
+  o = section.taboption(
+    "settings",
+    form.Value,
+    "access_token",
+    _("FPTN Access Token"),
+  );
+  o.depends("action", "fptn");
+  o.password = true;
+  o.rmempty = false;
+  o.modalonly = true;
+
+  o = section.taboption(
+    "settings",
+    form.Value,
+    "sni",
+    _("FPTN SNI"),
+    _("Optional: override TLS SNI for FPTN connection"),
+  );
+  o.depends("action", "fptn");
+  o.optional = true;
+  o.modalonly = true;
+
+  o = section.taboption(
+    "settings",
+    form.Value,
+    "bypass_method",
+    _("FPTN Bypass Method"),
+    _("Optional: override bypass method (e.g. quic, tcp)"),
+  );
+  o.depends("action", "fptn");
+  o.optional = true;
+  o.modalonly = true;
+
+  o = section.taboption(
+    "settings",
+    form.Value,
+    "preferred_server",
+    _("FPTN Preferred Server"),
+    _("Optional: preferred FPTN server address"),
+  );
+  o.depends("action", "fptn");
+  o.optional = true;
   o.modalonly = true;
 
   // ─── Hosts Import Helpers ──────────────────────────────────────────────
@@ -11310,6 +11386,7 @@ const ACTION_COLORS = {
   byedpi: "#d35400",
   wdtt: "#27ae60",
   olcrtc: "#2980b9",
+  fptn: "#e74c3c",
   awg: "#008080",
   warp: "#e67e22",
   anytls: "#16a085",

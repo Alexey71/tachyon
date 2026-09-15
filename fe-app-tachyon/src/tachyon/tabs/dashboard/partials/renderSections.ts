@@ -294,22 +294,31 @@ function renderDefaultState({
     'openvpn',
   ].includes(section.action || '');
   const isServiceNode =
-    ['zapret', 'zapret2', 'byedpi'].includes(section.action || '') ||
-    Boolean(section.serviceStatus);
+    ['zapret', 'zapret2', 'byedpi', 'wdtt', 'olcrtc', 'fptn'].includes(
+      section.action || '',
+    ) || Boolean(section.serviceStatus);
 
   if (isServiceNode) {
     const ss = section.serviceStatus;
     const serviceType =
       ss?.serviceType ||
-      (['zapret', 'zapret2', 'byedpi'].includes(section.action || '')
-        ? (section.action as 'zapret' | 'zapret2' | 'byedpi')
+      (['zapret', 'zapret2', 'byedpi', 'wdtt', 'olcrtc', 'fptn'].includes(
+        section.action || '',
+      )
+        ? (section.action as Tachyon.ServiceStatus['serviceType'])
         : 'zapret');
     const typeLabel =
       serviceType === 'zapret'
         ? 'Zapret'
         : serviceType === 'zapret2'
           ? 'Zapret2'
-          : 'ByeDPI';
+          : serviceType === 'byedpi'
+            ? 'ByeDPI'
+            : serviceType === 'wdtt'
+              ? 'WDTT'
+              : serviceType === 'olcrtc'
+                ? 'OlcRTC'
+                : 'FPTN';
     const statusColor = ss
       ? ss.ready
         ? 'var(--success-color-medium, green)'

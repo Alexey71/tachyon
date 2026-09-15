@@ -7,6 +7,7 @@ UPDATER_UC="$ROOT_DIR/tachyon/files/usr/lib/components/updater.uc"
 PACKAGES_UC="$ROOT_DIR/tachyon/files/usr/lib/core/packages.uc"
 FPTN_RUNTIME_UC="$ROOT_DIR/tachyon/files/usr/lib/providers/fptn/runtime.uc"
 STATE_UC="$ROOT_DIR/tachyon/files/usr/lib/service/state.uc"
+DIAGNOSTICS_UC="$ROOT_DIR/tachyon/files/usr/lib/diagnostics/runtime.uc"
 
 WORK_DIR="$(mktemp -d)"
 cleanup() {
@@ -114,5 +115,9 @@ EOF_FIXTURE2
 
 SIG_2="$(ucode_run "$STATE_UC" fptn-runtime-signature-fixture "$WORK_DIR/state_fixture2.json")"
 [ "$SIG_1" != "$SIG_2" ] || fail "fptn signature should differ when token changes"
+
+# 5. Test diagnostics runtime dispatch for get-fptn-status
+STATUS_OUT="$(TACHYON_LIB_DIR="$TACHYON_LIB" ucode_run "$DIAGNOSTICS_UC" get-fptn-status)"
+echo "$STATUS_OUT" | grep -q '"ready":' || fail "get-fptn-status should return status json"
 
 echo "fptn component tests passed"

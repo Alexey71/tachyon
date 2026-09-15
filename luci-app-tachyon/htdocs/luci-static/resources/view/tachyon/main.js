@@ -2056,11 +2056,15 @@ function renderDefaultState({
     "masque",
     "openvpn"
   ].includes(section.action || "");
-  const isServiceNode = ["zapret", "zapret2", "byedpi"].includes(section.action || "") || Boolean(section.serviceStatus);
+  const isServiceNode = ["zapret", "zapret2", "byedpi", "wdtt", "olcrtc", "fptn"].includes(
+    section.action || ""
+  ) || Boolean(section.serviceStatus);
   if (isServiceNode) {
     const ss = section.serviceStatus;
-    const serviceType = ss?.serviceType || (["zapret", "zapret2", "byedpi"].includes(section.action || "") ? section.action : "zapret");
-    const typeLabel = serviceType === "zapret" ? "Zapret" : serviceType === "zapret2" ? "Zapret2" : "ByeDPI";
+    const serviceType = ss?.serviceType || (["zapret", "zapret2", "byedpi", "wdtt", "olcrtc", "fptn"].includes(
+      section.action || ""
+    ) ? section.action : "zapret");
+    const typeLabel = serviceType === "zapret" ? "Zapret" : serviceType === "zapret2" ? "Zapret2" : serviceType === "byedpi" ? "ByeDPI" : serviceType === "wdtt" ? "WDTT" : serviceType === "olcrtc" ? "OlcRTC" : "FPTN";
     const statusColor = ss ? ss.ready ? "var(--success-color-medium, green)" : ss.conflict ? "var(--error-color-medium, red)" : ss.configured ? "var(--warn-color-medium, orange)" : "var(--primary-color-low, lightgray)" : "var(--primary-color-low, lightgray)";
     const statusText = ss ? ss.ready ? _("Running") : ss.conflict ? _("Conflict") : ss.configured ? _("Stopped") : _("Not configured") : _("Unknown");
     return E("div", { class: "tachyon_dashboard-page__outbound-section" }, [
@@ -3049,6 +3053,7 @@ var Tachyon;
     AvailableMethods2["GET_BYEDPI_STATUS"] = "get_byedpi_status";
     AvailableMethods2["GET_WDTT_STATUS"] = "get_wdtt_status";
     AvailableMethods2["GET_OLCRTC_STATUS"] = "get_olcrtc_status";
+    AvailableMethods2["GET_FPTN_STATUS"] = "get_fptn_status";
     AvailableMethods2["CLASH_API"] = "clash_api";
     AvailableMethods2["ENABLE"] = "enable";
     AvailableMethods2["DISABLE"] = "disable";
@@ -3384,6 +3389,12 @@ var TachyonShellMethods = {
   ),
   getOlcrtcStatus: async () => callBaseMethod(
     Tachyon.AvailableMethods.GET_OLCRTC_STATUS,
+    [],
+    "/usr/bin/tachyon",
+    { allowNonZeroWithStdout: true }
+  ),
+  getFptnStatus: async () => callBaseMethod(
+    Tachyon.AvailableMethods.GET_FPTN_STATUS,
     [],
     "/usr/bin/tachyon",
     { allowNonZeroWithStdout: true }
@@ -4691,7 +4702,8 @@ var ACTION_DISPLAY_NAMES = {
   mieru: "Mieru",
   sudoku: "Sudoku",
   masque: "MASQUE",
-  openvpn: "OpenVPN"
+  openvpn: "OpenVPN",
+  fptn: "FPTN"
 };
 function isConnectionAction(action) {
   return Boolean(
@@ -4700,7 +4712,9 @@ function isConnectionAction(action) {
 }
 function isServiceAction(action) {
   return Boolean(
-    action && ["zapret", "zapret2", "byedpi", "wdtt", "olcrtc"].includes(action)
+    action && ["zapret", "zapret2", "byedpi", "wdtt", "olcrtc", "fptn"].includes(
+      action
+    )
   );
 }
 function hasSubscriptionSources(section) {
@@ -5578,6 +5592,22 @@ async function getDashboardSections(options = {}) {
                   restartCount: s.restart_count,
                   unstable: Boolean(s.runtime_unstable),
                   statusMessage: s.status_message
+                };
+              }
+            } else if (serviceType === "fptn") {
+              const result = await TachyonShellMethods.getFptnStatus();
+              if (result.success && result.data) {
+                const s = result.data;
+                return {
+                  serviceType: "fptn",
+                  configured: Boolean(s.configured),
+                  ready: Boolean(s.ready),
+                  conflict: false,
+                  runningProcesses: s.service_running ? 1 : 0,
+                  expectedProcesses: s.configured ? 1 : 0,
+                  restartCount: 0,
+                  unstable: false,
+                  statusMessage: s.status_message || (s.ready ? _("Running") : _("Stopped"))
                 };
               }
             }
