@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 22:41+0300\n"
-"PO-Revision-Date: 2026-09-14 22:41+0300\n"
+"POT-Creation-Date: 2026-09-15 15:05+0300\n"
+"PO-Revision-Date: 2026-09-15 15:05+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -4160,11 +4160,17 @@ msgstr "Маршрутизировать подсети списков сооб�
 msgid "Route IP subnets associated with built-in community lists (e.g. Discord voice/media). Disable this if community subnets overlap with CDN/Anycast networks (such as Cloudflare/Google Cloud) and interfere with unrelated services (e.g. game launchers)."
 msgstr "Маршрутизировать IP-подсети из списков сообщества (например, голос/медиа Discord). Отключите, если подсети сообщества пересекаются с CDN/Anycast сетями (Cloudflare/Google Cloud) и мешают другим сервисам."
 
+msgid "Route local traffic originating directly from the router (e.g. wget, curl, opkg, torrent clients on the router) through Tachyon."
+msgstr "Направлять локальный трафик, исходящий непосредственно с роутера (например, wget, curl, opkg, торрент-клиент на роутере), через Tachyon."
+
 msgid "Route main DNS requests through the selected section."
 msgstr "Маршрутизировать основные DNS-запросы через выбранную секцию."
 
 msgid "Route requests to this DNS server through another section."
 msgstr "Маршрутизировать запросы к этому DNS-серверу через другую секцию."
+
+msgid "Route Router's Own Traffic"
+msgstr "Маршрутизировать собственный трафик роутера"
 
 msgid "Route via Proxy"
 msgstr "Через прокси"
@@ -4177,6 +4183,9 @@ msgstr "Протокол маршрутизированного DNS"
 
 msgid "Routed DNS Servers"
 msgstr "Серверы маршрутизированного DNS"
+
+msgid "Router Traffic Target Section"
+msgstr "Секция для трафика роутера"
 
 msgid "Routing mode"
 msgstr "Режим маршрутизации"
@@ -4423,6 +4432,9 @@ msgstr "Выберите интерфейс, с которого будет ид
 
 msgid "Select the network interface to which the traffic will originate"
 msgstr "Выберите интерфейс, на который будет идти трафик"
+
+msgid "Select the section to route router's own traffic through."
+msgstr "Выберите секцию для маршрутизации трафика роутера."
 
 msgid "Select the WAN interfaces to be monitored"
 msgstr "Выберите WAN-интерфейсы для отслеживания"
@@ -6742,15 +6754,3 @@ msgstr "Блокировать: "
 
 msgid "Traffic from these IP addresses will never be routed through this section, even if other conditions match."
 msgstr "Трафик от этих IP-адресов никогда не будет маршрутизирован через эту секцию, даже если другие условия совпадают."
-
-msgid "Route Router's Own Traffic"
-msgstr "Маршрутизировать собственный трафик роутера"
-
-msgid "Route local traffic originating directly from the router (e.g. wget, curl, opkg, torrent clients on the router) through Tachyon."
-msgstr "Направлять локальный трафик, исходящий непосредственно с роутера (например, wget, curl, opkg, торрент-клиент на роутере), через Tachyon."
-
-msgid "Router Traffic Target Section"
-msgstr "Секция для трафика роутера"
-
-msgid "Select the section to route router's own traffic through."
-msgstr "Выберите секцию для маршрутизации трафика роутера."
