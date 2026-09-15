@@ -7,7 +7,7 @@ NFT_RUNTIME="$ROOT_DIR/tachyon/files/usr/lib/nft/apply.uc"
 WORK_DIR="$(mktemp -d)"
 NFT_LOG="$WORK_DIR/nft.log"
 LOGGER_LOG="$WORK_DIR/logger.log"
-export NFT_LOG LOGGER_LOG
+export NFT_LOG LOGGER_LOG WORK_DIR
 
 cleanup() {
   rm -rf "$WORK_DIR"
@@ -31,28 +31,28 @@ assert_contains() {
 
 mkdir -p "$WORK_DIR/bin"
 
-cat >"$WORK_DIR/bin/nft" <<'NFT'
+cat >"$WORK_DIR/bin/nft" <<NFT
 #!/usr/bin/env bash
 set -eo pipefail
 {
   printf 'nft'
-  for arg in "$@"; do
-    printf '\t%s' "$arg"
+  for arg in "\$@"; do
+    printf '\t%s' "\$arg"
   done
   printf '\n'
-} >> "${NFT_LOG:?}"
+} >> "\${NFT_LOG:?}"
 
-if [ "$#" -ge 5 ] && [ "$1" = "flush" ] && [ "$2" = "chain" ]; then
+if [ "\$#" -ge 5 ] && [ "\$1" = "flush" ] && [ "\$2" = "chain" ]; then
   if [ ! -f "$WORK_DIR/chain_exists" ]; then
     exit 1
   fi
 fi
 
-if [ "$#" -ge 5 ] && [ "$1" = "add" ] && [ "$2" = "chain" ]; then
+if [ "\$#" -ge 5 ] && [ "\$1" = "add" ] && [ "\$2" = "chain" ]; then
   touch "$WORK_DIR/chain_exists"
 fi
 
-if [ "$#" -ge 5 ] && [ "$1" = "delete" ] && [ "$2" = "chain" ]; then
+if [ "\$#" -ge 5 ] && [ "\$1" = "delete" ] && [ "\$2" = "chain" ]; then
   rm -f "$WORK_DIR/chain_exists"
 fi
 NFT
