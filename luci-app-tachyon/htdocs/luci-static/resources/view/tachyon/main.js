@@ -6814,7 +6814,9 @@ function applyUiStateToStore(uiState) {
 // src/tachyon/services/runtimeUiState.service.ts
 var RUNTIME_UI_STATE_REFRESH_MIN_INTERVAL_MS = 500;
 var RUNTIME_UI_STATE_IDLE_POLL_INTERVAL_MS = 1e4;
-var RUNTIME_UI_STATE_ACTIVE_POLL_INTERVAL_MS = 500;
+var RUNTIME_UI_STATE_ACTIVE_INITIAL_POLL_INTERVAL_MS = 1e3;
+var RUNTIME_UI_STATE_ACTIVE_SLOW_POLL_INTERVAL_MS = 2e3;
+var RUNTIME_UI_STATE_ACTIVE_SLOW_THRESHOLD_MS = 4e3;
 var RUNTIME_UI_STATE_HIDDEN_POLL_INTERVAL_MS = 6e4;
 var runtimeUiStateRefreshPromise = null;
 var lastRuntimeUiStateRefreshAt = 0;
@@ -6823,6 +6825,7 @@ var runtimeStateResumeRefreshRegistered = false;
 var runtimeStatePollTimer = null;
 var runtimeStatePollingStarted = false;
 var runtimeStateHasRunningAction = false;
+var runningActionStartedAt = 0;
 var runtimeUiStateListeners = /* @__PURE__ */ new Set();
 function isDocumentVisible() {
   return typeof document === "undefined" || !document.visibilityState || document.visibilityState === "visible";
@@ -6836,7 +6839,15 @@ function getNextPollDelay() {
   if (!isDocumentVisible()) {
     return RUNTIME_UI_STATE_HIDDEN_POLL_INTERVAL_MS;
   }
-  return runtimeStateHasRunningAction ? RUNTIME_UI_STATE_ACTIVE_POLL_INTERVAL_MS : RUNTIME_UI_STATE_IDLE_POLL_INTERVAL_MS;
+  if (!runtimeStateHasRunningAction) {
+    runningActionStartedAt = 0;
+    return RUNTIME_UI_STATE_IDLE_POLL_INTERVAL_MS;
+  }
+  if (runningActionStartedAt === 0) {
+    runningActionStartedAt = Date.now();
+  }
+  const elapsed = Date.now() - runningActionStartedAt;
+  return elapsed < RUNTIME_UI_STATE_ACTIVE_SLOW_THRESHOLD_MS ? RUNTIME_UI_STATE_ACTIVE_INITIAL_POLL_INTERVAL_MS : RUNTIME_UI_STATE_ACTIVE_SLOW_POLL_INTERVAL_MS;
 }
 function scheduleRuntimeUiStatePoll(delay = getNextPollDelay()) {
   if (!runtimeStatePollingStarted || runtimeStatePollTimer || typeof window === "undefined") {
@@ -6872,6 +6883,9 @@ async function refreshRuntimeUiState({
     return void 0;
   }
   lastRuntimeUiStateRefreshAt = now;
+  if (force) {
+    runningActionStartedAt = now;
+  }
   const promise = TachyonShellMethods.getUiState().then((response) => {
     if (!response.success) {
       return void 0;
@@ -6879,6 +6893,9 @@ async function refreshRuntimeUiState({
     applyUiStateToStore(response.data);
     lastRuntimeUiState = response.data;
     runtimeStateHasRunningAction = hasRunningAction(response.data);
+    if (!runtimeStateHasRunningAction) {
+      runningActionStartedAt = 0;
+    }
     notifyRuntimeUiStateListeners(response.data);
     return response.data;
   }).catch((error) => {

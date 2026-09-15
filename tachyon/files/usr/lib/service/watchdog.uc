@@ -2110,12 +2110,15 @@ function check_section_failover() {
                     write_state_file("/var/run/tachyon_watchdog.keepalive", as_string(now), "keepalive stamp");
                 }
                 current_ctx = null;
+                if (controller.clear_tick_context)
+                    controller.clear_tick_context();
+
                 if (now - last_fast_check >= 15) {
                     last_fast_check = now;
                     current_ctx = current_ctx || (controller.create_tick_context ? controller.create_tick_context() : null);
                     perform_fast_checks();
                 }
-                if (now - last_normal_check >= controller.adaptive_normal_interval()) {
+                if (now - last_normal_check >= 120 && now - last_normal_check >= controller.adaptive_normal_interval()) {
                     last_normal_check = now;
                     current_ctx = current_ctx || (controller.create_tick_context ? controller.create_tick_context() : null);
                     perform_normal_checks();
@@ -2125,6 +2128,9 @@ function check_section_failover() {
                     current_ctx = current_ctx || (controller.create_tick_context ? controller.create_tick_context() : null);
                     perform_slow_checks();
                 }
+                if (controller.clear_tick_context)
+                    controller.clear_tick_context();
+                current_ctx = null;
             } catch (e) {
                 log_message("Error in tick: " + as_string(e), "err");
             }

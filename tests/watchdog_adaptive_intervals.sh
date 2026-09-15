@@ -40,6 +40,8 @@ grep -Fq 'controller.probe_slow(current_ctx)' "$WATCHDOG_UC" ||
 # Event controller exports and methods
 grep -Fq 'create_tick_context' "$CONTROLLER_UC" ||
   fail "event_controller.uc must define create_tick_context"
+grep -Fq 'current_tick_ctx.settings' "$CONTROLLER_UC" ||
+  fail "event_controller.uc settings() must reuse current_tick_ctx.settings"
 grep -Fq 'ai_proxy_health_interval' "$CONTROLLER_UC" ||
   fail "event_controller.uc must respect ai_proxy_health_interval"
 grep -Fq 'ai_dns_interval' "$CONTROLLER_UC" ||
@@ -170,5 +172,29 @@ let throttled = (c.state.last_dns_probe == now - 20);
 print(throttled);
 ')"
 assert_eq "$res" "true" "healthy dns probe is throttled within interval"
+
+# Verify shared settings caching during active tick context
+res="$(run_ucode '
+let events = require("core.events");
+let ec = require("service.event_controller");
+let b = events.bus();
+let c = ec.controller(b, {});
+
+c.set_tick_context({
+    settings: {
+        recovery_bypass: "1",
+        custom_test_key: "cached_value"
+    }
+});
+
+let cached_val = c.setting("custom_test_key", "default");
+let is_bypassed = c.setting("recovery_bypass", "0");
+
+c.clear_tick_context();
+let cleared = (c.setting("custom_test_key", "cleared_default") == "cleared_default");
+
+print(cached_val + "," + is_bypassed + "," + cleared);
+')"
+assert_eq "$res" "cached_value,1,true" "settings helper uses cached tick_context settings"
 
 printf 'watchdog_adaptive_intervals checks passed\n'

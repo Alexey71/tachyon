@@ -5,7 +5,9 @@ import { applyUiStateToStore } from './uiState.service';
 
 const RUNTIME_UI_STATE_REFRESH_MIN_INTERVAL_MS = 500;
 const RUNTIME_UI_STATE_IDLE_POLL_INTERVAL_MS = 10_000;
-const RUNTIME_UI_STATE_ACTIVE_POLL_INTERVAL_MS = 500;
+const RUNTIME_UI_STATE_ACTIVE_INITIAL_POLL_INTERVAL_MS = 1_000;
+const RUNTIME_UI_STATE_ACTIVE_SLOW_POLL_INTERVAL_MS = 2_000;
+const RUNTIME_UI_STATE_ACTIVE_SLOW_THRESHOLD_MS = 4_000;
 // A hidden tab must not keep spawning shell commands on the router:
 // back off to one request per 60s while hidden (a force refresh on
 // visibilitychange covers the moment the tab comes back).
@@ -20,6 +22,7 @@ let runtimeStateResumeRefreshRegistered = false;
 let runtimeStatePollTimer: ReturnType<typeof setTimeout> | null = null;
 let runtimeStatePollingStarted = false;
 let runtimeStateHasRunningAction = false;
+let runningActionStartedAt = 0;
 const runtimeUiStateListeners = new Set<RuntimeUiStateListener>();
 
 function isDocumentVisible() {
@@ -40,9 +43,17 @@ function getNextPollDelay() {
   if (!isDocumentVisible()) {
     return RUNTIME_UI_STATE_HIDDEN_POLL_INTERVAL_MS;
   }
-  return runtimeStateHasRunningAction
-    ? RUNTIME_UI_STATE_ACTIVE_POLL_INTERVAL_MS
-    : RUNTIME_UI_STATE_IDLE_POLL_INTERVAL_MS;
+  if (!runtimeStateHasRunningAction) {
+    runningActionStartedAt = 0;
+    return RUNTIME_UI_STATE_IDLE_POLL_INTERVAL_MS;
+  }
+  if (runningActionStartedAt === 0) {
+    runningActionStartedAt = Date.now();
+  }
+  const elapsed = Date.now() - runningActionStartedAt;
+  return elapsed < RUNTIME_UI_STATE_ACTIVE_SLOW_THRESHOLD_MS
+    ? RUNTIME_UI_STATE_ACTIVE_INITIAL_POLL_INTERVAL_MS
+    : RUNTIME_UI_STATE_ACTIVE_SLOW_POLL_INTERVAL_MS;
 }
 
 function scheduleRuntimeUiStatePoll(delay = getNextPollDelay()) {
@@ -94,6 +105,9 @@ export async function refreshRuntimeUiState({
   }
 
   lastRuntimeUiStateRefreshAt = now;
+  if (force) {
+    runningActionStartedAt = now;
+  }
 
   const promise = TachyonShellMethods.getUiState()
     .then((response) => {
@@ -104,6 +118,9 @@ export async function refreshRuntimeUiState({
       applyUiStateToStore(response.data);
       lastRuntimeUiState = response.data;
       runtimeStateHasRunningAction = hasRunningAction(response.data);
+      if (!runtimeStateHasRunningAction) {
+        runningActionStartedAt = 0;
+      }
       notifyRuntimeUiStateListeners(response.data);
       return response.data;
     })

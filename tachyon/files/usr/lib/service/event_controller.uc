@@ -91,7 +91,11 @@ function command_output_from_args(args) {
     return result.status == 0 ? result.output : "";
 }
 
+let current_tick_ctx = null;
+
 function settings() {
+    if (current_tick_ctx && current_tick_ctx.settings)
+        return current_tick_ctx.settings;
     return common.object_or_empty(uci_core.get_all(CONFIG_NAME, "settings"));
 }
 
@@ -417,7 +421,7 @@ function controller(bus, opts) {
     };
 
     let self = { EV: EV, state: state };
-    let current_tick_ctx = null;
+    current_tick_ctx = null;
 
     // Keeps the last 20 samples. Bounded so a long-lived watchdog cannot grow
     // its heap through the history array.
@@ -509,7 +513,7 @@ function controller(bus, opts) {
     // and duplicate pid lookups.
     function create_tick_context() {
         let now = time();
-        let cfg = settings();
+        let cfg = common.object_or_empty(uci_core.get_all(CONFIG_NAME, "settings"));
         let reload = is_reload_in_progress();
         let list_upd = is_list_update_running();
         let sb_pid = get_sing_box_pid();
@@ -531,6 +535,8 @@ function controller(bus, opts) {
         };
     }
     self.create_tick_context = create_tick_context;
+    self.set_tick_context = function(ctx) { current_tick_ctx = ctx; };
+    self.clear_tick_context = function() { current_tick_ctx = null; };
 
     // ── Probe: sing-box liveness ──────────────────────────────────────────────
     // The expensive /proc scan only runs once the cheap pidfile/ubus/pidof
@@ -580,7 +586,7 @@ function controller(bus, opts) {
         let pid = ctx.singbox_pid;
         if (pid == "" || !ctx.singbox_running) return;
 
-        let port = proxy_port();
+        let port = ctx.proxy_port;
         // No http/mixed inbound in the generated config: there is nothing to
         // measure, so the proxy must not be declared broken on a dead port.
         if (port == "") return;
@@ -1321,6 +1327,9 @@ function controller(bus, opts) {
     self.is_list_update_running = is_list_update_running;
     self.check_tachyon_cli_running = check_tachyon_cli_running;
     self.proxy_port = proxy_port;
+    self.setting = setting;
+    self.settings = settings;
+    self.enabled = enabled;
 
     return self;
 }
@@ -1330,6 +1339,9 @@ function module_exports() {
         controller,
         classify_log_line,
         smart_detect_extract_domain,
+        setting,
+        settings,
+        enabled,
         EV
     };
 }
