@@ -347,7 +347,11 @@ function sync_enforcement(blocked_macs, blocked_ips) {
 }
 
 function crontab_lines() {
-    return split(command_output_from_args([ "crontab", "-l" ]), "\n");
+    // BusyBox's `crontab -l` exits with code 1 when the file is empty or
+    // absent, making command_output_from_args() return "" and causing a
+    // subsequent crontab write to discard every user cron line.  Read the
+    // file directly instead; null (no file yet) is treated as empty string.
+    return split(as_string(fs.readfile("/etc/crontabs/root") || ""), "\n");
 }
 
 function cron_line() {

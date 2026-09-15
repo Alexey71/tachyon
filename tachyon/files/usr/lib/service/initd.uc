@@ -284,10 +284,19 @@ function schedule_start_retry(path, delay_seconds) {
     if (!ensure_parent_dir(path))
         return false;
 
+    // Build the retry worker.  The inner command sleeps, removes the pid file,
+    // then runs the retry action.  We wrap everything in background_command() so
+    // that all inherited descriptors (in particular procd's flock fd 1000) are
+    // closed before the sleep starts — without that the background subshell
+    // would pin the lock file and prevent any subsequent service operation that
+    // also tries to acquire flock 1000.
     let worker = command_from_args([ "sleep", delay_seconds ]) +
         "; " + command_from_args([ "rm", "-f", path ]) +
-        "; exec " + command_from_args([ SERVICE_INIT, "retry_start_on_wan_up" ]);
-    let result = command_capture(command_from_args([ "sh", "-c", worker ]) + " >/dev/null 2>&1 & echo $!");
+        "; " + command_from_args([ SERVICE_INIT, "retry_start_on_wan_up" ]);
+    let bg = background_command(worker);
+    // background_command() already appends " &"; we need $! so run it inside a
+    // subshell that prints the pid back to us.
+    let result = command_capture("{ " + bg + " } ; echo $!");
     let pid = trim(result.output);
     if (result.status != 0 || !numeric_text(pid))
         return false;
@@ -494,7 +503,11 @@ function retry_start_on_wan_up(owner_pid) {
         return 0;
 
     command_success_from_args([ "logger", "-t", SERVICE_NAME, "[info] Retrying failed Tachyon start after WAN came up" ]);
-    return command_status_from_args([ SERVICE_INIT, "restart", "triggered" ]);
+    // Do NOT call SERVICE_INIT here: rc.common holds flock 1000 for the whole
+    // duration of the init.d script, so a nested /etc/init.d/tachyon call would
+    // block forever waiting for that same lock (recursive flock self-deadlock).
+    // Call BIN_PATH directly, the same way start_service and stop_service do.
+    return command_status_from_args([ BIN_PATH, "restart" ]);
 }
 
 function active_service_action_value() {

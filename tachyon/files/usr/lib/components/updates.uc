@@ -923,7 +923,11 @@ function log_cron_apply_result(result) {
 }
 
 function remove_cron_jobs(list_marker, subscription_marker, component_marker) {
-    let crontab = command_output_from_args([ "crontab", "-l" ]);
+    // BusyBox `crontab -l` exits with code 1 when the crontab is empty or
+    // absent; command_output_from_args returns "" in that case and a
+    // subsequent write would wipe all user cron lines.  Read the file
+    // directly to avoid this.
+    let crontab = as_string(fs.readfile("/etc/crontabs/root") || "");
     let markers = [ list_marker, subscription_marker, component_marker ];
     let result = {
         crontab: strip_unmarked_tachyon_cron_lines(
@@ -938,10 +942,12 @@ function remove_cron_jobs(list_marker, subscription_marker, component_marker) {
 }
 
 function refresh_cron_from_sources(settings, sections, bin, list_marker, subscription_marker, component_marker) {
+    // Same as remove_cron_jobs: read /etc/crontabs/root directly to avoid
+    // BusyBox's `crontab -l` exit-code-1 on an empty or absent file.
     let result = cron_refresh_apply_result(
         settings,
         sections,
-        command_output_from_args([ "crontab", "-l" ]),
+        as_string(fs.readfile("/etc/crontabs/root") || ""),
         bin,
         list_marker,
         subscription_marker,
