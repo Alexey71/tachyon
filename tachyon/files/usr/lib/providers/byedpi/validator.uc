@@ -227,7 +227,8 @@ function module_exports() {
     return {
         normalize_strategy_whitespace,
         strategy_or_default,
-        validate_byedpi_strategy
+        validate_byedpi_strategy,
+        validate_strategy: validate_byedpi_strategy
     };
 }
 

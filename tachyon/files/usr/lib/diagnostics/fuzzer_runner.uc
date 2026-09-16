@@ -80,7 +80,8 @@ function validate_strategy_args(engine, args_val) {
             return (res && res.valid === true) ? true : false;
         } else if (engine == "byedpi") {
             let val = require("providers.byedpi.validator");
-            let res = val.validate_strategy(args_val, "");
+            let fn = val.validate_byedpi_strategy || val.validate_strategy;
+            let res = fn ? fn(args_val) : null;
             return (res && res.valid === true) ? true : false;
         }
     } catch (e) {
@@ -137,6 +138,66 @@ function kill_pid_file(path) {
     }
 }
 
+function get_system_capabilities() {
+    let caps = {
+        http2: false,
+        http3: false,
+        doh: false
+    };
+    let p = fs.popen("curl -V 2>/dev/null", "r");
+    if (!p) return caps;
+    let out = p.read("all");
+    p.close();
+    if (!out || out == "") return caps;
+
+    let lout = lc(out);
+    if (index(lout, "http2") >= 0) caps.http2 = true;
+    if (index(lout, "http3") >= 0 || index(lout, "nghttp3") >= 0 || index(lout, "quiche") >= 0 || index(lout, "msh3") >= 0) caps.http3 = true;
+    if (index(lout, "doh") >= 0) caps.doh = true;
+    return caps;
+}
+
+function get_system_memory_kb() {
+    let data = fs.readfile("/proc/meminfo");
+    if (!data) return 999999;
+    let m = match(data, /MemAvailable:[ \t]+([0-9]+)[ \t]+kB/);
+    if (m && m[1]) return int(m[1]);
+    let mf = match(data, /MemFree:[ \t]+([0-9]+)[ \t]+kB/);
+    if (mf && mf[1]) return int(mf[1]);
+    return 999999;
+}
+
+function calculate_median(values) {
+    if (!values || length(values) == 0) return 0;
+    let copy = [];
+    for (let v in values) push(copy, 1.0 * v);
+    sort(copy, function(a, b) { return a - b; });
+    let n = length(copy);
+    let mid = int(n / 2);
+    if (n % 2 == 1) return int(copy[mid]);
+    return int((copy[mid - 1] + copy[mid]) / 2.0);
+}
+
+function calculate_p25(values) {
+    if (!values || length(values) == 0) return 0;
+    let copy = [];
+    for (let v in values) push(copy, 1.0 * v);
+    sort(copy, function(a, b) { return a - b; });
+    let idx = int(length(copy) * 0.25);
+    return int(copy[idx]);
+}
+
+function calculate_jitter(values, median_val) {
+    if (!values || length(values) <= 1) return 0;
+    let sum_dev = 0.0;
+    for (let v in values) {
+        let diff = (1.0 * v) - (1.0 * median_val);
+        if (diff < 0) diff = -diff;
+        sum_dev += diff;
+    }
+    return int(sum_dev / (1.0 * length(values)));
+}
+
 return {
     is_valid_hostname,
     is_valid_url,
@@ -144,5 +205,10 @@ return {
     validate_strategy_args,
     build_byedpi_argv,
     build_zapret_argv,
-    kill_pid_file
+    kill_pid_file,
+    get_system_capabilities,
+    get_system_memory_kb,
+    calculate_median,
+    calculate_p25,
+    calculate_jitter
 };

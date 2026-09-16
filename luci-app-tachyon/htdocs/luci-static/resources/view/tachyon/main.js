@@ -13217,6 +13217,11 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       ),
       E(
         "option",
+        { value: "adaptive" },
+        _("🧬 Adaptive Smart Fuzzing (Genetic / Prior Seeds)")
+      ),
+      E(
+        "option",
         { value: "combinatorial" },
         _("🔍 Combinatorial Deep Fuzzing (~150-300+)")
       ),
@@ -14272,6 +14277,29 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           )
         );
       }
+      if (item.verified) {
+        statusChildren.push(
+          E(
+            "div",
+            { style: "font-size: 10px; opacity: 0.85; margin-top: 2px;" },
+            [
+              E(
+                "span",
+                {
+                  class: `badge ${item.confidence === "high" ? "badge-success" : item.confidence === "medium" ? "badge-warning" : "badge-neutral"}`,
+                  style: "font-size: 9px; padding: 1px 4px; margin-right: 4px;"
+                },
+                item.confidence ? item.confidence.toUpperCase() : "VERIFIED"
+              ),
+              E(
+                "span",
+                {},
+                `${item.stability_pct ?? 100}% ` + _("stability (3x)")
+              )
+            ]
+          )
+        );
+      }
       if (item.sub_probes && item.sub_probes.length > 1) {
         const passedSub = item.sub_probes.filter((p) => p.success).length;
         const totalSub = item.sub_probes.length;
@@ -14337,7 +14365,14 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           E(
             "td",
             { class: "cbi-section-table-cell", style: "padding: 8px 10px;" },
-            item.success ? `${item.ttfb_ms}ms` : "—"
+            item.success ? [
+              E("div", {}, `${item.ttfb_ms}ms`),
+              item.jitter_ms !== void 0 && item.jitter_ms !== null && item.jitter_ms > 0 ? E(
+                "div",
+                { style: "font-size: 10px; opacity: 0.65;" },
+                `±${item.jitter_ms}ms jitter`
+              ) : ""
+            ] : "—"
           ),
           E(
             "td",
@@ -14402,7 +14437,13 @@ function renderStrategyFuzzerModal(ruleNames = []) {
     const bestStrategy = state.best_strategy || workingResults[0] || null;
     if (statusText) {
       if (state.running) {
-        statusText.innerText = `${_("Testing strategy")} ${state.current_index} / ${state.total_strategies}...`;
+        if (state.phase === "detecting_dpi") {
+          statusText.innerText = _("🔍 Analyzing DPI blocking patterns...");
+        } else if (state.stage === 2 || state.phase === "verification") {
+          statusText.innerText = `${_("🛡️ Stage 2: Stability Verification")} (${state.progress_pct}%)...`;
+        } else {
+          statusText.innerText = `${_("Stage 1: Exploration Scan")} (${state.current_index} / ${state.total_strategies})...`;
+        }
       } else if (state.finished_at > 0 || state.results?.length) {
         if (bestStrategy || workingResults.length > 0) {
           if (state.error) {

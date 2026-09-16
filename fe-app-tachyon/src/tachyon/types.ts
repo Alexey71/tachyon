@@ -1043,7 +1043,7 @@ export namespace Tachyon {
     | 'quic_http3'
     | 'custom';
 
-  export type FuzzerMode = 'presets' | 'combinatorial' | 'custom';
+  export type FuzzerMode = 'presets' | 'combinatorial' | 'adaptive' | 'custom';
 
   export interface FuzzerStrategyItem {
     id: string;
@@ -1066,6 +1066,9 @@ export namespace Tachyon {
     data_verified?: boolean;
     data_bytes?: number;
     dpi_verdict?: string;
+    required?: boolean;
+    weight?: number;
+    score?: number;
     success: boolean;
     error?: string;
   }
@@ -1086,6 +1089,12 @@ export namespace Tachyon {
     data_bytes?: number;
     dpi_verdict?: string;
     score: number;
+    stability_pct?: number;
+    reps?: number;
+    jitter_ms?: number;
+    p25_speed_kbps?: number;
+    confidence?: string;
+    verified?: boolean;
     error?: string;
     badge?: string;
     sub_probes?: Array<{
@@ -1098,6 +1107,8 @@ export namespace Tachyon {
       data_verified?: boolean;
       data_bytes?: number;
       dpi_verdict?: string;
+      required?: boolean;
+      weight?: number;
       score: number;
       success: boolean;
       error?: string;
@@ -1121,6 +1132,14 @@ export namespace Tachyon {
     best_strategy?: FuzzerStrategyResult | null;
     error?: string | null;
     aborted?: boolean;
+    phase?:
+      | 'idle'
+      | 'detecting_dpi'
+      | 'exploration'
+      | 'verification'
+      | 'finished'
+      | string;
+    stage?: 1 | 2;
     started_at: number;
     finished_at: number;
     dpi_detection?: FuzzerDpiDetection | null;

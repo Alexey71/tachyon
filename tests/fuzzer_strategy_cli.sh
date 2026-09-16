@@ -230,7 +230,98 @@ if (tok.valid !== false) {
     exit(1);
 }
 
-print("Hardened runner and fail-closed validation checks passed.\n");
+// 5. System capabilities & stats calculation checks
+let caps = r.get_system_capabilities();
+if (type(caps) != "object" || type(caps.http2) != "bool" || type(caps.http3) != "bool") {
+    warn("Failed: invalid capabilities object returned\n");
+    exit(1);
+}
+
+let mem_kb = r.get_system_memory_kb();
+if (type(mem_kb) != "int" || mem_kb <= 0) {
+    warn("Failed: invalid memory returned\n");
+    exit(1);
+}
+
+let test_vals = [ 100, 110, 120 ];
+let med = r.calculate_median(test_vals);
+if (med != 110) {
+    warn(sprintf("Failed: median should be 110, got %d\n", med));
+    exit(1);
+}
+
+let jitter = r.calculate_jitter(test_vals, med);
+if (jitter != 6 && jitter != 7) {
+    warn(sprintf("Failed: jitter unexpected, got %d\n", jitter));
+    exit(1);
+}
+
+let p25 = r.calculate_p25([ 100, 200, 300, 400 ]);
+if (p25 != 200 && p25 != 100) {
+    warn(sprintf("Failed: p25 unexpected, got %d\n", p25));
+    exit(1);
+}
+
+print("Hardened runner, capabilities, and statistics checks passed.\n");
 '
+
+# 8. Check TARGET_SUITES structure and requirements
+ucode -L "$TACHYON_LIB" -- "$FUZZER" strategies presets | JSON_VALUE="$(cat)" node - <<'NODE'
+const val = JSON.parse(process.env.JSON_VALUE);
+const suites = val.target_suites;
+if (!suites || typeof suites !== 'object') {
+  console.error("Missing target_suites");
+  process.exit(1);
+}
+
+const yt = suites.youtube_suite;
+if (!yt || !Array.isArray(yt.urls) || yt.urls.length < 3) {
+  console.error("Invalid youtube_suite structure");
+  process.exit(1);
+}
+
+const streamItem = yt.urls.find(u => u.name && u.name.includes("Stream"));
+if (!streamItem || streamItem.required !== true || streamItem.probe_kind !== 'streaming') {
+  console.error("YouTube Stream CDN must have required: true and probe_kind: streaming, got:", streamItem);
+  process.exit(1);
+}
+
+for (const key of Object.keys(suites)) {
+  const s = suites[key];
+  for (const u of s.urls) {
+    if (typeof u.weight !== 'number' || u.weight <= 0) {
+      console.error(`Missing valid weight in ${key}:`, u);
+      process.exit(1);
+    }
+    if (typeof u.probe_kind !== 'string') {
+      console.error(`Missing probe_kind in ${key}:`, u);
+      process.exit(1);
+    }
+  }
+}
+console.log("Verified TARGET_SUITES weights, required flags, and probe kinds.");
+NODE
+
+# 9. Check Adaptive strategy generation
+adaptive_tmp="$(mktemp "${TMPDIR:-/tmp}/fuzzer_adaptive_XXXXXX")"
+trap 'rm -f "$adaptive_tmp" "$combo_tmp"' EXIT
+ucode -L "$TACHYON_LIB" -- "$FUZZER" strategies adaptive > "$adaptive_tmp"
+ADAPTIVE_FILE="$adaptive_tmp" node <<'NODE'
+const fs = require('fs');
+const val = JSON.parse(fs.readFileSync(process.env.ADAPTIVE_FILE, 'utf8'));
+if (!Array.isArray(val.zapret2) || val.zapret2.length < 5) {
+  console.error("Adaptive zapret2 should have >= 5 strategies, got:", val.zapret2 ? val.zapret2.length : 0);
+  process.exit(1);
+}
+if (!Array.isArray(val.zapret) || val.zapret.length < 5) {
+  console.error("Adaptive zapret should have >= 5 strategies, got:", val.zapret ? val.zapret.length : 0);
+  process.exit(1);
+}
+if (!Array.isArray(val.byedpi) || val.byedpi.length < 5) {
+  console.error("Adaptive byedpi should have >= 5 strategies, got:", val.byedpi ? val.byedpi.length : 0);
+  process.exit(1);
+}
+console.log("Adaptive strategies generated: Zapret2=" + val.zapret2.length + ", Zapret=" + val.zapret.length + ", ByeDPI=" + val.byedpi.length);
+NODE
 
 printf 'PASS: fuzzer_strategy_cli\n'

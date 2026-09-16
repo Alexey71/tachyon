@@ -43,6 +43,54 @@ function ensure_job_dir(job_id) {
     return d;
 }
 
+// ── History Persistence ──────────────────────────────────────────────────────
+function load_history() {
+    let data = read_json_file(HISTORY_FILE);
+    if (data && type(data) == "object" && data.entries && type(data.entries) == "array") {
+        return data;
+    }
+    return { entries: [] };
+}
+
+function save_history(history) {
+    common.ensure_dir("/etc/tachyon");
+    while (length(history.entries) > 50) {
+        shift(history.entries);
+    }
+    write_json_file(HISTORY_FILE, history);
+}
+
+function append_history(entry) {
+    let history = load_history();
+    push(history.entries, {
+        timestamp: entry.timestamp || clock()[0],
+        engine: entry.engine || "unknown",
+        target: entry.target || "unknown",
+        mode: entry.mode || "presets",
+        best_strategy: entry.best_strategy || null,
+        total_tested: entry.total_tested || 0,
+        working_count: entry.working_count || 0,
+        dpi_detection: entry.dpi_detection || null,
+        duration_sec: entry.duration_sec || 0
+    });
+    save_history(history);
+}
+
+function get_history(limit) {
+    let history = load_history();
+    let entries = history.entries || [];
+    let n = int(limit) || 0;
+    if (n > 0 && length(entries) > n) {
+        let start = length(entries) - n;
+        let sliced = [];
+        for (let i = start; i < length(entries); i++) {
+            push(sliced, entries[i]);
+        }
+        entries = sliced;
+    }
+    return entries;
+}
+
 function resolve_binary(paths) {
     for (let p in paths) {
         if (p && fs.stat(p) != null)
@@ -406,61 +454,61 @@ const TARGET_SUITES = {
     youtube_suite: {
         name: "YouTube Full Suite (Web + Static CDN + Stream)",
         urls: [
-            { name: "Web Interface", url: "https://www.youtube.com", weight: 40 },
-            { name: "Static Assets (i.ytimg)", url: "https://i.ytimg.com/generate_204", weight: 30 },
-            { name: "GoogleVideo Stream CDN", url: "https://redirector.googlevideo.com/generate_204", weight: 30 }
+            { name: "Web Interface", url: "https://www.youtube.com", weight: 25, required: true, probe_kind: "tls_http" },
+            { name: "Static Assets (i.ytimg)", url: "https://i.ytimg.com/generate_204", weight: 25, required: false, probe_kind: "tls_http" },
+            { name: "GoogleVideo Stream CDN", url: "https://redirector.googlevideo.com/generate_204", weight: 50, required: true, probe_kind: "streaming" }
         ]
     },
     discord_suite: {
         name: "Discord Full Suite (API + WSS Gateway + CDN)",
         urls: [
-            { name: "API Gateway", url: "https://discord.com/api/v9/gateway", weight: 40 },
-            { name: "Global Assets CDN", url: "https://cdn.discordapp.com/generate_204", weight: 30 },
-            { name: "Discord Web Portal", url: "https://discord.com/login", weight: 30 }
+            { name: "API Gateway", url: "https://discord.com/api/v9/gateway", weight: 40, required: true, probe_kind: "tls_http" },
+            { name: "Global Assets CDN", url: "https://cdn.discordapp.com/generate_204", weight: 30, required: false, probe_kind: "tls_http" },
+            { name: "Discord Web Portal", url: "https://discord.com/login", weight: 30, required: true, probe_kind: "tls_http" }
         ]
     },
     twitch_suite: {
         name: "Twitch Live Suite (Web + HLS Video + CDN)",
         urls: [
-            { name: "Web Portal", url: "https://www.twitch.tv", weight: 40 },
-            { name: "Static Assets CDN", url: "https://static-cdn.jtvnw.net/", weight: 30 },
-            { name: "HLS Usher API", url: "https://usher.ttvnw.net/", weight: 30 }
+            { name: "Web Portal", url: "https://www.twitch.tv", weight: 40, required: true, probe_kind: "tls_http" },
+            { name: "Static Assets CDN", url: "https://static-cdn.jtvnw.net/", weight: 30, required: false, probe_kind: "tls_http" },
+            { name: "HLS Usher API", url: "https://usher.ttvnw.net/", weight: 30, required: true, probe_kind: "tls_http" }
         ]
     },
     twitter_suite: {
         name: "X / Twitter Suite (Web + API + CDN)",
         urls: [
-            { name: "X Web Portal", url: "https://x.com", weight: 40 },
-            { name: "API Endpoint", url: "https://api.x.com/", weight: 30 },
-            { name: "Twimg Media CDN", url: "https://pbs.twimg.com/", weight: 30 }
+            { name: "X Web Portal", url: "https://x.com", weight: 40, required: true, probe_kind: "tls_http" },
+            { name: "API Endpoint", url: "https://api.x.com/", weight: 30, required: true, probe_kind: "tls_http" },
+            { name: "Twimg Media CDN", url: "https://pbs.twimg.com/", weight: 30, required: false, probe_kind: "tls_http" }
         ]
     },
     chatgpt_suite: {
         name: "ChatGPT / OpenAI Suite (Web + Static CDN)",
         urls: [
-            { name: "ChatGPT Portal", url: "https://chatgpt.com", weight: 50 },
-            { name: "Static Assets CDN", url: "https://cdn.oaistatic.com/", weight: 50 }
+            { name: "ChatGPT Portal", url: "https://chatgpt.com", weight: 60, required: true, probe_kind: "tls_http" },
+            { name: "Static Assets CDN", url: "https://cdn.oaistatic.com/", weight: 40, required: false, probe_kind: "tls_http" }
         ]
     },
     instagram_suite: {
         name: "Instagram / Meta Suite (Web + Static CDN)",
         urls: [
-            { name: "Web Interface", url: "https://www.instagram.com", weight: 50 },
-            { name: "CDN Static Assets", url: "https://static.cdninstagram.com/", weight: 50 }
+            { name: "Web Interface", url: "https://www.instagram.com", weight: 60, required: true, probe_kind: "tls_http" },
+            { name: "CDN Static Assets", url: "https://static.cdninstagram.com/", weight: 40, required: false, probe_kind: "tls_http" }
         ]
     },
     telegram_suite: {
         name: "Telegram Suite (Web + API)",
         urls: [
-            { name: "Web App", url: "https://web.telegram.org", weight: 50 },
-            { name: "Bot API", url: "https://api.telegram.org", weight: 50 }
+            { name: "Web App", url: "https://web.telegram.org", weight: 50, required: true, probe_kind: "tls_http" },
+            { name: "Bot API", url: "https://api.telegram.org", weight: 50, required: true, probe_kind: "tls_http" }
         ]
     },
     rutracker_suite: {
         name: "RuTracker Suite (HTTP / HTTPS)",
         urls: [
-            { name: "Main Portal", url: "https://rutracker.org", weight: 60 },
-            { name: "CDN Static Logo", url: "https://static.rutracker.cc/logo/logo-3.png", weight: 40 }
+            { name: "Main Portal", url: "https://rutracker.org", weight: 60, required: true, probe_kind: "tls_http" },
+            { name: "CDN Static Logo", url: "https://static.rutracker.cc/logo/logo-3.png", weight: 40, required: false, probe_kind: "tls_http" }
         ]
     }
 };
@@ -1498,7 +1546,118 @@ function generate_combinatorial_byedpi() {
     return list;
 }
 
-function get_strategies_for_engine(engine, mode) {
+function generate_adaptive_strategies(engine, target) {
+    let list = [];
+    let seen = {};
+
+    let add = function(name, args, desc, rationale) {
+        args = trim(as_string(args));
+        if (args == "" || seen[args]) return;
+        if (!validate_strategy_args(engine == "all" ? "zapret2" : engine, args)) return;
+        seen[args] = true;
+        push(list, {
+            id: sprintf("adapt_%s_%d", engine, length(list) + 1),
+            name: name,
+            engine: engine == "all" ? "zapret2" : engine,
+            args: args,
+            description: desc || "Adaptive evolved strategy",
+            rationale: rationale || "Synthesized from parameter attribution and target profile"
+        });
+    };
+
+    // 1. Seed from Prior History: inject historic winning strategies for this target & engine
+    let history_res = get_history(20);
+    if (history_res && length(history_res) > 0) {
+        for (let h in history_res) {
+            if (h && h.target == target && h.best_strategy && (engine == "all" || h.engine == engine)) {
+                let bs = h.best_strategy;
+                if (bs.args && !seen[bs.args]) {
+                    add("⭐ Prior Winner: " + (bs.name || "Historical Best"), bs.args, "Previously verified effective on this target", "Historical success seed");
+                }
+            }
+        }
+    }
+
+    // 2. High-probability domain seeds based on engine
+    if (engine == "zapret2" || engine == "all") {
+        for (let blob in [ "tls_max", "tls_google", "tls_gosuslugi", "tls_sber" ]) {
+            let seq = (blob == "tls_max") ? 664 : (blob == "tls_google" ? 681 : 517);
+            add(sprintf("PAWS (%s) + Multisplit pos=1", blob),
+                sprintf("--lua-desync=fake:blob=%s:repeats=8:tcp_ts=-600000:tcp_ts_up --lua-desync=multisplit:pos=1:seqovl=%d:seqovl_pattern=%s", blob, seq, blob),
+                "PAWS timestamp desync with authentic blob overlap");
+            add(sprintf("PAWS (%s) + Multisplit pos=1,midsld", blob),
+                sprintf("--lua-desync=fake:blob=%s:repeats=6:tcp_ts=-600000:tcp_ts_up --lua-desync=multisplit:pos=1,midsld:seqovl=%d:seqovl_pattern=%s", blob, seq, blob),
+                "PAWS with midsld multisplit");
+        }
+        add("SYN Data + Multisplit pos=1,midsld (badseq)",
+            "--lua-desync=syndata --lua-desync=multisplit:pos=1,midsld:seqovl=1:fooling=badseq",
+            "TCP SYN payload injection with badseq fooling");
+        add("SYN Data + Multidisorder pos=1,midsld",
+            "--lua-desync=syndata --lua-desync=multidisorder:pos=1,midsld",
+            "TCP SYN payload injection with segment disordering");
+        add("SYN Data + Window Clamp wsize=1",
+            "--lua-desync=syndata --lua-desync=multisplit:pos=1,midsld:wsize=1",
+            "SYN data injection with 1-byte TCP window clamping");
+        for (let fooling in [ "badseq", "fakeddrop", "badack" ]) {
+            for (let ttl in [ 3, 4, 6 ]) {
+                for (let pos in [ "1", "1,midsld", "sniext+4" ]) {
+                    add(sprintf("Fake (%s, ttl=%d) + Multisplit %s", fooling, ttl, pos),
+                        sprintf("--lua-desync=fake:blob=tls_max:repeats=6:ttl=%d:fooling=%s --lua-desync=multisplit:pos=%s", ttl, fooling, pos),
+                        "Evolved fake desync parameter combination");
+                }
+            }
+        }
+    }
+
+    if (engine == "zapret" || engine == "all") {
+        for (let split_mode in [ "split2", "fake,split2", "disorder2", "fake,disorder2" ]) {
+            for (let ttl in [ 2, 3, 4, 6, 8 ]) {
+                for (let pos in [ "1", "2", "midsld", "sniext+4" ]) {
+                    let fooling = index(split_mode, "fake") >= 0 ? " --dpi-desync-fooling=badseq" : "";
+                    add(sprintf("%s (pos=%s, ttl=%d)", split_mode, pos, ttl),
+                        sprintf("--dpi-desync=%s --dpi-desync-split-pos=%s --dpi-desync-ttl=%d%s", split_mode, pos, ttl, fooling),
+                        "Adaptive parameter combination for Zapret v1");
+                }
+            }
+        }
+    }
+
+    if (engine == "byedpi" || engine == "all") {
+        for (let a in [ "t,r,a,s", "r,s", "t,a" ]) {
+            for (let o in [ "1", "2" ]) {
+                for (let d in [ "1", "2" ]) {
+                    add(sprintf("Auto (%s) + OOB %s + Disorder %s", a, o, d),
+                        sprintf("-o %s --auto=%s -d %s", o, a, d),
+                        "Adaptive auto mode with OOB and disorder");
+                }
+                for (let s in [ "1", "1+sniext", "midsld" ]) {
+                    add(sprintf("Auto (%s) + OOB %s + Split %s", a, o, s),
+                        sprintf("-o %s --auto=%s -s %s", o, a, s),
+                        "Adaptive auto mode with OOB and split");
+                }
+            }
+        }
+        for (let ttl in [ 3, 4, 8 ]) {
+            for (let s in [ "1", "1+sniext", "midsld" ]) {
+                add(sprintf("Fake (TTL=%d) + Split %s", ttl, s),
+                    sprintf("--split %s --fake -1 --ttl %d", s, ttl),
+                    "ByeDPI fake injection with split");
+            }
+        }
+    }
+
+    // Check memory budget: if low RAM (<32MB), cap to 20 strategies
+    let avail_kb = fuzzer_runner.get_system_memory_kb();
+    if (avail_kb < 32768 && length(list) > 20) {
+        let capped = [];
+        for (let i = 0; i < 20; i++) push(capped, list[i]);
+        return capped;
+    }
+
+    return list;
+}
+
+function get_strategies_for_engine(engine, mode, target) {
     engine = lc(as_string(engine));
     mode = lc(trim(as_string(mode || "presets")));
     let cfg = get_patterns_config();
@@ -1518,18 +1677,29 @@ function get_strategies_for_engine(engine, mode) {
         }
         return custom_list;
     }
+
+    if (mode == "adaptive" || mode == "smart") {
+        return generate_adaptive_strategies(engine, target || "youtube_suite");
+    }
     
     if (mode == "combinatorial" || mode == "deep_fuzz" || mode == "deep") {
-        if (engine == "zapret2") return generate_combinatorial_zapret2();
-        if (engine == "zapret") return generate_combinatorial_zapret();
-        if (engine == "byedpi") return generate_combinatorial_byedpi();
-        if (engine == "all") {
-            let combined = [];
-            for (let s in generate_combinatorial_zapret2()) push(combined, s);
-            for (let s in generate_combinatorial_zapret()) push(combined, s);
-            for (let s in generate_combinatorial_byedpi()) push(combined, s);
-            return combined;
+        let combo = [];
+        if (engine == "zapret2") combo = generate_combinatorial_zapret2();
+        else if (engine == "zapret") combo = generate_combinatorial_zapret();
+        else if (engine == "byedpi") combo = generate_combinatorial_byedpi();
+        else if (engine == "all") {
+            for (let s in generate_combinatorial_zapret2()) push(combo, s);
+            for (let s in generate_combinatorial_zapret()) push(combo, s);
+            for (let s in generate_combinatorial_byedpi()) push(combo, s);
         }
+
+        let avail_kb = fuzzer_runner.get_system_memory_kb();
+        if (avail_kb < 32768 && length(combo) > 30) {
+            let capped = [];
+            for (let i = 0; i < 30; i++) push(capped, combo[i]);
+            return capped;
+        }
+        return combo;
     }
     
     let base = [];
@@ -1543,9 +1713,37 @@ function get_strategies_for_engine(engine, mode) {
     }
     
     let result = [];
-    for (let s in base) push(result, s);
+    let seen_args = {};
+
+    // Seed prior winners from history if available
+    let history_res = get_history(10);
+    if (history_res && length(history_res) > 0) {
+        for (let h in history_res) {
+            if (h && target && h.target == target && h.best_strategy && (engine == "all" || h.engine == engine)) {
+                let bs = h.best_strategy;
+                if (bs.args && !seen_args[bs.args]) {
+                    seen_args[bs.args] = true;
+                    push(result, {
+                        id: sprintf("hist_%s_1", bs.engine || engine),
+                        name: "⭐ " + (bs.name || "Historical Best"),
+                        engine: bs.engine || engine,
+                        args: bs.args,
+                        description: "Previously verified winner on this target"
+                    });
+                }
+            }
+        }
+    }
+
+    for (let s in base) {
+        if (!seen_args[s.args]) {
+            seen_args[s.args] = true;
+            push(result, s);
+        }
+    }
     for (let cs in cfg.custom_strategies) {
-        if (cs && (engine == "all" || cs.engine == engine) && cs.args) {
+        if (cs && (engine == "all" || cs.engine == engine) && cs.args && !seen_args[cs.args]) {
+            seen_args[cs.args] = true;
             push(result, {
                 id: cs.id || sprintf("custom_%d", length(result) + 1),
                 name: cs.name || "Custom Strategy",
@@ -1567,15 +1765,18 @@ function resolve_target_url(target_key, custom_url) {
 
 function resolve_target_urls_list(target_key, custom_url) {
     if (custom_url && custom_url != "") {
-        return [ { name: "Custom Target", url: custom_url, weight: 100 } ];
+        return [ { name: "Custom Target", url: custom_url, weight: 100, required: true, probe_kind: "tls_http" } ];
     }
     target_key = as_string(target_key || "youtube_suite");
+    if (target_key == "quic_http3") {
+        return [ { name: "Google QUIC Initial / HTTP3", url: "https://www.google.com", weight: 100, required: true, probe_kind: "quic" } ];
+    }
     let suite = TARGET_SUITES[target_key];
     if (suite && suite.urls && length(suite.urls) > 0) {
         return suite.urls;
     }
     let single = TARGET_URLS[target_key] || TARGET_URLS.youtube;
-    return [ { name: target_key, url: single, weight: 100 } ];
+    return [ { name: target_key, url: single, weight: 100, required: true, probe_kind: (target_key == "quic_http3" ? "quic" : "tls_http") } ];
 }
 
 function ensure_state_dir() {
@@ -1932,7 +2133,7 @@ function cleanup_temp_daemons(job_id) {
     // Ensure ByeDPI port is released
     system(sprintf("fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
 
-    // Notice: killall -9 curl removed to avoid killing external curl operations
+    // Notice: global kill of curl processes removed to avoid killing external curl operations
 
     system("nft delete table inet tachyon_fuzzer >/dev/null 2>&1");
     try { fs.unlink(STATE_DIR + "/fuzzer_daemon_err.log"); } catch (e) {}
@@ -2138,11 +2339,6 @@ function detect_dpi_type(target_key, custom_url) {
         result.confidence = 70;
         result.details = sprintf("Connection refused — likely RST or blackhole by DPI");
         result.recommended_engines = ["zapret2", "zapret"];
-    } else if (http_code >= 400 && http_code < 500) {
-        result.type = "throttle";
-        result.confidence = 60;
-        result.details = sprintf("HTTP %d returned — DPI may be injecting HTTP errors or throttling", http_code);
-        result.recommended_engines = ["zapret2", "byedpi"];
     } else if (handshake > 2000) {
         result.type = "throttle";
         result.confidence = 75;
@@ -2153,7 +2349,7 @@ function detect_dpi_type(target_key, custom_url) {
         result.confidence = 65;
         result.details = sprintf("High TTFB (%dms) despite successful connection — likely bandwidth throttling", ttfb);
         result.recommended_engines = ["zapret2", "byedpi"];
-    } else if (http_code >= 200 && http_code < 400) {
+    } else if ((http_code >= 200 && http_code < 400) || (http_code >= 401 && http_code <= 405)) {
         result.type = "none";
         result.confidence = 95;
         result.details = sprintf("Target accessible — no DPI blocking detected (HTTP %d, TTFB %dms)", http_code, ttfb);
@@ -2168,53 +2364,6 @@ function detect_dpi_type(target_key, custom_url) {
     return result;
 }
 
-// ── History Persistence ──────────────────────────────────────────────────────
-function load_history() {
-    let data = read_json_file(HISTORY_FILE);
-    if (data && type(data) == "object" && data.entries && type(data.entries) == "array") {
-        return data;
-    }
-    return { entries: [] };
-}
-
-function save_history(history) {
-    common.ensure_dir("/etc/tachyon");
-    while (length(history.entries) > 50) {
-        shift(history.entries);
-    }
-    write_json_file(HISTORY_FILE, history);
-}
-
-function append_history(entry) {
-    let history = load_history();
-    push(history.entries, {
-        timestamp: entry.timestamp || clock()[0],
-        engine: entry.engine || "unknown",
-        target: entry.target || "unknown",
-        mode: entry.mode || "presets",
-        best_strategy: entry.best_strategy || null,
-        total_tested: entry.total_tested || 0,
-        working_count: entry.working_count || 0,
-        dpi_detection: entry.dpi_detection || null,
-        duration_sec: entry.duration_sec || 0
-    });
-    save_history(history);
-}
-
-function get_history(limit) {
-    let history = load_history();
-    let entries = history.entries || [];
-    let n = int(limit) || 0;
-    if (n > 0 && length(entries) > n) {
-        let start = length(entries) - n;
-        let sliced = [];
-        for (let i = start; i < length(entries); i++) {
-            push(sliced, entries[i]);
-        }
-        entries = sliced;
-    }
-    return entries;
-}
 
 // ── Strategy Priority Reranking (based on DPI type) ─────────────────────────
 function rerank_strategies_by_dpi(strategies, dpi_type) {
@@ -2271,6 +2420,7 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
     
     let urls_list = resolve_target_urls_list(target_key, custom_url);
     let total_urls = length(urls_list);
+    let caps = fuzzer_runner.get_system_capabilities();
     
     let result = {
         success: false,
@@ -2344,18 +2494,49 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
         system(sprintf("nft 'add rule inet tachyon_fuzzer bypass_singbox meta l4proto tcp tcp dport { 80, 443 } meta mark set meta mark | %s counter' 2>/dev/null", FUZZER_OUTBOUND_MARK));
         
         let passed_count = 0;
-        let sum_handshake = 0;
-        let sum_ttfb = 0;
         let max_speed = 0;
         let sum_data_bytes = 0;
         let all_data_verified = true;
         let last_http = 0;
         let last_dpi_verdict = "available";
+        let required_failed = false;
         
         for (let target_item in urls_list) {
+            let is_req = (target_item.required !== false);
+            let p_kind = target_item.probe_kind || "tls_http";
+            let extra_flags = "";
+
+            if (p_kind == "quic" || target_key == "quic_http3") {
+                if (!caps.http3) {
+                    let single_res = {
+                        target_name: target_item.name,
+                        url: target_item.url,
+                        required: is_req,
+                        weight: target_item.weight || 100,
+                        http_code: 0,
+                        handshake_ms: 0,
+                        ttfb_ms: 0,
+                        speed_kbps: 0,
+                        data_bytes: 0,
+                        data_verified: false,
+                        dpi_verdict: "unsupported_proto",
+                        score: 0,
+                        success: false,
+                        error: "HTTP/3 (QUIC) not supported by router curl binary"
+                    };
+                    push(result.sub_probes, single_res);
+                    if (is_req) { required_failed = true; result.error = single_res.error; }
+                    break;
+                }
+                extra_flags = "--http3-only ";
+            } else if (p_kind == "streaming") {
+                extra_flags = "-r 0-65535 ";
+            }
+
             let curl_cmd = wrap_cmd_timeout(
                 sprintf(
-                    "curl -x socks5h://127.0.0.1:%d -so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
+                    "curl %s-x socks5h://127.0.0.1:%d -so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
+                    extra_flags,
                     BYEDPI_PORT,
                     shell_quote(target_item.url)
                 ),
@@ -2370,12 +2551,12 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
             let single_res = parse_curl_output(output, {});
             single_res.target_name = target_item.name;
             single_res.url = target_item.url;
+            single_res.required = is_req;
+            single_res.weight = target_item.weight || 100;
             push(result.sub_probes, single_res);
             
             if (single_res.success) {
                 passed_count++;
-                sum_handshake += single_res.handshake_ms;
-                sum_ttfb += single_res.ttfb_ms;
                 sum_data_bytes += single_res.data_bytes || 0;
                 if (!single_res.data_verified) all_data_verified = false;
                 if (single_res.speed_kbps > max_speed) max_speed = single_res.speed_kbps;
@@ -2386,24 +2567,16 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                 if (last_http == 0) last_http = single_res.http_code;
                 if (single_res.error && result.error == "") result.error = single_res.error;
                 last_dpi_verdict = single_res.dpi_verdict || "failed";
-                break;
+                if (is_req) {
+                    required_failed = true;
+                    break;
+                }
             }
         }
         
         cleanup_temp_daemons(job_id);
         
-        if (passed_count == total_urls) {
-            result.success = true;
-            result.http_code = last_http > 0 ? last_http : 200;
-            result.handshake_ms = int(sum_handshake / double(total_urls));
-            result.ttfb_ms = int(sum_ttfb / double(total_urls));
-            result.speed_kbps = max_speed;
-            result.data_bytes = int(sum_data_bytes / double(total_urls));
-            result.data_verified = all_data_verified;
-            result.dpi_verdict = all_data_verified ? "verified_32k" : last_dpi_verdict;
-            result.score = 100 + max(0, 1000 - result.ttfb_ms) + int(result.speed_kbps / 10.0) + (result.data_verified ? 50 : 20);
-            result.error = "";
-        } else {
+        if (required_failed || passed_count == 0) {
             result.success = false;
             result.http_code = last_http;
             result.data_bytes = sum_data_bytes;
@@ -2411,8 +2584,31 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
             result.dpi_verdict = last_dpi_verdict;
             result.score = 0;
             if (result.error == "") {
-                result.error = sprintf("Failed %d of %d endpoints", total_urls - passed_count, total_urls);
+                result.error = sprintf("Required endpoint failed (%d of %d endpoints passed)", passed_count, total_urls);
             }
+        } else {
+            result.success = true;
+            result.http_code = last_http > 0 ? last_http : 200;
+            result.speed_kbps = max_speed;
+            result.data_bytes = int(sum_data_bytes / (1.0 * total_urls));
+            result.data_verified = all_data_verified;
+            result.dpi_verdict = all_data_verified ? "verified_32k" : last_dpi_verdict;
+            result.error = "";
+
+            let total_w = 0;
+            let weighted_score = 0.0;
+            let weighted_ttfb = 0.0;
+            let weighted_hs = 0.0;
+            for (let sp in result.sub_probes) {
+                let w = sp.weight || 10;
+                total_w += w;
+                weighted_score += (sp.score * w);
+                weighted_ttfb += (sp.ttfb_ms * w);
+                weighted_hs += (sp.handshake_ms * w);
+            }
+            result.score = total_w > 0 ? int(weighted_score / (1.0 * total_w)) : 0;
+            result.ttfb_ms = total_w > 0 ? int(weighted_ttfb / (1.0 * total_w)) : 0;
+            result.handshake_ms = total_w > 0 ? int(weighted_hs / (1.0 * total_w)) : 0;
         }
         
         return result;
@@ -2504,22 +2700,53 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
         setup_fuzzer_direct_nftables(qnum, is_udp);
         
         let passed_count = 0;
-        let sum_handshake = 0;
-        let sum_ttfb = 0;
         let max_speed = 0;
         let sum_data_bytes = 0;
         let all_data_verified = true;
         let last_http = 0;
         let last_dpi_verdict = "available";
         let dns_flags = get_fuzzer_curl_dns_flags();
+        let required_failed = false;
         
         for (let target_item in urls_list) {
+            let is_req = (target_item.required !== false);
+            let p_kind = target_item.probe_kind || "tls_http";
+            let extra_flags = "";
+
+            if (p_kind == "quic" || target_key == "quic_http3") {
+                if (!caps.http3) {
+                    let single_res = {
+                        target_name: target_item.name,
+                        url: target_item.url,
+                        required: is_req,
+                        weight: target_item.weight || 100,
+                        http_code: 0,
+                        handshake_ms: 0,
+                        ttfb_ms: 0,
+                        speed_kbps: 0,
+                        data_bytes: 0,
+                        data_verified: false,
+                        dpi_verdict: "unsupported_proto",
+                        score: 0,
+                        success: false,
+                        error: "HTTP/3 (QUIC) not supported by router curl binary"
+                    };
+                    push(result.sub_probes, single_res);
+                    if (is_req) { required_failed = true; result.error = single_res.error; }
+                    break;
+                }
+                extra_flags = "--http3-only ";
+            } else if (p_kind == "streaming") {
+                extra_flags = "-r 0-65535 ";
+            }
+
             let target_flags = get_resolved_host_flags(target_item.url);
             if (target_flags == "") target_flags = dns_flags;
 
             let curl_cmd = wrap_cmd_timeout(
                 sprintf(
-                    "curl %s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
+                    "curl %s%s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
+                    extra_flags,
                     target_flags,
                     shell_quote(target_item.url)
                 ),
@@ -2534,12 +2761,12 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
             let single_res = parse_curl_output(output, {});
             single_res.target_name = target_item.name;
             single_res.url = target_item.url;
+            single_res.required = is_req;
+            single_res.weight = target_item.weight || 100;
             push(result.sub_probes, single_res);
             
             if (single_res.success) {
                 passed_count++;
-                sum_handshake += single_res.handshake_ms;
-                sum_ttfb += single_res.ttfb_ms;
                 sum_data_bytes += single_res.data_bytes || 0;
                 if (!single_res.data_verified) all_data_verified = false;
                 if (single_res.speed_kbps > max_speed) max_speed = single_res.speed_kbps;
@@ -2550,24 +2777,16 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                 if (last_http == 0) last_http = single_res.http_code;
                 if (single_res.error && result.error == "") result.error = single_res.error;
                 last_dpi_verdict = single_res.dpi_verdict || "failed";
-                break;
+                if (is_req) {
+                    required_failed = true;
+                    break;
+                }
             }
         }
         
         cleanup_temp_daemons(job_id);
         
-        if (passed_count == total_urls) {
-            result.success = true;
-            result.http_code = last_http > 0 ? last_http : 200;
-            result.handshake_ms = int(sum_handshake / double(total_urls));
-            result.ttfb_ms = int(sum_ttfb / double(total_urls));
-            result.speed_kbps = max_speed;
-            result.data_bytes = int(sum_data_bytes / double(total_urls));
-            result.data_verified = all_data_verified;
-            result.dpi_verdict = all_data_verified ? "verified_32k" : last_dpi_verdict;
-            result.score = 100 + max(0, 1000 - result.ttfb_ms) + int(result.speed_kbps / 10.0) + (result.data_verified ? 50 : 20);
-            result.error = "";
-        } else {
+        if (required_failed || passed_count == 0) {
             result.success = false;
             result.http_code = last_http;
             result.data_bytes = sum_data_bytes;
@@ -2575,8 +2794,31 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
             result.dpi_verdict = last_dpi_verdict;
             result.score = 0;
             if (result.error == "") {
-                result.error = sprintf("Failed %d of %d endpoints", total_urls - passed_count, total_urls);
+                result.error = sprintf("Required endpoint failed (%d of %d endpoints passed)", passed_count, total_urls);
             }
+        } else {
+            result.success = true;
+            result.http_code = last_http > 0 ? last_http : 200;
+            result.speed_kbps = max_speed;
+            result.data_bytes = int(sum_data_bytes / (1.0 * total_urls));
+            result.data_verified = all_data_verified;
+            result.dpi_verdict = all_data_verified ? "verified_32k" : last_dpi_verdict;
+            result.error = "";
+
+            let total_w = 0;
+            let weighted_score = 0.0;
+            let weighted_ttfb = 0.0;
+            let weighted_hs = 0.0;
+            for (let sp in result.sub_probes) {
+                let w = sp.weight || 10;
+                total_w += w;
+                weighted_score += (sp.score * w);
+                weighted_ttfb += (sp.ttfb_ms * w);
+                weighted_hs += (sp.handshake_ms * w);
+            }
+            result.score = total_w > 0 ? int(weighted_score / (1.0 * total_w)) : 0;
+            result.ttfb_ms = total_w > 0 ? int(weighted_ttfb / (1.0 * total_w)) : 0;
+            result.handshake_ms = total_w > 0 ? int(weighted_hs / (1.0 * total_w)) : 0;
         }
         
         return result;
@@ -2610,7 +2852,9 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
             aborted: false,
             started_at: clock()[0],
             finished_at: 0,
-            dpi_detection: null
+            dpi_detection: null,
+            phase: "detecting_dpi",
+            stage: 1
         };
         save_fuzzer_state(state);
     }
@@ -2627,6 +2871,8 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
     // ── Pre-fuzz DPI detection ────────────────────────────────────────────
     let dpi_detection = detect_dpi_type(target, custom_url);
     state.dpi_detection = dpi_detection;
+    state.phase = "exploration";
+    state.stage = 1;
     save_fuzzer_state(state);
 
     let strategies = null;
@@ -2634,7 +2880,7 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
         strategies = common.read_json_file(custom_file);
     }
     if (!strategies || type(strategies) != "array" || length(strategies) == 0) {
-        strategies = get_strategies_for_engine(engine, mode);
+        strategies = get_strategies_for_engine(engine, mode, target);
     }
 
     // Fail-closed re-validation of all candidate strategies before benchmarking
@@ -2665,13 +2911,16 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
         let highest_score = -1;
         let best = null;
         let working_count = 0;
+        let consecutive_plateau = 0;
         
+        // ── Stage 1: Exploration (Single-probe scan) ──────────────────────
         for (let i = 0; i < total; i++) {
             let strat = strategies[i];
             state.current_index = i + 1;
             state.current_strategy = strat;
-            state.progress_pct = int(((i) / double(total)) * 100.0);
+            state.progress_pct = int(((i) / (1.0 * total)) * 70.0);
             save_fuzzer_state(state);
+
             let probe = null;
             try {
                 probe = run_probe(strat.engine || engine, strat.args, target, custom_url, state.job_id);
@@ -2710,44 +2959,171 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
                 score: probe.score,
                 error: probe.error,
                 sub_probes: probe.sub_probes || [],
+                stability_pct: probe.success ? 100 : 0,
+                reps: 1,
+                jitter_ms: 0,
+                confidence: probe.success ? "preliminary" : "none",
                 badge: ""
             };
             
-            if (item_result.success) working_count++;
-
-            if (item_result.score > highest_score && item_result.success) {
-                highest_score = item_result.score;
-                best = item_result;
-                item_result.badge = "🏆 Best Match";
-                state.best_strategy = item_result;
+            if (item_result.success) {
+                working_count++;
+                if (item_result.score > highest_score) {
+                    highest_score = item_result.score;
+                    best = item_result;
+                    consecutive_plateau = 0;
+                } else {
+                    consecutive_plateau++;
+                }
+            } else if (working_count > 0) {
+                consecutive_plateau++;
             }
             
             push(state.results, item_result);
-            state.progress_pct = int(((i + 1) / double(total)) * 100.0);
+            state.progress_pct = int(((i + 1) / (1.0 * total)) * 70.0);
             save_fuzzer_state(state);
-        }
-        
-        // Assign badges
-        if (best) {
-            best.badge = "🏆 Best Match";
-            state.best_strategy = best;
-        }
-        
-        // Mark fastest and most stable
-        let min_ttfb = 999999;
-        let fastest = null;
-        for (let r in state.results) {
-            if (r.success && r.ttfb_ms > 0 && r.ttfb_ms < min_ttfb) {
-                min_ttfb = r.ttfb_ms;
-                fastest = r;
+
+            // Adaptive mode early plateau detection
+            if (mode == "adaptive" && consecutive_plateau >= 8 && working_count >= 2) {
+                break;
             }
         }
-        if (fastest && fastest.id != (best ? best.id : "")) {
+
+        // ── Stage 2: Verification (3 Repetitions on Top Candidates) ────────
+        let working_candidates = [];
+        for (let r in state.results) {
+            if (r && r.success === true) push(working_candidates, r);
+        }
+        sort(working_candidates, function(a, b) { return b.score - a.score; });
+
+        let avail_kb = fuzzer_runner.get_system_memory_kb();
+        let max_verify = (avail_kb < 32768) ? 3 : 5;
+        let num_verify = length(working_candidates) < max_verify ? length(working_candidates) : max_verify;
+
+        if (num_verify > 0) {
+            state.phase = "verification";
+            state.stage = 2;
+            save_fuzzer_state(state);
+
+            for (let v_idx = 0; v_idx < num_verify; v_idx++) {
+                let cand = working_candidates[v_idx];
+                state.current_strategy = {
+                    name: sprintf("[Stage 2 Verification %d/%d] %s", v_idx + 1, num_verify, cand.name),
+                    args: cand.args
+                };
+                state.progress_pct = 70 + int(((v_idx) / (1.0 * num_verify)) * 30.0);
+                save_fuzzer_state(state);
+
+                let rep_ttfb = [];
+                let rep_speed = [];
+                let rep_handshake = [];
+                let rep_bytes = [];
+                let rep_success = 0;
+
+                for (let rep = 0; rep < 3; rep++) {
+                    let p = null;
+                    try {
+                        p = run_probe(cand.engine || engine, cand.args, target, custom_url, state.job_id);
+                    } catch (e) {
+                        cleanup_temp_daemons(state.job_id);
+                    }
+                    if (p && p.success) {
+                        rep_success++;
+                        push(rep_ttfb, p.ttfb_ms);
+                        push(rep_speed, p.speed_kbps);
+                        push(rep_handshake, p.handshake_ms);
+                        push(rep_bytes, p.data_bytes || 0);
+                    }
+                }
+
+                let stability_pct = int((rep_success / 3.0) * 100);
+                cand.verified = true;
+                cand.reps = 3;
+                cand.stability_pct = stability_pct;
+
+                if (rep_success > 0) {
+                    let med_ttfb = fuzzer_runner.calculate_median(rep_ttfb);
+                    let jitter_ms = fuzzer_runner.calculate_jitter(rep_ttfb, med_ttfb);
+                    let p25_speed = fuzzer_runner.calculate_p25(rep_speed);
+                    let med_bytes = fuzzer_runner.calculate_median(rep_bytes);
+                    let data_verified = (med_bytes >= 32768);
+
+                    cand.ttfb_ms = med_ttfb;
+                    cand.jitter_ms = jitter_ms;
+                    cand.speed_kbps = fuzzer_runner.calculate_median(rep_speed);
+                    cand.p25_speed_kbps = p25_speed;
+                    cand.data_bytes = med_bytes;
+                    cand.data_verified = data_verified;
+
+                    let conf = "low";
+                    if (stability_pct == 100 && jitter_ms <= 80) conf = "high";
+                    else if (stability_pct >= 66 && jitter_ms <= 200) conf = "medium";
+                    cand.confidence = conf;
+
+                    // Composite Stage 2 Score: Stability (0-400) + Latency (0-300) + Speed p25 (0-150) + Data (20-50)
+                    cand.score = int((stability_pct * 4.0) + (max(0, 1000 - med_ttfb) * 0.3) + (min(500, int(p25_speed / 10.0)) * 0.3) + (data_verified ? 50 : 20));
+                } else {
+                    cand.score = 0;
+                    cand.success = false;
+                    cand.confidence = "low";
+                    cand.jitter_ms = 0;
+                    cand.p25_speed_kbps = 0;
+                    cand.error = "Failed all 3 verification repetitions (unstable connection)";
+                }
+
+                for (let r_i = 0; r_i < length(state.results); r_i++) {
+                    if (state.results[r_i].id == cand.id) {
+                        state.results[r_i] = cand;
+                        break;
+                    }
+                }
+                save_fuzzer_state(state);
+            }
+        }
+        
+        // ── Assign Badges based on verified results ────────────────────────
+        let best_verified = null;
+        let highest_vscore = -1;
+        for (let r in state.results) {
+            if (r.success && r.score > highest_vscore) {
+                highest_vscore = r.score;
+                best_verified = r;
+            }
+        }
+        if (best_verified) {
+            best_verified.badge = "🏆 Best Match";
+            state.best_strategy = best_verified;
+        }
+        
+        let min_ttfb = 999999;
+        let fastest = null;
+        let lowest_jitter = 999999;
+        let most_stable = null;
+
+        for (let r in state.results) {
+            if (r.success && r.stability_pct == 100) {
+                if (r.ttfb_ms > 0 && r.ttfb_ms < min_ttfb) {
+                    min_ttfb = r.ttfb_ms;
+                    fastest = r;
+                }
+                if (r.jitter_ms !== null && r.jitter_ms < lowest_jitter) {
+                    lowest_jitter = r.jitter_ms;
+                    most_stable = r;
+                }
+            }
+        }
+        if (fastest && fastest.id != (best_verified ? best_verified.id : "")) {
             fastest.badge = "⚡ Ultra Fast";
+        }
+        if (most_stable && most_stable.id != (best_verified ? best_verified.id : "") && (!fastest || most_stable.id != fastest.id)) {
+            most_stable.badge = "🛡️ Bulletproof";
         }
         
         state.running = false;
+        state.stage = 2;
+        state.phase = "finished";
         state.current_strategy = null;
+        state.progress_pct = 100;
         state.finished_at = clock()[0];
         save_fuzzer_state(state);
 
@@ -2758,14 +3134,16 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
             engine: engine,
             target: target,
             mode: mode,
-            best_strategy: best ? {
-                id: best.id,
-                name: best.name,
-                engine: best.engine,
-                args: best.args,
-                score: best.score,
-                ttfb_ms: best.ttfb_ms,
-                speed_kbps: best.speed_kbps
+            best_strategy: state.best_strategy ? {
+                id: state.best_strategy.id,
+                name: state.best_strategy.name,
+                engine: state.best_strategy.engine,
+                args: state.best_strategy.args,
+                score: state.best_strategy.score,
+                ttfb_ms: state.best_strategy.ttfb_ms,
+                speed_kbps: state.best_strategy.speed_kbps,
+                stability_pct: state.best_strategy.stability_pct,
+                confidence: state.best_strategy.confidence
             } : null,
             total_tested: total,
             working_count: working_count,
@@ -2774,6 +3152,7 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
         });
     } catch (err) {
         state.running = false;
+        state.phase = "finished";
         state.current_strategy = null;
         state.error = as_string(err);
         state.finished_at = clock()[0];
@@ -2809,6 +3188,7 @@ function stop_fuzzer() {
     
     state.running = false;
     state.aborted = true;
+    state.phase = "finished";
     state.current_strategy = null;
     state.error = "Stopped by user";
     state.finished_at = clock()[0];
@@ -2868,12 +3248,19 @@ function start_fuzzer(engine, target, custom_url, rule_section, custom_file, mod
         aborted: false,
         started_at: clock()[0],
         finished_at: 0,
-        dpi_detection: null
+        dpi_detection: null,
+        phase: "detecting_dpi",
+        stage: 1
     };
     save_fuzzer_state(state);
     
+    let fuzzer_bin = LIB_DIR + "/diagnostics/fuzzer.uc";
+    if (fs.stat(fuzzer_bin) == null) fuzzer_bin = "/usr/lib/tachyon/diagnostics/fuzzer.uc";
+
     let cmd = sprintf(
-        "ucode -L /usr/lib/tachyon /usr/lib/tachyon/diagnostics/fuzzer.uc worker %s %s %s %s %s %s %s",
+        "ucode -L %s %s worker %s %s %s %s %s %s %s",
+        shell_quote(LIB_DIR),
+        shell_quote(fuzzer_bin),
         shell_quote(engine || "zapret2"),
         shell_quote(target || "youtube_suite"),
         shell_quote(custom_url || ""),
