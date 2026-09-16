@@ -19,6 +19,8 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
   let currentState: Tachyon.FuzzerState | null = null;
   let resultFilter: 'all' | 'success' | 'fast' = 'all';
   let autoApplyEnabled = false;
+  let autoAppliedJobId: string | null = null;
+  let stoppedManually = false;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let currentDpiDetection: Tachyon.FuzzerDpiDetection | null = null;
 
@@ -1677,9 +1679,18 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           lastRenderedFinishedAt = finishedAt;
         }
 
-        if (!isRunning) {
-          // Auto-apply best strategy if enabled
-          if (autoApplyEnabled && currentState?.best_strategy) {
+        if (!isRunning && !stoppedManually) {
+          // Auto-apply best strategy only if benchmark completed 100%, without abort, and not already applied for this job
+          if (
+            autoApplyEnabled &&
+            currentState?.progress_pct === 100 &&
+            !currentState?.aborted &&
+            !currentState?.error &&
+            currentState?.best_strategy &&
+            currentState.job_id &&
+            autoAppliedJobId !== currentState.job_id
+          ) {
+            autoAppliedJobId = currentState.job_id;
             try {
               const applyRes =
                 await TachyonShellMethods.autoApplyFuzzerStrategy(
@@ -1803,6 +1814,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
 
   const handleToggleRun = async () => {
     if (isRunning) {
+      stoppedManually = true;
       (startBtn as HTMLButtonElement).disabled = true;
       startBtn.innerText = _('⏳ Stopping...');
       await TachyonShellMethods.stopFuzzer();
@@ -1813,6 +1825,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       return;
     }
 
+    stoppedManually = false;
     (startBtn as HTMLButtonElement).disabled = true;
     startBtn.innerText = _('🛑 Stop Benchmark');
 
@@ -1932,6 +1945,7 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
         activeTab = 'benchmark';
         updateTabVisibility();
 
+        stoppedManually = false;
         (startBtn as HTMLButtonElement).disabled = true;
         startBtn.innerText = _('🛑 Stop Benchmark');
 
@@ -1940,6 +1954,8 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
           selectedTarget,
           customUrl,
           selectedRuleSection,
+          res.data.custom_file,
+          'ai_custom',
         );
 
         if (startRes.success) {

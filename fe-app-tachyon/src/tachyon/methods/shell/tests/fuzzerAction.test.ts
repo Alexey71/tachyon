@@ -183,6 +183,42 @@ describe('TachyonShellMethods Fuzzer Actions', () => {
     }
   });
 
+  it('starts fuzzer with custom_file from AI synthesis', async () => {
+    mocks.executeShellCommand.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        success: true,
+        job_id: 'fuzz_ai_42',
+        engine: 'zapret2',
+        target: 'youtube',
+      }),
+      stderr: '',
+      code: 0,
+    });
+
+    const res = await TachyonShellMethods.startFuzzer(
+      'zapret2',
+      'youtube',
+      '',
+      'rule_1',
+      '/var/run/tachyon/fuzzer_ai_strategies.json',
+      'ai_custom',
+    );
+    expect(res.success).toBe(true);
+    expect(mocks.executeShellCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        args: [
+          'fuzzer_start',
+          'zapret2',
+          'youtube',
+          '',
+          'rule_1',
+          '/var/run/tachyon/fuzzer_ai_strategies.json',
+          'ai_custom',
+        ],
+      }),
+    );
+  });
+
   it('gets fuzzer patterns configuration', async () => {
     mocks.executeShellCommand.mockResolvedValueOnce({
       stdout: JSON.stringify({

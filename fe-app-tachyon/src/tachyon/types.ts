@@ -1120,6 +1120,7 @@ export namespace Tachyon {
     results: FuzzerStrategyResult[];
     best_strategy?: FuzzerStrategyResult | null;
     error?: string | null;
+    aborted?: boolean;
     started_at: number;
     finished_at: number;
     dpi_detection?: FuzzerDpiDetection | null;
@@ -1147,6 +1148,7 @@ export namespace Tachyon {
     target?: string;
     target_url?: string;
     analysis?: string;
+    custom_file?: string;
     strategies?: FuzzerStrategyItem[];
     error?: string;
   }

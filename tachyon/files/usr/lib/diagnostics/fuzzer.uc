@@ -4,6 +4,7 @@ let fs = require("fs");
 let common = require("core.common");
 let uci_core = require("core.uci");
 let rag = require("diagnostics.rag");
+let fuzzer_runner = require("diagnostics.fuzzer_runner");
 
 let as_string = common.as_string;
 let read_json_file = common.read_json_file;
@@ -22,12 +23,25 @@ const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const STATE_DIR = getenv("TACHYON_FUZZER_STATE_DIR") || "/var/run/tachyon";
 const STATE_FILE = STATE_DIR + "/fuzzer-state.json";
 const PID_FILE = STATE_DIR + "/fuzzer-worker.pid";
+const JOBS_DIR = STATE_DIR + "/fuzzer";
 const HISTORY_FILE = "/etc/tachyon/fuzzer_history.json";
 const BYEDPI_PORT = 11089;
 const NFQUEUE_QNUM_ZAPRET = 298;
 const NFQUEUE_QNUM_ZAPRET2 = 299;
 const FUZZER_FWMARK = "0x40000000";
 const FUZZER_OUTBOUND_MARK = getenv("NFT_OUTBOUND_MARK") || "0x08000000";
+
+function get_job_dir(job_id) {
+    if (!job_id || job_id == "") return null;
+    return JOBS_DIR + "/" + job_id;
+}
+
+function ensure_job_dir(job_id) {
+    if (!job_id || job_id == "") return null;
+    let d = JOBS_DIR + "/" + job_id;
+    system(sprintf("mkdir -p %s 2>/dev/null", shell_quote(d)));
+    return d;
+}
 
 function resolve_binary(paths) {
     for (let p in paths) {
@@ -119,10 +133,16 @@ function get_timeout_prefix(sec) {
     return _has_timeout ? sprintf("timeout %d ", sec) : "";
 }
 
-function wrap_cmd_timeout(cmd, sec) {
+function wrap_cmd_timeout(cmd, sec, pid_file) {
     sec = sec || 8;
     if (_has_timeout === null) {
         _has_timeout = (system("command -v timeout >/dev/null 2>&1") == 0);
+    }
+    if (pid_file && pid_file != "") {
+        if (_has_timeout) {
+            return sprintf("sh -c 'echo $$ > %s; exec timeout -s KILL %d %s'", shell_quote(pid_file), sec, cmd);
+        }
+        return sprintf("sh -c 'echo $$ > %s; ( %s ) & p=$!; ( sleep %d; kill -9 $p 2>/dev/null ) & w=$!; wait $p 2>/dev/null; r=$?; kill -9 $w 2>/dev/null; wait $w 2>/dev/null; [ $r -ne 0 ] && printf \"\\t%%d\\n\" $r; exit $r'", shell_quote(pid_file), cmd, sec);
     }
     if (_has_timeout) {
         return sprintf("timeout -s KILL %d %s", sec, cmd);
@@ -157,12 +177,14 @@ function get_resolved_host_flags(url) {
     if (!m || !m[1]) return "";
     let host = m[1];
     if (match(host, /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) || index(host, ":") >= 0) return "";
+    if (!fuzzer_runner.is_valid_hostname(host)) return "";
     if (exists(_fuzzer_host_cache, host))
         return _fuzzer_host_cache[host];
     
+    let safe_host = shell_quote(host);
     let ip = null;
     // 1. Try Cloudflare DoH JSON
-    let p = fs.popen(sprintf("curl -s -m 3 --connect-timeout 2 -H 'accept: application/dns-json' 'https://1.1.1.1/dns-query?name=%s&type=A'", host), "r");
+    let p = fs.popen(sprintf("curl -s -m 3 --connect-timeout 2 -H 'accept: application/dns-json' 'https://1.1.1.1/dns-query?name=%s&type=A'", safe_host), "r");
     let out = p ? p.read("all") : "";
     if (p) p.close();
     if (out && out != "") {
@@ -180,7 +202,7 @@ function get_resolved_host_flags(url) {
     }
     // 2. Try Google DoH JSON if Cloudflare failed
     if (!ip) {
-        let gp = fs.popen(sprintf("curl -s -m 3 --connect-timeout 2 -H 'accept: application/dns-json' 'https://8.8.8.8/dns-query?name=%s&type=A'", host), "r");
+        let gp = fs.popen(sprintf("curl -s -m 3 --connect-timeout 2 -H 'accept: application/dns-json' 'https://8.8.8.8/dns-query?name=%s&type=A'", safe_host), "r");
         let gout = gp ? gp.read("all") : "";
         if (gp) gp.close();
         if (gout && gout != "") {
@@ -199,7 +221,7 @@ function get_resolved_host_flags(url) {
     }
     // 3. Fallback: nslookup via 1.1.1.1 or system
     if (!ip) {
-        let np = fs.popen(sprintf("nslookup %s 1.1.1.1 2>/dev/null", host), "r");
+        let np = fs.popen(sprintf("nslookup %s 1.1.1.1 2>/dev/null", safe_host), "r");
         let nout = np ? np.read("all") : "";
         if (np) np.close();
         if (nout && nout != "") {
@@ -316,27 +338,7 @@ function setup_fuzzer_direct_nftables(qnum, is_udp) {
 }
 
 function validate_strategy_args(engine, args_val) {
-    args_val = trim(as_string(args_val));
-    if (args_val == "") return false;
-    engine = lc(as_string(engine));
-    try {
-        if (engine == "zapret2") {
-            let val = require("providers.zapret2.validator");
-            let res = val.validate_strategy("nfqws2", args_val, "");
-            return res ? res.valid == true : true;
-        } else if (engine == "zapret") {
-            let val = require("providers.zapret.validator");
-            let res = val.validate_strategy("nfqws", args_val, "");
-            return res ? res.valid == true : true;
-        } else if (engine == "byedpi") {
-            let val = require("providers.byedpi.validator");
-            let res = val.validate_strategy(args_val, "");
-            return res ? res.valid == true : true;
-        }
-    } catch (e) {
-        return true;
-    }
-    return true;
+    return fuzzer_runner.validate_strategy_args(engine, args_val);
 }
 
 const PATTERNS_FILE = "/etc/tachyon/fuzzer_patterns.json";
@@ -1583,6 +1585,12 @@ function ensure_state_dir() {
 function save_fuzzer_state(state) {
     ensure_state_dir();
     common.write_json_file(STATE_FILE, state);
+    if (state && state.job_id) {
+        let job_dir = get_job_dir(state.job_id);
+        if (job_dir) {
+            common.write_json_file(job_dir + "/state.json", state);
+        }
+    }
 }
 
 function safe_json_parse(str) {
@@ -1839,6 +1847,18 @@ function get_fuzzer_state() {
                 is_alive = (system(sprintf("kill -0 %s >/dev/null 2>&1", pid)) == 0);
             }
         }
+        if (!is_alive && state.job_id) {
+            let j_dir = get_job_dir(state.job_id);
+            if (j_dir) {
+                let j_pid_str = fs.readfile(j_dir + "/worker.pid");
+                if (j_pid_str) {
+                    let j_pid = trim(as_string(j_pid_str));
+                    if (j_pid != "" && match(j_pid, /^[0-9]+$/) != null) {
+                        is_alive = (system(sprintf("kill -0 %s >/dev/null 2>&1", j_pid)) == 0);
+                    }
+                }
+            }
+        }
         if (!is_alive) {
             state.running = false;
             if (!state.error && state.progress_pct < 100) {
@@ -1854,24 +1874,21 @@ function get_fuzzer_state() {
 }
 
 function kill_pid_file(path) {
-    let pid_str = fs.readfile(path);
-    if (pid_str) {
-        let pid = trim(as_string(pid_str));
-        if (pid != "" && match(pid, /^[0-9]+$/) != null) {
-            system(sprintf("kill %s >/dev/null 2>&1 || kill -9 %s >/dev/null 2>&1", pid, pid));
-            for (let k = 0; k < 3; k++) {
-                if (system(sprintf("kill -0 %s >/dev/null 2>&1", pid)) != 0) break;
-                system("sleep 0.1");
-            }
-        }
-        try { fs.unlink(path); } catch (e) {}
-    }
+    fuzzer_runner.kill_pid_file(path);
 }
 
-function cleanup_temp_daemons() {
+function cleanup_temp_daemons(job_id) {
+    if (job_id) {
+        let job_dir = get_job_dir(job_id);
+        if (job_dir) {
+            kill_pid_file(job_dir + "/engine.pid");
+            kill_pid_file(job_dir + "/probe.pid");
+        }
+    }
     kill_pid_file(STATE_DIR + "/fuzzer_byedpi.pid");
     kill_pid_file(STATE_DIR + "/fuzzer_zapret.pid");
     kill_pid_file(STATE_DIR + "/fuzzer_zapret2.pid");
+    kill_pid_file(STATE_DIR + "/fuzzer_probe.pid");
 
     // Directly parse /proc/net/netfilter/nfnetlink_queue to terminate any process bound to fuzzer queues
     for (let w = 0; w < 5; w++) {
@@ -1915,8 +1932,7 @@ function cleanup_temp_daemons() {
     // Ensure ByeDPI port is released
     system(sprintf("fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
 
-    // Terminate any leftover curl probe processes
-    system("killall -9 curl 2>/dev/null || true");
+    // Notice: killall -9 curl removed to avoid killing external curl operations
 
     system("nft delete table inet tachyon_fuzzer >/dev/null 2>&1");
     try { fs.unlink(STATE_DIR + "/fuzzer_daemon_err.log"); } catch (e) {}
@@ -2247,8 +2263,11 @@ function rerank_strategies_by_dpi(strategies, dpi_type) {
     return result;
 }
 
-function run_probe(engine, args_str, target_key, custom_url) {
-    cleanup_temp_daemons();
+function run_probe(engine, args_str, target_key, custom_url, job_id) {
+    cleanup_temp_daemons(job_id);
+    let job_dir = get_job_dir(job_id);
+    let probe_pid_path = job_dir ? (job_dir + "/probe.pid") : (STATE_DIR + "/fuzzer_probe.pid");
+    try { fs.unlink(probe_pid_path); } catch (e) {}
     
     let urls_list = resolve_target_urls_list(target_key, custom_url);
     let total_urls = length(urls_list);
@@ -2267,6 +2286,12 @@ function run_probe(engine, args_str, target_key, custom_url) {
     engine = lc(as_string(engine));
     let is_udp = index(args_str, "--filter-udp") >= 0 || index(args_str, "--dpi-desync-any-protocol") >= 0 || target_key == "quic_http3";
     
+    let tok_res = fuzzer_runner.tokenize_strategy_args(args_str);
+    if (!tok_res.valid) {
+        result.error = "Invalid strategy arguments: " + tok_res.error;
+        return result;
+    }
+
     if (engine == "byedpi") {
         let bin = get_byedpi_bin();
         if (!bin) {
@@ -2274,12 +2299,13 @@ function run_probe(engine, args_str, target_key, custom_url) {
             return result;
         }
         
-        let pid_path = STATE_DIR + "/fuzzer_byedpi.pid";
-        let stderr_log = STATE_DIR + "/fuzzer_daemon_err.log";
+        let pid_path = job_dir ? (job_dir + "/engine.pid") : (STATE_DIR + "/fuzzer_byedpi.pid");
+        let stderr_log = job_dir ? (job_dir + "/daemon_err.log") : (STATE_DIR + "/fuzzer_daemon_err.log");
         try { fs.unlink(pid_path); } catch (e) {}
         try { fs.unlink(stderr_log); } catch (e) {}
         
-        let spawn_cmd = sprintf("cd /tmp && %s -i 127.0.0.1 -p %d %s 2>%s", bin, BYEDPI_PORT, args_str, shell_quote(stderr_log));
+        let argv = fuzzer_runner.build_byedpi_argv(bin, BYEDPI_PORT, tok_res.tokens);
+        let spawn_cmd = "cd /tmp && " + common.command_from_args(argv) + " 2>" + shell_quote(stderr_log);
         system(common.background_command_with_pid(spawn_cmd, ">/dev/null", ">" + shell_quote(pid_path)));
         
         let pid_running = false;
@@ -2308,7 +2334,7 @@ function run_probe(engine, args_str, target_key, custom_url) {
             } else {
                 result.error = "ByeDPI daemon failed to start (invalid arguments)";
             }
-            cleanup_temp_daemons();
+            cleanup_temp_daemons(job_id);
             return result;
         }
         
@@ -2333,11 +2359,13 @@ function run_probe(engine, args_str, target_key, custom_url) {
                     BYEDPI_PORT,
                     shell_quote(target_item.url)
                 ),
-                8
+                8,
+                probe_pid_path
             );
             let pipe = fs.popen(curl_cmd, "r");
             let output = pipe ? pipe.read("all") : "";
             if (pipe) pipe.close();
+            try { fs.unlink(probe_pid_path); } catch (e) {}
             
             let single_res = parse_curl_output(output, {});
             single_res.target_name = target_item.name;
@@ -2362,7 +2390,7 @@ function run_probe(engine, args_str, target_key, custom_url) {
             }
         }
         
-        cleanup_temp_daemons();
+        cleanup_temp_daemons(job_id);
         
         if (passed_count == total_urls) {
             result.success = true;
@@ -2391,12 +2419,12 @@ function run_probe(engine, args_str, target_key, custom_url) {
     }
     
     if (engine == "zapret" || engine == "zapret2") {
-        cleanup_temp_daemons();
+        cleanup_temp_daemons(job_id);
         let is_z2 = engine == "zapret2";
         let bin = is_z2 ? get_zapret2_bin() : get_zapret_bin();
         let qnum = is_z2 ? NFQUEUE_QNUM_ZAPRET2 : NFQUEUE_QNUM_ZAPRET;
-        let pid_path = is_z2 ? (STATE_DIR + "/fuzzer_zapret2.pid") : (STATE_DIR + "/fuzzer_zapret.pid");
-        let stderr_log = STATE_DIR + "/fuzzer_daemon_err.log";
+        let pid_path = job_dir ? (job_dir + "/engine.pid") : (is_z2 ? (STATE_DIR + "/fuzzer_zapret2.pid") : (STATE_DIR + "/fuzzer_zapret.pid"));
+        let stderr_log = job_dir ? (job_dir + "/daemon_err.log") : (STATE_DIR + "/fuzzer_daemon_err.log");
         try { fs.unlink(pid_path); } catch (e) {}
         try { fs.unlink(stderr_log); } catch (e) {}
         
@@ -2429,7 +2457,8 @@ function run_probe(engine, args_str, target_key, custom_url) {
                 fwmark_flag = sprintf("--dpi-desync-fwmark=%s ", FUZZER_FWMARK);
         }
         
-        let spawn_cmd = sprintf("cd /tmp && %s --qnum=%d %s%s%s%s%s --pidfile=%s --daemon >%s 2>&1", bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, args_str, pid_path, shell_quote(stderr_log));
+        let argv = fuzzer_runner.build_zapret_argv(bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, tok_res.tokens, pid_path);
+        let spawn_cmd = "cd /tmp && " + common.command_from_args(argv) + " >" + shell_quote(stderr_log) + " 2>&1";
         system(common.background_command(spawn_cmd));
         
         let pid_running = false;
@@ -2468,7 +2497,7 @@ function run_probe(engine, args_str, target_key, custom_url) {
             } else {
                 result.error = sprintf("Daemon %s failed to start (invalid arguments or missing Lua library)", is_z2 ? "nfqws2" : "nfqws");
             }
-            cleanup_temp_daemons();
+            cleanup_temp_daemons(job_id);
             return result;
         }
         
@@ -2494,11 +2523,13 @@ function run_probe(engine, args_str, target_key, custom_url) {
                     target_flags,
                     shell_quote(target_item.url)
                 ),
-                8
+                8,
+                probe_pid_path
             );
             let pipe = fs.popen(curl_cmd, "r");
             let output = pipe ? pipe.read("all") : "";
             if (pipe) pipe.close();
+            try { fs.unlink(probe_pid_path); } catch (e) {}
             
             let single_res = parse_curl_output(output, {});
             single_res.target_name = target_item.name;
@@ -2523,7 +2554,7 @@ function run_probe(engine, args_str, target_key, custom_url) {
             }
         }
         
-        cleanup_temp_daemons();
+        cleanup_temp_daemons(job_id);
         
         if (passed_count == total_urls) {
             result.success = true;
@@ -2576,11 +2607,21 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
             results: [],
             best_strategy: null,
             error: null,
+            aborted: false,
             started_at: clock()[0],
             finished_at: 0,
             dpi_detection: null
         };
         save_fuzzer_state(state);
+    }
+
+    if (custom_url && custom_url != "" && !fuzzer_runner.is_valid_url(custom_url)) {
+        state.running = false;
+        state.error = "Invalid custom URL: malformed or forbidden characters";
+        state.finished_at = clock()[0];
+        save_fuzzer_state(state);
+        cleanup_temp_daemons(state.job_id);
+        return;
     }
 
     // ── Pre-fuzz DPI detection ────────────────────────────────────────────
@@ -2594,6 +2635,23 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
     }
     if (!strategies || type(strategies) != "array" || length(strategies) == 0) {
         strategies = get_strategies_for_engine(engine, mode);
+    }
+
+    // Fail-closed re-validation of all candidate strategies before benchmarking
+    let validated_strategies = [];
+    for (let s in strategies) {
+        if (s && s.args && fuzzer_runner.validate_strategy_args(s.engine || engine, s.args)) {
+            push(validated_strategies, s);
+        }
+    }
+    strategies = validated_strategies;
+    if (length(strategies) == 0) {
+        state.running = false;
+        state.error = "No valid strategies found to benchmark";
+        state.finished_at = clock()[0];
+        save_fuzzer_state(state);
+        cleanup_temp_daemons(state.job_id);
+        return;
     }
 
     // Rerank strategies based on detected DPI type
@@ -2616,9 +2674,9 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
             save_fuzzer_state(state);
             let probe = null;
             try {
-                probe = run_probe(strat.engine || engine, strat.args, target, custom_url);
+                probe = run_probe(strat.engine || engine, strat.args, target, custom_url, state.job_id);
             } catch (err) {
-                cleanup_temp_daemons();
+                cleanup_temp_daemons(state.job_id);
                 probe = {
                     success: false,
                     http_code: 0,
@@ -2736,15 +2794,21 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
         save_fuzzer_state(state);
     }
     
-    cleanup_temp_daemons();
+    cleanup_temp_daemons(state.job_id);
 }
 
 function stop_fuzzer() {
-    kill_pid_file(PID_FILE);
-    cleanup_temp_daemons();
-    
     let state = get_fuzzer_state();
+    let job_id = state ? state.job_id : null;
+    let job_dir = get_job_dir(job_id);
+    if (job_dir) {
+        kill_pid_file(job_dir + "/worker.pid");
+    }
+    kill_pid_file(PID_FILE);
+    cleanup_temp_daemons(job_id);
+    
     state.running = false;
+    state.aborted = true;
     state.current_strategy = null;
     state.error = "Stopped by user";
     state.finished_at = clock()[0];
@@ -2774,10 +2838,15 @@ function start_fuzzer(engine, target, custom_url, rule_section, custom_file, mod
         system("sleep 0.25");
     }
     
+    if (custom_url && custom_url != "" && !fuzzer_runner.is_valid_url(custom_url)) {
+        print(sprintf("%J\n", { success: false, error: "Invalid custom URL: malformed or forbidden characters" }));
+        return;
+    }
+
     ensure_state_dir();
-    cleanup_temp_daemons();
-    
     let job_id = sprintf("fuzz_%d", clock()[0]);
+    ensure_job_dir(job_id);
+    cleanup_temp_daemons(job_id);
 
     // Immediately write starting state to prevent race conditions during frontend polling
     let state = {
@@ -2796,6 +2865,7 @@ function start_fuzzer(engine, target, custom_url, rule_section, custom_file, mod
         results: [],
         best_strategy: null,
         error: null,
+        aborted: false,
         started_at: clock()[0],
         finished_at: 0,
         dpi_detection: null
@@ -2813,7 +2883,8 @@ function start_fuzzer(engine, target, custom_url, rule_section, custom_file, mod
         shell_quote(job_id)
     );
     
-    system(common.background_command_with_pid(cmd, ">/dev/null", ">" + shell_quote(PID_FILE)));
+    let job_worker_pid = get_job_dir(job_id) + "/worker.pid";
+    system(common.background_command_with_pid(cmd, ">/dev/null", ">" + shell_quote(PID_FILE) + " && cp " + shell_quote(PID_FILE) + " " + shell_quote(job_worker_pid) + " 2>/dev/null"));
     
     print(sprintf("%J\n", { success: true, job_id, engine: engine || "zapret2", target: target || "youtube_suite", mode: mode || "presets" }));
 }
@@ -2847,6 +2918,11 @@ function apply_strategy(engine, args_val, target_rule) {
         return;
     }
     
+    if (!fuzzer_runner.validate_strategy_args(engine, args_val)) {
+        print(sprintf("%J\n", { success: false, error: "Cannot apply invalid or insecure strategy arguments" }));
+        return;
+    }
+
     args_val = normalize_strategy_for_uci(engine, args_val);
     
     let uci = uci_core.cursor();
@@ -2890,6 +2966,14 @@ function apply_strategy(engine, args_val, target_rule) {
 
 function auto_apply_best(target_rule) {
     let state = get_fuzzer_state();
+    if (state.aborted) {
+        print(sprintf("%J\n", { success: false, error: "Cannot auto-apply: benchmark was stopped manually" }));
+        return;
+    }
+    if (state.progress_pct < 100) {
+        print(sprintf("%J\n", { success: false, error: "Cannot auto-apply: benchmark did not complete 100%" }));
+        return;
+    }
     if (!state.best_strategy || state.best_strategy.score <= 0) {
         print(sprintf("%J\n", { success: false, error: "No winning strategy found — run a benchmark first" }));
         return;

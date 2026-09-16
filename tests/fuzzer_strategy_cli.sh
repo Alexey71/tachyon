@@ -173,5 +173,64 @@ echo "$lua_res" | grep -q 'zapret-lib.lua' || fail "missing zapret-lib.lua in re
 echo "$lua_res" | grep -q 'zapret-antidpi.lua' || fail "missing zapret-antidpi.lua in resolved lua flags"
 echo "$lua_res" | grep -q 'zapret-auto.lua' || fail "missing zapret-auto.lua in resolved lua flags"
 
-printf 'PASS: fuzzer_strategy_cli\n'
+# 7. Check hardened runner, fail-closed validation, and absence of global killall curl
+grep -q 'killall -9 curl' "$FUZZER" && fail "killall -9 curl must not be present in fuzzer.uc" || true
 
+ucode -L "$TACHYON_LIB" -e '
+let r = require("diagnostics.fuzzer_runner");
+
+// 1. Fail-closed: unknown engine rejected
+if (r.validate_strategy_args("unknown_engine", "--split-pos=1") !== false) {
+    warn("Failed: unknown engine was not rejected\n");
+    exit(1);
+}
+
+// 2. Fail-closed: shell metacharacters rejected
+if (r.validate_strategy_args("zapret2", "--split-pos=1; rm -rf /") !== false) {
+    warn("Failed: semicolon command injection was not rejected\n");
+    exit(1);
+}
+if (r.validate_strategy_args("byedpi", "-s1 | reboot") !== false) {
+    warn("Failed: pipe command injection was not rejected\n");
+    exit(1);
+}
+if (r.validate_strategy_args("zapret", "--dpi-desync=split2 `reboot`") !== false) {
+    warn("Failed: backtick command injection was not rejected\n");
+    exit(1);
+}
+if (r.validate_strategy_args("zapret2", "--dpi-desync-split-pos=$(cat /etc/passwd)") !== false) {
+    warn("Failed: command substitution was not rejected\n");
+    exit(1);
+}
+
+// 3. Hostname and URL validation
+if (!r.is_valid_hostname("youtube.com") || !r.is_valid_hostname("googlevideo.com") || !r.is_valid_hostname("1.1.1.1")) {
+    warn("Failed: valid hostname was rejected\n");
+    exit(1);
+}
+if (r.is_valid_hostname("evil.com;rm") || r.is_valid_hostname("evil.com`id`") || r.is_valid_hostname("")) {
+    warn("Failed: malicious hostname was accepted\n");
+    exit(1);
+}
+if (!r.is_valid_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")) {
+    warn("Failed: valid URL was rejected\n");
+    exit(1);
+}
+if (r.is_valid_url("http://evil.com/`rm -rf /`") || r.is_valid_url("https://evil.com/;reboot") || r.is_valid_url("")) {
+    warn("Failed: malicious URL was accepted\n");
+    exit(1);
+}
+
+// 4. Tokenizer limit checks
+let huge = "";
+for (let i = 0; i < 70; i++) huge += sprintf("--split-pos=%d ", i);
+let tok = r.tokenize_strategy_args(huge);
+if (tok.valid !== false) {
+    warn("Failed: token limit > 64 was not rejected\n");
+    exit(1);
+}
+
+print("Hardened runner and fail-closed validation checks passed.\n");
+'
+
+printf 'PASS: fuzzer_strategy_cli\n'

@@ -13020,6 +13020,8 @@ function renderStrategyFuzzerModal(ruleNames = []) {
   let currentState = null;
   let resultFilter = "all";
   let autoApplyEnabled = false;
+  let autoAppliedJobId = null;
+  let stoppedManually = false;
   let currentDpiDetection = null;
   let patternsConfig = {
     zapret2: {
@@ -14459,8 +14461,9 @@ function renderStrategyFuzzerModal(ruleNames = []) {
           lastRenderedCount = resultCount;
           lastRenderedFinishedAt = finishedAt;
         }
-        if (!isRunning) {
-          if (autoApplyEnabled && currentState?.best_strategy) {
+        if (!isRunning && !stoppedManually) {
+          if (autoApplyEnabled && currentState?.progress_pct === 100 && !currentState?.aborted && !currentState?.error && currentState?.best_strategy && currentState.job_id && autoAppliedJobId !== currentState.job_id) {
+            autoAppliedJobId = currentState.job_id;
             try {
               const applyRes = await TachyonShellMethods.autoApplyFuzzerStrategy(
                 selectedRuleSection || void 0
@@ -14567,6 +14570,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
   };
   const handleToggleRun = async () => {
     if (isRunning) {
+      stoppedManually = true;
       startBtn.disabled = true;
       startBtn.innerText = _("⏳ Stopping...");
       await TachyonShellMethods.stopFuzzer();
@@ -14576,6 +14580,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       await pollStatus();
       return;
     }
+    stoppedManually = false;
     startBtn.disabled = true;
     startBtn.innerText = _("🛑 Stop Benchmark");
     progressContainer.style.display = "flex";
@@ -14679,13 +14684,16 @@ function renderStrategyFuzzerModal(ruleNames = []) {
         }
         activeTab2 = "benchmark";
         updateTabVisibility();
+        stoppedManually = false;
         startBtn.disabled = true;
         startBtn.innerText = _("🛑 Stop Benchmark");
         const startRes = await TachyonShellMethods.startFuzzer(
           selectedEngine,
           selectedTarget,
           customUrl,
-          selectedRuleSection
+          selectedRuleSection,
+          res.data.custom_file,
+          "ai_custom"
         );
         if (startRes.success) {
           isRunning = true;
