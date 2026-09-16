@@ -135,7 +135,11 @@ function get_zapret2_lua_flags(args_str) {
         LIB_DIR + "/providers/zapret2/lua",
         "/usr/lib/tachyon/providers/zapret2/lua",
         "/opt/zapret2/lua",
+        "/opt/zapret2/files/lua",
+        "/opt/zapret2/share/zapret/lua",
+        "/opt/zapret2/init.d/sysv/lua",
         "/opt/zapret/lua",
+        "/opt/zapret/files/lua",
         "/usr/share/zapret2/lua",
         "/usr/share/zapret/lua",
         "/etc/zapret2/lua",
@@ -2645,6 +2649,11 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
         if (is_z2) {
             lua_init_flags = get_zapret2_lua_flags(args_str);
             blob_flags = resolve_zapret2_blobs(args_str);
+            if (index(args_str, "--lua-desync") >= 0 && lua_init_flags == "" && index(args_str, "--lua-init") < 0) {
+                result.error = "Missing Zapret2 Lua library: zapret-antidpi.lua not found in /opt/zapret2/lua or system paths";
+                cleanup_temp_daemons(job_id);
+                return result;
+            }
         }
         
         let filter_prefix = "";
@@ -2664,9 +2673,9 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                 fwmark_flag = sprintf("--dpi-desync-fwmark=%s ", FUZZER_FWMARK);
         }
         
-        let argv = fuzzer_runner.build_zapret_argv(bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, tok_res.tokens, pid_path);
-        let spawn_cmd = "cd /tmp && " + common.command_from_args(argv) + " >" + shell_quote(stderr_log) + " 2>&1";
-        system(common.background_command(spawn_cmd));
+        let argv = fuzzer_runner.build_zapret_argv(bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, tok_res.tokens);
+        let spawn_cmd = "cd /tmp && " + common.command_from_args(argv) + " 2>" + shell_quote(stderr_log);
+        system(common.background_command_with_pid(spawn_cmd, ">/dev/null", ">" + shell_quote(pid_path)));
         
         let pid_running = false;
         for (let wait_i = 0; wait_i < 15; wait_i++) {

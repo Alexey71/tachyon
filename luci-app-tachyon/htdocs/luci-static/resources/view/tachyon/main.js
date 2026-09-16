@@ -4489,7 +4489,7 @@ var CLASH_API_FETCH_TIMEOUT_MS = 2500;
 var directClashApiFailedAt = 0;
 var DIRECT_CLASH_API_COOLDOWN_MS = 1e4;
 function getDisplayName(section) {
-  return section.label || section[".name"];
+  return section.label || section.name || section[".name"];
 }
 function getSettingsSection(configSections) {
   return configSections.find((section) => section[".type"] === "settings");
@@ -5676,7 +5676,7 @@ async function getDashboardSections(options = {}) {
           outbounds: [
             {
               code: outbound?.code || sectionName,
-              displayName: section.label || section.interface || customName || defaultLabel,
+              displayName: section.label || section.name || section.interface || customName || defaultLabel,
               latency: outbound?.value?.history?.length ? outbound.value.history[0].delay > 0 ? outbound.value.history[0].delay : -1 : 0,
               type: ACTION_DISPLAY_NAMES[sectionAction || ""] || outbound?.value?.type || (sectionAction || "").toUpperCase(),
               selected: true,
@@ -13023,6 +13023,9 @@ function renderAiChatModal() {
 
 // src/tachyon/tabs/diagnostic/partials/renderStrategyFuzzerModal.ts
 function renderStrategyFuzzerModal(ruleNames = []) {
+  const normalizedRules = ruleNames.map(
+    (r) => typeof r === "string" ? { id: r, label: r } : r
+  );
   let pollingInterval = null;
   let isPolling = false;
   let activeTab2 = "benchmark";
@@ -13263,7 +13266,9 @@ function renderStrategyFuzzerModal(ruleNames = []) {
     { class: "cbi-input-select", style: "width: 100%;" },
     [
       E("option", { value: "", selected: true }, _("Provider Global Default")),
-      ...ruleNames.map((r) => E("option", { value: r }, `${_("Rule:")} ${r}`))
+      ...normalizedRules.map(
+        (r) => E("option", { value: r.id }, `${_("Rule:")} ${r.label}`)
+      )
     ]
   );
   ruleSelect.addEventListener("change", () => {
@@ -14773,19 +14778,20 @@ function renderStrategyFuzzerModal(ruleNames = []) {
       selectedRuleSection
     );
     if (res.success) {
+      const targetLabel = normalizedRules.find((r) => r.id === selectedRuleSection)?.label || selectedRuleSection || _("Global Default");
       if (typeof ui?.addNotification === "function") {
         ui.addNotification(
           _("Tachyon"),
           E(
             "p",
             {},
-            `${_("Strategy applied successfully and service reloaded!")} (${item.name} -> ${selectedRuleSection || _("Global Default")})`
+            `${_("Strategy applied successfully and service reloaded!")} (${item.name} -> ${targetLabel})`
           ),
           "info"
         );
       } else {
         showToast(
-          `${_("Applied")} "${item.name}" -> ${selectedRuleSection || _("Global Default")}`,
+          `${_("Applied")} "${item.name}" -> ${targetLabel}`,
           "success"
         );
       }
@@ -17620,8 +17626,11 @@ function handleOpenLeakCheck() {
 }
 function handleOpenStrategyFuzzer() {
   getConfigSections().then((sections) => {
-    const ruleNames = sections.filter((s) => s[".type"] === "section" || s[".type"] === "rule").map((s) => s.name || s[".name"]).filter((n) => Boolean(n));
-    renderStrategyFuzzerModal(ruleNames);
+    const ruleSections = sections.filter((s) => s[".type"] === "section" || s[".type"] === "rule").map((s) => ({
+      id: s[".name"],
+      label: typeof s.label === "string" && s.label.trim() || typeof s.name === "string" && s.name.trim() || s[".name"]
+    })).filter((r) => Boolean(r.id));
+    renderStrategyFuzzerModal(ruleSections);
   }).catch(() => {
     renderStrategyFuzzerModal([]);
   });
@@ -18642,7 +18651,7 @@ function formatEndpoint(address, port) {
   return `${normalizedAddress}:${normalizedPort}`;
 }
 function getDisplayName2(section) {
-  return normalizeString(section.label) || section[".name"];
+  return normalizeString(section.label) || normalizeString(section.name) || section[".name"];
 }
 function buildRouteDisplayNames(sections) {
   const map = {
@@ -22646,14 +22655,45 @@ function renderComponentCard(card) {
   cardChildren.push(actionsContainer);
   return E("div", { class: "tachyon_updates-page__component" }, cardChildren);
 }
+function isComponentCardVisible(card, systemInfo) {
+  const component = card.component;
+  if (component === "tachyon" || component === "sing_box") {
+    return true;
+  }
+  if (component === "fptn") {
+    const fptnInstalled = Boolean(systemInfo.fptn_installed);
+    const fptnSupported = systemInfo.fptn_supported === void 0 ? true : Boolean(systemInfo.fptn_supported);
+    if (!fptnInstalled && !fptnSupported) {
+      return false;
+    }
+  }
+  const optKey = `show_component_${component}`;
+  const val = systemInfo[optKey];
+  if (val === void 0 || val === null || val === "") {
+    return true;
+  }
+  return String(val) === "1" || val === 1;
+}
 function renderUpdatesComponents() {
   const container = document.getElementById("tachyon_updates-components");
   if (!container) {
     return;
   }
+  const systemInfo = normalizeSingBoxVariantFields(
+    store.get().diagnosticsSystemInfo
+  );
+  const visibleCards = getComponentCards().filter(
+    (card) => isComponentCardVisible(card, systemInfo)
+  );
   const columns = [[], [], []];
-  getComponentCards().forEach((card) => {
-    columns[card.column]?.push(renderComponentCard(card));
+  const colCounts = [0, 0, 0];
+  visibleCards.forEach((card) => {
+    colCounts[card.column] = (colCounts[card.column] || 0) + 1;
+  });
+  const hasEmptyColumn = colCounts.some((c) => c === 0) && visibleCards.length >= 3;
+  visibleCards.forEach((card, idx) => {
+    const colIdx = hasEmptyColumn ? idx % 3 : card.column;
+    columns[colIdx]?.push(renderComponentCard(card));
   });
   return preserveScrollForPage(() => {
     container.replaceChildren(

@@ -1209,7 +1209,7 @@ function view_sections(token, chat_id, msg_id) {
     let keyboard = [];
     
     for (let s in sections) {
-        let label = s.label || s[".name"];
+        let label = s.label || s.name || s[".name"];
         let status = (s.enabled == "1") ? "✅" : "❌";
         push(keyboard, [{ text: status + " " + label, callback_data: "/sec_view " + s[".name"] }]);
     }
@@ -1227,7 +1227,7 @@ function view_section_editor(token, chat_id, msg_id, sec_name) {
     if (!s) return view_sections(token, chat_id, msg_id);
     
     let status = (s.enabled == "1") ? t("status_enabled") : t("status_disabled");
-    let text = "⚙️ <b>" + t("section_section") + ":</b> " + escape_html(s.label || sec_name) + "\n" +
+    let text = "⚙️ <b>" + t("section_section") + ":</b> " + escape_html(s.label || s.name || sec_name) + "\n" +
                t("section_type") + ": <code>" + escape_html(s.action || "none") + "</code>\n" +
                t("section_status") + ": <b>" + status + "</b>\n\n";
                
@@ -1340,7 +1340,7 @@ function view_sec_list(token, chat_id, msg_id, sec_name, list_type) {
         for (let x in rs) push(items, {type: "community_lists", val: x});
     }
     
-    let text = t("section_list_header") + " " + escape_html(s.label || sec_name) + "\n" +
+    let text = t("section_list_header") + " " + escape_html(s.label || s.name || sec_name) + "\n" +
                "📋 <b>" + title + "</b>:\n\n";
                
     let keyboard = [];

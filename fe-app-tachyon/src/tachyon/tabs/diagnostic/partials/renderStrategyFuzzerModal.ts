@@ -3,7 +3,17 @@ import { renderButton } from '../../../../partials';
 import { showToast } from '../../../../helpers/showToast';
 import { Tachyon } from '../../../types';
 
-export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
+export interface FuzzerRuleSection {
+  id: string;
+  label: string;
+}
+
+export function renderStrategyFuzzerModal(
+  ruleNames: Array<string | FuzzerRuleSection> = [],
+) {
+  const normalizedRules: FuzzerRuleSection[] = ruleNames.map((r) =>
+    typeof r === 'string' ? { id: r, label: r } : r,
+  );
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   let isPolling = false;
 
@@ -292,7 +302,9 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
     { class: 'cbi-input-select', style: 'width: 100%;' },
     [
       E('option', { value: '', selected: true }, _('Provider Global Default')),
-      ...ruleNames.map((r) => E('option', { value: r }, `${_('Rule:')} ${r}`)),
+      ...normalizedRules.map((r) =>
+        E('option', { value: r.id }, `${_('Rule:')} ${r.label}`),
+      ),
     ],
   );
   ruleSelect.addEventListener('change', () => {
@@ -2035,19 +2047,23 @@ export function renderStrategyFuzzerModal(ruleNames: string[] = []) {
       selectedRuleSection,
     );
     if (res.success) {
+      const targetLabel =
+        normalizedRules.find((r) => r.id === selectedRuleSection)?.label ||
+        selectedRuleSection ||
+        _('Global Default');
       if (typeof ui?.addNotification === 'function') {
         ui.addNotification(
           _('Tachyon'),
           E(
             'p',
             {},
-            `${_('Strategy applied successfully and service reloaded!')} (${item.name} -> ${selectedRuleSection || _('Global Default')})`,
+            `${_('Strategy applied successfully and service reloaded!')} (${item.name} -> ${targetLabel})`,
           ),
           'info',
         );
       } else {
         showToast(
-          `${_('Applied')} "${item.name}" -> ${selectedRuleSection || _('Global Default')}`,
+          `${_('Applied')} "${item.name}" -> ${targetLabel}`,
           'success',
         );
       }

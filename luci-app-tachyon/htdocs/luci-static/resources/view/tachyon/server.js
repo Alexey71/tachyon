@@ -596,7 +596,11 @@ function applyServerCapabilities(sectionRef, capabilities) {
 }
 
 function getServerName(sectionId) {
-  return uci.get(UCI_PACKAGE, sectionId, "label") || sectionId;
+  return (
+    uci.get(UCI_PACKAGE, sectionId, "label") ||
+    uci.get(UCI_PACKAGE, sectionId, "name") ||
+    sectionId
+  );
 }
 
 function getSocksUsername(sectionId) {

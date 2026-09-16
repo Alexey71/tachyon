@@ -182,7 +182,11 @@ function formatEndpoint(address?: string, port?: string | number): string {
 }
 
 function getDisplayName(section: Tachyon.ConfigSection) {
-  return normalizeString(section.label) || section['.name'];
+  return (
+    normalizeString(section.label) ||
+    normalizeString((section as any).name) ||
+    section['.name']
+  );
 }
 
 function buildRouteDisplayNames(sections: Tachyon.ConfigSection[]) {

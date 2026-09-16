@@ -82,7 +82,7 @@ function getUciSectionName(section) {
 }
 
 function getUciSectionLabel(section) {
-  return (section && section.label) || getUciSectionName(section);
+  return (section && section.label) || (section && section.name) || getUciSectionName(section);
 }
 
 function isOutboundDetourTargetSection(section, currentSectionId) {
@@ -7767,7 +7767,11 @@ function createSectionContent(section) {
   o.rmempty = false;
   o.modalonly = true;
   o.load = function (section_id) {
-    return uci.get(UCI_PACKAGE, section_id, "label") || section_id;
+    return (
+      uci.get(UCI_PACKAGE, section_id, "label") ||
+      uci.get(UCI_PACKAGE, section_id, "name") ||
+      section_id
+    );
   };
 
   o = section.taboption(
@@ -11891,7 +11895,9 @@ async function performTrace(query) {
         (type === "domain" && detourDomains.includes(queryForMatching));
       if (isDnsMatch) {
         const label =
-          uci.get(UCI_PACKAGE, detourSection, "label") || detourSection;
+          uci.get(UCI_PACKAGE, detourSection, "label") ||
+          uci.get(UCI_PACKAGE, detourSection, "name") ||
+          detourSection;
         const action =
           uci.get(UCI_PACKAGE, detourSection, "action") || "connection";
         return {
@@ -11916,7 +11922,10 @@ async function performTrace(query) {
       continue;
     }
 
-    const label = uci.get(UCI_PACKAGE, secName, "label") || secName;
+    const label =
+      uci.get(UCI_PACKAGE, secName, "label") ||
+      uci.get(UCI_PACKAGE, secName, "name") ||
+      secName;
     const action = uci.get(UCI_PACKAGE, secName, "action") || "connection";
 
     if (type === "port") {
@@ -12176,7 +12185,10 @@ async function performTrace(query) {
         const secName = sec[".name"];
         if (uci.get(UCI_PACKAGE, secName, "enabled") === "0") continue;
 
-        const label = uci.get(UCI_PACKAGE, secName, "label") || secName;
+        const label =
+          uci.get(UCI_PACKAGE, secName, "label") ||
+          uci.get(UCI_PACKAGE, secName, "name") ||
+          secName;
         const action = uci.get(UCI_PACKAGE, secName, "action") || "connection";
 
         const ipCidr = normalizeOptionValues(
@@ -12574,7 +12586,10 @@ function createTracerSearchWidget(sectionRef) {
 }
 
 function showSectionRulesModal(section_id) {
-  const sectionLabel = uci.get(UCI_PACKAGE, section_id, "label") || section_id;
+  const sectionLabel =
+    uci.get(UCI_PACKAGE, section_id, "label") ||
+    uci.get(UCI_PACKAGE, section_id, "name") ||
+    section_id;
 
   const getCleanList = (key) => {
     let val = uci.get(UCI_PACKAGE, section_id, key);
@@ -12822,7 +12837,7 @@ function configureSectionSection(sectionRef, options = {}) {
   setActionProvidersAvailabilityLoader(options.loadActionProvidersAvailability);
 
   sectionRef.sectiontitle = function (section_id) {
-    return uci.get(UCI_PACKAGE, section_id, "label") || section_id;
+    return uci.get(UCI_PACKAGE, section_id, "label") || uci.get(UCI_PACKAGE, section_id, "name") || section_id;
   };
 
   sectionRef.load = function () {

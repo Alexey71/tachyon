@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-16 15:18+0300\n"
-"PO-Revision-Date: 2026-09-16 15:18+0300\n"
+"POT-Creation-Date: 2026-09-16 16:15+0300\n"
+"PO-Revision-Date: 2026-09-16 16:15+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -310,6 +310,9 @@ msgstr "Chat ID администраторов"
 
 msgid "Adult content"
 msgstr "Взрослый контент"
+
+msgid "Advanced DPI bypass engine with Lua scripts (nfqws2)"
+msgstr ""
 
 msgid "Advanced System"
 msgstr "Расширенные настройки"
@@ -1079,6 +1082,9 @@ msgstr "Community-списки"
 msgid "Component action timed out"
 msgstr "Превышено время ожидания действия компонента"
 
+msgid "Component Cards Visibility"
+msgstr ""
+
 msgid "Component update available"
 msgstr "Доступно обновление компонента"
 
@@ -1184,6 +1190,9 @@ msgstr "Скопировать отчет для поддержки"
 msgid "Core configuration and preferences"
 msgstr "Основные настройки и параметры"
 
+msgid "Core orchestration service and LuCI application"
+msgstr ""
+
 msgid "Could not compare FakeIP and control public IPs"
 msgstr "Не удалось сравнить публичные IP FakeIP и контрольной проверки"
 
@@ -1253,6 +1262,9 @@ msgstr "Пользовательская стратегия добавлена!"
 msgid "Customize the order and visibility of tabs in the main navigation menu. Use the arrows to reorder and checkboxes to show or hide tabs."
 msgstr "Настройте порядок и видимость вкладок в главном меню навигации. Используйте стрелки для перемещения и галочки для показа или скрытия."
 
+msgid "Customize which component cards are displayed in the Components tab. Checkboxes show or hide components."
+msgstr ""
+
 msgid "Daily Quota"
 msgstr "Дневная квота"
 
@@ -1285,6 +1297,9 @@ msgstr "Дни недели"
 
 msgid "Dedicated cgroup unavailable"
 msgstr "Выделенная cgroup недоступна"
+
+msgid "Dedicated direct HTTP/SOCKS5 outbound proxy"
+msgstr ""
 
 msgid "Default"
 msgstr "По умолчанию"
@@ -1369,6 +1384,9 @@ msgstr "Прямое (по умолчанию)"
 
 msgid "Direct Bypass"
 msgstr "Прямой WAN"
+
+msgid "Direct cgroup bypass for TorrServer"
+msgstr ""
 
 msgid "Direct connection"
 msgstr "Прямое подключение"
@@ -1621,6 +1639,9 @@ msgstr "Загрузка и применение наборов правил и 
 
 msgid "DPI bandwidth throttling or delay detected — connection throttled during data transfer."
 msgstr "Обнаружено замедление DPI — соединение заблокировано или задушено при передаче данных."
+
+msgid "DPI bypass engine (nfqws v1)"
+msgstr ""
 
 msgid "DPI Detected"
 msgstr "DPI обнаружен"
@@ -2125,6 +2146,9 @@ msgstr "Семейные профили"
 
 msgid "Family profiles and device grouping"
 msgstr "Семейные профили и группировка устройств"
+
+msgid "Fast packet transport network client"
+msgstr ""
 
 msgid "Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."
 msgstr "Более быстрый мониторинг состояния DNS, чем стандартный цикл. Переключает bootstrap DNS при сбое."
@@ -3071,6 +3095,9 @@ msgstr "Загрузка..."
 msgid "Local Address"
 msgstr "Локальный адрес"
 
+msgid "Local SOCKS proxy desynchronizer (ciadpi)"
+msgstr ""
+
 msgid "Location"
 msgstr "Местоположение"
 
@@ -3958,6 +3985,9 @@ msgstr "Ошибка чтения"
 
 msgid "Ready to benchmark DNS providers"
 msgstr "Готов к тестированию DNS провайдеров"
+
+msgid "Real-time WebRTC anti-censorship tunnel"
+msgstr ""
 
 msgid "Reality fake site"
 msgstr "Фейковый сайт Reality"
@@ -5489,6 +5519,9 @@ msgstr "Великобритания (gb)"
 msgid "United States (us)"
 msgstr "США (us)"
 
+msgid "Universal proxy platform routing engine"
+msgstr ""
+
 msgid "unknown"
 msgstr "неизвестно"
 
@@ -5834,6 +5867,9 @@ msgstr "Будни (Пн-Пт)"
 msgid "Weekends (Sat-Sun)"
 msgstr "Выходные (Сб-Вс)"
 
+msgid "Western Digital Tunnel Transport"
+msgstr ""
+
 msgid "What Tachyon should do when this section matches"
 msgstr "Что должен делать Tachyon при совпадении этой секции"
 
@@ -5941,6 +5977,9 @@ msgstr "Правила маршрутизации sing-box для Zapret2 нас
 
 msgid "Zapret2 sing-box route rules are not configured"
 msgstr "Правила маршрутизации sing-box для Zapret2 не настроены"
+
+msgid "Zero config mesh VPN daemon"
+msgstr ""
 
 msgid "Testing strategy"
 msgstr "Тестирование стратегии"

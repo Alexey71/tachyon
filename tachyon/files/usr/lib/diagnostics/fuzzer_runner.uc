@@ -97,7 +97,7 @@ function build_byedpi_argv(bin, port, tokens) {
     return argv;
 }
 
-function build_zapret_argv(bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, tokens, pid_path) {
+function build_zapret_argv(bin, qnum, fwmark_flag, lua_init_flags, blob_flags, filter_prefix, tokens) {
     let argv = [ bin, sprintf("--qnum=%d", qnum) ];
 
     let append_flags = function(flag_str) {
@@ -113,13 +113,12 @@ function build_zapret_argv(bin, qnum, fwmark_flag, lua_init_flags, blob_flags, f
     append_flags(blob_flags);
     append_flags(filter_prefix);
 
-    for (let tok in tokens)
+    for (let tok in tokens) {
+        if (tok == "--daemon" || index(tok, "--pidfile") == 0)
+            continue;
         push(argv, tok);
+    }
 
-    if (pid_path && pid_path != "")
-        push(argv, sprintf("--pidfile=%s", pid_path));
-
-    push(argv, "--daemon");
     return argv;
 }
 

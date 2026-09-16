@@ -1589,11 +1589,17 @@ function handleOpenLeakCheck() {
 function handleOpenStrategyFuzzer() {
   getConfigSections()
     .then((sections) => {
-      const ruleNames = sections
+      const ruleSections = sections
         .filter((s) => s['.type'] === 'section' || s['.type'] === 'rule')
-        .map((s) => s.name || s['.name'])
-        .filter((n): n is string => Boolean(n));
-      renderStrategyFuzzerModal(ruleNames);
+        .map((s) => ({
+          id: s['.name'],
+          label:
+            (typeof s.label === 'string' && s.label.trim()) ||
+            (typeof s.name === 'string' && s.name.trim()) ||
+            s['.name'],
+        }))
+        .filter((r) => Boolean(r.id));
+      renderStrategyFuzzerModal(ruleSections);
     })
     .catch(() => {
       renderStrategyFuzzerModal([]);

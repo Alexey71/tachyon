@@ -2029,6 +2029,33 @@ function renderComponentCard(card: ComponentCard) {
   return E('div', { class: 'tachyon_updates-page__component' }, cardChildren);
 }
 
+function isComponentCardVisible(
+  card: ComponentCard,
+  systemInfo: any,
+): boolean {
+  const component = card.component;
+  if (component === 'tachyon' || component === 'sing_box') {
+    return true;
+  }
+  if (component === 'fptn') {
+    const fptnInstalled = Boolean(systemInfo.fptn_installed);
+    const fptnSupported =
+      systemInfo.fptn_supported === undefined
+        ? true
+        : Boolean(systemInfo.fptn_supported);
+    if (!fptnInstalled && !fptnSupported) {
+      return false;
+    }
+  }
+
+  const optKey = `show_component_${component}`;
+  const val = (systemInfo as Record<string, any>)[optKey];
+  if (val === undefined || val === null || val === '') {
+    return true;
+  }
+  return String(val) === '1' || val === 1;
+}
+
 function renderUpdatesComponents() {
   const container = document.getElementById('tachyon_updates-components');
 
@@ -2036,9 +2063,24 @@ function renderUpdatesComponents() {
     return;
   }
 
+  const systemInfo = normalizeSingBoxVariantFields(
+    store.get().diagnosticsSystemInfo,
+  );
+  const visibleCards = getComponentCards().filter((card) =>
+    isComponentCardVisible(card, systemInfo),
+  );
+
   const columns: Node[][] = [[], [], []];
-  getComponentCards().forEach((card) => {
-    columns[card.column]?.push(renderComponentCard(card));
+  const colCounts = [0, 0, 0];
+  visibleCards.forEach((card) => {
+    colCounts[card.column] = (colCounts[card.column] || 0) + 1;
+  });
+  const hasEmptyColumn =
+    colCounts.some((c) => c === 0) && visibleCards.length >= 3;
+
+  visibleCards.forEach((card, idx) => {
+    const colIdx = hasEmptyColumn ? idx % 3 : card.column;
+    columns[colIdx]?.push(renderComponentCard(card));
   });
 
   return preserveScrollForPage(() => {

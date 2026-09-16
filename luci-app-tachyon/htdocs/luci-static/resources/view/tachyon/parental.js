@@ -295,7 +295,10 @@ function createProfileContent(section) {
   o.modalonly = false;
   o.cfgvalue = function (sectionId) {
     const avatar = uci.get(UCI_PACKAGE, sectionId, "avatar") || "👶";
-    const label = uci.get(UCI_PACKAGE, sectionId, "label") || sectionId;
+    const label =
+      uci.get(UCI_PACKAGE, sectionId, "label") ||
+      uci.get(UCI_PACKAGE, sectionId, "name") ||
+      sectionId;
     const rawDevs = uci.get(UCI_PACKAGE, sectionId, "device_ip");
     const devCount = normalizeListValues(rawDevs).length;
     const devBadge =
@@ -313,7 +316,10 @@ function createProfileContent(section) {
   };
   o.textvalue = function (sectionId) {
     const avatar = uci.get(UCI_PACKAGE, sectionId, "avatar") || "👶";
-    const label = uci.get(UCI_PACKAGE, sectionId, "label") || sectionId;
+    const label =
+      uci.get(UCI_PACKAGE, sectionId, "label") ||
+      uci.get(UCI_PACKAGE, sectionId, "name") ||
+      sectionId;
     return `${avatar} ${label}`;
   };
 

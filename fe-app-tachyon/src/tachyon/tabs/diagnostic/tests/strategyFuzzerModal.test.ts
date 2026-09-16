@@ -169,4 +169,17 @@ describe('renderStrategyFuzzerModal', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(TachyonShellMethods.getFuzzerStatus).toHaveBeenCalled();
   });
+
+  it('renders rule options with human-readable labels and UCI section IDs', () => {
+    renderStrategyFuzzerModal([
+      { id: 'direct', label: 'Провайдер Direct' },
+      { id: 'jobvpn', label: 'Работа VPN' },
+    ]);
+
+    expect(mocks.showModal).toHaveBeenCalledTimes(1);
+    expect(mocks.showModal).toHaveBeenCalledWith(
+      '⚡ Strategy Fuzzer & Auto-Tuner',
+      expect.anything(),
+    );
+  });
 });

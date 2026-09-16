@@ -1140,6 +1140,47 @@ function openwrt_release() {
     return "unknown";
 }
 
+function get_system_arch_candidates() {
+    let arch_list = "";
+    if (fs.stat("/etc/apk/arch") != null) {
+        arch_list += " " + trim(as_string(fs.readfile("/etc/apk/arch")));
+    }
+    if (fs.stat("/etc/openwrt_release") != null) {
+        let content = as_string(fs.readfile("/etc/openwrt_release"));
+        for (let line in split(content, "\n")) {
+            if (substr(line, 0, length("DISTRIB_ARCH=")) == "DISTRIB_ARCH=") {
+                let v = substr(line, length("DISTRIB_ARCH="));
+                if (length(v) >= 2) {
+                    let q = substr(v, 0, 1);
+                    if ((q == "\"" || q == "'") && substr(v, length(v) - 1) == q)
+                        v = substr(v, 1, length(v) - 2);
+                }
+                arch_list += " " + v;
+                break;
+            }
+        }
+    }
+    if (command_exists("uname")) {
+        arch_list += " " + trim(command_output_from_args([ "uname", "-m" ]));
+    }
+    return arch_list;
+}
+
+function is_fptn_supported() {
+    let arch_list = get_system_arch_candidates();
+    let supported = [
+        "x86_64", "amd64",
+        "aarch64", "arm64",
+        "arm_cortex-a7_neon-vfpv4",
+        "arm_cortex-a7"
+    ];
+    for (let s in supported) {
+        if (index(arch_list, s) >= 0)
+            return true;
+    }
+    return false;
+}
+
 function build_system_info() {
     let tachyon_latest_version = first_line_value("/tmp/tachyon.latest-version.cache", "unknown");
     let luci_app_version = get_luci_app_version();
@@ -1177,6 +1218,7 @@ function build_system_info() {
     let tailscale_installed = provider_installed(TAILSCALE_RUNTIME_UC) ? 1 : 0;
     let tailscale_version = tailscale_installed ? provider_version(TAILSCALE_RUNTIME_UC) : "not installed";
     let fptn_installed = provider_installed(FPTN_RUNTIME_UC) ? 1 : 0;
+    let fptn_supported = (fptn_installed == 1 || is_fptn_supported()) ? 1 : 0;
     let fptn_version = fptn_installed ? provider_version(FPTN_RUNTIME_UC) : "not installed";
     let device_model = first_line_value("/tmp/sysinfo/model", "unknown");
 
@@ -1188,6 +1230,16 @@ function build_system_info() {
     let torrserver_direct_status = parse_json_or_null(command_output_from_args([ "ucode", "-L", LIB_DIR, LIB_DIR + "/torrserver/direct.uc", "status" ]));
     if (type(torrserver_direct_status) != "object")
         torrserver_direct_status = {};
+
+    let show_component_zapret = bool_option(settings(), "show_component_zapret", true) ? 1 : 0;
+    let show_component_zapret2 = bool_option(settings(), "show_component_zapret2", true) ? 1 : 0;
+    let show_component_byedpi = bool_option(settings(), "show_component_byedpi", true) ? 1 : 0;
+    let show_component_wdtt = bool_option(settings(), "show_component_wdtt", true) ? 1 : 0;
+    let show_component_olcrtc = bool_option(settings(), "show_component_olcrtc", true) ? 1 : 0;
+    let show_component_fptn = bool_option(settings(), "show_component_fptn", true) ? 1 : 0;
+    let show_component_tailscale = bool_option(settings(), "show_component_tailscale", true) ? 1 : 0;
+    let show_component_direct_bypass = bool_option(settings(), "show_component_direct_bypass", true) ? 1 : 0;
+    let show_component_torrserver_direct = bool_option(settings(), "show_component_torrserver_direct", true) ? 1 : 0;
 
     let base_bdir = getenv("TACHYON_COMPONENT_BACKUPS_DIR") || "/etc/tachyon/component-backups";
     let read_backup_meta = function(comp) {
@@ -1241,6 +1293,7 @@ function build_system_info() {
         tailscale_backup_time: tailscale_meta ? int(tailscale_meta.timestamp || 0) : 0,
         fptn_version,
         fptn_installed,
+        fptn_supported,
         fptn_backup_version: fptn_meta ? as_string(fptn_meta.version) : "",
         fptn_backup_time: fptn_meta ? int(fptn_meta.timestamp || 0) : 0,
         direct_bypass_enabled,
@@ -1250,6 +1303,15 @@ function build_system_info() {
         torrserver_direct_available: int(torrserver_direct_status.available || 0),
         torrserver_direct_enabled: int(torrserver_direct_status.enabled || 0),
         torrserver_direct_active: int(torrserver_direct_status.active || 0),
+        show_component_zapret,
+        show_component_zapret2,
+        show_component_byedpi,
+        show_component_wdtt,
+        show_component_olcrtc,
+        show_component_fptn,
+        show_component_tailscale,
+        show_component_direct_bypass,
+        show_component_torrserver_direct,
         openwrt_version: openwrt_release(),
         device_model,
         generated_at: int(clock()[0])

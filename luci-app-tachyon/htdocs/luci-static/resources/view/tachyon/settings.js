@@ -1288,6 +1288,200 @@ function createMenuTabsOrderWidget(option, section_id) {
   return wrapper;
 }
 
+function createComponentsVisibilityWidget(option, section_id) {
+  const ALL_COMPONENTS = [
+    {
+      id: "tachyon",
+      label: "Tachyon",
+      desc: _("Core orchestration service and LuCI application"),
+      defaultVisible: true,
+      fixed: true,
+    },
+    {
+      id: "sing_box",
+      label: "Sing-box",
+      desc: _("Universal proxy platform routing engine"),
+      defaultVisible: true,
+      fixed: true,
+    },
+    {
+      id: "zapret",
+      label: "Zapret",
+      desc: _("DPI bypass engine (nfqws v1)"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "zapret2",
+      label: "Zapret2",
+      desc: _("Advanced DPI bypass engine with Lua scripts (nfqws2)"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "byedpi",
+      label: "ByeDPI",
+      desc: _("Local SOCKS proxy desynchronizer (ciadpi)"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "wdtt",
+      label: "WDTT",
+      desc: _("Western Digital Tunnel Transport"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "olcrtc",
+      label: "OlcRTC",
+      desc: _("Real-time WebRTC anti-censorship tunnel"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "fptn",
+      label: "FPTN",
+      desc: _("Fast packet transport network client"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "tailscale",
+      label: "Tailscale",
+      desc: _("Zero config mesh VPN daemon"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "direct_bypass",
+      label: _("Direct Proxy"),
+      desc: _("Dedicated direct HTTP/SOCKS5 outbound proxy"),
+      defaultVisible: true,
+      fixed: false,
+    },
+    {
+      id: "torrserver_direct",
+      label: _("TorrServer Direct"),
+      desc: _("Direct cgroup bypass for TorrServer"),
+      defaultVisible: true,
+      fixed: false,
+    },
+  ];
+
+  const visibility = {};
+  ALL_COMPONENTS.forEach(function (c) {
+    if (c.fixed) {
+      visibility[c.id] = true;
+    } else {
+      const optKey = "show_component_" + c.id;
+      const val = uci.get(UCI_PACKAGE, section_id, optKey);
+      if (val === undefined || val === null || val === "") {
+        visibility[c.id] = c.defaultVisible;
+      } else {
+        visibility[c.id] = val === "1" || val === true;
+      }
+    }
+  });
+
+  const wrapper = E("div", { id: "components-visibility-widget-" + section_id });
+  const listEl = E("div", {
+    style:
+      "border:1px solid var(--border-color,#dee2e6);border-radius:6px;overflow:hidden;margin-bottom:8px;max-width:560px;background:var(--card-bg,transparent);",
+  });
+
+  function syncToUci() {
+    wrapper._vis = Object.assign({}, visibility);
+    ALL_COMPONENTS.forEach(function (c) {
+      if (!c.fixed) {
+        const optKey = "show_component_" + c.id;
+        uci.set(UCI_PACKAGE, section_id, optKey, visibility[c.id] ? "1" : "0");
+      }
+    });
+  }
+
+  function renderList() {
+    listEl.innerHTML = "";
+    ALL_COMPONENTS.forEach(function (c, idx) {
+      const isVisible = Boolean(visibility[c.id]);
+      const isFixed = Boolean(c.fixed);
+
+      const row = E("div", {
+        style: [
+          "display:flex;align-items:center;gap:12px;padding:8px 12px;",
+          idx < ALL_COMPONENTS.length - 1
+            ? "border-bottom:1px solid var(--border-color,#dee2e6);"
+            : "",
+          isVisible ? "" : "opacity:0.5;background:rgba(0,0,0,0.02);",
+        ].join(""),
+      });
+
+      const toggleBtn = E("button", {
+        type: "button",
+        title: isFixed
+          ? _("Always visible")
+          : isVisible
+            ? _("Click to hide")
+            : _("Click to show"),
+        style: [
+          "width:20px;height:20px;padding:0;border-radius:3px;border:2px solid;",
+          "display:flex;align-items:center;justify-content:center;",
+          "font-size:13px;font-weight:bold;line-height:1;cursor:",
+          isFixed ? "default;" : "pointer;",
+          "flex-shrink:0;",
+          isFixed || isVisible
+            ? "border-color:var(--primary-color,#2196f3);background:var(--primary-color,#2196f3);color:#fff;"
+            : "border-color:var(--border-color,#aaa);background:transparent;color:transparent;",
+        ].join(""),
+      });
+      toggleBtn.textContent = "✓";
+      if (isFixed) toggleBtn.disabled = true;
+
+      if (!isFixed) {
+        toggleBtn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          visibility[c.id] = !visibility[c.id];
+          syncToUci();
+          renderList();
+        });
+      }
+
+      const textWrap = E(
+        "div",
+        { style: "flex:1;min-width:0;line-height:1.3;" },
+        [
+          E(
+            "div",
+            {
+              style:
+                "font-weight:600;font-size:0.875rem;color:var(--text-color,#212529);",
+            },
+            c.label,
+          ),
+          E(
+            "div",
+            {
+              style:
+                "font-size:0.75rem;color:var(--text-color-medium,#6c757d);",
+            },
+            c.desc,
+          ),
+        ],
+      );
+
+      row.appendChild(toggleBtn);
+      row.appendChild(textWrap);
+      listEl.appendChild(row);
+    });
+  }
+
+  renderList();
+  syncToUci();
+
+  wrapper.appendChild(listEl);
+  return wrapper;
+}
+
 function createSettingsContent(section, capabilities) {
   section.tab("navigation", _("Menu & Navigation"));
   section.tab("dns", _("DNS Settings"));
@@ -1341,6 +1535,25 @@ function createSettingsContent(section, capabilities) {
     // Nothing extra to do here.
   };
   tabsOrderOpt.remove = function () {};
+
+  const compVisOpt = section.taboption(
+    "navigation",
+    form.Value,
+    "_components_visibility_widget",
+    _("Component Cards Visibility"),
+    _(
+      "Customize which component cards are displayed in the Components tab. Checkboxes show or hide components.",
+    ),
+  );
+  compVisOpt.renderWidget = function (section_id) {
+    return createComponentsVisibilityWidget(this, section_id);
+  };
+  compVisOpt.formvalue = function (section_id) {
+    const el = document.getElementById("components-visibility-widget-" + section_id);
+    return el ? JSON.stringify(el._vis) : "";
+  };
+  compVisOpt.write = function (_section_id) {};
+  compVisOpt.remove = function () {};
 
   // ── DNS Settings ────────────────────────────────────────────────────────
 

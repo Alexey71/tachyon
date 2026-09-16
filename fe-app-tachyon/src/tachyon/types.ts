@@ -661,6 +661,7 @@ export namespace Tachyon {
     tailscale_installed: 0 | 1;
     fptn_version: string;
     fptn_installed: 0 | 1;
+    fptn_supported?: 0 | 1;
     fptn_backup_version?: string;
     fptn_backup_time?: number;
     direct_bypass_enabled?: 0 | 1;
@@ -670,6 +671,15 @@ export namespace Tachyon {
     torrserver_direct_available?: 0 | 1;
     torrserver_direct_enabled?: 0 | 1;
     torrserver_direct_active?: 0 | 1;
+    show_component_zapret?: 0 | 1;
+    show_component_zapret2?: 0 | 1;
+    show_component_byedpi?: 0 | 1;
+    show_component_wdtt?: 0 | 1;
+    show_component_olcrtc?: 0 | 1;
+    show_component_fptn?: 0 | 1;
+    show_component_tailscale?: 0 | 1;
+    show_component_direct_bypass?: 0 | 1;
+    show_component_torrserver_direct?: 0 | 1;
     openwrt_version: string;
     device_model: string;
     generated_at?: number;
