@@ -188,14 +188,14 @@ function wrap_cmd_timeout(cmd, sec, pid_file) {
     }
     if (pid_file && pid_file != "") {
         if (_has_timeout) {
-            return sprintf("sh -c 'echo $$ > %s; exec timeout -s KILL %d %s'", shell_quote(pid_file), sec, cmd);
+            return sprintf("( echo $$ > %s; timeout -s KILL %d %s )", shell_quote(pid_file), sec, cmd);
         }
-        return sprintf("sh -c 'echo $$ > %s; ( %s ) & p=$!; ( sleep %d; kill -9 $p 2>/dev/null ) & w=$!; wait $p 2>/dev/null; r=$?; kill -9 $w 2>/dev/null; wait $w 2>/dev/null; [ $r -ne 0 ] && printf \"\\t%%d\\n\" $r; exit $r'", shell_quote(pid_file), cmd, sec);
+        return sprintf("( echo $$ > %s; %s )", shell_quote(pid_file), cmd);
     }
     if (_has_timeout) {
         return sprintf("timeout -s KILL %d %s", sec, cmd);
     }
-    return sprintf("( %s ) & p=$!; ( sleep %d; kill -9 $p 2>/dev/null ) & w=$!; wait $p 2>/dev/null; r=$?; kill -9 $w 2>/dev/null; wait $w 2>/dev/null; [ $r -ne 0 ] && printf \"\\t%%d\\n\" $r; exit $r", cmd, sec);
+    return cmd;
 }
 
 let _fuzzer_curl_dns_flags = null;
@@ -2156,7 +2156,19 @@ function parse_curl_output(output, result) {
         return result;
     }
     
-    let parts = split(output, "\t");
+    // In case there are multiple lines (e.g. warnings or messages), find the tab-delimited metrics line
+    let lines = split(output, "\n");
+    let target_line = "";
+    for (let l in lines) {
+        let tl = trim(l);
+        if (index(tl, "\t") >= 0) {
+            target_line = tl;
+            break;
+        }
+    }
+    if (target_line == "") target_line = trim(lines[length(lines) - 1]);
+
+    let parts = split(target_line, "\t");
     if (length(parts) < 4) {
         result.success = false;
         result.http_code = 0;
@@ -2169,9 +2181,9 @@ function parse_curl_output(output, result) {
     }
     
     let http_code = int(parts[0]);
-    let appconnect = double(parts[1]);
-    let starttransfer = double(parts[2]);
-    let speed_bytes = double(parts[3]);
+    let appconnect = 1.0 * parts[1];
+    let starttransfer = 1.0 * parts[2];
+    let speed_bytes = 1.0 * parts[3];
     let size_download = length(parts) >= 5 ? int(parts[4]) : 0;
     let exit_code = length(parts) >= 6 ? int(parts[5]) : 0;
     
@@ -2414,6 +2426,9 @@ function rerank_strategies_by_dpi(strategies, dpi_type) {
 
 function run_probe(engine, args_str, target_key, custom_url, job_id) {
     cleanup_temp_daemons(job_id);
+    if (job_id && job_id != "") {
+        ensure_job_dir(job_id);
+    }
     let job_dir = get_job_dir(job_id);
     let probe_pid_path = job_dir ? (job_dir + "/probe.pid") : (STATE_DIR + "/fuzzer_probe.pid");
     try { fs.unlink(probe_pid_path); } catch (e) {}
@@ -2459,7 +2474,7 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
         system(common.background_command_with_pid(spawn_cmd, ">/dev/null", ">" + shell_quote(pid_path)));
         
         let pid_running = false;
-        for (let wait_i = 0; wait_i < 10; wait_i++) {
+        for (let wait_i = 0; wait_i < 15; wait_i++) {
             system("sleep 0.1");
             let pid_str = fs.readfile(pid_path);
             if (pid_str) {
@@ -2468,10 +2483,6 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                     pid_running = true;
                     break;
                 }
-            }
-            let err_content = fs.readfile(stderr_log);
-            if (err_content && trim(as_string(err_content)) != "") {
-                break;
             }
         }
         
@@ -2658,7 +2669,7 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
         system(common.background_command(spawn_cmd));
         
         let pid_running = false;
-        for (let wait_i = 0; wait_i < 10; wait_i++) {
+        for (let wait_i = 0; wait_i < 15; wait_i++) {
             system("sleep 0.1");
             let pid_str = fs.readfile(pid_path);
             if (pid_str) {
@@ -2667,10 +2678,6 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                     pid_running = true;
                     break;
                 }
-            }
-            let err_content = fs.readfile(stderr_log);
-            if (err_content && trim(as_string(err_content)) != "") {
-                break;
             }
         }
         
@@ -2683,7 +2690,7 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                 for (let i = length(lines) - 1; i >= 0; i--) {
                     let l = trim(lines[i]);
                     if (l == "") continue;
-                    if (index(l, "version") < 0 && index(l, "Running as") < 0 && index(l, "LUA v") < 0 && index(l, "JIT:") < 0 && index(l, "we have") < 0 && index(l, "initializing") < 0) {
+                    if (index(l, "version") < 0 && index(l, "Running as") < 0 && index(l, "LUA v") < 0 && index(l, "JIT:") < 0 && index(l, "we have") < 0 && index(l, "initializing") < 0 && index(l, "opening nfq") < 0 && index(l, "unbinding") < 0 && index(l, "binding") < 0 && index(l, "setting copy") < 0 && index(l, "chdir") < 0) {
                         err_line = l;
                         break;
                     }
@@ -2829,6 +2836,9 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
 }
 
 function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file, mode, job_id) {
+    if (job_id && job_id != "") {
+        ensure_job_dir(job_id);
+    }
     let target_url = resolve_target_url(target, custom_url);
 
     let state = get_fuzzer_state();

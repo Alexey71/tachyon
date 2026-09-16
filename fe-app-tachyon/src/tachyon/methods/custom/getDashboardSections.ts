@@ -128,9 +128,9 @@ type ChildType =
   | 'priority_level';
 
 const DASHBOARD_SECTION_CACHE_DIR = '/var/run/tachyon/section-cache';
-const CLASH_API_FETCH_TIMEOUT_MS = 1200;
+const CLASH_API_FETCH_TIMEOUT_MS = 2500;
 let directClashApiFailedAt = 0;
-const DIRECT_CLASH_API_COOLDOWN_MS = 60_000;
+const DIRECT_CLASH_API_COOLDOWN_MS = 10_000;
 
 export function resetDirectClashApiState() {
   directClashApiFailedAt = 0;
@@ -1274,7 +1274,11 @@ function buildProxyGroupOutbounds(
     ...priorityCodes,
   ]);
 
-  const selectorNow = selector?.value?.now;
+  const selectorNow =
+    selector?.value?.now ||
+    (selectorCodes.length > 0 ? selectorCodes[0] : undefined) ||
+    urlTestCodes[0] ||
+    priorityCodes[0];
 
   const outbounds = uniqueCodes(groupCodes).flatMap((code) => {
     const item = proxyByCode.get(code);

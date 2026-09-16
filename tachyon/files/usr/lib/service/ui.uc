@@ -1523,6 +1523,28 @@ function action_dir(kind) {
     return "";
 }
 
+function get_clash_url(endpoint) {
+    let host = "127.0.0.1:9090";
+    let config_data = fs.readfile("/etc/sing-box/config.json");
+    if (config_data) {
+        try {
+            let sb_cfg = json(config_data);
+            let ext = sb_cfg.experimental?.clash_api?.external_controller;
+            if (ext) {
+                let parts = split(ext, ":");
+                let ip = (length(parts) > 1) ? parts[0] : "";
+                let port = (length(parts) > 1) ? parts[length(parts) - 1] : "9090";
+                if (ip == "0.0.0.0" || ip == "") {
+                    host = "127.0.0.1:" + port;
+                } else {
+                    host = ext;
+                }
+            }
+        } catch (e) {}
+    }
+    return "http://" + host + "/" + (endpoint || "");
+}
+
 function latency_boot_sweep() {
     let guard_file = "/var/run/tachyon/boot-sweep-done";
     if (fs.stat(guard_file) != null)
@@ -1545,7 +1567,8 @@ function latency_boot_sweep() {
         return;
     }
 
-    let clash_api_check = command_status("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9090/ 2>/dev/null | grep -q '200\\|404'") == 0;
+    let clash_url = get_clash_url("");
+    let clash_api_check = command_status(sprintf("curl -s -o /dev/null -w '%%{http_code}' %s 2>/dev/null | grep -q '200\\|404'", shell_quote(clash_url))) == 0;
     if (!clash_api_check) {
         fs.writefile(guard_file, as_string(time()));
         return;

@@ -4485,9 +4485,9 @@ var TachyonShellMethods = {
 
 // src/tachyon/methods/custom/getDashboardSections.ts
 var DASHBOARD_SECTION_CACHE_DIR = "/var/run/tachyon/section-cache";
-var CLASH_API_FETCH_TIMEOUT_MS = 1200;
+var CLASH_API_FETCH_TIMEOUT_MS = 2500;
 var directClashApiFailedAt = 0;
-var DIRECT_CLASH_API_COOLDOWN_MS = 6e4;
+var DIRECT_CLASH_API_COOLDOWN_MS = 1e4;
 function getDisplayName(section) {
   return section.label || section[".name"];
 }
@@ -5298,7 +5298,7 @@ function buildProxyGroupOutbounds(section, proxies, outboundMetadata, urltestGro
     ...urlTestCodes,
     ...priorityCodes
   ]);
-  const selectorNow = selector?.value?.now;
+  const selectorNow = selector?.value?.now || (selectorCodes.length > 0 ? selectorCodes[0] : void 0) || urlTestCodes[0] || priorityCodes[0];
   const outbounds = uniqueCodes(groupCodes).flatMap((code) => {
     const item = proxyByCode.get(code);
     const urlTestConfig = urlTestConfigByCode.get(code);

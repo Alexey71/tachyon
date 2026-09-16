@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-16 08:36+0300\n"
-"PO-Revision-Date: 2026-09-16 08:36+0300\n"
+"POT-Creation-Date: 2026-09-16 09:44+0300\n"
+"PO-Revision-Date: 2026-09-16 09:44+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -138,7 +138,7 @@ msgid "🔄 Reset to Factory Defaults"
 msgstr "🔄 Сбросить к заводским настройкам"
 
 msgid "🔍 Analyzing DPI blocking patterns..."
-msgstr ""
+msgstr "🔍 Анализ паттернов блокировки DPI..."
 
 msgid "🔍 Combinatorial Deep Fuzzing (~150-300+)"
 msgstr "🔍 Комбинаторный глубокий фаззинг (~150-300+)"
@@ -156,7 +156,7 @@ msgid "🧠 Synthesizing..."
 msgstr "🧠 Генерация..."
 
 msgid "🧬 Adaptive Smart Fuzzing (Genetic / Prior Seeds)"
-msgstr ""
+msgstr "🧬 Адаптивный умный фаззинг (генетический / по базовым шаблонам)"
 
 msgid "🚀 Initializing benchmark in sandbox..."
 msgstr "🚀 Инициализация бенчмарка в песочнице..."
@@ -180,7 +180,7 @@ msgid "🛡️ SECURE: Public IP is concealed behind the proxy outbound."
 msgstr "🛡️ ЗАЩИЩЕНО: Публичный IP-адрес скрыт за исходящим прокси."
 
 msgid "🛡️ Stage 2: Stability Verification"
-msgstr ""
+msgstr "🛡️ Этап 2: Проверка стабильности"
 
 msgid "🟣 Twitch Suite (Live Stream + HLS CDN)"
 msgstr "🟣 Twitch (Прямой эфир + HLS CDN)"
@@ -2190,16 +2190,16 @@ msgid "Found"
 msgstr "Найдено"
 
 msgid "FPTN Access Token"
-msgstr ""
+msgstr "Токен доступа FPTN"
 
 msgid "FPTN Bypass Method"
-msgstr ""
+msgstr "Метод обхода FPTN"
 
 msgid "FPTN Preferred Server"
-msgstr ""
+msgstr "Предпочитаемый сервер FPTN"
 
 msgid "FPTN SNI"
-msgstr ""
+msgstr "SNI для FPTN"
 
 msgid "France (fr)"
 msgstr "Франция (fr)"
@@ -3579,13 +3579,13 @@ msgid "Optional values must be attached with '=' here; a separate token would be
 msgstr "Опциональные значения должны быть присоединены через '=' здесь; отдельный токен будет игнорироваться nfqws2."
 
 msgid "Optional: override bypass method (e.g. quic, tcp)"
-msgstr ""
+msgstr "Опционально: переопределить метод обхода (напр. quic, tcp)"
 
 msgid "Optional: override TLS SNI for FPTN connection"
-msgstr ""
+msgstr "Опционально: переопределить TLS SNI для подключения FPTN"
 
 msgid "Optional: preferred FPTN server address"
-msgstr ""
+msgstr "Опционально: предпочитаемый адрес сервера FPTN"
 
 msgid "Optionally specify individual devices not in a profile. MAC addresses (e.g. AA:BB:CC:DD:EE:FF) work even if the IP changes."
 msgstr "При необходимости укажите отдельные устройства вне профилей. MAC-адреса (напр. AA:BB:CC:DD:EE:FF) работают даже при смене IP."
@@ -4773,10 +4773,10 @@ msgid "SSH"
 msgstr "SSH"
 
 msgid "stability (3x)"
-msgstr ""
+msgstr "стабильность (3x)"
 
 msgid "Stage 1: Exploration Scan"
-msgstr ""
+msgstr "Этап 1: Разведочное сканирование"
 
 msgid "Standalone ByeDPI autostart is enabled"
 msgstr "Автозапуск отдельной службы ByeDPI включен"

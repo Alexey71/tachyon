@@ -1364,6 +1364,18 @@ const dictionary = {
   "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19294-19344, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.": "Подсеть %s — диапазон Cloudflare Anycast, используемый Discord Voice. Только голосовой UDP-трафик (порты 50000-65535, 3478, 19294-19344, 5000-5020) направляется через этот раздел; веб-трафик (TCP 80/443) идет напрямую.",
   "Add URLs or local paths to .lst / .txt lists containing domains and subnets.": "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены и подсети.",
   "Add URLs or local paths to .lst / .txt lists containing domains. IP entries are ignored.": "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены. IP-записи игнорируются.",
+  "🔍 Analyzing DPI blocking patterns...": "🔍 Анализ паттернов блокировки DPI...",
+  "🧬 Adaptive Smart Fuzzing (Genetic / Prior Seeds)": "🧬 Адаптивный умный фаззинг (генетический / по базовым шаблонам)",
+  "🛡️ Stage 2: Stability Verification": "🛡️ Этап 2: Проверка стабильности",
+  "FPTN Access Token": "Токен доступа FPTN",
+  "FPTN Bypass Method": "Метод обхода FPTN",
+  "FPTN Preferred Server": "Предпочитаемый сервер FPTN",
+  "FPTN SNI": "SNI для FPTN",
+  "Optional: override bypass method (e.g. quic, tcp)": "Опционально: переопределить метод обхода (напр. quic, tcp)",
+  "Optional: override TLS SNI for FPTN connection": "Опционально: переопределить TLS SNI для подключения FPTN",
+  "Optional: preferred FPTN server address": "Опционально: предпочитаемый адрес сервера FPTN",
+  "stability (3x)": "стабильность (3x)",
+  "Stage 1: Exploration Scan": "Этап 1: Разведочное сканирование",
 };
 
 function escapePoString(str) {
