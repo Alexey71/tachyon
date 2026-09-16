@@ -36,6 +36,7 @@ const CRYPTO_LIST: CryptoItem[] = [
 ];
 
 const CLOUDTIPS_URL = 'https://pay.cloudtips.ru/p/48c57581';
+const BOOSTY_URL = 'https://boosty.to/tachyon';
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
   try {
@@ -78,6 +79,51 @@ export function renderSupportModal(): void {
         _(
           'If Tachyon powers your daily networking and keeps your connection fast and secure, consider supporting ongoing development! ☕ 🧀 🌭',
         ),
+      ),
+    ],
+  );
+
+  // Boosty card (primary)
+  const boostyCard = E(
+    'div',
+    {
+      style:
+        'margin-bottom: 16px; padding: 14px; background: var(--background-color-secondary, rgba(0, 0, 0, 0.05)); border: 1px solid rgba(255, 106, 0, 0.35); border-radius: 6px;',
+    },
+    [
+      E(
+        'div',
+        {
+          style:
+            'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;',
+        },
+        [
+          E(
+            'div',
+            { style: 'display: flex; flex-direction: column; gap: 2px;' },
+            [
+              E('div', { style: 'font-weight: bold; font-size: 14px;' }, [
+                '⭐ Boosty',
+              ]),
+              E(
+                'div',
+                {
+                  style:
+                    'font-size: 12px; color: var(--text-color-medium, #888);',
+                },
+                _('Subscriptions, one-time donations and exclusives'),
+              ),
+            ],
+          ),
+          renderButton({
+            classNames: ['cbi-button-action'],
+            icon: renderLinkIcon24,
+            text: _('Support on Boosty'),
+            onClick: () => {
+              window.open(BOOSTY_URL, '_blank', 'noopener,noreferrer');
+            },
+          }),
+        ],
       ),
     ],
   );
@@ -249,7 +295,7 @@ export function renderSupportModal(): void {
       style:
         'max-width: 640px; width: 100%; box-sizing: border-box; padding: 4px;',
     },
-    [introBlock, cloudTipsCard, cryptoSection, footer],
+    [introBlock, boostyCard, cloudTipsCard, cryptoSection, footer],
   );
 
   ui.showModal(`💖 ${_('Support Development')}`, modalContent);

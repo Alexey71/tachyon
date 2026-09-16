@@ -6,6 +6,7 @@
 [![Releases](https://img.shields.io/github/v/release/Dushnilin/tachyon?style=for-the-badge&color=818CF8)](https://github.com/Dushnilin/tachyon/releases)
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-23.05%20%7C%2024.10%20%7C%2025.x%20%7C%20SNAPSHOT-10B981?style=for-the-badge&logo=openwrt)](https://openwrt.org/)
 [![Telegram](https://img.shields.io/badge/Telegram-Канал-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/tachyon_proxy)
+[![Boosty](https://img.shields.io/badge/Boosty-Поддержать-FF6A00?style=for-the-badge&logo=boosty&logoColor=white)](https://boosty.to/tachyon)
 [![License](https://img.shields.io/github/license/Dushnilin/tachyon?style=for-the-badge&color=C084FC)](LICENSE)
 
 [**🇷🇺 Русский**](README.md) | [**🇬🇧 English**](README.en.md)
@@ -341,6 +342,9 @@ Tachyon опирается на фундаментальные разработ�
 ## 💖 Поддержать разработку
 
 Если Tachyon помогает вам и делает работу в сети комфортной, вы можете поддержать проект и автора! ☕ 🧀 🌭
+
+⭐ **Boosty (подписки, донаты, эксклюзив):**  
+👉 [**Поддержать на Boosty**](https://boosty.to/tachyon)
 
 💳 **Карты РФ / СБП / Tinkoff Pay:**  
 👉 [**Поддержать проект на CloudTips**](https://pay.cloudtips.ru/p/48c57581)
