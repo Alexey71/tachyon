@@ -1218,6 +1218,10 @@ function build_system_info() {
     let zapret2_version = zapret2_installed ? provider_version(ZAPRET2_RUNTIME_UC) : "not installed";
     let byedpi_installed = provider_installed(BYEDPI_RUNTIME_UC) ? 1 : 0;
     let byedpi_version = byedpi_installed ? provider_version(BYEDPI_RUNTIME_UC) : "not installed";
+    let wdtt_installed = provider_installed(WDTT_RUNTIME_UC) ? 1 : 0;
+    let wdtt_version = wdtt_installed ? provider_version(WDTT_RUNTIME_UC) : "not installed";
+    let olcrtc_installed = provider_installed(OLCRTC_RUNTIME_UC) ? 1 : 0;
+    let olcrtc_version = olcrtc_installed ? provider_version(OLCRTC_RUNTIME_UC) : "not installed";
     let tailscale_installed = provider_installed(TAILSCALE_RUNTIME_UC) ? 1 : 0;
     let tailscale_version = tailscale_installed ? provider_version(TAILSCALE_RUNTIME_UC) : "not installed";
     let fptn_installed = provider_installed(FPTN_RUNTIME_UC) ? 1 : 0;
@@ -1261,6 +1265,8 @@ function build_system_info() {
     let zapret_meta = read_backup_meta("zapret");
     let zapret2_meta = read_backup_meta("zapret2");
     let byedpi_meta = read_backup_meta("byedpi");
+    let wdtt_meta = read_backup_meta("wdtt");
+    let olcrtc_meta = read_backup_meta("olcrtc");
     let tailscale_meta = read_backup_meta("tailscale");
     let fptn_meta = read_backup_meta("fptn");
 
@@ -1290,6 +1296,14 @@ function build_system_info() {
         byedpi_installed,
         byedpi_backup_version: byedpi_meta ? as_string(byedpi_meta.version) : "",
         byedpi_backup_time: byedpi_meta ? int(byedpi_meta.timestamp || 0) : 0,
+        wdtt_version,
+        wdtt_installed,
+        wdtt_backup_version: wdtt_meta ? as_string(wdtt_meta.version) : "",
+        wdtt_backup_time: wdtt_meta ? int(wdtt_meta.timestamp || 0) : 0,
+        olcrtc_version,
+        olcrtc_installed,
+        olcrtc_backup_version: olcrtc_meta ? as_string(olcrtc_meta.version) : "",
+        olcrtc_backup_time: olcrtc_meta ? int(olcrtc_meta.timestamp || 0) : 0,
         tailscale_version,
         tailscale_installed,
         tailscale_backup_version: tailscale_meta ? as_string(tailscale_meta.version) : "",

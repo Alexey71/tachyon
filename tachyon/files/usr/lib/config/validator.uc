@@ -363,8 +363,9 @@ function ruleset_reference_valid(reference, community_services) {
 
     return reference == "" ||
         community_service_valid(reference, community_services) ||
-        (remote_reference(reference) && !remote_plain_list_reference(reference)) ||
-        absolute_reference_with_extension(reference, ".srs", ".json");
+        remote_reference(reference) ||
+        absolute_reference_with_extension(reference, ".srs", ".json") ||
+        absolute_reference_with_extension(reference, ".lst", ".txt");
 }
 
 function plain_domain_ip_list_reference_valid(reference) {
@@ -1223,8 +1224,6 @@ function validate_service_value(service, context) {
 }
 
 function validate_ruleset_reference_value(reference, context) {
-    if (remote_plain_list_reference(reference))
-        fail_validation("Plain .lst/.txt list '" + reference + "' belongs in domain_ip_lists, not rule_set. Aborted.");
     if (ruleset_reference_valid(reference, context.community_services))
         return;
 

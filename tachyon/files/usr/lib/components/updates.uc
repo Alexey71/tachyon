@@ -2743,10 +2743,43 @@ function import_rule_sets_with_subnets_from_rule(section, settings) {
             if (!import_custom_ruleset_subnets_from_local(reference, "source", section, "Rule set " + reference))
                 ok = false;
         }
-        else if (match(reference, /^https?:\/\//) != null) {
-            let format = extension == "json" ? "source" : (extension == "srs" ? "binary" : singbox_rulesets_module().remote_format(reference));
-            if (!import_custom_ruleset_subnets_from_remote(reference, format, section, "Rule set " + reference, settings))
+        else if (match(reference, /^\/.*\.(lst|txt)$/) != null) {
+            if (!add_plain_subnet_file_to_nft_for_section(section, reference))
                 ok = false;
+        }
+        else if (match(reference, /^https?:\/\//) != null) {
+            if (extension == "lst" || extension == "txt" || singbox_rulesets_module().is_plain_list_reference(reference)) {
+                let tmpfile = temp_path();
+                if (tmpfile == "") {
+                    ok = false;
+                } else {
+                    if (download_to_file(reference, tmpfile, service_proxy_address(settings, "lists")) && file_nonempty(tmpfile)) {
+                        convert_crlf_to_lf(tmpfile);
+                        if (!add_plain_subnet_file_to_nft_for_section(section, tmpfile))
+                            ok = false;
+                        let tag_name = "inline-custom-" + singbox_rulesets_module().hash12(reference) + "-ruleset";
+                        let srs_path = TMP_RULESET_FOLDER + "/" + tag_name + ".srs";
+                        let json_path = TMP_RULESET_FOLDER + "/" + tag_name + ".json";
+                        let etc_srs = "/etc/tachyon/rulesets/" + tag_name + ".srs";
+                        let etc_json = "/etc/tachyon/rulesets/" + tag_name + ".json";
+                        common.ensure_dir("/etc/tachyon/rulesets");
+                        common.ensure_dir(TMP_RULESET_FOLDER);
+                        let res = routing_rulesets_module().compile_plain_list(tmpfile, srs_path, json_path);
+                        if (res.format == "binary")
+                            common.copy_file(srs_path, etc_srs);
+                        else
+                            common.copy_file(json_path, etc_json);
+                    } else {
+                        log_message("Failed to download remote plain list " + reference + "; keeping existing cache", "warn");
+                    }
+                    remove_file(tmpfile);
+                }
+            }
+            else {
+                let format = extension == "json" ? "source" : (extension == "srs" ? "binary" : singbox_rulesets_module().remote_format(reference));
+                if (!import_custom_ruleset_subnets_from_remote(reference, format, section, "Rule set " + reference, settings))
+                    ok = false;
+            }
         }
         else {
             log_message("Unsupported rule set reference for subnet import: " + reference, "error");
@@ -2754,6 +2787,52 @@ function import_rule_sets_with_subnets_from_rule(section, settings) {
         }
     }
 
+    return ok;
+}
+
+function update_remote_plain_rulesets_from_rule(section, settings) {
+    if (!bool_option(section, "enabled", true))
+        return true;
+
+    let rulesets = connections.rule_sets(section);
+    if (length(rulesets) == 0)
+        return true;
+
+    let ok = true;
+    for (let reference in rulesets) {
+        reference = as_string(reference);
+        if (match(reference, /^https?:\/\//) == null)
+            continue;
+        if (!singbox_rulesets_module().is_plain_list_reference(reference))
+            continue;
+
+        log_message("Updating remote plain rule set for '" + section_name(section) + "': " + reference, "info");
+        let tmpfile = temp_path();
+        if (tmpfile == "") {
+            ok = false;
+            continue;
+        }
+
+        if (download_to_file(reference, tmpfile, service_proxy_address(settings, "lists")) && file_nonempty(tmpfile)) {
+            convert_crlf_to_lf(tmpfile);
+            let tag_name = "inline-custom-" + singbox_rulesets_module().hash12(reference) + "-ruleset";
+            let srs_path = TMP_RULESET_FOLDER + "/" + tag_name + ".srs";
+            let json_path = TMP_RULESET_FOLDER + "/" + tag_name + ".json";
+            let etc_srs = "/etc/tachyon/rulesets/" + tag_name + ".srs";
+            let etc_json = "/etc/tachyon/rulesets/" + tag_name + ".json";
+            common.ensure_dir("/etc/tachyon/rulesets");
+            common.ensure_dir(TMP_RULESET_FOLDER);
+            let res = routing_rulesets_module().compile_plain_list(tmpfile, srs_path, json_path);
+            if (res.format == "binary")
+                common.copy_file(srs_path, etc_srs);
+            else
+                common.copy_file(json_path, etc_json);
+        }
+        else {
+            log_message("Failed to download remote plain rule set " + reference + "; keeping existing cache", "warn");
+        }
+        remove_file(tmpfile);
+    }
     return ok;
 }
 
@@ -3154,6 +3233,9 @@ function list_update() {
             ok = false;
     for (let section in sections)
         if (!import_domains_from_remote_domain_lists(section, settings))
+            ok = false;
+    for (let section in sections)
+        if (!update_remote_plain_rulesets_from_rule(section, settings))
             ok = false;
 
     // Фаза 2: применение к nft (захватываем лок reload, чтобы не конфликтовать

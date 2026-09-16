@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-16 19:54+0300\n"
-"PO-Revision-Date: 2026-09-16 19:54+0300\n"
+"POT-Creation-Date: 2026-09-16 22:41+0300\n"
+"PO-Revision-Date: 2026-09-16 22:41+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -272,11 +272,11 @@ msgstr "Добавьте URL или локальные пути к списка�
 msgid "Add URLs or local paths to .lst lists containing domains. IP entries are ignored."
 msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены. IP-записи игнорируются."
 
-msgid "Add URLs or local paths to .srs / .json lists. Only domain rules are supported."
-msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Поддерживаются только правила доменов."
+msgid "Add URLs or local paths to .srs / .json / .lst / .txt lists. Only domain rules are supported."
+msgstr ""
 
-msgid "Add URLs or local paths to .srs / .json lists. Subnets are ignored by default."
-msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Подсети игнорируются по умолчанию."
+msgid "Add URLs or local paths to .srs / .json / .lst / .txt lists. Subnets are ignored by default."
+msgstr ""
 
 msgid "Add URLTest / Priority group"
 msgstr "Добавить группу URLTest / Приоритет"
@@ -3758,9 +3758,6 @@ msgstr "Закрепить на дашборде"
 msgid "Pin P2P isolation to the torrent client's own ports, comma separated. Each entry is \"proto\", \"proto:port\" or \"proto:port-port\" (tcp/udp). Without a port the whole protocol is routed direct."
 msgstr "Привязка изоляции P2P к портам торрент-клиента через запятую. Каждая запись: \"proto\", \"proto:port\" или \"proto:port-port\" (tcp/udp). Без указания порта весь протокол направляется напрямую."
 
-msgid "Plain .lst / .txt lists belong in \"Domain and IP lists\", not \"Rule sets\""
-msgstr ""
-
 msgid "Plain-UDP DNS servers used as a last resort when all primary DNS fail. These are always unencrypted (no DoH/DoT). Example: 1.1.1.1, 8.8.8.8. Unlike the ISP fallback toggle, these are your own chosen servers."
 msgstr "Обычные UDP DNS-серверы, используемые как резерв при недоступности всех основных DNS. Всегда работают без шифрования (без DoH/DoT). Пример: 1.1.1.1, 8.8.8.8. В отличие от аварийного DNS провайдера, это выбранные вами серверы."
 
@@ -4277,8 +4274,8 @@ msgstr "Правило"
 msgid "Rule Name"
 msgstr "Название правила"
 
-msgid "Rule set must be an HTTP(S) URL or a local .srs / .json path"
-msgstr "Набор правил должен быть HTTP(S) URL или локальным путём .srs / .json"
+msgid "Rule set must be an HTTP(S) URL or a local .srs / .json / .lst / .txt path"
+msgstr ""
 
 msgid "Rule set settings"
 msgstr "Настройки набора правил"
@@ -5980,6 +5977,18 @@ msgstr "Правила маршрутизации sing-box для Zapret2 не �
 
 msgid "Zero config mesh VPN daemon"
 msgstr "Mesh VPN-демон с нулевой конфигурацией"
+
+msgid "Add URLs or local paths to .srs / .json lists. Only domain rules are supported."
+msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Поддерживаются только правила доменов."
+
+msgid "Add URLs or local paths to .srs / .json lists. Subnets are ignored by default."
+msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Подсети игнорируются по умолчанию."
+
+msgid "Plain .lst / .txt lists belong in \"Domain and IP lists\", not \"Rule sets\""
+msgstr ""
+
+msgid "Rule set must be an HTTP(S) URL or a local .srs / .json path"
+msgstr "Набор правил должен быть HTTP(S) URL или локальным путём .srs / .json"
 
 msgid "Testing strategy"
 msgstr "Тестирование стратегии"

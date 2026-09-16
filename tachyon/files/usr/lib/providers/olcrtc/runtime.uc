@@ -31,6 +31,7 @@ let bool_option = common.bool_option;
 let list_option = common.list_option;
 let section_name = common.section_name;
 let read_json_file = common.read_json_file;
+let write_json = common.write_json;
 
 function yaml_quote(value) {
     value = as_string(value);
@@ -70,6 +71,12 @@ function package_version() {
     let ver = trim(fs.readfile("/etc/olcrtc/.version") || "");
     if (ver != "")
         return ver;
+    let pkgs = require("core.packages");
+    if (pkgs && pkgs.version) {
+        let v = pkgs.version("olcrtc");
+        if (v != "")
+            return v;
+    }
     return "";
 }
 

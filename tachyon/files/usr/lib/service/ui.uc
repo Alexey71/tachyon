@@ -1011,6 +1011,8 @@ function capability_flags() {
         zapret_installed: file_executable(ZAPRET_PROVIDER_NFQWS_BIN) ? 1 : 0,
         zapret2_installed: file_executable(ZAPRET2_PROVIDER_NFQWS2_BIN) ? 1 : 0,
         byedpi_installed: file_executable(BYEDPI_BIN) ? 1 : 0,
+        wdtt_installed: (file_executable("/usr/bin/qwdtt") || file_executable("/usr/bin/wdtt")) ? 1 : 0,
+        olcrtc_installed: file_executable("/usr/bin/olcrtc") ? 1 : 0,
         server_inbounds_enabled_count: 0
     };
 

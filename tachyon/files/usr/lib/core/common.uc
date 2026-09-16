@@ -538,6 +538,18 @@ function remove_file(path) {
     try { fs.unlink(path); return true; } catch (e) { return true; }
 }
 
+function copy_file(source, target) {
+    source = as_string(source);
+    target = as_string(target);
+    let data = fs.readfile(source);
+    if (data == null)
+        return false;
+    let slash = rindex(target, "/");
+    if (slash > 0)
+        ensure_dir(substr(target, 0, slash));
+    return fs.writefile(target, data) != null;
+}
+
 function unlink_file(path) {
     return remove_file(path);
 }
@@ -705,6 +717,7 @@ return {
     command_output_from_args,
     ensure_dir,
     remove_file,
+    copy_file,
     unlink_file,
     write_file,
     file_exists,

@@ -32,6 +32,7 @@ let list_option = common.list_option;
 let section_name = common.section_name;
 let read_json_file = common.read_json_file;
 let write_json_file = common.write_json_file;
+let write_json = common.write_json;
 
 function lan_mac_address() {
     for (let iface in ["br-lan", "lan", "eth0", "eth1"]) {
@@ -83,6 +84,12 @@ function package_version() {
         let ver = trim(fs.readfile("/etc/qwdtt/.version") || "");
         if (ver != "")
             return ver;
+    }
+    let pkgs = require("core.packages");
+    if (pkgs && pkgs.version) {
+        let v = pkgs.version("wdtt") || pkgs.version("qwdtt");
+        if (v != "")
+            return v;
     }
     return "";
 }

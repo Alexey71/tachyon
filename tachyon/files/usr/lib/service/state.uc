@@ -751,11 +751,19 @@ function has_community_subnet_list(value) {
     return rule_config.has_community_subnet_list(value);
 }
 
-function rule_has_list_update_source(enabled, action, community_lists, remote_domain_lists, remote_subnet_lists, rule_set_with_subnets, domain_ip_lists) {
+function has_remote_plain_ruleset(value) {
+    for (let item in split(as_string(value), /[ \t\r\n]+/)) {
+        if (match(item, /^https?:\/\//) != null && match(item, /\.(lst|txt)$/i) != null)
+            return true;
+    }
+    return false;
+}
+
+function rule_has_list_update_source(enabled, action, community_lists, remote_domain_lists, remote_subnet_lists, rule_set_with_subnets, domain_ip_lists, rule_set) {
     if (!arg_bool(enabled))
         return false;
     if (as_string(action) == "dns")
-        return list_has_remote_references(domain_ip_lists);
+        return list_has_remote_references(domain_ip_lists) || has_remote_plain_ruleset(rule_set);
     if (as_string(action) == "hosts")
         return false;
 
@@ -764,7 +772,8 @@ function rule_has_list_update_source(enabled, action, community_lists, remote_do
         as_string(remote_domain_lists) != "" ||
         as_string(remote_subnet_lists) != "" ||
         as_string(rule_set_with_subnets) != "" ||
-        list_has_remote_references(domain_ip_lists)
+        list_has_remote_references(domain_ip_lists) ||
+        has_remote_plain_ruleset(rule_set)
     );
 }
 
@@ -1244,6 +1253,7 @@ function append_list_update_signature_body(body, section) {
     body = signature_add_value(body, "lists." + name + ".action", action);
     if (action == "dns") {
         body = signature_add_value(body, "lists." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
+        body = signature_add_value(body, "lists." + name + ".rule_set", connections.rule_sets_value(section));
         return body;
     }
     if (action == "hosts") {
@@ -1261,6 +1271,7 @@ function append_list_update_signature_body(body, section) {
     body = signature_add_value(body, "lists." + name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
     body = signature_add_value(body, "lists." + name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));
     body = signature_add_value(body, "lists." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
+    body = signature_add_value(body, "lists." + name + ".rule_set", connections.rule_sets_value(section));
 
     return body;
 }
@@ -1959,7 +1970,8 @@ function has_list_update_sources_from_sections(sections) {
             option(section, "remote_domain_lists", ""),
             option(section, "remote_subnet_lists", ""),
             connections.rule_sets_with_subnets_value(section),
-            option(section, "domain_ip_lists", "")
+            option(section, "domain_ip_lists", ""),
+            connections.rule_sets_value(section)
         ))
             return true;
 
@@ -2221,7 +2233,7 @@ else if (mode == "community-service-has-subnet-list")
 else if (mode == "filter-community-subnet-lists")
     filter_community_subnet_lists(ARGV[1]);
 else if (mode == "rule-has-list-update-source")
-    exit(rule_has_list_update_source(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5], ARGV[6], ARGV[7]) ? 0 : 1);
+    exit(rule_has_list_update_source(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5], ARGV[6], ARGV[7], ARGV[8]) ? 0 : 1);
 else if (mode == "rule-has-nft-list-update-source")
     exit(rule_has_nft_list_update_source(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5], ARGV[6]) ? 0 : 1);
 else if (mode == "rule-has-subscription-update-source")

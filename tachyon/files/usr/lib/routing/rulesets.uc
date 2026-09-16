@@ -469,6 +469,34 @@ function has_rules(path) {
     return length(array_or_empty(ruleset.rules)) > 0;
 }
 
+function compile_plain_list(plain_path, ruleset_srs_path, ruleset_json_path) {
+    create_source(ruleset_json_path);
+    import_plain_list(plain_path, ruleset_json_path, "domain_suffix", "domains", "5000");
+    import_plain_list(plain_path, ruleset_json_path, "ip_cidr", "subnets", "5000");
+
+    let has_doms = has_domain_matchers(ruleset_json_path);
+    let rules_exist = has_rules(ruleset_json_path);
+
+    if (rules_exist) {
+        let compile_ok = common.command_success_from_args([
+            "sing-box", "rule-set", "compile", ruleset_json_path, "-o", ruleset_srs_path
+        ]);
+        let srs_st = fs.stat(ruleset_srs_path);
+        if (compile_ok && srs_st != null && srs_st.size >= 16) {
+            fs.unlink(ruleset_json_path);
+            return { format: "binary", path: ruleset_srs_path, has_domains: has_doms };
+        }
+        return { format: "source", path: ruleset_json_path, has_domains: has_doms };
+    }
+
+    let rulesets_mod = null;
+    try { rulesets_mod = require("singbox.rulesets"); } catch (e) {}
+    if (rulesets_mod && rulesets_mod.ensure_empty_srs_stub)
+        rulesets_mod.ensure_empty_srs_stub(ruleset_srs_path);
+    fs.unlink(ruleset_json_path);
+    return { format: "binary", path: ruleset_srs_path, has_domains: false };
+}
+
 function module_exports() {
     return {
         create_source,
@@ -480,6 +508,7 @@ function module_exports() {
         extract_ip_cidr_nft_elements,
         has_domain_matchers,
         has_rules,
+        compile_plain_list,
         ruleset_tag,
         read_json_file,
         write_json_file

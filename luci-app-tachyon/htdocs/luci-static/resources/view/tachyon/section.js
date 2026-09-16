@@ -7652,16 +7652,10 @@ function validateFileReference(value, extensions, errorMessage, options = {}) {
 }
 
 function validateCustomRulesetReference(value) {
-  if (hasAllowedReferenceExtension(value, [".lst", ".txt"])) {
-    return _(
-      'Plain .lst / .txt lists belong in "Domain and IP lists", not "Rule sets"',
-    );
-  }
-
   return validateFileReference(
     value,
-    [".srs", ".json"],
-    _("Rule set must be an HTTP(S) URL or a local .srs / .json path"),
+    [".srs", ".json", ".lst", ".txt"],
+    _("Rule set must be an HTTP(S) URL or a local .srs / .json / .lst / .txt path"),
     { allowRemoteWithoutExtension: true },
   );
 }
@@ -11139,7 +11133,7 @@ function createSectionContent(section) {
     "rule_set",
     _("Rule sets"),
     _(
-      "Add URLs or local paths to .srs / .json lists. Subnets are ignored by default.",
+      "Add URLs or local paths to .srs / .json / .lst / .txt lists. Subnets are ignored by default.",
     ),
   );
   ruleSetOption.modalonly = true;
@@ -11168,7 +11162,7 @@ function createSectionContent(section) {
     "_dns_rule_set",
     _("Rule sets"),
     _(
-      "Add URLs or local paths to .srs / .json lists. Only domain rules are supported.",
+      "Add URLs or local paths to .srs / .json / .lst / .txt lists. Only domain rules are supported.",
     ),
   );
   dnsRuleSetOption.depends("action", "dns");

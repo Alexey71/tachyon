@@ -952,9 +952,121 @@ function ensure_custom_ruleset(config, reference) {
         return { tag: tag_name, kind };
 
     let extension = runtime_rulesets.file_extension(reference);
-    if (runtime_rulesets.is_plain_list_reference(reference))
-        ctx.runtime_generate_unsupported("plain .lst/.txt list '" + reference + "' belongs in domain_ip_lists, not rule_set");
-    if (substr(reference, 0, 1) == "/") {
+    let folder = ctx.runtime_ruleset_folder || runtime_ruleset_folder;
+    common.ensure_dir(folder);
+
+    if (runtime_rulesets.is_plain_list_reference(reference)) {
+        let srs_path = folder + "/" + tag_name + ".srs";
+        let json_path = folder + "/" + tag_name + ".json";
+        let etc_srs = "/etc/tachyon/rulesets/" + tag_name + ".srs";
+        let etc_json = "/etc/tachyon/rulesets/" + tag_name + ".json";
+
+        if (substr(reference, 0, 1) == "/") {
+            if (!helpers.file_is_usable(reference, 1))
+                return null;
+
+            let ref_st = fs.stat(reference);
+            let srs_st = fs.stat(srs_path);
+            if (srs_st && runtime_rulesets.is_valid_srs_file(srs_path) && ref_st && srs_st.mtime >= ref_st.mtime) {
+                push(config.route.rule_set, {
+                    type: "local",
+                    tag: tag_name,
+                    format: "binary",
+                    path: srs_path
+                });
+                return { tag: tag_name, kind: "domains" };
+            }
+
+            let res = source_rulesets.compile_plain_list(reference, srs_path, json_path);
+            push(config.route.rule_set, {
+                type: "local",
+                tag: tag_name,
+                format: res.format,
+                path: res.path
+            });
+            return { tag: tag_name, kind: res.has_domains ? "domains" : "unknown" };
+        }
+        else if (substr(reference, 0, 7) == "http://" || substr(reference, 0, 8) == "https://") {
+            if (runtime_rulesets.is_valid_srs_file(srs_path)) {
+                push(config.route.rule_set, {
+                    type: "local",
+                    tag: tag_name,
+                    format: "binary",
+                    path: srs_path
+                });
+                return { tag: tag_name, kind: "domains" };
+            }
+            else if (runtime_rulesets.is_valid_srs_file(etc_srs)) {
+                common.copy_file(etc_srs, srs_path);
+                push(config.route.rule_set, {
+                    type: "local",
+                    tag: tag_name,
+                    format: "binary",
+                    path: srs_path
+                });
+                return { tag: tag_name, kind: "domains" };
+            }
+            else if (fs.stat(json_path) != null) {
+                push(config.route.rule_set, {
+                    type: "local",
+                    tag: tag_name,
+                    format: "source",
+                    path: json_path
+                });
+                return { tag: tag_name, kind: "domains" };
+            }
+            else if (fs.stat(etc_json) != null) {
+                common.copy_file(etc_json, json_path);
+                push(config.route.rule_set, {
+                    type: "local",
+                    tag: tag_name,
+                    format: "source",
+                    path: json_path
+                });
+                return { tag: tag_name, kind: "domains" };
+            }
+            else {
+                let tmp_plain = folder + "/" + tag_name + ".tmp.plain";
+                let dl_ok = false;
+                if (common.command_success("command -v curl"))
+                    dl_ok = common.command_success_from_args([ "curl", "-fsSL", "--connect-timeout", "5", "-m", "10", reference, "-o", tmp_plain ]);
+                else if (common.command_success("command -v wget"))
+                    dl_ok = common.command_success_from_args([ "wget", "-q", "-T", "10", "-O", tmp_plain, reference ]);
+
+                if (dl_ok && helpers.file_is_usable(tmp_plain, 1)) {
+                    common.ensure_dir("/etc/tachyon/rulesets");
+                    let res = source_rulesets.compile_plain_list(tmp_plain, srs_path, json_path);
+                    if (res.format == "binary")
+                        common.copy_file(srs_path, etc_srs);
+                    else
+                        common.copy_file(json_path, etc_json);
+                    fs.unlink(tmp_plain);
+                    push(config.route.rule_set, {
+                        type: "local",
+                        tag: tag_name,
+                        format: res.format,
+                        path: res.path
+                    });
+                    return { tag: tag_name, kind: res.has_domains ? "domains" : "unknown" };
+                }
+                else {
+                    fs.unlink(tmp_plain);
+                    runtime_rulesets.ensure_empty_srs_stub(srs_path);
+                    push(config.route.rule_set, {
+                        type: "local",
+                        tag: tag_name,
+                        format: "binary",
+                        path: srs_path
+                    });
+                    return { tag: tag_name, kind: "domains" };
+                }
+            }
+        }
+        else {
+            ctx.runtime_generate_unsupported("plain list reference is not supported by sing-box config generation");
+        }
+    }
+    else if (substr(reference, 0, 1) == "/") {
         if (extension != "srs" && extension != "json")
             ctx.runtime_generate_unsupported("local rule_set extension is not supported by sing-box config generation");
         // Skip broken local ruleset files — nonexistent or suspiciously small
