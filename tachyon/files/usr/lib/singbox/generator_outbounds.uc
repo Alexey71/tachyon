@@ -1844,6 +1844,16 @@ function add_olcrtc_outbound(config, section, sections) {
     });
 }
 
+// FPTN routes traffic through its TUN interface (tun-fptn) via kernel routing.
+// fwmark 0x00300000 (3145728) → ip rule → routing table 4249 → dev tun-fptn.
+function add_fptn_outbound(config, section, sections) {
+    push(config.outbounds, {
+        type: "direct",
+        tag: outbound_tag(section[".name"]),
+        routing_mark: 3145728
+    });
+}
+
 return {
     init,
     reserved_runtime_tag_set,
@@ -1880,5 +1890,6 @@ return {
     add_zapret2_outbound,
     add_byedpi_outbound,
     add_wdtt_outbound,
-    add_olcrtc_outbound
+    add_olcrtc_outbound,
+    add_fptn_outbound
 };

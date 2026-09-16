@@ -126,7 +126,7 @@ function target(section, outbound_tag_name) {
         action == "anytls" || action == "snell" || action == "mieru" || action == "sudoku" ||
         action == "masque" || action == "openvpn" ||
         action == "byedpi" || action == "zapret" || action == "zapret2" ||
-        action == "wdtt" || action == "olcrtc")
+        action == "wdtt" || action == "olcrtc" || action == "fptn")
         return { action: "route", outbound: outbound_tag_name };
     if (action == "bypass")
         return { action: "route", outbound: runtime_constants.BYPASS_OUTBOUND_TAG };

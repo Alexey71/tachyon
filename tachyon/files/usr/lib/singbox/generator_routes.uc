@@ -1824,6 +1824,8 @@ function add_outbound_for_section(config, section, taken, sections) {
         ctx.outbounds.add_wdtt_outbound(config, section, sections);
     else if (action == "olcrtc")
         ctx.outbounds.add_olcrtc_outbound(config, section, sections);
+    else if (action == "fptn")
+        ctx.outbounds.add_fptn_outbound(config, section, sections);
     else if (action == "bypass") {
         /* route-only action */
     }
@@ -1849,7 +1851,7 @@ function reserve_section_outbound_tags(sections, taken) {
         let action = option(section, "action", "");
         if (connections.is_connections_action(action) ||
             action == "awg" || action == "warp" || action == "byedpi" || action == "zapret" || action == "zapret2" ||
-            action == "wdtt" || action == "olcrtc" ||
+            action == "wdtt" || action == "olcrtc" || action == "fptn" ||
             action == "anytls" || action == "snell" || action == "mieru" || action == "sudoku" ||
             action == "masque" || action == "openvpn")
             taken[outbound_tag(section[".name"])] = true;
