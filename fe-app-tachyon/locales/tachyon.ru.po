@@ -4925,6 +4925,12 @@ msgstr "Поддержать разработку"
 msgid "Support on CloudTips"
 msgstr "Поддержать проект на CloudTips"
 
+msgid "Support on Boosty"
+msgstr "Поддержать на Boosty"
+
+msgid "Subscriptions, one-time donations and exclusives"
+msgstr "Подписки, разовые донаты и эксклюзивный контент"
+
 msgid "Sweden (se)"
 msgstr "Швеция (se)"
 
