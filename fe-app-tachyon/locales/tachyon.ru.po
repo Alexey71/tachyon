@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-15 15:34+0300\n"
-"PO-Revision-Date: 2026-09-15 15:34+0300\n"
+"POT-Creation-Date: 2026-09-16 08:36+0300\n"
+"PO-Revision-Date: 2026-09-16 08:36+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -137,6 +137,9 @@ msgstr "🔄 Обновить"
 msgid "🔄 Reset to Factory Defaults"
 msgstr "🔄 Сбросить к заводским настройкам"
 
+msgid "🔍 Analyzing DPI blocking patterns..."
+msgstr ""
+
 msgid "🔍 Combinatorial Deep Fuzzing (~150-300+)"
 msgstr "🔍 Комбинаторный глубокий фаззинг (~150-300+)"
 
@@ -151,6 +154,9 @@ msgstr "🧠 Сгенерировать через ИИ"
 
 msgid "🧠 Synthesizing..."
 msgstr "🧠 Генерация..."
+
+msgid "🧬 Adaptive Smart Fuzzing (Genetic / Prior Seeds)"
+msgstr ""
 
 msgid "🚀 Initializing benchmark in sandbox..."
 msgstr "🚀 Инициализация бенчмарка в песочнице..."
@@ -172,6 +178,9 @@ msgstr "🛡️ ЗАЩИЩЕНО: Все DNS-запросы разрешаютс
 
 msgid "🛡️ SECURE: Public IP is concealed behind the proxy outbound."
 msgstr "🛡️ ЗАЩИЩЕНО: Публичный IP-адрес скрыт за исходящим прокси."
+
+msgid "🛡️ Stage 2: Stability Verification"
+msgstr ""
 
 msgid "🟣 Twitch Suite (Live Stream + HLS CDN)"
 msgstr "🟣 Twitch (Прямой эфир + HLS CDN)"
@@ -2180,6 +2189,18 @@ msgstr "Принудительно направлять DNS-запросы че�
 msgid "Found"
 msgstr "Найдено"
 
+msgid "FPTN Access Token"
+msgstr ""
+
+msgid "FPTN Bypass Method"
+msgstr ""
+
+msgid "FPTN Preferred Server"
+msgstr ""
+
+msgid "FPTN SNI"
+msgstr ""
+
 msgid "France (fr)"
 msgstr "Франция (fr)"
 
@@ -3557,6 +3578,15 @@ msgstr "Опциональные значения должны быть прис
 msgid "Optional values must be attached with '=' here; a separate token would be ignored by nfqws2."
 msgstr "Опциональные значения должны быть присоединены через '=' здесь; отдельный токен будет игнорироваться nfqws2."
 
+msgid "Optional: override bypass method (e.g. quic, tcp)"
+msgstr ""
+
+msgid "Optional: override TLS SNI for FPTN connection"
+msgstr ""
+
+msgid "Optional: preferred FPTN server address"
+msgstr ""
+
 msgid "Optionally specify individual devices not in a profile. MAC addresses (e.g. AA:BB:CC:DD:EE:FF) work even if the IP changes."
 msgstr "При необходимости укажите отдельные устройства вне профилей. MAC-адреса (напр. AA:BB:CC:DD:EE:FF) работают даже при смене IP."
 
@@ -4742,6 +4772,12 @@ msgstr "Значения сплита (-s)"
 msgid "SSH"
 msgstr "SSH"
 
+msgid "stability (3x)"
+msgstr ""
+
+msgid "Stage 1: Exploration Scan"
+msgstr ""
+
 msgid "Standalone ByeDPI autostart is enabled"
 msgstr "Автозапуск отдельной службы ByeDPI включен"
 
@@ -4904,6 +4940,9 @@ msgstr "Настройки URL подписки"
 msgid "Subscriptions updated"
 msgstr "Подписки обновлены"
 
+msgid "Subscriptions, one-time donations and exclusives"
+msgstr "Подписки, разовые донаты и эксклюзивный контент"
+
 msgid "Success"
 msgstr "Успех"
 
@@ -4922,14 +4961,11 @@ msgstr "Воскресенье"
 msgid "Support Development"
 msgstr "Поддержать разработку"
 
-msgid "Support on CloudTips"
-msgstr "Поддержать проект на CloudTips"
-
 msgid "Support on Boosty"
 msgstr "Поддержать на Boosty"
 
-msgid "Subscriptions, one-time donations and exclusives"
-msgstr "Подписки, разовые донаты и эксклюзивный контент"
+msgid "Support on CloudTips"
+msgstr "Поддержать проект на CloudTips"
 
 msgid "Sweden (se)"
 msgstr "Швеция (se)"
@@ -5143,9 +5179,6 @@ msgstr "Проверка всех секций..."
 
 msgid "Testing bypass strategies in isolated sandbox..."
 msgstr "Тестирование стратегий обхода в изолированной песочнице..."
-
-msgid "Testing strategy"
-msgstr "Тестирование стратегии"
 
 msgid "Testing upstream DNS resolvers..."
 msgstr "Тестирование вышестоящих DNS-резолверов..."
@@ -5899,6 +5932,9 @@ msgstr "Правила маршрутизации sing-box для Zapret2 нас
 
 msgid "Zapret2 sing-box route rules are not configured"
 msgstr "Правила маршрутизации sing-box для Zapret2 не настроены"
+
+msgid "Testing strategy"
+msgstr "Тестирование стратегии"
 
 msgid "Add URLs or local paths to .lst / .txt lists containing domains and subnets."
 msgstr "Добавьте URL или локальные пути к спискам .lst / .txt, содержащим домены и подсети."
