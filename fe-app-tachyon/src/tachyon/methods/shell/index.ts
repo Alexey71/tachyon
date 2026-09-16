@@ -976,6 +976,23 @@ export const TachyonShellMethods = {
       const parsedResponse = parseComponentActionResult(statusResponse);
 
       if ((statusResponse.code ?? 0) !== 0 || !parsedResponse) {
+        const failure = componentActionFailure(statusResponse, parsedResponse);
+        const isBackendStuck =
+          Date.now() - jobStartedAt >= COMPONENT_ACTION_TRANSIENT_RPC_GRACE_MS;
+
+        if (stateResponse?.running && !isBackendStuck) {
+          transientRpc.reset();
+          continue;
+        }
+
+        if (
+          !isBackendStuck &&
+          (await isComponentActionStillRunning(jobId, component, action))
+        ) {
+          transientRpc.reset();
+          continue;
+        }
+
         if (isSelfUpdate) {
           const version =
             (await confirmedByVersion()) ||
@@ -992,18 +1009,6 @@ export const TachyonShellMethods = {
           transientRpc.reset();
           continue;
         }
-
-        if (stateResponse?.running) {
-          transientRpc.reset();
-          continue;
-        }
-
-        if (await isComponentActionStillRunning(jobId, component, action)) {
-          transientRpc.reset();
-          continue;
-        }
-
-        const failure = componentActionFailure(statusResponse, parsedResponse);
 
         if (transientRpc.shouldContinue(failure.error)) {
           continue;

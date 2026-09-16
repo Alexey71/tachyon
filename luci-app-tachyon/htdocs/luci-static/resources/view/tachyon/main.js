@@ -3877,6 +3877,16 @@ var TachyonShellMethods = {
       });
       const parsedResponse = parseComponentActionResult(statusResponse);
       if ((statusResponse.code ?? 0) !== 0 || !parsedResponse) {
+        const failure = componentActionFailure(statusResponse, parsedResponse);
+        const isBackendStuck = Date.now() - jobStartedAt >= COMPONENT_ACTION_TRANSIENT_RPC_GRACE_MS;
+        if (stateResponse?.running && !isBackendStuck) {
+          transientRpc.reset();
+          continue;
+        }
+        if (!isBackendStuck && await isComponentActionStillRunning(jobId, component, action)) {
+          transientRpc.reset();
+          continue;
+        }
         if (isSelfUpdate) {
           const version = await confirmedByVersion() || await confirmedSameVersionReinstall();
           if (version) {
@@ -3888,15 +3898,6 @@ var TachyonShellMethods = {
           transientRpc.reset();
           continue;
         }
-        if (stateResponse?.running) {
-          transientRpc.reset();
-          continue;
-        }
-        if (await isComponentActionStillRunning(jobId, component, action)) {
-          transientRpc.reset();
-          continue;
-        }
-        const failure = componentActionFailure(statusResponse, parsedResponse);
         if (transientRpc.shouldContinue(failure.error)) {
           continue;
         }
@@ -21010,6 +21011,12 @@ function showUpdateProgressModal(options) {
             try {
               const res = await TachyonShellMethods.getSystemInfo();
               if (res && res.success) {
+                const targetVer = currentModalVersions.targetVersion?.replace(/^v/i, "").trim();
+                const currentVer = res.data?.tachyon_version?.replace(/^v/i, "").trim();
+                if (options.component === "tachyon" && targetVer && currentVer && currentVer !== targetVer && attempt < maxAttempts - 2) {
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  continue;
+                }
                 statusEl.textContent = _(
                   "Services are online and ready! Reloading page..."
                 );

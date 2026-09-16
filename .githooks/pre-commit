@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+echo "==> [pre-commit] Actualizing locales and building frontend..."
+cd fe-app-tachyon
+
+npm run locales:actualize
+npm run build
+npm run format
+
+cd ..
+git add fe-app-tachyon/locales/ luci-app-tachyon/po/ luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js
+echo "==> [pre-commit] Frontend and locales actualized & staged."

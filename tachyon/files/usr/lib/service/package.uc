@@ -295,6 +295,8 @@ function remove_component_update_cache() {
     for (let path in fs.glob(COMPONENT_UPDATE_CHECK_DIR + "/*.json"))
         unlink_if_exists(path);
     unlink_if_exists(COMPONENT_UPDATE_CHECK_TIMESTAMP);
+    unlink_if_exists(RUNTIME_STATE_DIR + "/system-info.json");
+    unlink_if_exists("/tmp/tachyon/system-info.json");
     command_success_from_args([ "rm", "-rf", COMPONENT_ACTION_LOCK ]);
     for (let path in fs.glob(COMPONENT_ACTION_DIR + "/*"))
         if (!component_job_is_running(path))

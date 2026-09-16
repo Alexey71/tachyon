@@ -3437,8 +3437,11 @@ if (op == "start") {
         zapret: get_strategies_for_engine("zapret", strat_mode),
         byedpi: get_strategies_for_engine("byedpi", strat_mode)
     }));
+} else if (op == "probe") {
+    let r = run_probe(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5]);
+    print(sprintf("%J\n", r));
 } else {
-    warn("Usage: fuzzer.uc [start|status|stop|apply|strategies|generate|get_patterns|save_patterns|reset_patterns|ai_synthesize|detect_dpi|auto_apply|history|clear_history|worker] ...\n");
+    warn("Usage: fuzzer.uc [start|status|stop|apply|strategies|generate|get_patterns|save_patterns|reset_patterns|ai_synthesize|detect_dpi|auto_apply|history|clear_history|worker|probe] ...\n");
     exit(1);
 }
 

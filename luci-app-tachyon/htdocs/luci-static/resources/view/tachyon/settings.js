@@ -1401,6 +1401,7 @@ function createComponentsVisibilityWidget(option, section_id) {
       }
     });
   }
+  wrapper._syncToUci = syncToUci;
 
   function renderList() {
     listEl.innerHTML = "";
@@ -1456,7 +1457,7 @@ function createComponentsVisibilityWidget(option, section_id) {
             "div",
             {
               style:
-                "font-weight:600;font-size:0.875rem;color:var(--text-color,#212529);",
+                "font-weight:600;font-size:0.875rem;color:inherit;",
             },
             c.label,
           ),
@@ -1464,7 +1465,7 @@ function createComponentsVisibilityWidget(option, section_id) {
             "div",
             {
               style:
-                "font-size:0.75rem;color:var(--text-color-medium,#6c757d);",
+                "font-size:0.75rem;opacity:0.75;",
             },
             c.desc,
           ),
@@ -1556,7 +1557,14 @@ function createSettingsContent(section, capabilities) {
     );
     return el ? JSON.stringify(el._vis) : "";
   };
-  compVisOpt.write = function (_section_id) {};
+  compVisOpt.write = function (section_id) {
+    const el = document.getElementById(
+      "components-visibility-widget-" + section_id,
+    );
+    if (el && typeof el._syncToUci === "function") {
+      el._syncToUci();
+    }
+  };
   compVisOpt.remove = function () {};
 
   // ── DNS Settings ────────────────────────────────────────────────────────

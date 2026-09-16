@@ -384,6 +384,23 @@ export function showUpdateProgressModal(
             try {
               const res = await TachyonShellMethods.getSystemInfo();
               if (res && res.success) {
+                const targetVer = currentModalVersions.targetVersion
+                  ?.replace(/^v/i, '')
+                  .trim();
+                const currentVer = res.data?.tachyon_version
+                  ?.replace(/^v/i, '')
+                  .trim();
+                if (
+                  options.component === 'tachyon' &&
+                  targetVer &&
+                  currentVer &&
+                  currentVer !== targetVer &&
+                  attempt < maxAttempts - 2
+                ) {
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  continue;
+                }
+
                 statusEl.textContent = _(
                   'Services are online and ready! Reloading page...',
                 );

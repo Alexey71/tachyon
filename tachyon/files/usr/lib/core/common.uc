@@ -390,10 +390,18 @@ function split_leading_assignments(command) {
 
     while (true) {
         let matched = match(rest, /^([A-Za-z_][A-Za-z0-9_]*=[^ \t]*)[ \t]+/);
-        if (!matched)
-            break;
-        assignments += matched[1] + " ";
-        rest = substr(rest, length(matched[0]));
+        if (matched) {
+            assignments += matched[1] + " ";
+            rest = substr(rest, length(matched[0]));
+            continue;
+        }
+        let cd_match = match(rest, /^(cd[ \t]+[^&;]+[ \t]*&&[ \t]*)/);
+        if (cd_match) {
+            assignments += cd_match[1];
+            rest = substr(rest, length(cd_match[0]));
+            continue;
+        }
+        break;
     }
 
     return { assignments, command: rest };

@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+echo "==> [pre-push] Running pre-push checks..."
+cd fe-app-tachyon
+
+npm run locales:actualize
+npm run ci
+
+cd ..
+
+# If only PO/POT creation dates changed, discard them to keep working tree clean
+if git diff -I "POT-Creation-Date" -I "PO-Revision-Date" --quiet; then
+  git checkout -- fe-app-tachyon/locales/*.pot fe-app-tachyon/locales/*.po luci-app-tachyon/po/ 2>/dev/null || true
+fi
+
+# Verify that there are no meaningful uncommitted changes after building locales and frontend
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "ERROR: Uncommitted changes detected after building locales and frontend."
+  echo "Please commit these changes before pushing to avoid breaking GitHub Actions:"
+  git status --short
+  exit 1
+fi
+
+echo "==> [pre-push] All checks passed! Proceeding with push."

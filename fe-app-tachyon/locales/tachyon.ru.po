@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-16 16:15+0300\n"
-"PO-Revision-Date: 2026-09-16 16:15+0300\n"
+"POT-Creation-Date: 2026-09-16 19:54+0300\n"
+"PO-Revision-Date: 2026-09-16 19:54+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -312,7 +312,7 @@ msgid "Adult content"
 msgstr "Взрослый контент"
 
 msgid "Advanced DPI bypass engine with Lua scripts (nfqws2)"
-msgstr ""
+msgstr "Продвинутый движок обхода DPI с Lua-скриптами (nfqws2)"
 
 msgid "Advanced System"
 msgstr "Расширенные настройки"
@@ -1083,7 +1083,7 @@ msgid "Component action timed out"
 msgstr "Превышено время ожидания действия компонента"
 
 msgid "Component Cards Visibility"
-msgstr ""
+msgstr "Видимость карточек компонентов"
 
 msgid "Component update available"
 msgstr "Доступно обновление компонента"
@@ -1191,7 +1191,7 @@ msgid "Core configuration and preferences"
 msgstr "Основные настройки и параметры"
 
 msgid "Core orchestration service and LuCI application"
-msgstr ""
+msgstr "Основной сервис маршрутизации и веб-интерфейс LuCI"
 
 msgid "Could not compare FakeIP and control public IPs"
 msgstr "Не удалось сравнить публичные IP FakeIP и контрольной проверки"
@@ -1263,7 +1263,7 @@ msgid "Customize the order and visibility of tabs in the main navigation menu. U
 msgstr "Настройте порядок и видимость вкладок в главном меню навигации. Используйте стрелки для перемещения и галочки для показа или скрытия."
 
 msgid "Customize which component cards are displayed in the Components tab. Checkboxes show or hide components."
-msgstr ""
+msgstr "Настройте отображение карточек на вкладке «Компоненты». Галочки показывают или скрывают компоненты."
 
 msgid "Daily Quota"
 msgstr "Дневная квота"
@@ -1299,7 +1299,7 @@ msgid "Dedicated cgroup unavailable"
 msgstr "Выделенная cgroup недоступна"
 
 msgid "Dedicated direct HTTP/SOCKS5 outbound proxy"
-msgstr ""
+msgstr "Выделенный прямой исходящий HTTP/SOCKS5 прокси"
 
 msgid "Default"
 msgstr "По умолчанию"
@@ -1386,7 +1386,7 @@ msgid "Direct Bypass"
 msgstr "Прямой WAN"
 
 msgid "Direct cgroup bypass for TorrServer"
-msgstr ""
+msgstr "Прямой обход через cgroup для TorrServer"
 
 msgid "Direct connection"
 msgstr "Прямое подключение"
@@ -1641,7 +1641,7 @@ msgid "DPI bandwidth throttling or delay detected — connection throttled durin
 msgstr "Обнаружено замедление DPI — соединение заблокировано или задушено при передаче данных."
 
 msgid "DPI bypass engine (nfqws v1)"
-msgstr ""
+msgstr "Движок обхода блокировок DPI (nfqws v1)"
 
 msgid "DPI Detected"
 msgstr "DPI обнаружен"
@@ -2148,7 +2148,7 @@ msgid "Family profiles and device grouping"
 msgstr "Семейные профили и группировка устройств"
 
 msgid "Fast packet transport network client"
-msgstr ""
+msgstr "Быстрый сетевой клиент передачи пакетов (FPTN)"
 
 msgid "Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."
 msgstr "Более быстрый мониторинг состояния DNS, чем стандартный цикл. Переключает bootstrap DNS при сбое."
@@ -3096,7 +3096,7 @@ msgid "Local Address"
 msgstr "Локальный адрес"
 
 msgid "Local SOCKS proxy desynchronizer (ciadpi)"
-msgstr ""
+msgstr "Локальный десинхронизатор SOCKS-прокси (ciadpi)"
 
 msgid "Location"
 msgstr "Местоположение"
@@ -3987,7 +3987,7 @@ msgid "Ready to benchmark DNS providers"
 msgstr "Готов к тестированию DNS провайдеров"
 
 msgid "Real-time WebRTC anti-censorship tunnel"
-msgstr ""
+msgstr "Антицензурный туннель реального времени на базе WebRTC"
 
 msgid "Reality fake site"
 msgstr "Фейковый сайт Reality"
@@ -5520,7 +5520,7 @@ msgid "United States (us)"
 msgstr "США (us)"
 
 msgid "Universal proxy platform routing engine"
-msgstr ""
+msgstr "Универсальный движок маршрутизации и проксирования"
 
 msgid "unknown"
 msgstr "неизвестно"
@@ -5868,7 +5868,7 @@ msgid "Weekends (Sat-Sun)"
 msgstr "Выходные (Сб-Вс)"
 
 msgid "Western Digital Tunnel Transport"
-msgstr ""
+msgstr "Транспортный туннель Western Digital"
 
 msgid "What Tachyon should do when this section matches"
 msgstr "Что должен делать Tachyon при совпадении этой секции"
@@ -5979,7 +5979,7 @@ msgid "Zapret2 sing-box route rules are not configured"
 msgstr "Правила маршрутизации sing-box для Zapret2 не настроены"
 
 msgid "Zero config mesh VPN daemon"
-msgstr ""
+msgstr "Mesh VPN-демон с нулевой конфигурацией"
 
 msgid "Testing strategy"
 msgstr "Тестирование стратегии"
