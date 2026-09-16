@@ -508,7 +508,7 @@ function base_config(settings, service_address, runtime_context) {
     for (let rule in dns_config.rules)
         push(dns_rules, rule);
     for (let rule in [
-        { action: "reject", query_type: "HTTPS" },
+        { action: "reject", query_type: [ "HTTPS", "SVCB" ] },
         { action: "reject", domain_suffix: "use-application-dns.net" },
         {
             action: "route",

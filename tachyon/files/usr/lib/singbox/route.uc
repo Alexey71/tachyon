@@ -97,8 +97,10 @@ function config(settings, runtime) {
 
     if (output_network_interface != "")
         result.default_interface = output_network_interface;
-    if (bool_option(settings, "disable_quic", false))
-        push(result.rules, { action: "reject", inbound: runtime_constants.TPROXY_INBOUND_TAG, protocol: "quic" });
+    if (bool_option(settings, "disable_quic", false)) {
+        push(result.rules, { action: "reject", network: "udp", port: [ 443 ] });
+        push(result.rules, { action: "reject", protocol: "quic" });
+    }
     if (bool_option(settings, "isolate_p2p", false)) {
         push(result.rules, { protocol: "bittorrent", action: "route", outbound: runtime_constants.DIRECT_OUTBOUND_TAG });
         for (let rule in p2p_direct_rules(settings))
