@@ -35,12 +35,12 @@ assert_accepts "empty ruleset reference" ruleset-reference-valid "" "$COMMUNITY_
 assert_accepts "community ruleset reference" ruleset-reference-valid telegram "$COMMUNITY_SERVICES"
 assert_accepts "https ruleset reference" ruleset-reference-valid https://example.com/rule.srs "$COMMUNITY_SERVICES"
 assert_accepts "extensionless https ruleset reference" ruleset-reference-valid https://example.com/download "$COMMUNITY_SERVICES"
-assert_rejects "https plain list as ruleset reference" ruleset-reference-valid https://example.com/list.lst "$COMMUNITY_SERVICES"
-assert_rejects "https plain list with query as ruleset reference" ruleset-reference-valid "https://example.com/list.txt?token=1" "$COMMUNITY_SERVICES"
+assert_accepts "https plain list as ruleset reference" ruleset-reference-valid https://example.com/list.lst "$COMMUNITY_SERVICES"
+assert_accepts "https plain list with query as ruleset reference" ruleset-reference-valid "https://example.com/list.txt?token=1" "$COMMUNITY_SERVICES"
 assert_accepts "absolute srs ruleset reference" ruleset-reference-valid /tmp/rule.srs "$COMMUNITY_SERVICES"
 assert_accepts "absolute json ruleset reference" ruleset-reference-valid /tmp/rule.json "$COMMUNITY_SERVICES"
 assert_rejects "relative ruleset reference" ruleset-reference-valid relative/rule.srs "$COMMUNITY_SERVICES"
-assert_rejects "plain list as ruleset reference" ruleset-reference-valid /tmp/rule.lst "$COMMUNITY_SERVICES"
+assert_accepts "plain list as ruleset reference" ruleset-reference-valid /tmp/rule.lst "$COMMUNITY_SERVICES"
 
 assert_accepts "empty plain list reference" plain-domain-ip-list-reference-valid ""
 assert_accepts "https plain list reference" plain-domain-ip-list-reference-valid https://example.com/list.lst

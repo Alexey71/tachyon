@@ -1253,7 +1253,6 @@ function append_list_update_signature_body(body, section) {
     body = signature_add_value(body, "lists." + name + ".action", action);
     if (action == "dns") {
         body = signature_add_value(body, "lists." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
-        body = signature_add_value(body, "lists." + name + ".rule_set", connections.rule_sets_value(section));
         return body;
     }
     if (action == "hosts") {
@@ -1271,7 +1270,6 @@ function append_list_update_signature_body(body, section) {
     body = signature_add_value(body, "lists." + name + ".remote_subnet_lists", option(section, "remote_subnet_lists", ""));
     body = signature_add_value(body, "lists." + name + ".rule_set_with_subnets", connections.rule_sets_with_subnets_value(section));
     body = signature_add_value(body, "lists." + name + ".domain_ip_lists", option(section, "domain_ip_lists", ""));
-    body = signature_add_value(body, "lists." + name + ".rule_set", connections.rule_sets_value(section));
 
     return body;
 }
