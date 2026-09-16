@@ -119,6 +119,40 @@ SIG_2="$(ucode_run "$STATE_UC" fptn-runtime-signature-fixture "$WORK_DIR/state_f
 # 5. Test diagnostics runtime dispatch for get-fptn-status
 STATUS_OUT="$(TACHYON_LIB="$TACHYON_LIB" ucode_run "$DIAGNOSTICS_UC" get-fptn-status)"
 echo "$STATUS_OUT" | grep -q '"ready":' || fail "get-fptn-status should return status json"
+echo "$STATUS_OUT" | grep -q '"process_running":' || fail "get-fptn-status should include process_running"
+echo "$STATUS_OUT" | grep -q '"tun_up":' || fail "get-fptn-status should include tun_up"
+echo "$STATUS_OUT" | grep -q '"route_installed":' || fail "get-fptn-status should include route_installed"
+echo "$STATUS_OUT" | grep -q '"rule_installed":' || fail "get-fptn-status should include rule_installed"
+echo "$STATUS_OUT" | grep -q '"status_message":' || fail "get-fptn-status should include status_message"
+
+# 6. Test fptn ensure-routing command syntax
+ENSURE_RES="$(TACHYON_LIB_DIR="$TACHYON_LIB" ucode_run "$FPTN_RUNTIME_UC" ensure-routing && echo "1" || echo "0")"
+assert_eq "1" "$ENSURE_RES" "ensure-routing should execute successfully"
+
+# 7. Test validator supports fptn rule action
+cat >"$WORK_DIR/fptn_valid.json" <<'JSON'
+{
+  "settings": {
+    ".name": "settings",
+    ".type": "settings",
+    "main_action": "direct",
+    "dns_server": ["77.88.8.8"],
+    "bootstrap_dns_server": ["77.88.8.8"]
+  },
+  "sec_fptn": {
+    ".name": "sec_fptn",
+    ".type": "section",
+    "enabled": "1",
+    "action": "fptn",
+    "access_token": "secret_token_123"
+  }
+}
+JSON
+TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" "$ROOT_DIR/tachyon/files/usr/lib/config/validator.uc" validate-runtime-fixture "$WORK_DIR/fptn_valid.json" "{}" || fail "validator rejected valid fptn config"
+
+# 8. Test telegram token masking subcommand
+TG_MASK_OUT="$(ucode -L "$TACHYON_LIB" "$ROOT_DIR/tachyon/files/usr/lib/service/telegram.uc" mask-token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9Q7Fx")"
+assert_eq "••••••••Q7Fx" "$TG_MASK_OUT" "telegram token masking"
 
 echo "fptn component tests passed"
 

@@ -159,6 +159,9 @@ function emit_reload_plan(previous, current, context) {
         !needs.zapret_restart &&
         !needs.zapret2_restart &&
         !needs.byedpi_restart &&
+        !needs.wdtt_restart &&
+        !needs.olcrtc_restart &&
+        !needs.fptn_restart &&
         !needs.dnsmasq_configure &&
         !needs.dnsmasq_restore)
         needs.sing_box_reload = true;
@@ -169,6 +172,9 @@ function emit_reload_plan(previous, current, context) {
         needs.zapret_restart ||
         needs.zapret2_restart ||
         needs.byedpi_restart ||
+        needs.wdtt_restart ||
+        needs.olcrtc_restart ||
+        needs.fptn_restart ||
         needs.dnsmasq_configure ||
         needs.dnsmasq_restore ||
         needs.cron_refresh ||

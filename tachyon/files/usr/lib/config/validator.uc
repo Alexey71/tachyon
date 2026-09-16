@@ -756,13 +756,13 @@ function rule_action_supported(action) {
     return contains([ "connection", "proxy", "outbound", "vpn", "awg", "warp",
         "anytls", "snell", "mieru", "sudoku", "masque", "openvpn",
         "bypass", "block", "dns", "zapret", "zapret2", "byedpi", "hosts",
-        "wdtt", "olcrtc" ], as_string(action));
+        "wdtt", "olcrtc", "fptn" ], as_string(action));
 }
 
 function server_routing_section_action_supported(action) {
     return contains([ "connection", "proxy", "outbound", "vpn", "awg", "warp",
         "anytls", "snell", "mieru", "sudoku", "masque", "openvpn",
-        "zapret", "zapret2", "byedpi", "wdtt", "olcrtc" ], as_string(action));
+        "zapret", "zapret2", "byedpi", "wdtt", "olcrtc", "fptn" ], as_string(action));
 }
 
 function duration_to_seconds_value(value) {
@@ -1517,6 +1517,13 @@ function validate_rule(section, sections, context) {
         validate_olcrtc_section(section, context);
     }
 
+    if (action == "fptn") {
+        let fptn_validator = require("providers.fptn.validator");
+        let vres = fptn_validator.validate_section(section);
+        if (!vres.valid)
+            fail_validation("FPTN rule '" + name + "': " + vres.error + ". Aborted.");
+    }
+
     if (connections.is_connections_action(action)) {
         validate_dashboard_filter(section);
 
@@ -2058,6 +2065,9 @@ function context_from_runtime() {
         zapret2_installed: file_executable(constant_value(constants, "ZAPRET2_PROVIDER_NFQWS2_BIN")),
         wdtt_installed: file_executable(constant_value(constants, "WDTT_BIN")),
         olcrtc_installed: file_executable(constant_value(constants, "OLCRTC_BIN")),
+        fptn_installed: file_executable("/usr/bin/fptn-client-cli") || file_executable("/usr/bin/fptn-client"),
+        fptn_bin: file_executable("/usr/bin/fptn-client-cli") ? "/usr/bin/fptn-client-cli" : "/usr/bin/fptn-client",
+        fptn_state_dir: "/var/run/tachyon/fptn",
         zapret_provider_nfqws_bin: constant_value(constants, "ZAPRET_PROVIDER_NFQWS_BIN"),
         zapret2_provider_nfqws2_bin: constant_value(constants, "ZAPRET2_PROVIDER_NFQWS2_BIN"),
         zapret_route_mark_base: constant_value(constants, "ZAPRET_ROUTE_MARK_BASE"),
@@ -2367,7 +2377,7 @@ function has_outbound_section(ctx) {
         // without this check a lone AWG/WARP/VPN section triggered the
         // misleading "No proxy outbound sections found" warning.
         if (contains([ "awg", "warp", "vpn", "openvpn", "masque",
-            "anytls", "snell", "mieru", "sudoku" ], as_string(action)))
+            "anytls", "snell", "mieru", "sudoku", "fptn" ], as_string(action)))
             return true;
 
         if (length(connections.connection_urls(section)) > 0 ||
@@ -2450,6 +2460,15 @@ function check_provider_requirements(ctx) {
         [ ctx.byedpi_state_dir, ctx.byedpi_pid_dir, ctx.byedpi_child_pid_dir, ctx.byedpi_log_dir ],
         "ByeDPI provider is not available at " + ctx.byedpi_bin + ". Rules with action 'byedpi' will be skipped until the byedpi package is installed.",
         "Failed to prepare the Tachyon ByeDPI state directory in " + ctx.byedpi_state_dir + ". Aborted."
+    );
+
+    check_provider_requirement(
+        "fptn",
+        "FPTN",
+        ctx.fptn_bin,
+        [ ctx.fptn_state_dir ],
+        "FPTN provider is not available at " + ctx.fptn_bin + ". Rules with action 'fptn' will be skipped until the fptn package is installed.",
+        "Failed to prepare the Tachyon FPTN state directory in " + ctx.fptn_state_dir + ". Aborted."
     );
 }
 

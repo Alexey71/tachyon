@@ -145,26 +145,10 @@ function stop_runtime() {
     return true;
 }
 
-function start_runtime() {
-    let sections = enabled_sections();
-    if (length(sections) == 0) {
-        stop_runtime();
-        return true;
-    }
-
-    if (!provider_available()) {
-        log_message("Cannot start FPTN: binary " + cfg.binary + " not found or not executable", "warn");
-        return false;
-    }
-
-    let section = sections[0];
+function launch_fptn_process(section) {
     let token = as_string(option(section, "access_token", ""));
-    if (token == "") {
-        log_message("Cannot start FPTN: access_token not configured for section " + section_name(section), "warn");
+    if (token == "")
         return false;
-    }
-
-    stop_runtime();
 
     command_status("mkdir -p " + shell_quote(cfg.state_dir) + " 2>/dev/null");
 
@@ -196,6 +180,95 @@ function start_runtime() {
     let cmd_str = command_from_args(cmd_args) + " >> " + shell_quote(cfg.log_file) + " 2>&1 & echo $! > " + shell_quote(cfg.pid_file);
     log_message("Starting FPTN client on interface " + cfg.tun_interface, "info");
     system(cmd_str);
+    return true;
+}
+
+function supervise_runtime() {
+    let sup_pid_file = cfg.state_dir + "/supervisor.pid";
+    let cur_pid = trim(as_string(fs.readfile(sup_pid_file) || ""));
+    if (cur_pid != "" && !match(cur_pid, /[^0-9]/) && fs.stat("/proc/" + cur_pid) != null)
+        return true;
+
+    let delays = [ 2, 5, 10, 20, 30, 30, 30 ];
+    for (let i = 0; i < length(delays); i++) {
+        let sec_wait = delays[i];
+        system(sprintf("sleep %d 2>/dev/null || sleep %d", sec_wait, sec_wait));
+
+        let sections = enabled_sections();
+        if (length(sections) == 0)
+            break;
+
+        let tun_ok = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
+        let p = running_pid();
+
+        if (!tun_ok || p == null) {
+            log_message("FPTN supervisor: retrying start (attempt " + (i + 1) + ")", "info");
+            stop_runtime();
+            launch_fptn_process(sections[0]);
+            for (let wait_i = 0; wait_i < 20; wait_i++) {
+                if (command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0) {
+                    tun_ok = true;
+                    break;
+                }
+                system("sleep 0.2 2>/dev/null || sleep 1");
+            }
+        }
+
+        if (tun_ok) {
+            let routed = install_kernel_routing();
+            if (routed) {
+                log_message("FPTN supervisor: interface " + cfg.tun_interface + " is UP and routing installed", "info");
+                remove_file(sup_pid_file);
+                return true;
+            }
+        }
+    }
+    remove_file(sup_pid_file);
+    return false;
+}
+
+function ensure_routing() {
+    let sections = enabled_sections();
+    if (length(sections) == 0)
+        return true;
+    let tun_up = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
+    let p = running_pid();
+    if (p != null && tun_up) {
+        let route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
+        let rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
+        if (route_installed && rule_installed)
+            return true;
+        return install_kernel_routing();
+    }
+    return start_runtime();
+}
+
+function start_runtime() {
+    let sections = enabled_sections();
+    if (length(sections) == 0) {
+        stop_runtime();
+        return true;
+    }
+
+    if (!provider_available()) {
+        log_message("Cannot start FPTN: binary " + cfg.binary + " not found or not executable", "warn");
+        return false;
+    }
+
+    let section = sections[0];
+    let token = as_string(option(section, "access_token", ""));
+    if (token == "") {
+        log_message("Cannot start FPTN: access_token not configured for section " + section_name(section), "warn");
+        return false;
+    }
+
+    // Stop and disable conflicting standalone init.d service if present
+    command_status("/etc/init.d/fptn stop >/dev/null 2>&1 || true; /etc/init.d/fptn disable >/dev/null 2>&1 || true;");
+
+    stop_runtime();
+
+    if (!launch_fptn_process(section))
+        return false;
 
     let started = false;
     for (let i = 0; i < 30; i++) {
@@ -210,11 +283,24 @@ function start_runtime() {
     }
 
     if (!started) {
-        log_message("FPTN interface " + cfg.tun_interface + " did not come up", "warn");
-        return false;
+        log_message("FPTN interface " + cfg.tun_interface + " did not come up immediately (WAN may be initializing); launching background retry supervisor", "warn");
+        let sup_pid_file = cfg.state_dir + "/supervisor.pid";
+        let sup_exec = sprintf("ucode -L %s %s supervise-runtime",
+            shell_quote(LIB_DIR), shell_quote(LIB_DIR + "/providers/fptn/runtime.uc"));
+        system(common.background_command_with_pid(sup_exec, ">/dev/null", ">" + shell_quote(sup_pid_file)));
+        return true;
     }
 
-    install_kernel_routing();
+    let routing_ok = install_kernel_routing();
+    if (!routing_ok) {
+        log_message("FPTN interface " + cfg.tun_interface + " came up but routing failed; launching background supervisor", "warn");
+        let sup_pid_file = cfg.state_dir + "/supervisor.pid";
+        let sup_exec = sprintf("ucode -L %s %s supervise-runtime",
+            shell_quote(LIB_DIR), shell_quote(LIB_DIR + "/providers/fptn/runtime.uc"));
+        system(common.background_command_with_pid(sup_exec, ">/dev/null", ">" + shell_quote(sup_pid_file)));
+        return true;
+    }
+
     log_message("FPTN client successfully started on " + cfg.tun_interface + " (table " + cfg.route_table + ")", "info");
     return true;
 }
@@ -225,20 +311,42 @@ function status_json() {
     let running = pid != null;
     let rule_count = enabled_rule_count();
     let ver = package_version();
+    let tun_up = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
+    let route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
+    let rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
+    let ready = installed && running && tun_up && route_installed && rule_installed && rule_count > 0;
+
+    let status_msg = "FPTN is running";
+    if (!installed)
+        status_msg = "FPTN is not installed";
+    else if (rule_count == 0)
+        status_msg = "FPTN is not configured";
+    else if (!running)
+        status_msg = "FPTN is stopped";
+    else if (!tun_up)
+        status_msg = "FPTN is running (degraded: tun interface down)";
+    else if (!route_installed)
+        status_msg = "FPTN is running (degraded: table " + cfg.route_table + " route missing)";
+    else if (!rule_installed)
+        status_msg = "FPTN is running (degraded: table " + cfg.route_table + " ip rule missing)";
 
     write_json({
         installed: installed,
         configured: rule_count > 0,
         enabled_rule_count: rule_count,
         service_running: running,
+        process_running: running,
+        tun_up: tun_up,
+        route_installed: route_installed,
+        rule_installed: rule_installed,
         pid: pid,
         version: ver,
         binary: cfg.binary,
         tun_interface: cfg.tun_interface,
         route_table: cfg.route_table,
         log_file: cfg.log_file,
-        ready: installed && running && rule_count > 0,
-        status_message: running ? "FPTN is running" : (installed ? "FPTN is installed but not running" : "FPTN is not installed")
+        ready: ready,
+        status_message: status_msg
     });
     return true;
 }
@@ -258,6 +366,8 @@ function module_exports() {
         package_version: package_version,
         start_runtime: start_runtime,
         stop_runtime: stop_runtime,
+        ensure_routing: ensure_routing,
+        supervise_runtime: supervise_runtime,
         status_json: status_json,
         check_json: check_json
     };
@@ -275,6 +385,10 @@ else if (mode == "restart-runtime") {
     stop_runtime();
     exit(start_runtime() ? 0 : 1);
 }
+else if (mode == "ensure-routing")
+    exit(ensure_routing() ? 0 : 1);
+else if (mode == "supervise-runtime")
+    exit(supervise_runtime() ? 0 : 1);
 else if (mode == "status")
     status_json();
 else if (mode == "check")
@@ -286,6 +400,6 @@ else if (mode == "package-version" || mode == "version")
 else if (mode == "enabled-rule-count")
     printf("%d\n", enabled_rule_count());
 else {
-    warn("Usage: providers/fptn/runtime.uc <start-runtime|stop-runtime|restart-runtime|status|check|installed|version>\n");
+    warn("Usage: providers/fptn/runtime.uc <start-runtime|stop-runtime|restart-runtime|ensure-routing|supervise-runtime|status|check|installed|version>\n");
     exit(1);
 }

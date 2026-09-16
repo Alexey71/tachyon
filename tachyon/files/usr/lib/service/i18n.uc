@@ -556,6 +556,16 @@ let strings = {
         critical_keyword_fallen: "Down",
         critical_keyword_error: "Error",
         btn_update_component: "Update",
+        fptn_token_title: "FPTN Access Token",
+        fptn_token_prompt: "Send the new FPTN access token (copy/forward from @fptn_bot):",
+        fptn_token_invalid: "Invalid or empty FPTN token. Please provide a valid token.",
+        fptn_token_no_section: "Token saved, but no section with action 'fptn' was found.",
+        fptn_restarting: "Updating token and connecting FPTN...",
+        fptn_token_updated_title: "FPTN Token Updated and Connected!",
+        fptn_token_saved_connecting: "Token saved. Connecting to FPTN...",
+        fptn_token_retry_hint: "Connecting in background; routing will be applied automatically.",
+        fptn_token_change_btn: "FPTN Token",
+        fptn_token_btn: "FPTN Token",
     },
 
     ru: {
@@ -1113,6 +1123,16 @@ let strings = {
         critical_keyword_fallen: "Упал",
         critical_keyword_error: "Ошибка",
         btn_update_component: "Обновить",
+        fptn_token_title: "FPTN Access Token",
+        fptn_token_prompt: "Пришлите новый токен доступа FPTN (скопируйте или перешлите из @fptn_bot):",
+        fptn_token_invalid: "Некорректный или пустой токен FPTN. Попробуйте ещё раз.",
+        fptn_token_no_section: "Токен сохранён, но секция с действием 'fptn' не найдена в конфиге.",
+        fptn_restarting: "Обновляю токен и запускаю FPTN...",
+        fptn_token_updated_title: "FPTN токен успешно обновлён и подключён!",
+        fptn_token_saved_connecting: "Токен сохранён, но FPTN пока подключается.",
+        fptn_token_retry_hint: "Подключение продолжится в фоне; маршрутизация применится автоматически.",
+        fptn_token_change_btn: "Сменить токен FPTN",
+        fptn_token_btn: "Токен FPTN",
     }
 };
 

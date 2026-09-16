@@ -23,6 +23,7 @@ let bool_option = common.bool_option;
 let int_option = common.int_option;
 let array_or_empty = common.array_or_empty;
 let object_or_empty = common.object_or_empty;
+let read_json_file = common.read_json_file;
 
 let outbound_tag = runtime_constants.outbound_tag;
 let tag = runtime_constants.tag;
@@ -881,6 +882,14 @@ function add_proxy_selector(config, section, selector_tags, urltest_candidate_ta
             selector_default = runtime_constants.DIRECT_OUTBOUND_TAG;
             warn("Section " + section_name + ": subscription has no loaded servers yet, using direct fallback until cache is populated\n");
         }
+    }
+
+    let persistent_selector_file = getenv("TACHYON_PERSISTENT_SELECTOR_STATE_FILE") || "/etc/tachyon/selector_state.json";
+    let saved_selector_state = read_json_file(persistent_selector_file);
+    if (type(saved_selector_state) == "object" && as_string(saved_selector_state[selector_tag]) != "") {
+        let saved_target = as_string(saved_selector_state[selector_tag]);
+        if (index(selector_outbounds, saved_target) >= 0)
+            selector_default = saved_target;
     }
 
     push(config.outbounds, {

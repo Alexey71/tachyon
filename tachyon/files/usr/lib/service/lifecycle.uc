@@ -435,10 +435,26 @@ function clash_api_json(action, arg1, arg2, arg3) {
 }
 
 function capture_selector_state() {
-    return selector_state_from_proxies_payload(clash_api_json("get_proxies"));
+    let state = selector_state_from_proxies_payload(clash_api_json("get_proxies"));
+    if (type(state) == "object" && length(keys(state)) > 0) {
+        let persistent_path = getenv("TACHYON_PERSISTENT_SELECTOR_STATE_FILE") || "/etc/tachyon/selector_state.json";
+        let disk_state = common.read_json_file(persistent_path);
+        if (type(disk_state) != "object")
+            disk_state = {};
+        for (let k, v in state)
+            disk_state[k] = v;
+        common.write_json_file(persistent_path, disk_state, 2);
+    }
+    return state;
 }
 
 function restore_selector_state(snapshot) {
+    if (snapshot == null || (type(snapshot) == "object" && length(keys(snapshot)) == 0)) {
+        let persistent_path = getenv("TACHYON_PERSISTENT_SELECTOR_STATE_FILE") || "/etc/tachyon/selector_state.json";
+        let disk_state = common.read_json_file(persistent_path);
+        if (type(disk_state) == "object" && length(keys(disk_state)) > 0)
+            snapshot = disk_state;
+    }
     let pairs = selector_restore_pairs(snapshot, clash_api_json("get_proxies"));
 
     for (let pair in pairs)
@@ -947,6 +963,8 @@ function start_main() {
     module_success(FPTN_UC, [ "start-runtime" ]);
     module_success(PARENTAL_QUOTA_UC, [ "install-cron" ]);
     module_success(PARENTAL_QUOTA_UC, [ "tick" ]);
+
+    restore_selector_state(null);
 
     module_background(UI_UC, [ "latency-boot-sweep" ]);
     module_background(UPDATES_UC, [ "list-update" ]);

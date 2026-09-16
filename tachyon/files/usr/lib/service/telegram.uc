@@ -882,6 +882,20 @@ function view_menu(token, chat_id, msg_id) {
             { text: t("menu_help"), callback_data: "/help" }
         ]
     ];
+
+    let has_fptn = false;
+    let sections = api.get_sections();
+    for (let i = 0; i < length(sections); i++) {
+        if (sections[i].action == "fptn") {
+            has_fptn = true;
+            break;
+        }
+    }
+    if (has_fptn) {
+        push(keyboard, [
+            { text: "🔑 " + t("fptn_token_btn"), callback_data: "/fptn_token" }
+        ]);
+    }
     
     if (msg_id) edit_message(token, chat_id, msg_id, text, "HTML", keyboard);
     else send_message(token, chat_id, text, "HTML", keyboard);
@@ -1046,6 +1060,130 @@ function view_outbounds(token, chat_id, msg_id, group_name) {
     else send_message(token, chat_id, text, "HTML", keyboard);
 }
 
+function save_persistent_selector_choice(group_tag, proxy_tag) {
+    group_tag = as_string(group_tag);
+    proxy_tag = as_string(proxy_tag);
+    if (group_tag == "" || proxy_tag == "")
+        return false;
+    let path = getenv("TACHYON_PERSISTENT_SELECTOR_STATE_FILE") || "/etc/tachyon/selector_state.json";
+    let state = common.read_json_file(path);
+    if (type(state) != "object")
+        state = {};
+    state[group_tag] = proxy_tag;
+    return common.write_json_file(path, state, 2);
+}
+
+function extract_clean_fptn_token(raw) {
+    let text = trim(as_string(raw));
+    if (text == "") return "";
+    let m = match(text, /(?:access_token|token)[\s:=]+["']?([A-Za-z0-9_\-\.]{8,})["']?/i);
+    if (m && m[1])
+        return trim(m[1]);
+    m = match(text, /^["']([A-Za-z0-9_\-\.]{8,})["']$/);
+    if (m && m[1])
+        return trim(m[1]);
+    m = match(text, /^([A-Za-z0-9_\-\.]{8,})$/);
+    if (m && m[1])
+        return trim(m[1]);
+    return "";
+}
+
+function mask_fptn_token(tok) {
+    tok = as_string(tok);
+    if (length(tok) > 8)
+        return "••••••••" + substr(tok, length(tok) - 4);
+    if (length(tok) > 0)
+        return "••••";
+    return t("status_disabled");
+}
+
+function handle_fptn_token_update(token, chat_id, raw_input, target_sec) {
+    let clean_tok = extract_clean_fptn_token(raw_input);
+    if (clean_tok == "") {
+        send_message(token, chat_id, "❌ " + t("fptn_token_invalid"), "HTML", [
+            [{ text: "⬅️ " + t("nav_menu"), callback_data: "/menu" }]
+        ]);
+        return false;
+    }
+
+    let c = uci_core.cursor();
+    c.load(CONFIG_NAME);
+    let all = c.get_all(CONFIG_NAME);
+    let fptn_count = 0;
+
+    if (target_sec && all[target_sec]) {
+        c.set(CONFIG_NAME, target_sec, "access_token", clean_tok);
+        fptn_count++;
+    } else {
+        for (let sname in keys(all)) {
+            let s = all[sname];
+            if (type(s) == "object" && s.action == "fptn") {
+                c.set(CONFIG_NAME, sname, "access_token", clean_tok);
+                fptn_count++;
+            }
+        }
+    }
+
+    c.commit(CONFIG_NAME);
+
+    try {
+        let fc = uci_core.cursor();
+        if (fc.load("fptn")) {
+            if (fc.get_all("fptn", "config")) {
+                fc.set("fptn", "config", "access_token", clean_tok);
+                fc.commit("fptn");
+            }
+        }
+    } catch (e) {}
+
+    let masked = mask_fptn_token(clean_tok);
+
+    if (fptn_count == 0) {
+        let msg = "⚠️ <b>" + t("fptn_token_no_section") + "</b>\nToken: <code>" + escape_html(masked) + "</code>";
+        send_message(token, chat_id, msg, "HTML", [
+            [{ text: "⬅️ " + t("nav_menu"), callback_data: "/menu" }]
+        ]);
+        return true;
+    }
+
+    send_message(token, chat_id, "⏳ <b>" + t("fptn_token_saved_connecting") + "</b>\nToken: <code>" + escape_html(masked) + "</code>", "HTML");
+
+    // Restart FPTN runtime
+    command_status(command_from_args([ "ucode", "-L", LIB_DIR, LIB_DIR + "/providers/fptn/runtime.uc", "restart-runtime" ]));
+
+    // Poll up to 5 seconds for tun-fptn and table 4249 routing
+    let connected = false;
+    for (let i = 0; i < 5; i++) {
+        let out = command_output_from_args([ "ucode", "-L", LIB_DIR, LIB_DIR + "/providers/fptn/runtime.uc", "status" ]);
+        try {
+            let st = json(out);
+            if (st && st.running && st.tun_up && st.route_installed) {
+                connected = true;
+                break;
+            }
+        } catch (e) {}
+        command_status(command_from_args([ "sleep", "1" ]));
+    }
+
+    if (connected) {
+        let msg = "✅ <b>" + t("fptn_token_updated_title") + "</b>\n" +
+                  "Token: <code>" + escape_html(masked) + "</code>\n" +
+                  "Status: 🟢 Connected (tun-fptn & routing ready)";
+        send_message(token, chat_id, msg, "HTML", [
+            [{ text: "⬅️ " + t("nav_menu"), callback_data: "/menu" }]
+        ]);
+    } else {
+        let msg = "⚠️ <b>" + t("fptn_token_saved_connecting") + "</b>\n" +
+                  "Token: <code>" + escape_html(masked) + "</code>\n\n" +
+                  t("fptn_token_retry_hint");
+        send_message(token, chat_id, msg, "HTML", [
+            [{ text: "⬅️ " + t("nav_menu"), callback_data: "/menu" }]
+        ]);
+    }
+
+    return true;
+}
+
 function handle_switch(token, chat_id, msg_id, group_name, server_name) {
     api.clash_request("PUT", "proxies/" + group_name, { name: server_name });
     // A successful switch answers 204 with an empty body, which clash_request()
@@ -1058,6 +1196,8 @@ function handle_switch(token, chat_id, msg_id, group_name, server_name) {
              t("outbound_group") + ": <code>" + escape_html(group_name) + "</code>\n" +
              t("outbound_server") + ": <code>" + escape_html(server_name) + "</code>\n\n" +
              t("outbound_check_hint"), "HTML");
+    } else {
+        save_persistent_selector_choice(group_name, server_name);
     }
     view_outbounds(token, chat_id, msg_id, group_name);
 }
@@ -1094,6 +1234,10 @@ function view_section_editor(token, chat_id, msg_id, sec_name) {
     if (s.action == "proxy" || s.action == "route") {
         text += t("status_target") + ": <code>" + escape_html(s.target || "main-out") + "</code>\n";
     }
+    if (s.action == "fptn") {
+        let tok = s.access_token || "";
+        text += "🔑 Token: <code>" + escape_html(mask_fptn_token(tok)) + "</code>\n";
+    }
     
     let d_count = length(common.list_option(s, "domain")) + length(common.list_option(s, "domain_suffix")) + length(common.list_option(s, "domain_keyword")) + length(common.list_option(s, "domain_regex"));
     let ip_count = length(common.list_option(s, "ip")) + length(common.list_option(s, "ip_cidr"));
@@ -1115,6 +1259,9 @@ function view_section_editor(token, chat_id, msg_id, sec_name) {
     push(keyboard, [{ text: t("section_action") + ": " + (s.action || "none"), callback_data: "/sec_action " + sec_name }]);
     if (s.action == "proxy" || s.action == "route") {
         push(keyboard, [{ text: t("status_target") + ": " + (s.target || "main-out"), callback_data: "/sec_target " + sec_name }]);
+    }
+    if (s.action == "fptn") {
+        push(keyboard, [{ text: "🔑 " + t("fptn_token_change_btn"), callback_data: "/fptn_token " + sec_name }]);
     }
     
     push(keyboard, [
@@ -2026,7 +2173,8 @@ function register_bot_commands(token) {
         { command: "close_connections", description: t("cmd_close_connections") },
         { command: "doctor",    description: t("cmd_doctor") },
         { command: "restart",   description: t("cmd_restart") },
-        { command: "lang",      description: t("cmd_lang") }
+        { command: "lang",      description: t("cmd_lang") },
+        { command: "fptn",      description: t("fptn_token_btn") }
     ];
     tg_request(token, "setMyCommands", { commands: commands });
 }
@@ -2536,6 +2684,32 @@ function dispatch_command(token, chat_id, text, msg_id) {
         let parts = split(cmd, " ");
         let grp = trim(join(" ", slice(parts, 1)));
         return view_outbounds(token, chat_id, msg_id, grp);
+    }
+
+    if (cmd == "/fptn_token" || cmd == "/fptn") {
+        set_tg_state(chat_id, { action: "fptn_token" });
+        return send_message(token, chat_id,
+            "🔑 <b>" + t("fptn_token_title") + "</b>\n\n" +
+            t("fptn_token_prompt") + "\n\n<i>Отправьте /cancel для отмены</i>", "HTML");
+    }
+    if (match(cmd, /^\/(fptn_token|fptn)[ \t]+/)) {
+        let raw_token = trim(replace(cmd, /^\/(fptn_token|fptn)[ \t]+/, ""));
+        let all_sections = api.get_sections();
+        let target_sec = null;
+        for (let i = 0; i < length(all_sections); i++) {
+            let s = all_sections[i];
+            if (s[".name"] == raw_token || s.name == raw_token) {
+                target_sec = raw_token;
+                break;
+            }
+        }
+        if (target_sec) {
+            set_tg_state(chat_id, { action: "fptn_token", sec: target_sec });
+            return send_message(token, chat_id,
+                "🔑 <b>" + t("fptn_token_title") + " (" + escape_html(target_sec) + ")</b>\n\n" +
+                t("fptn_token_prompt") + "\n\n<i>Отправьте /cancel для отмены</i>", "HTML");
+        }
+        return handle_fptn_token_update(token, chat_id, raw_token, null);
     }
     
     if (cmd == "/sections" || cmd == "/rules") return view_sections(token, chat_id, msg_id);
@@ -3053,6 +3227,10 @@ function process_updates(token, admin_ids) {
                         view_quiet_hours(token, chat_id, null);
                     }
                 }
+                else if (state.action == "fptn_token") {
+                    set_tg_state(chat_id, null);
+                    handle_fptn_token_update(token, chat_id, trim(msg.text), state.sec || null);
+                }
                 continue;
             }
 
@@ -3538,11 +3716,14 @@ else if (mode == "send") {
     let msg_parts = [];
     for (let i = 2; i < length(ARGV); i++)
         push(msg_parts, ARGV[i]);
-    let message = join(" ", msg_parts);
     if (message == "") { warn("No message text\n"); exit(1); }
     exit(send_api(message));
 }
+else if (mode == "mask-token") {
+    print(mask_fptn_token(ARGV[1]), "\n");
+    exit(0);
+}
 else {
-    warn("Usage: service/telegram.uc <start-runtime|stop-runtime|worker|status|diagnose|send ...> ...\n");
+    warn("Usage: service/telegram.uc <start-runtime|stop-runtime|worker|status|diagnose|send|mask-token ...> ...\n");
     exit(1);
 }

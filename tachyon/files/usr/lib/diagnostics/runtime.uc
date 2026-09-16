@@ -1825,6 +1825,19 @@ function latency_test_url() {
     return value == "" ? DEFAULT_LATENCY_TEST_URL : value;
 }
 
+function save_persistent_selector_choice(group_tag, proxy_tag) {
+    group_tag = as_string(group_tag);
+    proxy_tag = as_string(proxy_tag);
+    if (group_tag == "" || proxy_tag == "")
+        return false;
+    let path = getenv("TACHYON_PERSISTENT_SELECTOR_STATE_FILE") || "/etc/tachyon/selector_state.json";
+    let state = common.read_json_file(path);
+    if (type(state) != "object")
+        state = {};
+    state[group_tag] = proxy_tag;
+    return common.write_json_file(path, state, 2);
+}
+
 function clash_api(action, arg1, arg2, arg3) {
     let base_url = clash_api_url();
     let test_url = latency_test_url();
@@ -1997,11 +2010,29 @@ function clash_api(action, arg1, arg2, arg3) {
         push(args, "--data-raw");
         push(args, payload);
         let result = status_capture([ "clash-set-group-proxy-result", arg1, arg2 ], command_output(command_from_args(args)));
-        if (result.status == 0)
+        if (result.status == 0) {
             command_status("conntrack -F >/dev/null 2>&1 || true");
+            save_persistent_selector_choice(arg1, arg2);
+        }
         if (result.output != "")
             print(result.output);
         return result.status;
+    }
+
+    if (action == "restore_selector_state") {
+        let path = getenv("TACHYON_PERSISTENT_SELECTOR_STATE_FILE") || "/etc/tachyon/selector_state.json";
+        let state = common.read_json_file(path);
+        if (type(state) != "object" || length(keys(state)) == 0)
+            return 0;
+        let proxies_res = clash_json_data([ "curl", "-s", base_url + "/proxies" ], auth);
+        let proxies = object_or_empty(object_or_empty(proxies_res).proxies);
+        for (let group, selected in state) {
+            let grp = proxies[group];
+            if (type(grp) == "object" && lc(as_string(grp.type || "")) == "selector" && index(grp.all, selected) >= 0 && as_string(grp.now || "") != selected) {
+                clash_api("set_group_proxy", group, selected);
+            }
+        }
+        return 0;
     }
 
     if (action == "close_connection") {
