@@ -67,14 +67,25 @@ function is_public_dns_resolver(ip, name, asn) {
  * Prioritizes actual routing table default gateway device (e.g. pppoe-wan, eth1, br-wan),
  * avoiding IP-less physical interfaces from UCI network.wan.device under PPPoE/VLANs.
  */
+function is_virtual_or_tunnel_iface(dev) {
+    dev = trim(as_string(dev));
+    if (dev == "" || dev == "lo")
+        return true;
+    if (match(dev, /^(tun|tap|tailscale|wg|docker|veth|br-|dummy|gre|sit|ifb)/))
+        return true;
+    return false;
+}
+
 function get_wan_interface() {
     // 1. Prefer default routing table lookup: the device carrying the default route
     // is guaranteed to be the active L3 interface.
     let route_res = command_capture("ip -4 route show default 2>/dev/null");
     if (route_res && route_res.status == 0 && route_res.output != "") {
-        let m = match(route_res.output, /dev\s+([a-zA-Z0-9_\.\-]+)/);
-        if (m && m[1])
-            return trim(as_string(m[1]));
+        for (let line in split(route_res.output, "\n")) {
+            let m = match(line, /dev\s+([a-zA-Z0-9_\.\-]+)/);
+            if (m && m[1] && !is_virtual_or_tunnel_iface(m[1]))
+                return trim(as_string(m[1]));
+        }
     }
 
     // 2. Fallback to UCI network inspection
@@ -83,7 +94,7 @@ function get_wan_interface() {
         if (cursor) {
             cursor.load("network");
             let dev = cursor.get("network", "wan", "device") || cursor.get("network", "wan", "ifname");
-            if (dev != null && dev != "")
+            if (dev != null && dev != "" && !is_virtual_or_tunnel_iface(dev))
                 return trim(as_string(dev));
         }
     } catch (e) {

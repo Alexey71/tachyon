@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-16 09:44+0300\n"
-"PO-Revision-Date: 2026-09-16 09:44+0300\n"
+"POT-Creation-Date: 2026-09-16 10:05+0300\n"
+"PO-Revision-Date: 2026-09-16 10:05+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -3917,6 +3917,9 @@ msgstr "Публичный хост"
 msgid "Public IP Address Isolation"
 msgstr "Изоляция публичного IP-адреса"
 
+msgid "Public IP not required for this configuration"
+msgstr "Публичный IP не требуется для этой конфигурации"
+
 msgid "QoS Priority Engine (DSCP)"
 msgstr "Движок приоритета QoS (DSCP)"
 
@@ -5080,6 +5083,9 @@ msgstr "Ключ авторизации Tailscale"
 
 msgid "Tailscale control URL"
 msgstr "Control URL Tailscale"
+
+msgid "Tailscale does not require public WAN"
+msgstr "Tailscale не требует публичного WAN"
 
 msgid "Tailscale endpoint"
 msgstr "Tailscale endpoint"

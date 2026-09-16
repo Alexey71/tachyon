@@ -199,11 +199,25 @@ function network_status_ip_addresses(data, key) {
     return result;
 }
 
+function is_virtual_or_tunnel_iface(dev) {
+    dev = trim(as_string(dev));
+    if (dev == "" || dev == "lo")
+        return true;
+    if (match(dev, /^(tun|tap|tailscale|wg|docker|veth|br-|dummy|gre|sit|ifb)/))
+        return true;
+    return false;
+}
+
 function get_wan_ip_addresses() {
     let result = [];
     let seen = {};
 
-    for (let interface in [ "wan", "wwan" ]) {
+    let ifaces = [ "wan", "wan6", "wwan", "wwan6" ];
+    let custom_iface = trim(as_string(uci_core.get(CONFIG_NAME + ".settings.output_network_interface")));
+    if (custom_iface != "" && !is_virtual_or_tunnel_iface(custom_iface))
+        unshift(ifaces, custom_iface);
+
+    for (let interface in ifaces) {
         let data = command_output_from_args([
             "ubus", "-S", "call", "network.interface." + interface, "status"
         ]);
@@ -213,47 +227,56 @@ function get_wan_ip_addresses() {
             push_unique(result, seen, ip);
     }
 
-    let route = command_output_from_args([ "ip", "-4", "route", "show", "default" ]);
-    let fields = words(route);
-    let iface = "";
-    for (let i = 0; i + 1 < length(fields); i++) {
-        if (fields[i] == "dev") {
-            iface = fields[i + 1];
-            break;
-        }
-    }
-    if (iface == "")
-        return "";
+    if (length(result) > 0)
+        return join(" ", result);
 
-    let addr = command_output_from_args([ "ip", "-4", "addr", "show", "dev", iface ]);
-    for (let line in split(addr, "\n")) {
-        line = trim(as_string(line));
-        let matched = match(line, /^inet[ \t]+([0-9.]+)\//);
-        if (matched != null)
-            push_unique(result, seen, matched[1]);
+    let route = command_output_from_args([ "ip", "-4", "route", "show", "default" ]);
+    for (let line in split(route, "\n")) {
+        let m = match(line, /dev\s+([a-zA-Z0-9_\.\-]+)/);
+        if (!m || !m[1])
+            continue;
+        let iface = m[1];
+        if (is_virtual_or_tunnel_iface(iface))
+            continue;
+
+        let addr = command_output_from_args([ "ip", "-4", "addr", "show", "dev", iface ]);
+        for (let l in split(addr, "\n")) {
+            l = trim(as_string(l));
+            let matched = match(l, /^inet[ \t]+([0-9.]+)\//);
+            if (matched != null)
+                push_unique(result, seen, matched[1]);
+        }
+        if (length(result) > 0)
+            break;
     }
+
     return join(" ", result);
 }
 
 function get_wan_interface() {
     let iface = trim(as_string(uci_core.get(CONFIG_NAME + ".settings.output_network_interface")));
-    if (iface != "") return iface;
+    if (iface != "" && !is_virtual_or_tunnel_iface(iface)) return iface;
 
     iface = trim(as_string(uci_core.get("network.wan.device")));
-    if (iface != "") return iface;
+    if (iface != "" && !is_virtual_or_tunnel_iface(iface)) return iface;
 
     iface = trim(as_string(uci_core.get("network.wan.ifname")));
-    if (iface != "") return iface;
+    if (iface != "" && !is_virtual_or_tunnel_iface(iface)) return iface;
+
+    let ubus_data = command_output_from_args([ "ubus", "-S", "call", "network.interface.wan", "status" ]);
+    let wan_stat = parse_json_or_null(ubus_data);
+    if (type(wan_stat) == "object") {
+        let dev = wan_stat.l3_device || wan_stat.device;
+        if (dev && !is_virtual_or_tunnel_iface(dev))
+            return dev;
+    }
 
     let route = command_output_from_args([ "ip", "-4", "route", "show", "default" ]);
-    let fields = words(route);
-    for (let i = 0; i + 1 < length(fields); i++) {
-        if (fields[i] == "dev") {
-            iface = fields[i + 1];
-            break;
-        }
+    for (let line in split(route, "\n")) {
+        let m = match(line, /dev\s+([a-zA-Z0-9_\.\-]+)/);
+        if (m && m[1] && !is_virtual_or_tunnel_iface(m[1]))
+            return m[1];
     }
-    if (iface != "") return iface;
 
     return "eth0";
 }
@@ -684,6 +707,7 @@ function check_inbounds() {
     }
     let items = [];
     let enabled_count = 0;
+    let requires_public_wan = 0;
 
     for (let section in uci_sections("server")) {
         if (!bool_option(section, "enabled", false))
@@ -693,6 +717,8 @@ function check_inbounds() {
         let section_name = as_string(section[".name"] || "");
         let label = option(section, "label", section_name);
         let protocol = option(section, "protocol", "vless");
+        if (protocol != "tailscale" && protocol != "json_inbound")
+            requires_public_wan = 1;
         let listen = option(section, "listen", "0.0.0.0");
         let listen_port = option(section, "listen_port", "");
         let public_host = option(section, "public_host", "");
@@ -762,6 +788,7 @@ function check_inbounds() {
         config_path: sing_box_config_path,
         wan_ip,
         wan_public,
+        requires_public_wan,
         items
     });
     return 0;

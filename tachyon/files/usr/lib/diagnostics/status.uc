@@ -1261,20 +1261,37 @@ function render_global_inbounds_check() {
     let enabled_count = number_value(value.enabled_count);
     let wan_ip = as_string(value.wan_ip || "");
     let wan_public = number_value(value.wan_public);
+    let requires_public_wan = value.requires_public_wan != null
+        ? number_value(value.requires_public_wan)
+        : null;
 
     if (enabled_count == 0) {
         print_line("[OK] No enabled server inbounds");
         return;
     }
 
+    let items = type(value.items) == "array" ? value.items : [];
+    if (requires_public_wan == null) {
+        requires_public_wan = 0;
+        for (let i = 0; i < enabled_count; i++) {
+            let item = type(items[i]) == "object" ? items[i] : {};
+            let proto = as_string(item.protocol || "");
+            if (proto != "tailscale" && proto != "json_inbound") {
+                requires_public_wan = 1;
+                break;
+            }
+        }
+    }
+
     if (wan_public == 1)
         print_line("[OK] WAN public IP: " + wan_ip);
+    else if (!requires_public_wan)
+        print_line("[OK] WAN IP: " + (wan_ip != "" ? wan_ip : "private") + " (Tailscale does not require public WAN)");
     else if (wan_ip != "")
         print_line("[WARN] WAN IP is not public: " + wan_ip);
     else
         print_line("[WARN] WAN IP was not detected");
 
-    let items = type(value.items) == "array" ? value.items : [];
     for (let i = 0; i < enabled_count; i++)
         render_inbound_item(type(items[i]) == "object" ? items[i] : {}, wan_ip);
 }

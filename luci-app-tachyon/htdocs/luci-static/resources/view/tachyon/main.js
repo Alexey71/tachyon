@@ -10713,11 +10713,26 @@ async function runInboundsCheck() {
     });
     return;
   }
+  const requiresPublicWan = data.requires_public_wan !== void 0 ? Boolean(data.requires_public_wan) : data.items.some(
+    (item) => item.protocol !== "tailscale" && item.protocol !== "json_inbound"
+  );
+  let wanState = "warning";
+  let wanValue = data.wan_ip || _("Not detected");
+  if (data.wan_public) {
+    wanState = "success";
+  } else if (!requiresPublicWan) {
+    wanState = "success";
+    const isOnlyTailscale = data.items.every(
+      (item) => item.protocol === "tailscale"
+    );
+    const note = isOnlyTailscale ? _("Tailscale does not require public WAN") : _("Public IP not required for this configuration");
+    wanValue = data.wan_ip ? `${data.wan_ip} (${note})` : note;
+  }
   const items = [
     {
-      state: data.wan_public ? "success" : "warning",
+      state: wanState,
       key: _("WAN public IP"),
-      value: data.wan_ip || _("Not detected")
+      value: wanValue
     }
   ];
   data.items.forEach((item) => {

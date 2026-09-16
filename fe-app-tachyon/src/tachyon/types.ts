@@ -599,6 +599,7 @@ export namespace Tachyon {
     config_path: string;
     wan_ip: string;
     wan_public: 0 | 1;
+    requires_public_wan?: 0 | 1;
     items: InboundCheckItem[];
   }
 

@@ -1376,6 +1376,8 @@ const dictionary = {
   "Optional: preferred FPTN server address": "Опционально: предпочитаемый адрес сервера FPTN",
   "stability (3x)": "стабильность (3x)",
   "Stage 1: Exploration Scan": "Этап 1: Разведочное сканирование",
+  "Tailscale does not require public WAN": "Tailscale не требует публичного WAN",
+  "Public IP not required for this configuration": "Публичный IP не требуется для этой конфигурации",
 };
 
 function escapePoString(str) {
