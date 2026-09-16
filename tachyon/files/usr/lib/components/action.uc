@@ -1352,10 +1352,18 @@ function resolve_byedpi_release(arch, tag) {
 function resolve_wdtt_release(arch, tag) {
     let asset_ext = is_apk() ? "apk" : "ipk";
     let release_series = trim(helper_output("openwrt-release-series", [ "/etc/openwrt_release" ]));
+    let owner = "Dushnilin";
+    let repo = "qwdtt-openwrt";
     let releases_json = (tag != null && tag != "") ?
-        fetch_github_release_by_tag_json("SpaceNeuroX", "qwdtt-openwrt", tag) :
-        fetch_github_releases_json("SpaceNeuroX", "qwdtt-openwrt", "30");
-    if (releases_json != "") {
+        fetch_github_release_by_tag_json(owner, repo, tag) :
+        fetch_github_releases_json(owner, repo, "30");
+    if (releases_json == "" || releases_json == "[]") {
+        owner = "SpaceNeuroX";
+        releases_json = (tag != null && tag != "") ?
+            fetch_github_release_by_tag_json(owner, repo, tag) :
+            fetch_github_releases_json(owner, repo, "30");
+    }
+    if (releases_json != "" && releases_json != "[]") {
         let resolved = trim(helper_output_input(releases_json, "wdtt-select-asset", [ release_series, asset_ext, arch.candidates ]));
         let fields = split(resolved, "\t");
         if (length(fields) >= 4) {
@@ -1372,11 +1380,13 @@ function resolve_wdtt_release(arch, tag) {
         let distrib_arch = read_openwrt_release_value("DISTRIB_ARCH");
         let tag_clean = replace(tag, /^v/, "");
         let pkg_name = "wdtt_" + tag_clean + "_openwrt_" + distrib_arch + "." + asset_ext;
+        let dushnilin_url = "https://github.com/Dushnilin/qwdtt-openwrt/releases/download/" + tag + "/" + pkg_name;
+        let target_owner = url_exists(dushnilin_url) ? "Dushnilin" : "SpaceNeuroX";
         return {
             arch: distrib_arch,
             package_name: pkg_name,
-            package_url: "https://github.com/SpaceNeuroX/qwdtt-openwrt/releases/download/" + tag + "/" + pkg_name,
-            release_url: "https://github.com/SpaceNeuroX/qwdtt-openwrt/releases/tag/" + tag,
+            package_url: "https://github.com/" + target_owner + "/qwdtt-openwrt/releases/download/" + tag + "/" + pkg_name,
+            release_url: "https://github.com/" + target_owner + "/qwdtt-openwrt/releases/tag/" + tag,
             version: tag
         };
     }
@@ -1386,10 +1396,18 @@ function resolve_wdtt_release(arch, tag) {
 function resolve_olcrtc_release(arch, tag) {
     let asset_ext = is_apk() ? "apk" : "ipk";
     let release_series = trim(helper_output("openwrt-release-series", [ "/etc/openwrt_release" ]));
+    let owner = "Dushnilin";
+    let repo = "openwrt-olcrtc";
     let releases_json = (tag != null && tag != "") ?
-        fetch_github_release_by_tag_json("alekvol", "openwrt-olcrtc", tag) :
-        fetch_github_releases_json("alekvol", "openwrt-olcrtc", "30");
-    if (releases_json != "") {
+        fetch_github_release_by_tag_json(owner, repo, tag) :
+        fetch_github_releases_json(owner, repo, "30");
+    if (releases_json == "" || releases_json == "[]") {
+        owner = "alekvol";
+        releases_json = (tag != null && tag != "") ?
+            fetch_github_release_by_tag_json(owner, repo, tag) :
+            fetch_github_releases_json(owner, repo, "30");
+    }
+    if (releases_json != "" && releases_json != "[]") {
         let resolved = trim(helper_output_input(releases_json, "olcrtc-select-asset", [ release_series, asset_ext, arch.candidates ]));
         let fields = split(resolved, "\t");
         if (length(fields) >= 4) {
@@ -1406,11 +1424,13 @@ function resolve_olcrtc_release(arch, tag) {
         let distrib_arch = read_openwrt_release_value("DISTRIB_ARCH");
         let tag_clean = replace(tag, /^v/, "");
         let pkg_name = "olcrtc_" + tag_clean + "_openwrt_" + distrib_arch + "." + asset_ext;
+        let dushnilin_url = "https://github.com/Dushnilin/openwrt-olcrtc/releases/download/" + tag + "/" + pkg_name;
+        let target_owner = url_exists(dushnilin_url) ? "Dushnilin" : "alekvol";
         return {
             arch: distrib_arch,
             package_name: pkg_name,
-            package_url: "https://github.com/alekvol/openwrt-olcrtc/releases/download/" + tag + "/" + pkg_name,
-            release_url: "https://github.com/alekvol/openwrt-olcrtc/releases/tag/" + tag,
+            package_url: "https://github.com/" + target_owner + "/openwrt-olcrtc/releases/download/" + tag + "/" + pkg_name,
+            release_url: "https://github.com/" + target_owner + "/openwrt-olcrtc/releases/tag/" + tag,
             version: tag
         };
     }
@@ -1420,10 +1440,18 @@ function resolve_olcrtc_release(arch, tag) {
 function resolve_fptn_release(arch, tag) {
     let asset_ext = is_apk() ? "apk" : "ipk";
     let release_series = trim(helper_output("openwrt-release-series", [ "/etc/openwrt_release" ]));
+    let owner = "Dushnilin";
+    let repo = "fptn";
     let releases_json = (tag != null && tag != "") ?
-        fetch_github_release_by_tag_json("fptn-project", "fptn", tag) :
-        fetch_github_releases_json("fptn-project", "fptn", "30");
-    if (releases_json != "") {
+        fetch_github_release_by_tag_json(owner, repo, tag) :
+        fetch_github_releases_json(owner, repo, "30");
+    if (releases_json == "" || releases_json == "[]") {
+        owner = "fptn-project";
+        releases_json = (tag != null && tag != "") ?
+            fetch_github_release_by_tag_json(owner, repo, tag) :
+            fetch_github_releases_json(owner, repo, "30");
+    }
+    if (releases_json != "" && releases_json != "[]") {
         let resolved = trim(helper_output_input(releases_json, "fptn-select-asset", [ release_series, asset_ext, arch.candidates ]));
         let fields = split(resolved, "\t");
         if (length(fields) >= 4) {
@@ -1443,11 +1471,13 @@ function resolve_fptn_release(arch, tag) {
         let distrib_arch = read_openwrt_release_value("DISTRIB_ARCH");
         let tag_clean = replace(tag, /^v/, "");
         let pkg_name = "fptn-client-" + tag_clean + "-openwrt-" + (release_series != "" ? release_series + ".x" : "24.10.x") + "-" + distrib_arch + "." + asset_ext;
+        let dushnilin_url = "https://github.com/Dushnilin/fptn/releases/download/" + tag + "/" + pkg_name;
+        let target_owner = url_exists(dushnilin_url) ? "Dushnilin" : "fptn-project";
         return {
             arch: distrib_arch,
             package_name: pkg_name,
-            package_url: "https://github.com/fptn-project/fptn/releases/download/" + tag + "/" + pkg_name,
-            release_url: "https://github.com/fptn-project/fptn/releases/tag/" + tag,
+            package_url: "https://github.com/" + target_owner + "/fptn/releases/download/" + tag + "/" + pkg_name,
+            release_url: "https://github.com/" + target_owner + "/fptn/releases/tag/" + tag,
             version: tag_clean
         };
     }
@@ -3498,17 +3528,23 @@ function list_component_releases(component, count) {
     } else if (component == "byedpi") {
         owner = "DPITrickster"; repo = "ByeDPI-OpenWrt";
     } else if (component == "wdtt") {
-        owner = "SpaceNeuroX"; repo = "qwdtt-openwrt";
+        owner = "Dushnilin"; repo = "qwdtt-openwrt";
     } else if (component == "olcrtc") {
-        owner = "alekvol"; repo = "openwrt-olcrtc";
+        owner = "Dushnilin"; repo = "openwrt-olcrtc";
     } else if (component == "fptn") {
-        owner = "fptn-project"; repo = "fptn";
+        owner = "Dushnilin"; repo = "fptn";
     } else {
         print("[]\n"); return;
     }
 
     let releases_json = fetch_github_releases_json(owner, repo, per_page);
-    if (releases_json == "") { print("[]\n"); return; }
+    if ((releases_json == "" || releases_json == "[]") && (component == "wdtt" || component == "olcrtc" || component == "fptn")) {
+        if (component == "wdtt") { owner = "SpaceNeuroX"; repo = "qwdtt-openwrt"; }
+        else if (component == "olcrtc") { owner = "alekvol"; repo = "openwrt-olcrtc"; }
+        else if (component == "fptn") { owner = "fptn-project"; repo = "fptn"; }
+        releases_json = fetch_github_releases_json(owner, repo, per_page);
+    }
+    if (releases_json == "" || releases_json == "[]") { print("[]\n"); return; }
 
     let releases = [];
     try {
