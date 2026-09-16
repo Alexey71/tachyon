@@ -82,7 +82,11 @@ function getUciSectionName(section) {
 }
 
 function getUciSectionLabel(section) {
-  return (section && section.label) || (section && section.name) || getUciSectionName(section);
+  return (
+    (section && section.label) ||
+    (section && section.name) ||
+    getUciSectionName(section)
+  );
 }
 
 function isOutboundDetourTargetSection(section, currentSectionId) {
@@ -12837,7 +12841,11 @@ function configureSectionSection(sectionRef, options = {}) {
   setActionProvidersAvailabilityLoader(options.loadActionProvidersAvailability);
 
   sectionRef.sectiontitle = function (section_id) {
-    return uci.get(UCI_PACKAGE, section_id, "label") || uci.get(UCI_PACKAGE, section_id, "name") || section_id;
+    return (
+      uci.get(UCI_PACKAGE, section_id, "label") ||
+      uci.get(UCI_PACKAGE, section_id, "name") ||
+      section_id
+    );
   };
 
   sectionRef.load = function () {

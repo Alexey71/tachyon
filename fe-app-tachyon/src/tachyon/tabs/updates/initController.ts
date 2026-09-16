@@ -2031,7 +2031,7 @@ function renderComponentCard(card: ComponentCard) {
 
 function isComponentCardVisible(
   card: ComponentCard,
-  systemInfo: any,
+  systemInfo: Record<string, unknown>,
 ): boolean {
   const component = card.component;
   if (component === 'tachyon' || component === 'sing_box') {
@@ -2049,7 +2049,7 @@ function isComponentCardVisible(
   }
 
   const optKey = `show_component_${component}`;
-  const val = (systemInfo as Record<string, any>)[optKey];
+  const val = systemInfo[optKey];
   if (val === undefined || val === null || val === '') {
     return true;
   }

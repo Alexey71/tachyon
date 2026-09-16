@@ -137,7 +137,7 @@ export function resetDirectClashApiState() {
 }
 
 function getDisplayName(section: Tachyon.ConfigSection) {
-  return section.label || (section as any).name || section['.name'];
+  return section.label || section.name || section['.name'];
 }
 
 function getSettingsSection(configSections: Tachyon.ConfigSection[]) {
@@ -1806,7 +1806,7 @@ export async function getDashboardSections(
                 code: outbound?.code || sectionName,
                 displayName:
                   section.label ||
-                  (section as any).name ||
+                  section.name ||
                   section.interface ||
                   customName ||
                   defaultLabel,

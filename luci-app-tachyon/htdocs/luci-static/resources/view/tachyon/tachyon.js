@@ -78,11 +78,17 @@ function configureGridSection(sectionRef, type, title, addTitle) {
   sectionRef.rowcolors = true;
   sectionRef.nodescriptions = true;
   sectionRef.modaltitle = function (section_id) {
-    const label = uci.get(UCI_PACKAGE, section_id, "label") || uci.get(UCI_PACKAGE, section_id, "name");
+    const label =
+      uci.get(UCI_PACKAGE, section_id, "label") ||
+      uci.get(UCI_PACKAGE, section_id, "name");
     return section_id ? `${title}: ${label || section_id}` : addTitle;
   };
   sectionRef.sectiontitle = function (section_id) {
-    return uci.get(UCI_PACKAGE, section_id, "label") || uci.get(UCI_PACKAGE, section_id, "name") || section_id;
+    return (
+      uci.get(UCI_PACKAGE, section_id, "label") ||
+      uci.get(UCI_PACKAGE, section_id, "name") ||
+      section_id
+    );
   };
   sectionRef.renderSectionAdd = function (extra_class) {
     return renderSectionAdd(sectionRef, extra_class);

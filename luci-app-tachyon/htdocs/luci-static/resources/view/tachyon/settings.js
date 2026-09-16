@@ -1384,7 +1384,9 @@ function createComponentsVisibilityWidget(option, section_id) {
     }
   });
 
-  const wrapper = E("div", { id: "components-visibility-widget-" + section_id });
+  const wrapper = E("div", {
+    id: "components-visibility-widget-" + section_id,
+  });
   const listEl = E("div", {
     style:
       "border:1px solid var(--border-color,#dee2e6);border-radius:6px;overflow:hidden;margin-bottom:8px;max-width:560px;background:var(--card-bg,transparent);",
@@ -1549,7 +1551,9 @@ function createSettingsContent(section, capabilities) {
     return createComponentsVisibilityWidget(this, section_id);
   };
   compVisOpt.formvalue = function (section_id) {
-    const el = document.getElementById("components-visibility-widget-" + section_id);
+    const el = document.getElementById(
+      "components-visibility-widget-" + section_id,
+    );
     return el ? JSON.stringify(el._vis) : "";
   };
   compVisOpt.write = function (_section_id) {};

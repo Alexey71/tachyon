@@ -184,7 +184,7 @@ function formatEndpoint(address?: string, port?: string | number): string {
 function getDisplayName(section: Tachyon.ConfigSection) {
   return (
     normalizeString(section.label) ||
-    normalizeString((section as any).name) ||
+    normalizeString(section.name) ||
     section['.name']
   );
 }
