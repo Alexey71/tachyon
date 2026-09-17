@@ -527,4 +527,81 @@ describe('renderSections', () => {
     expect(prefixBadge).not.toBeNull();
     expect(prefixBadge?.textContent).toBe('Geodema Network');
   });
+
+  it('renders connection node (AWG) with collapsible header and check connection action', () => {
+    const section: any = {
+      sectionName: 'AWG',
+      displayName: 'AMNEZIA',
+      action: 'awg',
+      outbounds: [
+        {
+          code: 'awg-out',
+          displayName: 'AmneziaWG 3.0',
+          latency: 155,
+          runtimeAvailable: true,
+          selected: true,
+        },
+      ],
+    };
+
+    // 1. Collapsed state
+    const collapsedEl = renderSections({
+      loading: false,
+      failed: false,
+      section,
+      isCollapsed: true,
+      onTestLatency: vi.fn(),
+      onChooseOutbound: vi.fn(),
+      onCopyOutbound: vi.fn(),
+      onShowUrlTestInfo: vi.fn(),
+      onShowPriorityInfo: vi.fn(),
+      onUpdateSubscription: vi.fn(),
+      latencyFetching: false,
+      subscriptionUpdating: false,
+    });
+
+    const titleSec = collapsedEl.querySelector(
+      '.tachyon_dashboard-page__outbound-section__title-section',
+    );
+    expect(titleSec).not.toBeNull();
+    expect(titleSec?.textContent).toContain('AMNEZIA');
+    expect(titleSec?.textContent).toContain('AmneziaWG');
+    expect(titleSec?.textContent).toContain('155ms');
+    expect(titleSec?.textContent).toContain('Check Connection');
+    expect(
+      collapsedEl.querySelector('.tachyon_dashboard-page__outbound-grid'),
+    ).toBeNull();
+
+    // 2. Expanded state
+    const expandedEl = renderSections({
+      loading: false,
+      failed: false,
+      section,
+      isCollapsed: false,
+      onTestLatency: vi.fn(),
+      onChooseOutbound: vi.fn(),
+      onCopyOutbound: vi.fn(),
+      onShowUrlTestInfo: vi.fn(),
+      onShowPriorityInfo: vi.fn(),
+      onUpdateSubscription: vi.fn(),
+      latencyFetching: false,
+      subscriptionUpdating: false,
+    });
+
+    const expandedTitleSec = expandedEl.querySelector(
+      '.tachyon_dashboard-page__outbound-section__title-section',
+    );
+    expect(expandedTitleSec).not.toBeNull();
+    expect(expandedTitleSec?.textContent).toContain('AMNEZIA');
+    expect(expandedTitleSec?.textContent).toContain('AmneziaWG');
+    expect(expandedTitleSec?.textContent).toContain('Check Connection');
+
+    const grid = expandedEl.querySelector(
+      '.tachyon_dashboard-page__outbound-grid',
+    );
+    expect(grid).not.toBeNull();
+    expect(grid?.textContent).toContain('Connected');
+    expect(grid?.textContent).toContain('AmneziaWG 3.0');
+    expect(grid?.textContent).toContain('155 ms');
+  });
 });

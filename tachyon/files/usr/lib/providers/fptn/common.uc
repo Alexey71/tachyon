@@ -22,6 +22,7 @@ function config(ctx) {
         mark_mask: env_get("TACHYON_FPTN_MARK_MASK", "0x00ff0000"),
         rule_priority: env_get("TACHYON_FPTN_RULE_PRIORITY", "102"),
         state_dir: state_dir,
+        shims_dir: state_dir + "/bin",
         pid_file: state_dir + "/fptn.pid",
         log_file: state_dir + "/fptn.log",
         package_name: "fptn",

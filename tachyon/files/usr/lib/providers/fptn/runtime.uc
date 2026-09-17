@@ -86,6 +86,87 @@ function package_version() {
     return "";
 }
 
+function install_shims() {
+    let shims_dir = cfg.shims_dir || (cfg.state_dir + "/bin");
+    command_status("mkdir -p " + shell_quote(shims_dir) + " 2>/dev/null");
+
+    let ip_shim = "#!/bin/sh\n" +
+        "REAL_IP=''\n" +
+        "for p in /sbin/ip /usr/sbin/ip /usr/bin/ip /bin/ip; do\n" +
+        "    if [ -x \"$p\" ] && [ \"$p\" != \"$0\" ]; then\n" +
+        "        REAL_IP=\"$p\"\n" +
+        "        break\n" +
+        "    fi\n" +
+        "done\n" +
+        "[ -z \"$REAL_IP\" ] && REAL_IP='ip'\n" +
+        "CMD_LINE=\"$*\"\n" +
+        "case \"$CMD_LINE\" in\n" +
+        "    *route*default*|*default*route*)\n" +
+        "        case \"$CMD_LINE\" in\n" +
+        "            *replace*|*add*|*del*)\n" +
+        "                exit 0\n" +
+        "                ;;\n" +
+        "        esac\n" +
+        "        ;;\n" +
+        "esac\n" +
+        "exec \"$REAL_IP\" \"$@\"\n";
+    fs.writefile(shims_dir + "/ip", ip_shim);
+    command_status("chmod +x " + shell_quote(shims_dir + "/ip") + " 2>/dev/null");
+
+    let sed_shim = "#!/bin/sh\n" +
+        "REAL_SED=''\n" +
+        "for p in /bin/sed /usr/bin/sed /sbin/sed /usr/sbin/sed; do\n" +
+        "    if [ -x \"$p\" ] && [ \"$p\" != \"$0\" ]; then\n" +
+        "        REAL_SED=\"$p\"\n" +
+        "        break\n" +
+        "    fi\n" +
+        "done\n" +
+        "[ -z \"$REAL_SED\" ] && REAL_SED='sed'\n" +
+        "case \"$*\" in\n" +
+        "    *resolv.conf*)\n" +
+        "        exit 0\n" +
+        "        ;;\n" +
+        "esac\n" +
+        "exec \"$REAL_SED\" \"$@\"\n";
+    fs.writefile(shims_dir + "/sed", sed_shim);
+    command_status("chmod +x " + shell_quote(shims_dir + "/sed") + " 2>/dev/null");
+
+    let dummy_names = ["iptables", "ip6tables", "resolvectl", "chattr", "systemctl"];
+    let dummy_shim = "#!/bin/sh\nexit 0\n";
+    for (let idx, name in dummy_names) {
+        fs.writefile(shims_dir + "/" + name, dummy_shim);
+        command_status("chmod +x " + shell_quote(shims_dir + "/" + name) + " 2>/dev/null");
+    }
+}
+
+function sanitize_system() {
+    command_status("chattr -i /etc/resolv.conf 2>/dev/null; true");
+
+    if (fs.stat("/etc/resolv.conf") == null) {
+        if (fs.stat("/tmp/resolv.conf") != null)
+            command_status("ln -sf /tmp/resolv.conf /etc/resolv.conf 2>/dev/null; true");
+        else if (fs.stat("/tmp/resolv.conf.d/resolv.conf.auto") != null)
+            command_status("ln -sf /tmp/resolv.conf.d/resolv.conf.auto /etc/resolv.conf 2>/dev/null; true");
+    }
+
+    command_status("sed -i '/nameserver 172\\.20\\./d' /etc/resolv.conf 2>/dev/null; true");
+
+    for (let i = 0; i < 4; i++) {
+        command_status("iptables -D OUTPUT -p udp --dport 53 -m comment --comment fptn -j DROP 2>/dev/null; true");
+        command_status("iptables -D OUTPUT -p tcp --dport 53 -m comment --comment fptn -j DROP 2>/dev/null; true");
+        command_status("iptables -D OUTPUT -p udp --dport 853 -m comment --comment fptn -j DROP 2>/dev/null; true");
+        command_status("iptables -D OUTPUT -p tcp --dport 853 -m comment --comment fptn -j DROP 2>/dev/null; true");
+    }
+
+    command_status("uci del_list dhcp.@dnsmasq[0].server='172.20.0.1' 2>/dev/null; uci commit dhcp 2>/dev/null; true");
+
+    let main_default = trim(command_output("ip -4 route show table main default 2>/dev/null | grep dev | grep " + shell_quote(cfg.tun_interface) + " || true"));
+    if (main_default != "") {
+        log_message("Sanitizing rogue default route dev " + cfg.tun_interface + " in table main", "warn");
+        command_status("ip -4 route del default dev " + shell_quote(cfg.tun_interface) + " table main 2>/dev/null; true");
+    }
+}
+
 function remove_kernel_routing() {
     let p = cfg.rule_priority || "102";
     let mark_spec = cfg.fwmark + "/" + cfg.mark_mask;
@@ -99,6 +180,8 @@ function remove_kernel_routing() {
     command_status("ip -4 route del default dev " + shell_quote(cfg.tun_interface) + " table main 2>/dev/null; true");
     if (command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0)
         command_status("ip link set dev " + shell_quote(cfg.tun_interface) + " down 2>/dev/null; true");
+
+    sanitize_system();
 }
 
 function install_kernel_routing() {
@@ -119,12 +202,7 @@ function install_kernel_routing() {
         return false;
     }
 
-    // Ensure table main default route was not hijacked by fptn-client-cli
-    let main_default_dev = trim(command_output("ip -4 route show table main default 2>/dev/null | awk '{print $5; exit}'"));
-    if (main_default_dev == cfg.tun_interface) {
-        log_message("FPTN client hijacked table main default route; restoring WAN route", "warn");
-        command_status("ip -4 route del default dev " + shell_quote(cfg.tun_interface) + " table main 2>/dev/null; true");
-    }
+    sanitize_system();
 
     return true;
 }
@@ -161,6 +239,7 @@ function launch_fptn_process(section) {
         return false;
 
     command_status("mkdir -p " + shell_quote(cfg.state_dir) + " 2>/dev/null");
+    install_shims();
 
     let cmd_args = [
         cfg.binary,
@@ -187,7 +266,9 @@ function launch_fptn_process(section) {
         push(cmd_args, preferred_server);
     }
 
-    let cmd_str = command_from_args(cmd_args) + " >> " + shell_quote(cfg.log_file) + " 2>&1 & echo $! > " + shell_quote(cfg.pid_file);
+    let shims_dir = cfg.shims_dir || (cfg.state_dir + "/bin");
+    let cmd_str = "PATH=" + shell_quote(shims_dir) + ":$PATH " +
+        command_from_args(cmd_args) + " >> " + shell_quote(cfg.log_file) + " 2>&1 & echo $! > " + shell_quote(cfg.pid_file);
     log_message("Starting FPTN client on interface " + cfg.tun_interface, "info");
     system(cmd_str);
     return true;
@@ -246,8 +327,10 @@ function ensure_routing() {
     if (p != null && tun_up) {
         let route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
         let rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
-        if (route_installed && rule_installed)
+        if (route_installed && rule_installed) {
+            sanitize_system();
             return true;
+        }
         return install_kernel_routing();
     }
     return start_runtime();
@@ -379,7 +462,9 @@ function module_exports() {
         ensure_routing: ensure_routing,
         supervise_runtime: supervise_runtime,
         status_json: status_json,
-        check_json: check_json
+        check_json: check_json,
+        install_shims: install_shims,
+        sanitize_system: sanitize_system
     };
 }
 
@@ -399,6 +484,14 @@ else if (mode == "ensure-routing")
     exit(ensure_routing() ? 0 : 1);
 else if (mode == "supervise-runtime")
     exit(supervise_runtime() ? 0 : 1);
+else if (mode == "install-shims") {
+    install_shims();
+    exit(0);
+}
+else if (mode == "sanitize-system") {
+    sanitize_system();
+    exit(0);
+}
 else if (mode == "status")
     status_json();
 else if (mode == "check")

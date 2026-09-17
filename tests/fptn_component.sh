@@ -154,5 +154,36 @@ TACHYON_LIB="$TACHYON_LIB" ucode -L "$TACHYON_LIB" "$ROOT_DIR/tachyon/files/usr/
 TG_MASK_OUT="$(ucode -L "$TACHYON_LIB" "$ROOT_DIR/tachyon/files/usr/lib/service/telegram.uc" mask-token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9Q7Fx")"
 assert_eq "••••••••Q7Fx" "$TG_MASK_OUT" "telegram token masking"
 
+# 9. Test shims creation and isolation behavior
+export TACHYON_FPTN_STATE_DIR="$WORK_DIR/fptn_state"
+mkdir -p "$TACHYON_FPTN_STATE_DIR"
+TACHYON_LIB_DIR="$TACHYON_LIB" ucode_run "$FPTN_RUNTIME_UC" install-shims
+
+SHIMS_DIR="$TACHYON_FPTN_STATE_DIR/bin"
+[ -x "$SHIMS_DIR/ip" ] || fail "ip shim not created or not executable"
+[ -x "$SHIMS_DIR/sed" ] || fail "sed shim not created or not executable"
+[ -x "$SHIMS_DIR/iptables" ] || fail "iptables shim not created or not executable"
+[ -x "$SHIMS_DIR/chattr" ] || fail "chattr shim not created or not executable"
+
+# Test ip shim blocks default route replace/del/add
+IP_REPLACE_STATUS=0
+"$SHIMS_DIR/ip" route replace default dev tun-fptn scope link || IP_REPLACE_STATUS=$?
+assert_eq "0" "$IP_REPLACE_STATUS" "ip shim should return 0 for route replace default"
+
+IP_DEL_STATUS=0
+"$SHIMS_DIR/ip" route del default dev tun-fptn scope link || IP_DEL_STATUS=$?
+assert_eq "0" "$IP_DEL_STATUS" "ip shim should return 0 for route del default"
+
+# Test sed shim blocks modifying /etc/resolv.conf
+SED_STATUS=0
+"$SHIMS_DIR/sed" -i '1i nameserver 172.20.0.1' /etc/resolv.conf || SED_STATUS=$?
+assert_eq "0" "$SED_STATUS" "sed shim should return 0 for resolv.conf"
+
+# Test dummy shims exit 0
+IPT_STATUS=0
+"$SHIMS_DIR/iptables" -A OUTPUT -p udp --dport 53 -j DROP || IPT_STATUS=$?
+assert_eq "0" "$IPT_STATUS" "iptables shim should return 0"
+
 echo "fptn component tests passed"
+
 

@@ -47,6 +47,19 @@ interface IRenderSectionsProps {
   testingOutboundCodes?: Record<string, boolean>;
 }
 
+const CONNECTION_ACTION_LABELS: Record<string, string> = {
+  awg: 'AmneziaWG',
+  warp: 'WARP',
+  anytls: 'AnyTLS',
+  snell: 'Snell',
+  mieru: 'Mieru',
+  sudoku: 'Sudoku',
+  masque: 'MASQUE',
+  openvpn: 'OpenVPN',
+  fptn: 'FPTN',
+  vpn: 'VPN',
+};
+
 function renderFailedState() {
   return E(
     'div',
@@ -529,89 +542,88 @@ function renderDefaultState({
       .join(' ');
 
     if (isConnectionNode) {
+      const statusText = latencyFetching
+        ? _('Checking...')
+        : outbound.latency === -1 || outbound.latency < 0
+          ? _('Not responding')
+          : outbound.runtimeAvailable
+            ? _('Connected')
+            : _('Not connected');
+
+      const statusColor = latencyFetching
+        ? 'var(--warn-color-medium, orange)'
+        : outbound.latency === -1 || outbound.latency < 0
+          ? 'var(--error-color-medium, red)'
+          : outbound.runtimeAvailable
+            ? 'var(--success-color-medium, green)'
+            : 'var(--error-color-medium, red)';
+
+      const latencyDisplay =
+        outbound.latency && outbound.latency > 0
+          ? `${outbound.latency} ms`
+          : '';
+
       return E(
         'div',
         {
           class: className,
           style:
-            'display: flex; align-items: center; justify-content: space-between; padding: 12px; min-width: 0; gap: 16px;',
+            'display: flex; flex-direction: column; justify-content: space-between; padding: 12px; min-width: 0;',
         },
         [
           E(
             'div',
             {
-              style:
-                'display: flex; align-items: center; gap: 12px; min-width: 0;',
+              class: 'tachyon_dashboard-page__outbound-grid__item__header',
+              style: 'margin-bottom: 8px;',
             },
             [
               E(
-                'b',
-                {
-                  style:
-                    'overflow-wrap: anywhere; word-break: break-all; min-width: 0;',
-                },
-                renderFlagEmojis(outbound.displayName),
-              ),
-              outbound.prefix
-                ? E(
-                    'span',
-                    {
-                      class:
-                        'tachyon_dashboard-page__outbound-grid__item__prefix-badge',
-                    },
-                    renderFlagEmojis(outbound.prefix),
-                  )
-                : '',
-              E(
-                'span',
-                {
-                  style:
-                    'opacity: 0.7; font-size: 13px; white-space: nowrap; flex-shrink: 0;',
-                },
-                [formatOutboundType(outbound.type, outbound.transport)].filter(
-                  Boolean,
-                ),
-              ),
-              E(
                 'div',
                 {
-                  class: getLatencyClass(),
-                  style: 'white-space: nowrap; flex-shrink: 0;',
+                  class:
+                    'tachyon_dashboard-page__outbound-grid__item__title-wrapper',
                 },
-                connectionStatusText,
+                [
+                  E(
+                    'span',
+                    {
+                      style: `color: ${statusColor}; font-weight: 500; font-size: 13px;`,
+                    },
+                    statusText,
+                  ),
+                ],
               ),
             ],
           ),
           E(
-            'button',
+            'div',
             {
-              type: 'button',
-              class: 'btn dashboard-sections-grid-item-test-latency',
-              style: 'padding: 4px 12px; height: 30px; flex-shrink: 0;',
-              disabled: latencyFetching ? true : undefined,
-              click: (event: MouseEvent) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (latencyFetching) return;
-                testLatency();
-              },
+              class: 'tachyon_dashboard-page__outbound-grid__item__footer',
+              style:
+                'display: flex; align-items: center; justify-content: space-between; gap: 8px;',
             },
-            latencyFetching
-              ? [
-                  renderLoaderCircleIcon24(),
-                  E(
-                    'span',
+            [
+              E(
+                'div',
+                {
+                  class: 'tachyon_dashboard-page__outbound-grid__item__type',
+                  style:
+                    'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;',
+                },
+                renderFlagEmojis(outbound.displayName),
+              ),
+              latencyDisplay
+                ? E(
+                    'div',
                     {
-                      class: 'dashboard-sections-grid-item-test-latency__label',
+                      class: getLatencyClass(),
+                      style: 'white-space: nowrap; flex-shrink: 0;',
                     },
-                    _('Checking...'),
-                  ),
-                ]
-              : E(
-                  'span',
-                  { class: 'dashboard-sections-grid-item-test-latency__label' },
-                  _('Check Connection'),
-                ),
+                    latencyDisplay,
+                  )
+                : '',
+            ],
           ),
         ],
       );
@@ -817,26 +829,6 @@ function renderDefaultState({
     );
   }
 
-  if (isConnectionNode) {
-    return E(
-      'div',
-      {
-        class: 'tachyon_dashboard-page__outbound-section',
-        style: 'border: none; padding: 0;',
-      },
-      [
-        E(
-          'div',
-          {
-            style:
-              'display: flex; flex-direction: column; gap: 8px; padding: 0;',
-          },
-          [...section.outbounds.map((outbound) => renderOutbound(outbound))],
-        ),
-      ],
-    );
-  }
-
   const metadataNodes = (section.subscriptionMetadata || [])
     .map((metadata) => renderSubscriptionMetadata(metadata))
     .filter(Boolean) as HTMLElement[];
@@ -907,6 +899,11 @@ function renderDefaultState({
                     'openvpn',
                   ].includes(section.action || '');
 
+                  const connectionTitle =
+                    (section.action &&
+                      CONNECTION_ACTION_LABELS[section.action]) ||
+                    selectedOutbound.displayName;
+
                   function getLatencyColor() {
                     if (isConnectionNode) {
                       if (latencyFetching)
@@ -974,7 +971,10 @@ function renderDefaultState({
                       E(
                         'span',
                         { style: 'opacity: 0.7;' },
-                        selectedOutbound.displayName,
+                        isConnectionNode
+                          ? connectionTitle
+                          : selectedOutbound.prefix ||
+                              selectedOutbound.displayName,
                       ),
                       latencyText
                         ? E(
@@ -986,7 +986,32 @@ function renderDefaultState({
                     ],
                   );
                 })()
-              : '',
+              : isConnectionNode
+                ? (() => {
+                    const selectedOutbound = section.outbounds.find(
+                      (o) => o.selected,
+                    );
+                    if (!selectedOutbound) return '';
+                    const connectionTitle =
+                      (section.action &&
+                        CONNECTION_ACTION_LABELS[section.action]) ||
+                      selectedOutbound.displayName;
+                    if (
+                      section.displayName.toLowerCase().trim() ===
+                      connectionTitle.toLowerCase().trim()
+                    ) {
+                      return '';
+                    }
+                    return E(
+                      'span',
+                      {
+                        style:
+                          'font-size: 13px; font-weight: normal; margin-left: 8px; opacity: 0.7;',
+                      },
+                      connectionTitle,
+                    );
+                  })()
+                : '',
           ],
         ),
         E(
