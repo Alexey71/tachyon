@@ -935,6 +935,14 @@ function run(command) {
     return system(command) == 0;
 }
 
+function command_success(command) {
+    return system(command) == 0;
+}
+
+function command_success_from_args(args) {
+    return run_args(args);
+}
+
 function shell_quote(value) {
     return "'" + replace(as_string(value), /'/g, "'\\''") + "'";
 }
