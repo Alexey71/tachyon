@@ -459,7 +459,7 @@ function pkg_install_files_command(files, force_reinstall) {
         let add_args = [ "apk", "add", "--allow-untrusted" ];
         for (let file in files)
             push(add_args, file);
-        let extract_args = [ "apk", "extract", "--allow-untrusted", "--destination", "/" ];
+        let extract_args = [ "apk", "extract", "--allow-untrusted", "--force-overwrite", "--destination", "/" ];
         for (let file in files)
             push(extract_args, file);
         return "(" + command_from_args(add_args) + " </dev/null || " + command_from_args(extract_args) + " </dev/null)";
@@ -476,13 +476,24 @@ function pkg_install_files_command(files, force_reinstall) {
     return "(" + opkg_cmd + " || (" + join(" && ", fallback_cmds) + "))";
 }
 
+function sanitize_apk_world() {
+    if (!is_apk() || !file_exists("/etc/apk/world"))
+        return;
+    for (let pkg in [ "sing-box-extended", "sing-box", "sing-box-tiny", "sing-box-lx" ]) {
+        if (!pkg_is_installed(pkg))
+            command_success("sed -i -E " + shell_quote("/^" + pkg + "([><= ].*)?$/d") + " /etc/apk/world 2>/dev/null");
+    }
+}
+
 function pkg_install_files(files, force_reinstall) {
+    sanitize_apk_world();
     return command_success(pkg_install_files_command(files, force_reinstall));
 }
 
 // Like run_logged but retries up to 10 times on package manager database lock (exit code 227 for APK, lock file contention for opkg)
 function run_logged_retrying(description, command) {
     init_tmp_dir();
+    sanitize_apk_world();
     let output_file = make_tmp_file("command");
     if (output_file == "")
         output_file = "/tmp/tachyon-updates-command." + owner_pid();
@@ -498,7 +509,8 @@ function run_logged_retrying(description, command) {
         }
         status = command_status(as_string(command) + " >" + shell_quote(output_file) + " 2>&1");
         let output_text = read_file(output_file);
-        let is_locked = status == 227 || (status == 255 && match(output_text, /Could not lock|opkg\.lock|Resource temporarily unavailable/i) != null);
+        let is_locked = (status == 227 || (status == 255 && match(output_text, /Could not lock|opkg\.lock|Resource temporarily unavailable/i) != null)) &&
+            match(output_text, /unable to select packages|no such package/i) == null;
         if (!is_locked)
             break;
     }
@@ -517,14 +529,22 @@ function run_logged_retrying(description, command) {
 
 function pkg_remove_sing_box_conflict(package_name) {
     package_name = as_string(package_name);
+    if (is_apk()) {
+        if (file_exists("/etc/apk/world"))
+            command_success("sed -i -E " + shell_quote("/^" + package_name + "([><= ].*)?$/d") + " /etc/apk/world 2>/dev/null");
+        if (!pkg_is_installed(package_name))
+            return true;
+        return command_success(command_from_args([ "apk", "del", "--force-broken-world", package_name ]) + " </dev/null");
+    }
     if (!pkg_is_installed(package_name))
         return true;
-    if (is_apk())
-        return command_success(command_from_args([ "apk", "del", "--force-broken-world", package_name ]) + " </dev/null");
     return command_success(command_from_args([ "opkg", "remove", "--force-depends", package_name ]) + " </dev/null");
 }
 
 function run_logged_pkg_remove_sing_box_conflict(package_name, description) {
+    if (is_apk() && file_exists("/etc/apk/world"))
+        command_success("sed -i -E " + shell_quote("/^" + package_name + "([><= ].*)?$/d") + " /etc/apk/world 2>/dev/null");
+
     if (!pkg_is_installed(package_name)) {
         updates_log(description);
         return true;
@@ -2189,6 +2209,8 @@ function write_sing_box_variant_state(marker, version) {
         updates_log("Failed to write sing-box variant marker", "warn");
     if (!sing_box_runtime_success("write-version-state", [ version ]))
         updates_log("Failed to write sing-box version state", "warn");
+    if (marker != "extended")
+        sanitize_apk_world();
 }
 
 function restore_sing_box_variant_state(previous_marker, previous_version_state) {

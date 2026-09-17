@@ -423,12 +423,29 @@ run_logged_timeout() {
     return "$_rc"
 }
 
+# Clean up orphaned sing-box package references in /etc/apk/world that prevent apk from resolving dependencies
+sanitize_apk_world() {
+    [ "$PKG_IS_APK" -eq 1 ] || return 0
+    [ -f /etc/apk/world ] || return 0
+
+    local _orphaned_pkg
+    for _orphaned_pkg in sing-box-extended sing-box sing-box-tiny sing-box-lx; do
+        if grep -E -q "^${_orphaned_pkg}([><= ].*)?$" /etc/apk/world 2>/dev/null; then
+            if ! apk info -e "$_orphaned_pkg" >/dev/null 2>&1; then
+                log_line "WARN  removing orphaned $_orphaned_pkg from /etc/apk/world"
+                sed -i -E "/^${_orphaned_pkg}([><= ].*)?$/d" /etc/apk/world 2>/dev/null || true
+            fi
+        fi
+    done
+}
+
 # Retry an APK command up to 10 times if the database is locked (exit 227).
 # Usage: apk_with_lock_retry <tag> <timeout> <apk args...>
 apk_with_lock_retry() {
     local _tag="$1" _secs="$2"
     shift 2
     local _attempt=0 _rc=227
+    sanitize_apk_world
     while [ "$_attempt" -lt 10 ] && [ "$_rc" -eq 227 ]; do
         if [ "$_attempt" -gt 0 ]; then
             log_line "WARN  [$_tag] APK database locked (exit 227), retrying in 3s (attempt $((_attempt+1))/10)..."
@@ -462,6 +479,11 @@ warn() {
 
 fail() {
     log_line "FAIL  $1"
+    if [ "${TACHYON_WAS_RUNNING:-0}" -eq 1 ] && [ -x /etc/init.d/tachyon ]; then
+        log_line "WARN  restoring Tachyon service after failed install"
+        /etc/init.d/tachyon enable 2>/dev/null || true
+        /etc/init.d/tachyon restart 2>/dev/null || true
+    fi
     if command -v tui_err >/dev/null 2>&1; then
         tui_err "$1"
     else
@@ -1138,11 +1160,18 @@ function installer_package_installed(name) {
 
 function installer_remove_package(name) {
     name = as_string(name);
-    if (name == "" || !installer_package_installed(name))
+    if (name == "")
         return true;
 
-    if (installer_package_manager() == "apk")
+    if (installer_package_manager() == "apk") {
+        if (file_exists("/etc/apk/world"))
+            command_success("sed -i -E " + shell_quote("/^" + name + "([><= ].*)?$/d") + " /etc/apk/world 2>/dev/null");
+        if (!installer_package_installed(name))
+            return true;
         return run_args([ "timeout", "120", "apk", "del", name ]);
+    }
+    if (!installer_package_installed(name))
+        return true;
     return run_args([ "timeout", "120", "opkg", "remove", "--force-depends", name ]);
 }
 
@@ -1440,6 +1469,13 @@ function installer_cleanup_legacy() {
         remove_path("/tmp/netshift");
         remove_path("/var/run/netshift");
         remove_path("/etc/netshift");
+    }
+
+    if (installer_package_manager() == "apk" && file_exists("/etc/apk/world")) {
+        for (let orphaned_pkg in [ "sing-box-extended", "sing-box", "sing-box-tiny", "sing-box-lx" ]) {
+            if (!installer_package_installed(orphaned_pkg))
+                command_success("sed -i -E " + shell_quote("/^" + orphaned_pkg + "([><= ].*)?$/d") + " /etc/apk/world 2>/dev/null");
+        }
     }
 
     if (!installer_remove_package_prefix("luci-i18n-tachyon"))
@@ -2826,6 +2862,7 @@ download_tachyon_packages() {
 }
 
 install_backend_package() {
+    sanitize_apk_world
     msg "$(installer_text kmod_check)"
     for kmod in kmod-inet-diag kmod-netlink-diag kmod-tun kmod-nft-tproxy kmod-nft-nat; do
         if ! pkg_is_installed "$kmod"; then

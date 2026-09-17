@@ -331,10 +331,32 @@ fi
 
 if command -v apk >/dev/null 2>&1 && [ -d "/lib/apk/db" ]; then
     for _pkg in luci-i18n-tachyon-ru luci-app-tachyon tachyon; do
+        if [ -f /etc/apk/world ]; then
+            sed -i -E "/^${_pkg}([><= ].*)?$/d" /etc/apk/world 2>/dev/null || true
+        fi
         if apk info -e "$_pkg" >/dev/null 2>&1; then
             apk del "$_pkg" >/dev/null 2>&1 || true
         fi
     done
+    if [ "$OPT_KEEP_BINARIES" -eq 0 ]; then
+        for _pkg in sing-box-extended sing-box-tiny; do
+            if [ -f /etc/apk/world ]; then
+                sed -i -E "/^${_pkg}([><= ].*)?$/d" /etc/apk/world 2>/dev/null || true
+            fi
+            if apk info -e "$_pkg" >/dev/null 2>&1; then
+                apk del "$_pkg" >/dev/null 2>&1 || true
+            fi
+        done
+        if [ ! -f /etc/init.d/sing-box ] || grep -q "Tachyon managed sing-box" /etc/init.d/sing-box 2>/dev/null; then
+            if [ -f /etc/apk/world ]; then
+                sed -i -E '/^sing-box([><= ].*)?$/d' /etc/apk/world 2>/dev/null || true
+            fi
+            if apk info -e "sing-box" >/dev/null 2>&1; then
+                apk del "sing-box" >/dev/null 2>&1 || true
+            fi
+            rm -f /usr/bin/sing-box 2>/dev/null || true
+        fi
+    fi
     tui_ok "Пакеты удалены через apk-tools"
 elif command -v opkg >/dev/null 2>&1; then
     _wait=0
