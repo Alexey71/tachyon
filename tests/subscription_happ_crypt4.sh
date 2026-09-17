@@ -4,9 +4,6 @@ set -eo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TACHYON_LIB="$ROOT_DIR/tachyon/files/usr/lib"
 CRYPT4="$ROOT_DIR/tachyon/files/usr/lib/subscription/crypt4.uc"
-PARSER="$ROOT_DIR/tachyon/files/usr/lib/subscription/parser.uc"
-CACHE="$ROOT_DIR/tachyon/files/usr/lib/subscription/cache.uc"
-RUNTIME="$ROOT_DIR/tachyon/files/usr/lib/diagnostics/runtime.uc"
 
 WORK_DIR="$(mktemp -d)"
 
@@ -35,14 +32,20 @@ fi
 PLAINTEXT="vless://00000000-0000-4000-8000-000000000001@example.com:443?encryption=none&security=tls&sni=example.com#HappNode"
 SECRET="my-custom-device-hwid"
 
-KEY_HEX="$(printf '%s' "$SECRET" | sha256sum | awk '{print $1}')"
-IV_HEX="000102030405060708090a0b0c0d0e0f"
+# Deterministic test vector (or dynamically generated if openssl CLI is present)
+B64_PAYLOAD="AAECAwQFBgcICQoLDA0OD0OMKcI1aFmugKQB4r4K4OSN6xxDU5FmUUFRentyDOXfswM3t0kyFovZ5yaTDJ1pva68axdwhD4QWAebC6Jnbv7X5xJKCGOAMMAQ3uRuJe+nXl0Az2QN+xgljgGeQaM8UHM1t3+tX4FlEWyuaaNZ4dZFwJUh0Nitkz26Mfa9//Hn"
 
-# Encrypt with OpenSSL using file redirection to preserve null bytes
-printf '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f' >"$WORK_DIR/iv.bin"
-printf '%s' "$PLAINTEXT" | openssl enc -aes-256-cbc -K "$KEY_HEX" -iv "$IV_HEX" >"$WORK_DIR/cipher.bin" 2>/dev/null
-cat "$WORK_DIR/iv.bin" "$WORK_DIR/cipher.bin" >"$WORK_DIR/payload.bin"
-B64_PAYLOAD="$(base64 <"$WORK_DIR/payload.bin" | tr -d '\r\n ')"
+if command -v openssl >/dev/null 2>&1; then
+  KEY_HEX="$(printf '%s' "$SECRET" | sha256sum | awk '{print $1}')"
+  IV_HEX="000102030405060708090a0b0c0d0e0f"
+  printf '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f' >"$WORK_DIR/iv.bin"
+  printf '%s' "$PLAINTEXT" | openssl enc -aes-256-cbc -K "$KEY_HEX" -iv "$IV_HEX" >"$WORK_DIR/cipher.bin" 2>/dev/null || true
+  if [ -s "$WORK_DIR/cipher.bin" ]; then
+    cat "$WORK_DIR/iv.bin" "$WORK_DIR/cipher.bin" >"$WORK_DIR/payload.bin"
+    B64_PAYLOAD="$(base64 <"$WORK_DIR/payload.bin" | tr -d '\r\n ')"
+  fi
+fi
+
 CRYPT4_URL="happ://crypt4/${B64_PAYLOAD}"
 
 # Decrypt using crypt4 CLI
@@ -50,10 +53,19 @@ DECRYPTED="$(ucode_run "$CRYPT4" decrypt "$CRYPT4_URL" "$SECRET")"
 [ "$DECRYPTED" = "$PLAINTEXT" ] || fail "Decrypted plaintext mismatch: got '$DECRYPTED', expected '$PLAINTEXT'"
 
 # 3. Default salt decryption ("HappDefaultSalt")
-SALT_HEX="$(printf '%s' "HappDefaultSalt" | sha256sum | awk '{print $1}')"
-printf '%s' "$PLAINTEXT" | openssl enc -aes-256-cbc -K "$SALT_HEX" -iv "$IV_HEX" >"$WORK_DIR/salt_cipher.bin" 2>/dev/null
-cat "$WORK_DIR/iv.bin" "$WORK_DIR/salt_cipher.bin" >"$WORK_DIR/salt_payload.bin"
-SALT_B64="$(base64 <"$WORK_DIR/salt_payload.bin" | tr -d '\r\n ')"
+SALT_B64="AAECAwQFBgcICQoLDA0OD6K0gDGOn/K3and0NuhjH6rDKR/ov8Xn8ESMdCk4+0rUkXQVLyUBpJTUyCagj1wCUWkMyOczDnAbhwthZ6HsuitMrPx4PnOGQypFH9+MdCQhZ+5mIkkO4g8+S5p4LTTqzA3H6U2wT6s21QmtkYxCmI8+0flp6JHnnm3Lp6krqaWq"
+
+if command -v openssl >/dev/null 2>&1; then
+  SALT_HEX="$(printf '%s' "HappDefaultSalt" | sha256sum | awk '{print $1}')"
+  IV_HEX="000102030405060708090a0b0c0d0e0f"
+  printf '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f' >"$WORK_DIR/iv.bin"
+  printf '%s' "$PLAINTEXT" | openssl enc -aes-256-cbc -K "$SALT_HEX" -iv "$IV_HEX" >"$WORK_DIR/salt_cipher.bin" 2>/dev/null || true
+  if [ -s "$WORK_DIR/salt_cipher.bin" ]; then
+    cat "$WORK_DIR/iv.bin" "$WORK_DIR/salt_cipher.bin" >"$WORK_DIR/salt_payload.bin"
+    SALT_B64="$(base64 <"$WORK_DIR/salt_payload.bin" | tr -d '\r\n ')"
+  fi
+fi
+
 SALT_CRYPT4_URL="crypt4/${SALT_B64}"
 
 SALT_DECRYPTED="$(ucode_run "$CRYPT4" decrypt "$SALT_CRYPT4_URL")"
