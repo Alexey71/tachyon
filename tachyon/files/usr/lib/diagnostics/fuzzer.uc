@@ -1905,126 +1905,6 @@ function parse_llm_json(raw_text) {
     return null;
 }
 
-let get_fuzzer_state, run_probe;
-
-function synthesize_ai_strategies(engine, target, custom_url, user_prompt) {
-    let current = get_fuzzer_state();
-    if (current.running) {
-        print(sprintf("%J\n", { success: false, error: "Fuzzer is currently running a benchmark" }));
-        return;
-    }
-
-    engine = lc(as_string(engine || "zapret2"));
-    target = trim(as_string(target || "youtube_suite"));
-    user_prompt = trim(as_string(user_prompt || ""));
-    let target_url = resolve_target_url(target, custom_url);
-
-    let baseline = run_probe(engine, "", target, custom_url);
-
-    let query_text = sprintf("%s %s %s", engine, target, user_prompt);
-    let rag_docs = rag.retrieve(query_text, 4);
-
-    let uci = uci_core.cursor();
-    let ai_sec = uci.get_all(CONFIG_NAME, "ai") || {};
-    let provider = ai_sec.provider || "openai";
-    let api_key = ai_sec.api_key || "";
-    let ai_custom_url = ai_sec.custom_url || "";
-    let model_override = ai_sec.model || "";
-
-    let prompt = sprintf(
-        "You are an expert DPI Bypass Engineer specializing in OpenWrt, Zapret, Zapret2 (nfqws2), and ByeDPI (ciadpi).\n" +
-        "We need to bypass censorship / TSPU blocking for target service '%s' (%s) using engine '%s'.\n\n" +
-        "LIVE PROBE DIAGNOSTICS:\n" +
-        "- Direct HTTP Code: %d\n" +
-        "- Connect Time: %d ms\n" +
-        "- TTFB: %d ms\n" +
-        "- Probe Error: %s\n" +
-        "- User Notes / ISP Context: %s\n\n" +
-        "TECHNICAL KNOWLEDGE BASE FRAGMENTS:\n%s\n\n" +
-        "TASK:\n" +
-        "1. Analyze why this target is blocked or throttled.\n" +
-        "2. Formulate 3 to 5 highly effective, syntactically valid DPI desync strategies for '%s'.\n" +
-        "3. Output MUST be strictly valid JSON matching this schema:\n" +
-        "{\n" +
-        '  "analysis": "Brief 1-2 sentence diagnosis of the blocking pattern",\n' +
-        '  "strategies": [\n' +
-        '    {\n' +
-        '      "id": "ai_strat_1",\n' +
-        '      "name": "Human-readable descriptive strategy name",\n' +
-        '      "args": "Exact command-line arguments string for the engine",\n' +
-        '      "description": "Why this combination should bypass the block"\n' +
-        '    }\n' +
-        '  ]\n' +
-        "}\n\n" +
-        "RULES FOR STRATEGY ARGS:\n" +
-        "- For zapret2: use valid options like '--lua-desync=multisplit:pos=1,midsld:seqovl=1:fooling=badseq' or '--lua-desync=fake:ttl=4:fooling=badseq --lua-desync=multisplit:pos=1,midsld'. DO NOT include binary name.\n" +
-        "- For zapret: use valid options like '--dpi-desync=fake,split2 --dpi-desync-split-pos=1,midsld --dpi-desync-fooling=badseq --dpi-desync-ttl=4'. DO NOT include binary name.\n" +
-        "- For byedpi: use valid options like '-s 1 -d 1 --auto=t,r,s -o 1'. DO NOT include binary name.\n\n" +
-        "JSON OUTPUT:",
-        target, target_url, engine,
-        baseline.http_code, baseline.handshake_ms, baseline.ttfb_ms,
-        baseline.error != "" ? baseline.error : "none",
-        user_prompt != "" ? user_prompt : "None provided",
-        rag_docs,
-        engine
-    );
-
-    let raw_reply = query_llm(provider, api_key, ai_custom_url, prompt, model_override);
-    if (!raw_reply) {
-        print(sprintf("%J\n", {
-            success: false,
-            error: "Failed to receive response from AI provider. Check API key and network connectivity."
-        }));
-        return;
-    }
-
-    let parsed_json = parse_llm_json(raw_reply);
-    if (!parsed_json || !parsed_json.strategies || type(parsed_json.strategies) != "array" || length(parsed_json.strategies) == 0) {
-        print(sprintf("%J\n", {
-            success: false,
-            error: "AI returned non-JSON or invalid format",
-            raw_response: raw_reply
-        }));
-        return;
-    }
-
-    let valid_strategies = [];
-    for (let i = 0; i < length(parsed_json.strategies); i++) {
-        let st = parsed_json.strategies[i];
-        if (st && st.args && validate_strategy_args(engine, st.args)) {
-            push(valid_strategies, {
-                id: st.id || sprintf("ai_strat_%d", i + 1),
-                name: st.name || sprintf("AI Strategy %d", i + 1),
-                engine,
-                args: trim(st.args),
-                description: st.description || ""
-            });
-        }
-    }
-
-    if (length(valid_strategies) == 0) {
-        print(sprintf("%J\n", {
-            success: false,
-            error: "All AI strategies failed syntax validation for engine " + engine,
-            raw_strategies: parsed_json.strategies
-        }));
-        return;
-    }
-
-    let custom_file = STATE_DIR + "/fuzzer_ai_strategies.json";
-    ensure_state_dir();
-    common.write_json_file(custom_file, valid_strategies);
-
-    print(sprintf("%J\n", {
-        success: true,
-        engine,
-        target,
-        target_url,
-        analysis: parsed_json.analysis || "AI strategy synthesis complete",
-        strategies: valid_strategies,
-        custom_file
-    }));
-}
 
 function get_fuzzer_state() {
     let state = common.read_json_file(STATE_FILE);
@@ -2844,6 +2724,125 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
     
     result.error = "Unknown engine: " + engine;
     return result;
+}
+
+function synthesize_ai_strategies(engine, target, custom_url, user_prompt) {
+    let current = get_fuzzer_state();
+    if (current.running) {
+        print(sprintf("%J\n", { success: false, error: "Fuzzer is currently running a benchmark" }));
+        return;
+    }
+
+    engine = lc(as_string(engine || "zapret2"));
+    target = trim(as_string(target || "youtube_suite"));
+    user_prompt = trim(as_string(user_prompt || ""));
+    let target_url = resolve_target_url(target, custom_url);
+
+    let baseline = run_probe(engine, "", target, custom_url);
+
+    let query_text = sprintf("%s %s %s", engine, target, user_prompt);
+    let rag_docs = rag.retrieve(query_text, 4);
+
+    let uci = uci_core.cursor();
+    let ai_sec = uci.get_all(CONFIG_NAME, "ai") || {};
+    let provider = ai_sec.provider || "openai";
+    let api_key = ai_sec.api_key || "";
+    let ai_custom_url = ai_sec.custom_url || "";
+    let model_override = ai_sec.model || "";
+
+    let prompt = sprintf(
+        "You are an expert DPI Bypass Engineer specializing in OpenWrt, Zapret, Zapret2 (nfqws2), and ByeDPI (ciadpi).\n" +
+        "We need to bypass censorship / TSPU blocking for target service '%s' (%s) using engine '%s'.\n\n" +
+        "LIVE PROBE DIAGNOSTICS:\n" +
+        "- Direct HTTP Code: %d\n" +
+        "- Connect Time: %d ms\n" +
+        "- TTFB: %d ms\n" +
+        "- Probe Error: %s\n" +
+        "- User Notes / ISP Context: %s\n\n" +
+        "TECHNICAL KNOWLEDGE BASE FRAGMENTS:\n%s\n\n" +
+        "TASK:\n" +
+        "1. Analyze why this target is blocked or throttled.\n" +
+        "2. Formulate 3 to 5 highly effective, syntactically valid DPI desync strategies for '%s'.\n" +
+        "3. Output MUST be strictly valid JSON matching this schema:\n" +
+        "{\n" +
+        '  "analysis": "Brief 1-2 sentence diagnosis of the blocking pattern",\n' +
+        '  "strategies": [\n' +
+        '    {\n' +
+        '      "id": "ai_strat_1",\n' +
+        '      "name": "Human-readable descriptive strategy name",\n' +
+        '      "args": "Exact command-line arguments string for the engine",\n' +
+        '      "description": "Why this combination should bypass the block"\n' +
+        '    }\n' +
+        '  ]\n' +
+        "}\n\n" +
+        "RULES FOR STRATEGY ARGS:\n" +
+        "- For zapret2: use valid options like '--lua-desync=multisplit:pos=1,midsld:seqovl=1:fooling=badseq' or '--lua-desync=fake:ttl=4:fooling=badseq --lua-desync=multisplit:pos=1,midsld'. DO NOT include binary name.\n" +
+        "- For zapret: use valid options like '--dpi-desync=fake,split2 --dpi-desync-split-pos=1,midsld --dpi-desync-fooling=badseq --dpi-desync-ttl=4'. DO NOT include binary name.\n" +
+        "- For byedpi: use valid options like '-s 1 -d 1 --auto=t,r,s -o 1'. DO NOT include binary name.\n\n" +
+        "JSON OUTPUT:",
+        target, target_url, engine,
+        baseline.http_code, baseline.handshake_ms, baseline.ttfb_ms,
+        baseline.error != "" ? baseline.error : "none",
+        user_prompt != "" ? user_prompt : "None provided",
+        rag_docs,
+        engine
+    );
+
+    let raw_reply = query_llm(provider, api_key, ai_custom_url, prompt, model_override);
+    if (!raw_reply) {
+        print(sprintf("%J\n", {
+            success: false,
+            error: "Failed to receive response from AI provider. Check API key and network connectivity."
+        }));
+        return;
+    }
+
+    let parsed_json = parse_llm_json(raw_reply);
+    if (!parsed_json || !parsed_json.strategies || type(parsed_json.strategies) != "array" || length(parsed_json.strategies) == 0) {
+        print(sprintf("%J\n", {
+            success: false,
+            error: "AI returned non-JSON or invalid format",
+            raw_response: raw_reply
+        }));
+        return;
+    }
+
+    let valid_strategies = [];
+    for (let i = 0; i < length(parsed_json.strategies); i++) {
+        let st = parsed_json.strategies[i];
+        if (st && st.args && validate_strategy_args(engine, st.args)) {
+            push(valid_strategies, {
+                id: st.id || sprintf("ai_strat_%d", i + 1),
+                name: st.name || sprintf("AI Strategy %d", i + 1),
+                engine,
+                args: trim(st.args),
+                description: st.description || ""
+            });
+        }
+    }
+
+    if (length(valid_strategies) == 0) {
+        print(sprintf("%J\n", {
+            success: false,
+            error: "All AI strategies failed syntax validation for engine " + engine,
+            raw_strategies: parsed_json.strategies
+        }));
+        return;
+    }
+
+    let custom_file = STATE_DIR + "/fuzzer_ai_strategies.json";
+    ensure_state_dir();
+    common.write_json_file(custom_file, valid_strategies);
+
+    print(sprintf("%J\n", {
+        success: true,
+        engine,
+        target,
+        target_url,
+        analysis: parsed_json.analysis || "AI strategy synthesis complete",
+        strategies: valid_strategies,
+        custom_file
+    }));
 }
 
 function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file, mode, job_id) {
