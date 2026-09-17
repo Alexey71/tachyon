@@ -1662,8 +1662,8 @@ function installer_post_install() {
         run_args([ "timeout", "10", INSTALLER_TACHYON_INIT, "enable" ]);
 
     if (env("TACHYON_WAS_RUNNING", "0") == "1" && path_executable(INSTALLER_TACHYON_INIT)) {
-        if (!run_args([ "timeout", "30", INSTALLER_TACHYON_INIT, "start" ]) &&
-            !run_args([ "timeout", "30", INSTALLER_TACHYON_INIT, "restart" ]))
+        if (!run_args([ "timeout", "120", INSTALLER_TACHYON_INIT, "start" ]) &&
+            !run_args([ "timeout", "120", INSTALLER_TACHYON_INIT, "restart" ]))
             warn("Failed to start Tachyon after upgrade.\n");
     }
 
