@@ -411,4 +411,79 @@ if [ -n "$SB_BIN" ]; then
   fi
 fi
 
+# 9. Test bypass section with routed DNS
+cat >"$WORK_DIR/bypass_routed_dns_fixture.json" <<'EOF'
+{
+  "settings": {
+    ".name": "settings",
+    ".type": "settings",
+    "dns_server": [ "77.88.8.8" ],
+    "bootstrap_dns_server": [ "77.88.8.8" ]
+  },
+  "section": [
+    {
+      ".name": "ByPass",
+      ".type": "section",
+      "enabled": "1",
+      "action": "bypass",
+      "community_lists": [ "russia_outside" ],
+      "routed_dns_enabled": "1",
+      "routed_dns_type": "doh",
+      "routed_dns_server": [ "https://dns.comss.one/dns-query" ]
+    }
+  ]
+}
+EOF
+output_bypass="$WORK_DIR/output_bypass.json"
+mkdir -p "$output_bypass.section-cache" "$output_bypass.rulesets"
+SB_VERSION_STATE_FILE="$WORK_DIR/sb_v14" \
+ucode -L "$TACHYON_LIB" "$GENERATOR_UC" generate-config-fixture \
+  "$WORK_DIR/bypass_routed_dns_fixture.json" "$output_bypass" "127.0.0.1" "0" "1"
+
+ucode -e '
+let fs = require("fs");
+let cfg = json(fs.readfile(ARGV[0]));
+let found_server = false;
+for (let s in cfg.dns.servers || []) {
+    if (s.tag == "ByPass-routed-dns-server") {
+        found_server = true;
+        if (s.type != "https" || s.server != "dns.comss.one" || s.detour) {
+            warn("ByPass-routed-dns-server properties mismatch: " + json(s) + "\n");
+            exit(1);
+        }
+    }
+}
+if (!found_server) {
+    warn("ByPass-routed-dns-server not found in dns.servers\n");
+    exit(1);
+}
+
+let found_dns_rule = false;
+for (let r in cfg.dns.rules || []) {
+    if (r.server == "ByPass-routed-dns-server")
+        found_dns_rule = true;
+}
+if (!found_dns_rule) {
+    warn("DNS rule targeting ByPass-routed-dns-server not found\n");
+    exit(1);
+}
+
+let found_route_rule = false;
+for (let r in cfg.route.rules || []) {
+    if (r.outbound == "bypass-out" && r.rule_set == "ByPass-russia_outside-community-ruleset")
+        found_route_rule = true;
+}
+if (!found_route_rule) {
+    warn("Route rule for ByPass community ruleset not found\n");
+    exit(1);
+}
+' "$output_bypass" || fail "bypass with routed DNS verification failed"
+
+if [ -n "$SB_BIN" ]; then
+  INSTALLED_SB_VER="$("$SB_BIN" version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+' | head -n1 || echo '0.0')"
+  if [ "$(printf '%s\n1.14\n' "$INSTALLED_SB_VER" | sort -V | head -n1)" = "1.14" ]; then
+    "$SB_BIN" check -c "$output_bypass" || fail "sing-box 1.14 check failed on bypass with routed DNS config!"
+  fi
+fi
+
 echo "sing-box 1.14 DNS rules tests passed"

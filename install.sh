@@ -730,6 +730,10 @@ function ends_with(value, suffix) {
     return length(value) >= length(suffix) && substr(value, length(value) - length(suffix)) == suffix;
 }
 
+function file_exists(path) {
+    return fs.stat(as_string(path)) != null;
+}
+
 let uci_cursor_state = false;
 
 function words(value) {

@@ -1197,6 +1197,8 @@ function add_subscription_source_with_state(config, section, source_index, sourc
         if (hidden_flags[i] !== true) {
             push(selector_tags, outbound.tag);
             runtime_subscription.remember_urltest_group(state, outbound.tag, display_names[i], outbound);
+        } else if (state && state.hiddenOutboundTags) {
+            state.hiddenOutboundTags[outbound.tag] = true;
         }
     }
     return added;

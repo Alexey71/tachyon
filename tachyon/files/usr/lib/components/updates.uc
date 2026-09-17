@@ -1864,8 +1864,20 @@ function finish_component_job(path, component, action, exit_code, output_file) {
         // reason; fall back to the result file only if stderr is empty.
         let raw_output = file_last_nonblank_line_value(output_file + ".stderr", "", 240);
         if (raw_output == "")
-            raw_output = file_last_nonblank_line_value(output_file, "Failed to execute", 240);
-        ok = write_state_file(path, component_fallback_job_state(component, action, raw_output, exit_code, updated_at));
+            raw_output = file_last_nonblank_line_value(output_file, "", 240);
+        let log_file = substr(output_file, 0, length(output_file) - 4) + ".log";
+        if (raw_output == "" && file_exists_value(log_file))
+            raw_output = file_last_nonblank_line_value(log_file, "", 240);
+        let is_success = arg_number(exit_code) == 0;
+        if (raw_output == "")
+            raw_output = is_success ? sprintf("%s %s completed successfully", component, action) : "Failed to execute";
+        let state = component_fallback_job_state(component, action, raw_output, exit_code, updated_at);
+        if (is_success) {
+            state.success = true;
+            state.status = "latest";
+            state.changed = 1;
+        }
+        ok = write_state_file(path, state);
     }
 
     remove_file(output_file);

@@ -1621,8 +1621,8 @@ function validate_rule(section, sections, context) {
     validate_combined_domain_text_value(option(section, "domain_suffix_text", ""), name);
 
     if (connections.routed_dns_enabled(section)) {
-        if (action == "dns" || action == "hosts" || action == "bypass" || action == "block")
-            fail_validation("Rule '" + name + "' has routed DNS enabled but action '" + action + "' does not support routed DNS. Use a proxy action (connection, zapret, etc.). Aborted.");
+        if (action == "dns" || action == "hosts" || action == "block")
+            fail_validation("Rule '" + name + "' has routed DNS enabled but action '" + action + "' does not support routed DNS. Aborted.");
         let routed_type = connections.routed_dns_type(section);
         if (!contains(["udp", "dot", "doh", "doq"], routed_type))
             fail_validation("Rule '" + name + "' has invalid routed DNS type '" + routed_type + "'. Use udp, dot, doh, or doq. Aborted.");

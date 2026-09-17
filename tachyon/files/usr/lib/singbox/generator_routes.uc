@@ -410,12 +410,24 @@ function filter_candidate_outbounds(filter_mode, urltest_candidate_tags, names, 
     include_proxy_parameters, include_protocols, include_transports, include_securities,
     exclude_names, exclude_regex, exclude_countries,
     exclude_proxy_parameters, exclude_protocols, exclude_transports, exclude_securities,
-    include_additional_matches, exclude_additional_matches) {
+    include_additional_matches, exclude_additional_matches,
+    hidden_tags) {
     let all_outbounds = urltest_all_candidate_outbounds(urltest_candidate_tags);
+    let visible_outbounds = all_outbounds;
+    if (hidden_tags && length(keys(hidden_tags)) > 0) {
+        let filtered = [];
+        for (let tag in all_outbounds) {
+            if (!hidden_tags[tag])
+                push(filtered, tag);
+        }
+        if (length(filtered) > 0)
+            visible_outbounds = filtered;
+    }
+
     if (filter_mode == "" || filter_mode == "disabled")
-        return all_outbounds;
+        return visible_outbounds;
     if (!supported_urltest_filter_mode(filter_mode))
-        return all_outbounds;
+        return visible_outbounds;
 
     let include_outbounds = urltest_matching_candidate_outbounds(
         urltest_candidate_tags,
@@ -451,10 +463,10 @@ function filter_candidate_outbounds(filter_mode, urltest_candidate_tags, names, 
     if (filter_mode == "include")
         return include_outbounds;
     if (filter_mode == "exclude")
-        return urltest_exclude_outbounds(all_outbounds, exclude_outbounds);
+        return urltest_exclude_outbounds(visible_outbounds, exclude_outbounds);
     if (filter_mode == "mixed")
         return urltest_exclude_outbounds(include_outbounds, exclude_outbounds);
-    return all_outbounds;
+    return visible_outbounds;
 }
 
 function urltest_filtered_outbounds(section, urltest_id, urltest_candidate_tags, state) {
@@ -477,7 +489,10 @@ function urltest_filtered_outbounds(section, urltest_id, urltest_candidate_tags,
         connections.urltest_exclude_proxy_parameters(section, urltest_id),
         connections.urltest_exclude_protocols(section, urltest_id),
         connections.urltest_exclude_transports(section, urltest_id),
-        connections.urltest_exclude_securities(section, urltest_id)
+        connections.urltest_exclude_securities(section, urltest_id),
+        null,
+        null,
+        state ? state.hiddenOutboundTags : null
     );
 }
 
@@ -520,7 +535,10 @@ function priority_level_filtered_outbounds(group_id, level_id, urltest_candidate
         connections.priority_level_exclude_proxy_parameters(group_id, level_id),
         connections.priority_level_exclude_protocols(group_id, level_id),
         connections.priority_level_exclude_transports(group_id, level_id),
-        connections.priority_level_exclude_securities(group_id, level_id)
+        connections.priority_level_exclude_securities(group_id, level_id),
+        null,
+        null,
+        state ? state.hiddenOutboundTags : null
     );
 }
 
@@ -1339,10 +1357,10 @@ function push_dns_matcher_rule(config, rule) {
 }
 
 function section_dns_server(section) {
-    if (option(section, "action", "") == "bypass")
-        return runtime_constants.DNS_SERVER_TAG;
     if (connections.routed_dns_enabled(section))
         return runtime_constants.tag(section[".name"], "routed-dns-server");
+    if (option(section, "action", "") == "bypass")
+        return runtime_constants.DNS_SERVER_TAG;
     return runtime_constants.FAKEIP_DNS_SERVER_TAG;
 }
 
@@ -1406,10 +1424,11 @@ function add_routed_dns_server_for_section(config, section) {
     if (!connections.routed_dns_enabled(section))
         return;
     let section_name = section[".name"];
+    let action = option(section, "action", "");
     let servers = connections.routed_dns_servers(section);
     let dns_type = connections.routed_dns_type(section);
     let tag_name = routed_dns_server_tag(section_name);
-    let detour = outbound_tag(section_name);
+    let detour = action == "bypass" ? null : outbound_tag(section_name);
 
     for (let i = 0; i < length(servers); i++) {
         let s_val = servers[i];
@@ -2128,7 +2147,7 @@ function add_outbound_for_section(config, section, taken, sections) {
         ctx.runtime_generate_unsupported("unsupported action " + action);
     }
 
-    if (action != "dns" && action != "hosts" && action != "bypass" && action != "block")
+    if (action != "dns" && action != "hosts" && action != "block")
         add_routed_dns_server_for_section(config, section);
 }
 

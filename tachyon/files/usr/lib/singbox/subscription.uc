@@ -347,7 +347,8 @@ function new_section_state(section_name) {
         urltestCandidateTags: [],
         urltestGroups: {},
         priorityGroups: {},
-        subscriptionMetadata: []
+        subscriptionMetadata: [],
+        hiddenOutboundTags: {}
     };
 }
 
