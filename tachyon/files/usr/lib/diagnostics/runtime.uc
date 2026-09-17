@@ -4692,17 +4692,52 @@ function local_rule_doctor(pre_res, pre_verify) {
         }
     }
 
-    // ── 1. End-to-end live verification ──
-    let wan_cause_added = false;
+    // ── 1. End-to-end live verification & root-cause correlation ──
+    let wan_failed = false;
+    let singbox_failed = false;
+    for (let c in verify.checks) {
+        if (c.status == "fail") {
+            if (c.name == "WAN interface" || c.name == "Default gateway")
+                wan_failed = true;
+            if (c.name == "sing-box process")
+                singbox_failed = true;
+        }
+    }
+
+    let wan_cause = null;
+    let singbox_cause = null;
+
+    if (wan_failed) {
+        wan_cause = {
+            probability: 95,
+            cause: lang == "en" ? "WAN default gateway or Internet uplink is unreachable" : "Шлюз по умолчанию или внешний интернет недоступен",
+            fix: "fix_wan_interface",
+            symptoms: []
+        };
+        push(causes, wan_cause);
+        add_fix("fix_wan_interface");
+    } else if (singbox_failed) {
+        singbox_cause = {
+            probability: 95,
+            cause: lang == "en" ? "sing-box process is stopped or non-functional" : "Процесс sing-box остановлен или не функционирует",
+            fix: "start_singbox",
+            symptoms: []
+        };
+        push(causes, singbox_cause);
+        add_fix("start_singbox");
+    }
+
     for (let c in verify.checks) {
         if (c.status != "fail") continue;
         if (c.name == "sing-box process") {
-            push(causes, {
-                probability: 95,
-                cause: lang == "en" ? "sing-box process is stopped or non-functional" : "Процесс sing-box остановлен или не функционирует",
-                fix: "start_singbox"
-            });
-            add_fix("start_singbox");
+            if (!singbox_cause && !wan_cause) {
+                push(causes, {
+                    probability: 95,
+                    cause: lang == "en" ? "sing-box process is stopped or non-functional" : "Процесс sing-box остановлен или не функционирует",
+                    fix: "start_singbox"
+                });
+                add_fix("start_singbox");
+            }
         } else if (c.name == "LAN DNS via dnsmasq") {
             push(causes, {
                 probability: 85,
@@ -4711,31 +4746,37 @@ function local_rule_doctor(pre_res, pre_verify) {
             });
             add_fix("fix_dnsmasq");
         } else if (c.name == "Proxy DNS via sing-box") {
-            push(causes, {
-                probability: 85,
-                cause: lang == "en" ? "Proxy DNS via sing-box failed to respond" : "Прокси-DNS через sing-box (127.0.0.42) не отвечает",
-                fix: "clear_dns_cache"
-            });
-            add_fix("clear_dns_cache");
-            if (cfg.dns_type != "doh") {
-                add_fix("switch_to_doh");
+            if (wan_cause) {
+                push(wan_cause.symptoms, lang == "en" ? "Proxy DNS unavailable (WAN down)" : "Прокси-DNS недоступен (нет связи с WAN)");
+            } else if (singbox_cause) {
+                push(singbox_cause.symptoms, lang == "en" ? "Proxy DNS not answering (sing-box stopped)" : "Прокси-DNS не отвечает (sing-box остановлен)");
+            } else {
+                push(causes, {
+                    probability: 85,
+                    cause: lang == "en" ? "Proxy DNS via sing-box failed to respond" : "Прокси-DNS через sing-box (127.0.0.42) не отвечает",
+                    fix: "clear_dns_cache"
+                });
+                add_fix("clear_dns_cache");
+                if (cfg.dns_type != "doh") {
+                    add_fix("switch_to_doh");
+                }
             }
-        } else if ((c.name == "WAN interface" || c.name == "Default gateway") && !wan_cause_added) {
-            wan_cause_added = true;
-            push(causes, {
-                probability: 90,
-                cause: lang == "en" ? "WAN default gateway or Internet uplink is unreachable" : "Шлюз по умолчанию или внешний интернет недоступен",
-                fix: "fix_wan_interface"
-            });
-            add_fix("fix_wan_interface");
+        } else if (c.name == "WAN interface" || c.name == "Default gateway") {
+            // Already added as primary root cause if wan_failed
         } else if (c.name == "HTTP via proxy") {
-            push(causes, {
-                probability: 88,
-                cause: lang == "en" ? "HTTP through the proxy fails end-to-end (node offline or blocked)" : "HTTP через прокси не проходит (узел офлайн или заблокирован)",
-                fix: "update_subscriptions"
-            });
-            add_fix("update_subscriptions");
-            add_fix("restart_zapret");
+            if (wan_cause) {
+                push(wan_cause.symptoms, lang == "en" ? "HTTP through proxy unreachable (WAN down)" : "HTTP через прокси недоступен (нет связи с WAN)");
+            } else if (singbox_cause) {
+                push(singbox_cause.symptoms, lang == "en" ? "HTTP through proxy fails (sing-box stopped)" : "HTTP через прокси не проходит (sing-box остановлен)");
+            } else {
+                push(causes, {
+                    probability: 88,
+                    cause: lang == "en" ? "HTTP through the proxy fails end-to-end (node offline or blocked)" : "HTTP через прокси не проходит (узел офлайн или заблокирован)",
+                    fix: "update_subscriptions"
+                });
+                add_fix("update_subscriptions");
+                add_fix("restart_zapret");
+            }
         }
     }
 
@@ -4856,7 +4897,10 @@ function local_rule_doctor(pre_res, pre_verify) {
         } else {
             push(report_lines, "#### Root Cause Analysis:");
             for (let c in causes) {
-                push(report_lines, sprintf("- [%d%% Probability] %s", c.probability, c.cause));
+                let line = sprintf("- [%d%% Probability] %s", c.probability, c.cause);
+                if (c.symptoms && length(c.symptoms) > 0)
+                    line += " (Symptoms: " + join("; ", c.symptoms) + ")";
+                push(report_lines, line);
             }
         }
     } else {
@@ -4873,7 +4917,10 @@ function local_rule_doctor(pre_res, pre_verify) {
         } else {
             push(report_lines, "#### Анализ возможных причин сбоя:");
             for (let c in causes) {
-                push(report_lines, sprintf("- [%d%% вероятность] %s", c.probability, c.cause));
+                let line = sprintf("- [%d%% вероятность] %s", c.probability, c.cause);
+                if (c.symptoms && length(c.symptoms) > 0)
+                    line += " (Симптомы: " + join("; ", c.symptoms) + ")";
+                push(report_lines, line);
             }
         }
     }

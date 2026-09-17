@@ -2,6 +2,7 @@
 
 let fs = require("fs");
 let common = require("core.common");
+let crypt4 = require("subscription.crypt4");
 let as_string = common.as_string;
 let object_or_empty = common.object_or_empty;
 let array_or_empty = common.array_or_empty;
@@ -31,7 +32,8 @@ function is_supported_share_link(line) {
         starts_with(line, "socks4a://") ||
         starts_with(line, "socks5://") ||
         starts_with(line, "http://") ||
-        starts_with(line, "https://");
+        starts_with(line, "https://") ||
+        crypt4.is_crypt4(line);
 }
 
 function split_csv(value) {
@@ -1786,6 +1788,30 @@ function normalize_uri_list_data(data, output_file) {
             line = replace(line, /\r/g, "");
         line = trim(line);
         if (line != "" && !starts_with(line, "#")) {
+            if (crypt4.is_crypt4(line)) {
+                let decrypted = crypt4.decrypt(line);
+                if (decrypted != null && decrypted != "") {
+                    for (let dec_line in split(decrypted, "\n")) {
+                        dec_line = trim(dec_line);
+                        if (dec_line != "" && !starts_with(dec_line, "#")) {
+                            let outbound = parse_share_link(dec_line);
+                            if (outbound) {
+                                if (outbound_is_unsupported_stub(outbound)) {
+                                    skipped++;
+                                    continue;
+                                }
+                                if (added > 0)
+                                    output.write(",");
+                                output.write(sprintf("%J", outbound));
+                                added++;
+                            } else {
+                                skipped++;
+                            }
+                        }
+                    }
+                    continue;
+                }
+            }
             let outbound = parse_share_link(line);
             if (outbound) {
                 if (outbound_is_unsupported_stub(outbound)) {
@@ -2202,6 +2228,30 @@ function normalize_uri_list_stream(input, output_file, strip_metadata) {
         if (strip_metadata && line_no <= 20 && is_metadata_preamble_line(line))
             continue;
         if (line != "" && !starts_with(line, "#")) {
+            if (crypt4.is_crypt4(line)) {
+                let decrypted = crypt4.decrypt(line);
+                if (decrypted != null && decrypted != "") {
+                    for (let dec_line in split(decrypted, "\n")) {
+                        dec_line = trim(dec_line);
+                        if (dec_line != "" && !starts_with(dec_line, "#")) {
+                            let outbound = parse_share_link(dec_line);
+                            if (outbound) {
+                                if (outbound_is_unsupported_stub(outbound)) {
+                                    skipped++;
+                                    continue;
+                                }
+                                if (added > 0)
+                                    output.write(",");
+                                output.write(sprintf("%J", outbound));
+                                added++;
+                            } else {
+                                skipped++;
+                            }
+                        }
+                    }
+                    continue;
+                }
+            }
             let outbound = parse_share_link(line);
             if (outbound) {
                 if (outbound_is_unsupported_stub(outbound)) {
@@ -2243,6 +2293,10 @@ function file_looks_like_uri_list(input_file) {
         line = trim(line);
         if (line == "" || starts_with(line, "#") || is_metadata_preamble_line(line))
             continue;
+        if (crypt4.is_crypt4(line)) {
+            input.close();
+            return false;
+        }
         if (is_supported_share_link(line)) {
             input.close();
             return true;
@@ -3137,6 +3191,12 @@ function normalize_content_data(data, output_file, depth) {
         data = replace(data, /\r/g, "");
     data = strip_metadata_preamble_data(data);
 
+    if (depth < 2 && crypt4.is_crypt4(data)) {
+        let decrypted = crypt4.decrypt(data);
+        if (decrypted != null && decrypted != "")
+            return normalize_content_data(decrypted, output_file, depth + 1);
+    }
+
     let first = first_non_ws_char(data);
     if (first == "{" || first == "[") {
         let decoded_json = json_decode_text(data);
@@ -3231,7 +3291,7 @@ function parse_subscription_source_entry(entry) {
     if (index(entry, "|") >= 0)
         return subscription_source_entry_result(false, "", "", "Configure User-Agent in the subscription item settings");
 
-    if (!(substr(entry, 0, 7) == "http://" || substr(entry, 0, 8) == "https://"))
+    if (!(substr(entry, 0, 7) == "http://" || substr(entry, 0, 8) == "https://" || crypt4.is_crypt4(entry)))
         return subscription_source_entry_result(false, "", "", "Subscription URL must start with http:// or https://");
 
     return subscription_source_entry_result(true, entry, "", "");

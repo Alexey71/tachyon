@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 15:45+0300\n"
-"PO-Revision-Date: 2026-09-17 15:45+0300\n"
+"POT-Creation-Date: 2026-09-17 18:04+0300\n"
+"PO-Revision-Date: 2026-09-17 18:04+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -273,10 +273,10 @@ msgid "Add URLs or local paths to .lst lists containing domains. IP entries are 
 msgstr "Добавьте URL или локальные пути к спискам .lst, содержащим домены. IP-записи игнорируются."
 
 msgid "Add URLs or local paths to .srs / .json / .lst / .txt lists. Only domain rules are supported."
-msgstr ""
+msgstr "Укажите URL или локальные пути к спискам .srs / .json / .lst / .txt. Поддерживаются только правила для доменов."
 
 msgid "Add URLs or local paths to .srs / .json / .lst / .txt lists. Subnets are ignored by default."
-msgstr ""
+msgstr "Укажите URL или локальные пути к спискам .srs / .json / .lst / .txt. Подсети по умолчанию игнорируются."
 
 msgid "Add URLTest / Priority group"
 msgstr "Добавить группу URLTest / Приоритет"
@@ -1395,7 +1395,7 @@ msgid "Direct connection via ISP"
 msgstr "Прямое подключение через провайдера"
 
 msgid "Direct Proxy"
-msgstr "Прямой прокси"
+msgstr "Direct Proxy"
 
 msgid "Direct WAN"
 msgstr "Прямой WAN"
@@ -1440,7 +1440,7 @@ msgid "DNS Blocking"
 msgstr "Блокировка DNS"
 
 msgid "DNS Cache Size"
-msgstr ""
+msgstr "Размер кэша DNS"
 
 msgid "DNS Check Interval"
 msgstr "Интервал проверки DNS"
@@ -1797,7 +1797,7 @@ msgid "Enabled (always prioritize)"
 msgstr "Включено (всегда повышать приоритет)"
 
 msgid "Enables high-capacity local DNS caching in dnsmasq to accelerate DNS queries and absorb transient latency during service restarts."
-msgstr ""
+msgstr "Включает емкий локальный кэш DNS в dnsmasq для ускорения запросов и устранения задержек при перезапуске служб."
 
 msgid "Enables the background daemon that polls Telegram for commands and sends notifications."
 msgstr "Включает фоновый демон, который опрашивает Telegram на наличие команд и отправляет уведомления."
@@ -3102,7 +3102,7 @@ msgid "Local Address"
 msgstr "Локальный адрес"
 
 msgid "Local DNS Cache"
-msgstr ""
+msgstr "Локальный кэш DNS"
 
 msgid "Local SOCKS proxy desynchronizer (ciadpi)"
 msgstr "Локальный десинхронизатор SOCKS-прокси (ciadpi)"
@@ -3480,7 +3480,7 @@ msgid "Notify on Subscription Updates"
 msgstr "Уведомлять об обновлениях подписок"
 
 msgid "Number of cached DNS domain entries in dnsmasq (default: 10000)."
-msgstr ""
+msgstr "Количество кэшируемых доменных записей в dnsmasq (по умолчанию: 10000)."
 
 msgid "Number of consecutive failed checks required before switching DNS servers."
 msgstr "Количество последовательных неудачных проверок до переключения DNS-серверов."
@@ -4287,7 +4287,7 @@ msgid "Rule Name"
 msgstr "Название правила"
 
 msgid "Rule set must be an HTTP(S) URL or a local .srs / .json / .lst / .txt path"
-msgstr ""
+msgstr "Набор правил должен быть URL HTTP(S) или локальным путем к .srs / .json / .lst / .txt"
 
 msgid "Rule set settings"
 msgstr "Настройки набора правил"
@@ -5997,7 +5997,7 @@ msgid "Add URLs or local paths to .srs / .json lists. Subnets are ignored by def
 msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Подсети игнорируются по умолчанию."
 
 msgid "Plain .lst / .txt lists belong in \"Domain and IP lists\", not \"Rule sets\""
-msgstr ""
+msgstr "Текстовые списки .lst / .txt относятся к «Спискам доменов и IP», а не к «Наборам правил»"
 
 msgid "Rule set must be an HTTP(S) URL or a local .srs / .json path"
 msgstr "Набор правил должен быть HTTP(S) URL или локальным путём .srs / .json"

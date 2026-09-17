@@ -14,6 +14,7 @@ let command_output_from_args = common.command_output_from_args;
 let command_success_from_args = common.command_success_from_args;
 let connections = require("config.connections");
 let subscription_share_link = require("subscription.share_link");
+let crypt4 = require("subscription.crypt4");
 
 function core_url_module_or_null() {
     try {
@@ -1535,6 +1536,22 @@ function get_subscription_hwid(custom_hwid) {
 }
 
 function download_subscription(url, filepath, http_proxy_address, headers_filepath, effective_user_agent, effective_hwid, device_headers, allow_insecure) {
+    if (crypt4.is_crypt4(url)) {
+        let dec = crypt4.decrypt(url, effective_hwid, generate_hwid());
+        if (dec != null && dec != "") {
+            let stamp = clock();
+            let suffix = sprintf(".part.%d.%d", stamp[0], stamp[1]);
+            let tmpfile = filepath + suffix;
+            if (fs.writefile(tmpfile, dec)) {
+                move_file(tmpfile, filepath);
+                if (headers_filepath != "")
+                    unlink_path(headers_filepath);
+                return 0;
+            }
+        }
+        return 1;
+    }
+
     let retries = 3;
     let wait_seconds = 2;
     let timeout = 15;
@@ -1579,9 +1596,11 @@ function download_subscription(url, filepath, http_proxy_address, headers_filepa
 
             push(args, "-o");
             push(args, tmpfile);
+            let hwid_val = get_subscription_hwid(effective_hwid);
             let request_headers = [
                 "User-Agent: " + get_subscription_user_agent(effective_user_agent),
-                "X-HWID: " + get_subscription_hwid(effective_hwid)
+                "X-HWID: " + hwid_val,
+                "HWID: " + hwid_val
             ];
             for (let header in device_request_headers(device_headers))
                 push(request_headers, header);
@@ -1593,6 +1612,12 @@ function download_subscription(url, filepath, http_proxy_address, headers_filepa
 
             let status = command_status_from_args(args);
             if (status == 0 && file_nonempty(tmpfile)) {
+                let downloaded_body = fs.readfile(tmpfile);
+                if (downloaded_body != null && crypt4.is_crypt4(downloaded_body)) {
+                    let dec = crypt4.decrypt(downloaded_body, effective_hwid, generate_hwid());
+                    if (dec != null && dec != "")
+                        fs.writefile(tmpfile, dec);
+                }
                 move_file(tmpfile, filepath);
                 if (headers_filepath != "") {
                     if (file_nonempty(headers_tmpfile))
