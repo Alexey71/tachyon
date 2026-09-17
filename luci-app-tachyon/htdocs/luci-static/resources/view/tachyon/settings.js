@@ -1853,6 +1853,30 @@ function createSettingsContent(section, capabilities) {
   o.default = "0";
   o.rmempty = false;
 
+  o = section.taboption(
+    "dns",
+    form.Flag,
+    "dns_local_cache",
+    _("Local DNS Cache"),
+    _(
+      "Enables high-capacity local DNS caching in dnsmasq to accelerate DNS queries and absorb transient latency during service restarts.",
+    ),
+  );
+  o.default = "0";
+  o.rmempty = false;
+
+  o = section.taboption(
+    "dns",
+    form.Value,
+    "dns_cache_size",
+    _("DNS Cache Size"),
+    _("Number of cached DNS domain entries in dnsmasq (default: 10000)."),
+  );
+  o.depends("dns_local_cache", "1");
+  o.default = "10000";
+  o.datatype = "uinteger";
+  o.rmempty = true;
+
   // ─── DNS Strategy ────────────────────────────────────────────────────────
 
   o = section.taboption(

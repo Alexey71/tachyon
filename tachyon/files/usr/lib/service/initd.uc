@@ -647,6 +647,26 @@ function stop_service(owner_pid) {
     return stop_finish(job_id, status);
 }
 
+function restart_service(owner_pid) {
+    clear_start_retry(START_RETRY_FILE);
+    cancel_scheduled_start_retry(START_RETRY_PID_FILE);
+    let job_id = begin_external_service_action("restart", "initd", owner_pid);
+    if (!file_executable(BIN_PATH)) {
+        restore_dnsmasq_failsafe();
+        finish_external_service_action("restart", job_id, 1);
+        return 1;
+    }
+
+    let status = command_status_from_args([ BIN_PATH, "restart" ]);
+    if (status != 0) {
+        mark_start_retry(START_RETRY_FILE, "restart_failed");
+        schedule_start_retry(START_RETRY_PID_FILE, START_RETRY_DELAY_SECONDS);
+        command_success_from_args([ "logger", "-t", SERVICE_NAME, "[warn] Tachyon restart failed; scheduled an automatic retry" ]);
+    }
+    finish_external_service_action("restart", job_id, status);
+    return status;
+}
+
 function reload_begin_value(reason, owner_pid, runtime_running_value, service_enabled_value, active_service_action) {
     reason = as_string(reason);
 
@@ -817,6 +837,8 @@ else if (mode == "stop-finish")
     exit(stop_finish(ARGV[1], ARGV[2]));
 else if (mode == "stop-service")
     exit(stop_service(ARGV[1]));
+else if (mode == "restart-service")
+    exit(restart_service(ARGV[1]));
 else if (mode == "reload-begin")
     exit(reload_begin(ARGV[1], ARGV[2], null, null));
 else if (mode == "reload-begin-fixture") {

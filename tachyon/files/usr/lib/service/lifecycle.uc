@@ -1627,12 +1627,25 @@ function restart() {
     log_message("Restarting Tachyon", "info");
 
     let selector_state = capture_selector_state();
-    let status = stop_impl();
+    invalidate_reload_hash();
+
+    let status = stop_main();
     if (status != 0)
         return status;
 
     status = start_impl();
     if (status != 0) {
+        cleanup_failed_runtime();
+        return status;
+    }
+
+    status = module_status(STATE_UC, [
+        "wait-sing-box-service-stable",
+        as_string(SING_BOX_START_STABLE_MIN_AGE),
+        as_string(SING_BOX_START_VERIFY_TIMEOUT)
+    ]);
+    if (status != 0) {
+        log_message("Restart verification failed after Tachyon was started; rolling back DNS changes", "fatal");
         cleanup_failed_runtime();
         return status;
     }

@@ -46,6 +46,16 @@ stop_service() {
     trap - INT TERM
 }
 
+restart_service() {
+    trap 'exit 1' INT TERM
+    initd_ucode restart-service "$$"
+    trap - INT TERM
+}
+
+restart() {
+    restart_service "$@"
+}
+
 reload_service() {
     local reason="$1"
     local result status

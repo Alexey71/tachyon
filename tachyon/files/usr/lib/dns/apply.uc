@@ -120,10 +120,18 @@ function dnsmasq_management_disabled() {
     return truthy(uci_get(CONFIG_NAME + ".settings.dont_touch_dhcp"));
 }
 
+function dnsmasq_target_cachesize() {
+    if (truthy(uci_get(CONFIG_NAME + ".settings.dns_local_cache"))) {
+        let size = uci_get(CONFIG_NAME + ".settings.dns_cache_size");
+        return (size != null && size != "") ? as_string(size) : "10000";
+    }
+    return "0";
+}
+
 function dnsmasq_default_config_is_complete() {
     return dnsmasq_default_has_tachyon_dns() &&
         uci_get("dhcp.@dnsmasq[0].noresolv") == "1" &&
-        uci_get("dhcp.@dnsmasq[0].cachesize") == "0" &&
+        uci_get("dhcp.@dnsmasq[0].cachesize") == dnsmasq_target_cachesize() &&
         !dnsmasq_legacy_instance_exists();
 }
 
@@ -209,7 +217,7 @@ function dnsmasq_configure_default_instance() {
     uci_delete("dhcp.@dnsmasq[0].server");
     uci_add_list("dhcp.@dnsmasq[0].server", SB_DNS_INBOUND_ADDRESS);
     uci_set("dhcp.@dnsmasq[0].noresolv", "1");
-    uci_set("dhcp.@dnsmasq[0].cachesize", "0");
+    uci_set("dhcp.@dnsmasq[0].cachesize", dnsmasq_target_cachesize());
 }
 
 function dnsmasq_restore_default_instance() {

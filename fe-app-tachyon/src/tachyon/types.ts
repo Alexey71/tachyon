@@ -476,6 +476,8 @@ export namespace Tachyon {
     smart_detect_section?: string;
     smart_detect_sections?: string | string[];
     dns_turbo_cache?: '0' | '1';
+    dns_local_cache?: '0' | '1';
+    dns_cache_size?: string;
     // AI Watchdog settings (introduced in AI Watchdog feature)
     ai_proxy_health_enabled?: '0' | '1';
     ai_proxy_health_interval?: string;
