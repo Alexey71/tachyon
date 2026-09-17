@@ -1161,9 +1161,6 @@ function installer_package_installed(name) {
     if (name == "")
         return false;
 
-    if (installer_package_manager() == "apk")
-        return run_args([ "timeout", "30", "apk", "info", "-e", name ]);
-
     for (let installed in installer_installed_package_names())
         if (installed == name)
             return true;
@@ -2015,7 +2012,7 @@ pkg_is_installed() {
     pkg_name="$1"
 
     if [ "$PKG_IS_APK" -eq 1 ]; then
-        apk info -e "$pkg_name" >/dev/null 2>&1
+        apk info 2>/dev/null | grep -qx "$pkg_name"
     else
         opkg list-installed 2>/dev/null | awk -v pkg="$pkg_name" '$1 == pkg { found = 1 } END { exit(found ? 0 : 1) }'
     fi
