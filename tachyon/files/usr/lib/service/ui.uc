@@ -6,6 +6,7 @@ let uci_core = require("core.uci");
 let connections = require("config.connections");
 
 let as_string = common.as_string;
+let bool_option = common.bool_option;
 
 function read_stdin() {
     let input = fs.open("/dev/stdin", "r");
@@ -1011,7 +1012,7 @@ function capability_flags() {
         zapret_installed: file_executable(ZAPRET_PROVIDER_NFQWS_BIN) ? 1 : 0,
         zapret2_installed: file_executable(ZAPRET2_PROVIDER_NFQWS2_BIN) ? 1 : 0,
         byedpi_installed: file_executable(BYEDPI_BIN) ? 1 : 0,
-        wdtt_installed: (file_executable("/usr/bin/qwdtt") || file_executable("/usr/bin/wdtt")) ? 1 : 0,
+        wdtt_installed: (file_executable("/usr/bin/qwdtt") || file_executable("/usr/bin/wdtt") || file_executable("/usr/bin/qwdtt-client")) ? 1 : 0,
         olcrtc_installed: file_executable("/usr/bin/olcrtc") ? 1 : 0,
         server_inbounds_enabled_count: 0
     };
@@ -1569,15 +1570,15 @@ function latency_boot_sweep() {
 
     ensure_dirs();
 
-    let sections = uci.sections(CONFIG_NAME, "section");
+    let sections = uci_core.section_objects(CONFIG_NAME, "section");
     let has_groups = false;
     for (let section in sections) {
         if (!bool_option(section, "enabled", true))
             continue;
-        if (!bool_option(section, "urltest_enabled", false))
-            continue;
-        has_groups = true;
-        break;
+        if (length(connections.urltests(section)) > 0) {
+            has_groups = true;
+            break;
+        }
     }
     if (!has_groups) {
         fs.writefile(guard_file, as_string(time()));
@@ -1585,8 +1586,15 @@ function latency_boot_sweep() {
     }
 
     let clash_url = get_clash_url("");
-    let clash_api_check = command_status(sprintf("curl -s -o /dev/null -w '%%{http_code}' %s 2>/dev/null | grep -q '200\\|404'", shell_quote(clash_url))) == 0;
-    if (!clash_api_check) {
+    let clash_ok = false;
+    for (let i = 0; i < 15; i++) {
+        if (command_status(sprintf("curl -s -o /dev/null -w '%%{http_code}' %s 2>/dev/null | grep -q '200\\|404'", shell_quote(clash_url))) == 0) {
+            clash_ok = true;
+            break;
+        }
+        system("sleep 1");
+    }
+    if (!clash_ok) {
         fs.writefile(guard_file, as_string(time()));
         return;
     }
@@ -1594,29 +1602,24 @@ function latency_boot_sweep() {
     for (let section in sections) {
         if (!bool_option(section, "enabled", true))
             continue;
-        if (!bool_option(section, "urltest_enabled", false))
-            continue;
 
         let section_name = section[".name"];
-        let urltest_id = "";
-        for (let ut in connections.urltests(section)) {
-            urltest_id = ut;
-            break;
+        let ut_list = connections.urltests(section);
+        for (let urltest_id in ut_list) {
+            let group_tag = (urltest_id == "urltest")
+                ? (section_name + "-urltest-out")
+                : (section_name + "-urltest-" + urltest_id + "-out");
+            let id = "boot-sweep-" + section_name + "-" + urltest_id;
+            let path = job_state_path_value(LATENCY_ACTION_DIR, id);
+            if (path == "")
+                continue;
+
+            write_state_file(path, running_latency_action_value("group", section_name, group_tag, now_seconds()));
+            let method_plan = latency_clash_method("group");
+            command_status(command_from_args([ BIN_PATH, "clash_api", "get_group_latency", group_tag, method_plan.timeout, path ]) + " >/dev/null 2>&1");
+            if (fs.stat(path) != null)
+                write_finished_action_state(path, true, "Boot latency sweep completed", 0);
         }
-        if (urltest_id == "")
-            continue;
-
-        let group_tag = section_name + "-urltest-" + urltest_id;
-        let id = "boot-sweep-" + section_name;
-        let path = job_state_path_value(LATENCY_ACTION_DIR, id);
-        if (path == "")
-            continue;
-
-        write_state_file(path, running_latency_action_value("group", section_name, group_tag, now_seconds()));
-        let method_plan = latency_clash_method("group");
-        command_status(command_from_args([ BIN_PATH, "clash_api", "get_group_latency", group_tag, method_plan.timeout, path ]) + " >/dev/null 2>&1");
-        if (fs.stat(path) != null)
-            write_finished_action_state(path, true, "Boot latency sweep completed", 0);
     }
 
     fs.writefile(guard_file, as_string(time()));

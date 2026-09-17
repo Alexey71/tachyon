@@ -2587,6 +2587,14 @@ function add_server_routes(config, servers, sections) {
         else {
             ctx.runtime_generate_unsupported("unsupported server routing_mode " + routing_mode);
         }
+
+        if (option(server, "protocol", "vless") == "tailscale") {
+            push(config.route.rules, {
+                action: "route",
+                ip_cidr: [ "100.64.0.0/10", "fd7a:115c:a1e0::/48" ],
+                outbound: inbound
+            });
+        }
     }
 }
 

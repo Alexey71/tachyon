@@ -550,6 +550,12 @@ function add_dns_bypass(config, section) {
         inbound,
         __service_tag: rule_tag
     });
+    push(config.dns.rules, {
+        action: "route",
+        server: dns_tag,
+        domain_suffix: [ "ts.net" ],
+        __service_tag: rule_tag + "-magicdns"
+    });
 }
 
 function add_server(config, section) {

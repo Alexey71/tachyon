@@ -59,6 +59,12 @@ function native_tailscale_enabled() {
     return false;
 }
 
+function tailscale_bypass_active() {
+    if (native_tailscale_enabled())
+        return true;
+    return fs.stat("/sys/class/net/tailscale0") != null;
+}
+
 function section_by_name(sections, section_name) {
     section_name = as_string(section_name);
     for (let section in sections)
@@ -1561,8 +1567,9 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
     // Native Tailscale: tailnet-bound traffic and anything already marked by
     // the Tailscale runtime (mask 0x00ff0000, see config validator) must not
     // be captured into tproxy — it is routed to tailscale0 instead.
-    if (native_tailscale_enabled()) {
+    if (tailscale_bypass_active()) {
         if (!nft_add_rule(table, "mangle", [ "meta", "mark", "&", "0x00ff0000", "!=", "0", "return" ]) ||
+            !nft_add_rule(table, "mangle", [ "iifname", "tailscale0", "return" ]) ||
             !nft_add_rule(table, "mangle", [ "ip", "daddr", "100.64.0.0/10", "return" ]) ||
             !nft_add_rule(table, "mangle", [ "ip6", "daddr", "fd7a:115c:a1e0::/48", "return" ]))
             return false;
@@ -1679,12 +1686,29 @@ function nft_create_runtime_base(table, localv4_set, common_set, port_set, ip_po
         !nft_add_rule(table, "mangle_output", [ "jump", "priority_output_rules" ]))
         return false;
 
+    if (tailscale_bypass_active()) {
+        if (!nft_add_rule(table, "mangle_output", [ "meta", "mark", "&", "0x00ff0000", "!=", "0", "return" ]) ||
+            !nft_add_rule(table, "mangle_output", [ "oifname", "tailscale0", "return" ]) ||
+            !nft_add_rule(table, "mangle_output", [ "ip", "daddr", "100.64.0.0/10", "return" ]) ||
+            !nft_add_rule(table, "mangle_output", [ "ip6", "daddr", "fd7a:115c:a1e0::/48", "return" ]))
+            return false;
+    }
+
     if (!nft_create_chain(table, "mangle_forward", "{ type filter hook forward priority -150; policy accept; }") ||
         !nft_add_rule(table, "mangle_forward", [ "meta", "mark", "&", "0x40000000", "==", "0x40000000", "counter", "return" ]) ||
         !nft_add_rule(table, "mangle_forward", [ "meta", "mark", "&", "0x20000000", "==", "0x20000000", "counter", "return" ]) ||
         !nft_add_rule(table, "mangle_forward", [ "jump", "guest_forward" ]) ||
         !nft_add_rule(table, "mangle_forward", [ "jump", "parental_forward" ]))
         return false;
+
+    if (tailscale_bypass_active()) {
+        if (!nft_add_rule(table, "mangle_forward", [ "meta", "mark", "&", "0x00ff0000", "!=", "0", "return" ]) ||
+            !nft_add_rule(table, "mangle_forward", [ "iifname", "tailscale0", "return" ]) ||
+            !nft_add_rule(table, "mangle_forward", [ "oifname", "tailscale0", "return" ]) ||
+            !nft_add_rule(table, "mangle_forward", [ "ip", "daddr", "100.64.0.0/10", "return" ]) ||
+            !nft_add_rule(table, "mangle_forward", [ "ip6", "daddr", "fd7a:115c:a1e0::/48", "return" ]))
+            return false;
+    }
 
     if (nft_add_rule(table, "mangle_forward", [ "tcp", "flags", "syn", "tcp", "option", "maxseg", "size", "set", "rt", "mtu" ])) {
         if (!nft_add_rule(table, "mangle_output", [ "tcp", "flags", "syn", "tcp", "option", "maxseg", "size", "set", "rt", "mtu" ]))

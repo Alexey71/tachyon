@@ -342,6 +342,17 @@ function log_file_tail(path) {
     return join(" | ", tail);
 }
 
+function sanitize_resolv_conf() {
+    let target = fs.readlink("/etc/resolv.conf");
+    if (target != null && target != "/tmp/resolv.conf" && target != "/tmp/resolv.conf.d/resolv.conf.auto") {
+        if (fs.stat("/tmp/resolv.conf") != null) {
+            fs.unlink("/etc/resolv.conf");
+            fs.symlink("/tmp/resolv.conf", "/etc/resolv.conf");
+            log_message("Restored /etc/resolv.conf symlink to /tmp/resolv.conf", "info");
+        }
+    }
+}
+
 function start_daemon(section) {
     if (running_pid(section)) {
         log_message("tailscaled for " + section_name(section) + " already running", "debug");
@@ -349,6 +360,7 @@ function start_daemon(section) {
     }
 
     neutralize_standalone_service();
+    sanitize_resolv_conf();
 
     let runtime_dir = section_runtime_dir(section);
     let socket_path = runtime_dir + "/tailscaled.sock";
@@ -360,7 +372,8 @@ function start_daemon(section) {
         "--tun=tailscale0",
         "--statedir=" + state_dir,
         "--socket=" + socket_path,
-        "--port=" + TAILSCALED_PORT
+        "--port=" + TAILSCALED_PORT,
+        "--netfilter-mode=off"
     ];
 
     fs.unlink(log_file);
@@ -398,6 +411,7 @@ function start_daemon(section) {
 function bring_up(section) {
     let args = tailscale_client_args(section);
     push(args, "up");
+    push(args, "--reset");
     push(args, "--authkey=" + as_string(option(section, "tailscale_auth_key", "") || ""));
     let hostname = as_string(option(section, "tailscale_hostname", "") || "");
     if (hostname != "")
@@ -419,12 +433,13 @@ function bring_up(section) {
     // DNS stays under dnsmasq/Tachyon control; MagicDNS names are resolved
     // through the dedicated dnsmasq forward instead of resolv.conf takeover.
     push(args, "--accept-dns=false");
+    push(args, "--netfilter-mode=off");
     // Never block the runtime on interactive prompts or dead control planes.
     push(args, "--timeout=120s");
-    push(args, "--reset");
 
     if (!run_step("tailscale up (" + section_name(section) + ")", args))
         return false;
+    sanitize_resolv_conf();
     return install_kernel_routing(section);
 }
 
@@ -575,6 +590,7 @@ function stop_runtime() {
     } catch (e) {
     }
     remove_kernel_routing(false);
+    sanitize_resolv_conf();
     return 0;
 }
 
