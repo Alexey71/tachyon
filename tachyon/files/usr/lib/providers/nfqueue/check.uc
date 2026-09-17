@@ -342,7 +342,7 @@ function run(argv, usage_path) {
     }
 }
 
-if (sourcepath(1) != null && sourcepath(1) != "") {
+if ((sourcepath(1) != null && sourcepath(1) != "") || ARGV[0] == null) {
     return {
         run,
         nft_queue_overlap

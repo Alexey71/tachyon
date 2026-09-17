@@ -64,4 +64,7 @@ grep -Fq "export const FAKEIP_CHECK_DOMAIN = 'fakeip.podkop.fyi';" "$FRONTEND_CO
 grep -Fq "export const IP_CHECK_DOMAIN = 'ip.podkop.fyi';" "$FRONTEND_CONSTANTS" ||
   fail "LuCI diagnostics must use the deployed public IP endpoint"
 
+ucode -L "$TACHYON_LIB" -e 'let c = require("core.constants"); exit(c.TACHYON_CONFIG_NAME == "tachyon" ? 0 : 1);' || \
+  fail "requiring core.constants from inline eval failed"
+
 printf 'constants ownership checks passed\n'

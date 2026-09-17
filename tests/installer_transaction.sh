@@ -69,6 +69,7 @@ if grep -qi 'jsdelivr' "$INSTALLER"; then
 fi
 
 grep -Fq '/usr/bin/tachyon component_action sing_box "$_action"' "$INSTALLER" || fail "sing-box must be delegated to component_action"
+grep -Fq 'require("core.common")' "$INSTALLER" || fail "runtime healthcheck must require core.common"
 
 export TACHYON_INSTALLER_TEST=1
 # shellcheck source=/dev/null

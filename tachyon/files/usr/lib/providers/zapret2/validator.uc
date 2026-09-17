@@ -17,7 +17,7 @@ function module_exports() {
     };
 }
 
-if (sourcepath(1) != null && sourcepath(1) != "")
+if ((sourcepath(1) != null && sourcepath(1) != "") || ARGV[0] == null)
     return module_exports();
 
 validator.run_expected(KIND, USAGE, ARGV);

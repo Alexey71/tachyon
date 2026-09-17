@@ -765,7 +765,7 @@ healthcheck() {
         err "Installed runtime reports version $_version, expected $TACHYON_RELEASE_TAG"
         return 1
     fi
-    ucode -L /usr/lib/tachyon -e 'require("core.constants");' >/dev/null 2>&1 || { err "ucode cannot load Tachyon runtime"; return 1; }
+    ucode -L /usr/lib/tachyon -e 'require("core.common");' >/dev/null 2>&1 || { err "ucode cannot load Tachyon runtime"; return 1; }
     ok "Healthcheck passed"
 }
 
