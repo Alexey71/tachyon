@@ -2349,6 +2349,11 @@ function validate_section_action_variant_support(ctx, sing_box_version) {
                 !sing_box_is_lx(ctx, sing_box_version) &&
                 !common.extended_awg_schema_has_junk_signatures(sing_box_version))
                 fail_requirement("Section '" + name + "' sets awg_j1/awg_j2/awg_j3/awg_itime, but sing-box-extended removed these fields in 2.6.1 and aborts on unknown fields. Remove them from the section or use sing-box-extended 2.6.0 or older. Aborted.", "fatal");
+
+            let has_v31_trailers = bool_option(section, "awg_random_trailers", false);
+            let has_v31_cookies = bool_option(section, "awg_disable_cookies", false);
+            if ((has_v31_trailers || has_v31_cookies) && !sing_box_is_lx(ctx, sing_box_version))
+                fail_requirement("Section '" + name + "' enables AmneziaWG 3.1 features (RandomTrailers / DisableCookies), which are only supported by sing-box-lx. Install sing-box-lx in the Updates tab or disable these options. Aborted.", "fatal");
         }
 
         // These actions emit outbound/endpoint shapes that only exist in the
@@ -2383,6 +2388,11 @@ function validate_section_action_variant_support(ctx, sing_box_version) {
             !sing_box_is_lx(ctx, sing_box_version) &&
             !common.extended_awg_schema_has_junk_signatures(sing_box_version))
             fail_requirement("Server '" + name + "' sets awg_j1/awg_j2/awg_j3/awg_itime, but sing-box-extended removed these fields in 2.6.1 and aborts on unknown fields. Remove them from the server or use sing-box-extended 2.6.0 or older. Aborted.", "fatal");
+
+        let has_srv_trailers = bool_option(server, "awg_random_trailers", false);
+        let has_srv_cookies = bool_option(server, "awg_disable_cookies", false);
+        if ((has_srv_trailers || has_srv_cookies) && !sing_box_is_lx(ctx, sing_box_version))
+            fail_requirement("Server '" + name + "' enables AmneziaWG 3.1 features (RandomTrailers / DisableCookies), which are only supported by sing-box-lx. Install sing-box-lx in the Updates tab or disable these options. Aborted.", "fatal");
     }
 }
 

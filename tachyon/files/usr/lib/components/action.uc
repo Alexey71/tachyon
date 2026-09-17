@@ -1953,6 +1953,15 @@ function move_file_to_backup(target_path, backup_path) {
     return move_file_portable(target_path, backup_path);
 }
 
+const COMPONENT_BACKUP_BASE_DIR = getenv("TACHYON_COMPONENT_BACKUPS_DIR") || "/etc/tachyon/component-backups";
+
+function get_component_backup_enabled() {
+    let uci_core = require("core.uci");
+    let settings = (uci_core && uci_core.get_all) ? (uci_core.get_all("tachyon", "settings") || {}) : {};
+    let val = as_string(settings.component_backup_enabled || "");
+    return val == "1" || val == "true" || val == "yes" || val == "on";
+}
+
 // Binary variants are fully extracted and validated before this helper is
 // called. On storage-constrained routers the temporary rollback copy can
 // be larger than the remaining /tmp space. If persistent component
@@ -3210,15 +3219,6 @@ function normalize_component_name(component) {
     if (component == "torrserver_direct" || component == "torrserver-direct")
         return "torrserver_direct";
     return component;
-}
-
-const COMPONENT_BACKUP_BASE_DIR = getenv("TACHYON_COMPONENT_BACKUPS_DIR") || "/etc/tachyon/component-backups";
-
-function get_component_backup_enabled() {
-    let uci_core = require("core.uci");
-    let settings = (uci_core && uci_core.get_all) ? (uci_core.get_all("tachyon", "settings") || {}) : {};
-    let val = as_string(settings.component_backup_enabled || "");
-    return val == "1" || val == "true" || val == "yes" || val == "on";
 }
 
 function component_backup_dir(component) {

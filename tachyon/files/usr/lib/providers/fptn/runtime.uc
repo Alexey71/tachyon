@@ -342,27 +342,6 @@ function supervise_runtime() {
     return false;
 }
 
-function ensure_routing() {
-    let sections = enabled_sections();
-    if (length(sections) == 0)
-        return true;
-    let tun_up = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
-    let p = running_pid();
-    if (p != null && tun_up) {
-        let route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
-        let rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
-        if (route_installed && rule_installed) {
-            sanitize_system();
-            return true;
-        }
-        return install_kernel_routing();
-    }
-    if (p != null && !tun_up) {
-        launch_supervisor();
-        return true;
-    }
-    return start_runtime();
-}
 
 function start_runtime() {
     let sections = enabled_sections();
@@ -418,6 +397,28 @@ function start_runtime() {
 
     log_message("FPTN client successfully started on " + cfg.tun_interface + " (table " + cfg.route_table + ")", "info");
     return true;
+}
+
+function ensure_routing() {
+    let sections = enabled_sections();
+    if (length(sections) == 0)
+        return true;
+    let tun_up = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
+    let p = running_pid();
+    if (p != null && tun_up) {
+        let route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
+        let rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
+        if (route_installed && rule_installed) {
+            sanitize_system();
+            return true;
+        }
+        return install_kernel_routing();
+    }
+    if (p != null && !tun_up) {
+        launch_supervisor();
+        return true;
+    }
+    return start_runtime();
 }
 
 function status_json() {

@@ -1905,6 +1905,8 @@ function parse_llm_json(raw_text) {
     return null;
 }
 
+let get_fuzzer_state, run_probe;
+
 function synthesize_ai_strategies(engine, target, custom_url, user_prompt) {
     let current = get_fuzzer_state();
     if (current.running) {
