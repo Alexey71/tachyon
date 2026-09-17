@@ -2175,13 +2175,16 @@ function createSettingsContent(section, capabilities) {
 
     const entries = value.split(",");
     for (const entry of entries) {
-      if (!/^(tcp|udp)(:[0-9]{1,5}(-[0-9]{1,5})?)?$/.test(entry.trim())) {
+      const trimmed = entry.trim();
+      if (!/^((tcp|udp):)?[0-9]{1,5}(-[0-9]{1,5})?$|^(tcp|udp)$/.test(trimmed)) {
         return _(
           'Each entry must be "proto", "proto:port" or "proto:port-port" (tcp/udp), e.g. tcp:6881,udp:6881-6889',
         );
       }
 
-      const portSpec = entry.split(":")[1];
+      const portSpec = trimmed.includes(":")
+        ? trimmed.split(":")[1]
+        : (/^[0-9]/.test(trimmed) ? trimmed : null);
       if (!portSpec) {
         continue;
       }

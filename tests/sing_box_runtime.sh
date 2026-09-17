@@ -653,7 +653,7 @@ cat >"$WORK_DIR/p2p-isolate-fixture.json" <<'JSON'
     "dns_server": "1.1.1.1",
     "service_listen_address": "127.0.0.1",
     "isolate_p2p": "1",
-    "p2p_ports": "tcp:6881,udp:6881-6889,udp"
+    "p2p_ports": "tcp:6881,udp:6881-6889,udp,51413"
   },
   "section": [
     {
@@ -662,7 +662,8 @@ cat >"$WORK_DIR/p2p-isolate-fixture.json" <<'JSON'
       "enabled": "1",
       "action": "outbound",
       "outbound_json": "{\"type\":\"direct\"}",
-      "domain_suffix": [ "example.org" ]
+      "domain_suffix": [ "example.org" ],
+      "excluded_protocol": [ "bittorrent" ]
     }
   ]
 }
@@ -1413,9 +1414,13 @@ assert(mwan3_pinned.route.default_interface == "wan2", "mwan3 pinned interface i
 
 let p2p_isolate = cfg("p2p-isolate");
 assert(route_rule(p2p_isolate, r => contains(r.protocol, "bittorrent") && r.outbound == "direct-out") != null, "p2p isolation sniffer rule");
-assert(route_rule(p2p_isolate, r => contains(r.protocol, "tcp") && r.source_port == 6881 && r.outbound == "direct-out") != null, "p2p client tcp port rule");
-assert(route_rule(p2p_isolate, r => contains(r.protocol, "udp") && contains(r.source_port_range, "6881:6889") && r.outbound == "direct-out") != null, "p2p client udp port range rule");
-assert(route_rule(p2p_isolate, r => contains(r.protocol, "udp") && r.source_port == null && r.source_port_range == null && r.outbound == "direct-out") != null, "p2p protocol-wide direct rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "tcp") && r.source_port == 6881 && r.outbound == "direct-out") != null, "p2p client tcp source port rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "tcp") && contains(r.port, 6881) && r.outbound == "direct-out") != null, "p2p client tcp dest port rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "udp") && contains(r.source_port_range, "6881:6889") && r.outbound == "direct-out") != null, "p2p client udp source port range rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "udp") && contains(r.port_range, "6881:6889") && r.outbound == "direct-out") != null, "p2p client udp dest port range rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "udp") && r.source_port == null && r.port == null && r.source_port_range == null && r.port_range == null && r.outbound == "direct-out") != null, "p2p protocol-wide direct rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "tcp") && contains(r.network, "udp") && r.source_port == 51413 && r.outbound == "direct-out") != null, "p2p plain port source rule");
+assert(route_rule(p2p_isolate, r => contains(r.network, "tcp") && contains(r.network, "udp") && contains(r.port, 51413) && r.outbound == "direct-out") != null, "p2p plain port dest rule");
 
 let lists = cfg("domain-ip-rulesets");
 assert(no_internal_fields(lists), "internal runtime fields stripped from generated config");

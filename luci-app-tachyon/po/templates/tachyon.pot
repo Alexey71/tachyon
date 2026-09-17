@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 15:04+0300\n"
-"PO-Revision-Date: 2026-09-17 15:04+0300\n"
+"POT-Creation-Date: 2026-09-17 15:17+0300\n"
+"PO-Revision-Date: 2026-09-17 15:17+0300\n"
 "Last-Translator: Dushnilin <dushnilin@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -32,7 +32,7 @@ msgstr ""
 msgid ".lst Lists"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2941
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2944
 msgid "(provider default)"
 msgstr ""
 
@@ -506,7 +506,7 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3475
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3478
 msgid "Administrator Chat IDs"
 msgstr ""
 
@@ -538,11 +538,11 @@ msgstr ""
 msgid "AI & Watchdog"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2892
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2895
 msgid "AI Agent REST API Bearer Token"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2959
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2962
 msgid "AI API Key"
 msgstr ""
 
@@ -575,7 +575,7 @@ msgstr ""
 msgid "AI Doctor failed"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2947
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2950
 msgid "AI Doctor Language"
 msgstr ""
 
@@ -589,11 +589,11 @@ msgstr ""
 msgid "AI DPI Engineer & Strategy Synthesizer"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2934
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2937
 msgid "AI Model"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2917
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2920
 msgid "AI Provider"
 msgstr ""
 
@@ -626,11 +626,11 @@ msgstr ""
 msgid "All"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3693
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3696
 msgid "All checks passed — Telegram bot should work correctly"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2539
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2542
 msgid "All components"
 msgstr ""
 
@@ -753,7 +753,7 @@ msgstr ""
 msgid "Allows limiting the list of servers for URLTest"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2906
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2909
 msgid "Allows Tachyon to send diagnostic snapshots to ChatGPT or DeepSeek API for intelligent root-cause analysis and auto-repair recommendations."
 msgstr ""
 
@@ -875,7 +875,7 @@ msgstr ""
 msgid "Anti-Bypass: Block Private DNS / DoH / DoT"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2960
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2963
 msgid "API Key for OpenAI (sk-...) or DeepSeek (optional for Ollama / LM Studio)"
 msgstr ""
 
@@ -939,7 +939,7 @@ msgstr ""
 msgid "Assigned Devices (MAC / IP)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3486
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3489
 msgid "At least one Admin Chat ID is required"
 msgstr ""
 
@@ -966,7 +966,7 @@ msgstr ""
 msgid "Auto"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2760
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2763
 msgid "Auto (cooperative with SQM/CAKE)"
 msgstr ""
 
@@ -996,7 +996,7 @@ msgstr ""
 msgid "Auto-apply failed"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3266
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3269
 msgid "Auto-detected domains"
 msgstr ""
 
@@ -1004,11 +1004,11 @@ msgstr ""
 msgid "Auto-detected Domains"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3224
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3227
 msgid "Auto-detects blocked domains from logs and adds them to the first section where they work via proxy."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2637
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2640
 msgid "Auto-failover of proxy sections"
 msgstr ""
 
@@ -1029,15 +1029,15 @@ msgstr ""
 msgid "Auto-update Hosts Lists"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2496
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2499
 msgid "Auto-update mode"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2439
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2442
 msgid "Automatic component update checks"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2485
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2488
 msgid "Automatic component updates"
 msgstr ""
 
@@ -1053,11 +1053,11 @@ msgstr ""
 msgid "Automatically benchmark latency, packet loss, and anti-censorship reliability of major DNS servers (UDP/DoH) from this router to find and apply the optimal configuration."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2440
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2443
 msgid "Automatically check installed components for new versions"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2486
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2489
 msgid "Automatically download and install new versions of components"
 msgstr ""
 
@@ -1065,7 +1065,7 @@ msgstr ""
 msgid "Automatically generate a Cloudflare WARP account and configure all AmneziaWG settings."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3183
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3186
 msgid "Automatically increase check intervals when healthy (to 5 min) and decrease on problems (to 120s)."
 msgstr ""
 
@@ -1248,7 +1248,7 @@ msgstr ""
 msgid "Bootstrap DNS Servers"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3437
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3440
 msgid "Bot Status"
 msgstr ""
 
@@ -1282,12 +1282,12 @@ msgstr ""
 msgid "By flag emoji from name"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2503
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2506
 msgid "By schedule"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:13806
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2545
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2548
 #: src/tachyon/tabs/diagnostic/partials/renderStrategyFuzzerModal.ts:912
 msgid "ByeDPI"
 msgstr ""
@@ -1362,7 +1362,7 @@ msgstr ""
 msgid "ByeDPI strategy cannot be empty"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2211
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2214
 msgid "Bypasses UDP traffic for selected game consoles (PS5/Xbox) to achieve NAT Type 1 / 2 (Full Cone NAT) for P2P matchmaking, while keeping TCP (PSN/Auth) routed through the proxy."
 msgstr ""
 
@@ -1370,15 +1370,15 @@ msgstr ""
 msgid "CA Certificate"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2427
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2430
 msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2676
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2679
 msgid "Cache File Path"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2690
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2693
 msgid "Cache file path cannot be empty"
 msgstr ""
 
@@ -1555,7 +1555,7 @@ msgid "Checking..."
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:301
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3329
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3332
 msgid "Checking…"
 msgstr ""
 
@@ -1605,7 +1605,7 @@ msgstr ""
 msgid "Choose whether this schedule rule is permanently active (24/7) or restricted to specific hours."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2497
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2500
 msgid "Choose whether to install updates immediately when detected or at a scheduled time (e.g. maintenance window)"
 msgstr ""
 
@@ -1718,7 +1718,7 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12699
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:4078
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1835
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2336
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2339
 #: src/partials/modal/renderModal.ts:263
 #: src/tachyon/tabs/dashboard/initController.ts:1425
 #: src/tachyon/tabs/diagnostic/initController.ts:1551
@@ -1773,7 +1773,7 @@ msgstr ""
 msgid "Cloudflare WARP API access token"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3476
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3479
 msgid "Comma-separated list of Telegram user IDs authorized to control the bot."
 msgstr ""
 
@@ -1800,7 +1800,7 @@ msgstr ""
 msgid "Component update available"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2449
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2452
 msgid "Component update check interval"
 msgstr ""
 
@@ -1832,11 +1832,11 @@ msgstr ""
 msgid "confidence"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2662
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2665
 msgid "Config File Path"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2865
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2868
 msgid "Config Snapshots"
 msgstr ""
 
@@ -2023,7 +2023,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2972
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2975
 msgid "Custom API Endpoint URL"
 msgstr ""
 
@@ -2056,11 +2056,11 @@ msgstr ""
 msgid "Custom header for handshake response"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2927
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2930
 msgid "Custom OpenAI-Compatible API"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2973
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2976
 msgid "Custom OpenAI-compatible API endpoint URL (e.g. http://192.168.1.100:11434/v1/chat/completions)"
 msgstr ""
 
@@ -2142,16 +2142,16 @@ msgstr ""
 msgid "Default"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3604
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3607
 msgid "Default (auto)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2776
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2788
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2779
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2791
 msgid "Default (Direct WAN / Default mixed proxy)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2567
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2570
 msgid "Default address for checking server availability and latency. URLTest uses its own address."
 msgstr ""
 
@@ -2189,7 +2189,7 @@ msgstr ""
 msgid "Detect server country"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2732
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2735
 msgid "Detects and drops STUN/TURN packets in nftables to prevent real IP leaks via WebRTC."
 msgstr ""
 
@@ -2333,7 +2333,7 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/parental.js:1051
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/parental.js:467
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/parental.js:480
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2762
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2765
 #: src/tachyon/tabs/updates/initController.ts:1480
 #: src/tachyon/tabs/updates/initController.ts:1499
 msgid "Disabled"
@@ -2375,7 +2375,7 @@ msgstr ""
 msgid "DNS Check Interval"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3075
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3078
 msgid "DNS Check Interval (s)"
 msgstr ""
 
@@ -2576,7 +2576,7 @@ msgstr ""
 msgid "Domain Resolver"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3236
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3239
 msgid "Domain test sections"
 msgstr ""
 
@@ -2597,7 +2597,7 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2627
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2630
 msgid "Dont Touch My DHCP!"
 msgstr ""
 
@@ -2617,27 +2617,27 @@ msgstr ""
 msgid "Download .conf"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2606
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2609
 msgid "Download component packages via the selected section"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2614
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2617
 msgid "Download components through"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2605
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2608
 msgid "Download components through a section"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2592
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2595
 msgid "Download lists through"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2583
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2586
 msgid "Download lists through a section"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2584
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2587
 msgid "Download remote lists and rule sets via the selected section"
 msgstr ""
 
@@ -2666,7 +2666,7 @@ msgstr ""
 msgid "Downloaded"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2300
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2303
 msgid "Downloading and applying rule sets and lists..."
 msgstr ""
 
@@ -2750,7 +2750,7 @@ msgstr ""
 msgid "e.g. SHA256 — leave empty for default"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2179
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2180
 msgid "Each entry must be \"proto\", \"proto:port\" or \"proto:port-port\" (tcp/udp), e.g. tcp:6881,udp:6881-6889"
 msgstr ""
 
@@ -2759,7 +2759,7 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2535
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2538
 msgid "Eligible components for auto-update"
 msgstr ""
 
@@ -2774,15 +2774,15 @@ msgstr ""
 msgid "Enable"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3182
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3185
 msgid "Enable Adaptive Intervals"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2905
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2908
 msgid "Enable AI Doctor (ChatGPT / LLM Analysis)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3196
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3199
 msgid "Enable Anomaly Detection"
 msgstr ""
 
@@ -2790,7 +2790,7 @@ msgstr ""
 msgid "Enable authentication"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2244
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2247
 msgid "Enable automatic updates for remote lists and rule sets"
 msgstr ""
 
@@ -2803,7 +2803,7 @@ msgstr ""
 msgid "Enable built-in DNS resolver for domains handled by this section"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3140
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3143
 msgid "Enable Config Validation"
 msgstr ""
 
@@ -2812,15 +2812,15 @@ msgstr ""
 msgid "Enable Direct WAN Bypass"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3062
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3065
 msgid "Enable DNS Continuous Check"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3087
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3090
 msgid "Enable Firewall Reload Dedup"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3154
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3157
 msgid "Enable Graceful Degradation"
 msgstr ""
 
@@ -2828,11 +2828,11 @@ msgstr ""
 msgid "Enable Guest Mode"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3101
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3104
 msgid "Enable Health Metrics"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2243
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2246
 msgid "Enable list updates"
 msgstr ""
 
@@ -2848,23 +2848,23 @@ msgstr ""
 msgid "Enable Output Network Interface"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3016
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3019
 msgid "Enable Proxy Health Monitor"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2988
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2991
 msgid "Enable RAG (Knowledge Base Retrieval)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3126
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3129
 msgid "Enable Smart Cooldowns"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3223
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3226
 msgid "Enable Smart Detect"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3447
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3450
 msgid "Enable Telegram Bot"
 msgstr ""
 
@@ -2876,7 +2876,7 @@ msgstr ""
 msgid "Enable WAN DNS Fallback for Main DNS"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2879
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2882
 msgid "Enable Watchdog"
 msgstr ""
 
@@ -2895,7 +2895,7 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2761
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2764
 msgid "Enabled (always prioritize)"
 msgstr ""
 
@@ -2903,11 +2903,11 @@ msgstr ""
 msgid "Enables high-capacity local DNS caching in dnsmasq to accelerate DNS queries and absorb transient latency during service restarts."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3448
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3451
 msgid "Enables the background daemon that polls Telegram for commands and sends notifications."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2880
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2883
 msgid "Enables the background watchdog process to monitor services and auto-recover on failures."
 msgstr ""
 
@@ -2974,7 +2974,7 @@ msgstr ""
 msgid "Enter a positive whole number in megabytes"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2528
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2531
 msgid "Enter a valid time in HH:MM format (00:00 to 23:59)"
 msgstr ""
 
@@ -2988,7 +2988,7 @@ msgstr ""
 msgid "Enter HWID"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3459
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3462
 msgid "Enter the API token obtained from @BotFather."
 msgstr ""
 
@@ -3022,8 +3022,8 @@ msgstr ""
 msgid "Error running trace:"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2391
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2416
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2394
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2419
 msgid "Error updating lists:"
 msgstr ""
 
@@ -3327,8 +3327,8 @@ msgstr ""
 msgid "Failed to restore snapshot"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3678
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3704
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3681
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3707
 msgid "Failed to run diagnostics — is the tachyon binary installed?"
 msgstr ""
 
@@ -3353,7 +3353,7 @@ msgstr ""
 msgid "Failed to start benchmark"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3393
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3396
 msgid "Failed to start bot"
 msgstr ""
 
@@ -3378,7 +3378,7 @@ msgstr ""
 msgid "Failed to start watchdog"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3407
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3410
 msgid "Failed to stop bot"
 msgstr ""
 
@@ -3429,7 +3429,7 @@ msgstr ""
 msgid "Failed to update subscriptions"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2649
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2652
 msgid "Failover failure threshold"
 msgstr ""
 
@@ -3505,7 +3505,7 @@ msgstr ""
 msgid "Fast packet transport network client"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3063
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3066
 msgid "Faster DNS health monitoring than the default cycle. Switches bootstrap DNS on failure."
 msgstr ""
 
@@ -3584,7 +3584,7 @@ msgstr ""
 msgid "Fooling Methods (fooling)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2291
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2294
 msgid "Force immediate download and refresh of all remote lists and rule sets"
 msgstr ""
 
@@ -3596,7 +3596,7 @@ msgstr ""
 msgid "Forces SafeSearch on Google, Yandex, Bing, DuckDuckGo and Strict Restricted Mode on YouTube via DNS rewrite for all devices in this profile."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2744
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2747
 msgid "Forces sing-box to tunnel DNS requests via DoQ with Encrypted Client Hello (ECH) for SNI hiding."
 msgstr ""
 
@@ -3658,11 +3658,11 @@ msgstr ""
 msgid "Fuzzing is not supported here because Tachyon needs deterministic runtime validation."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2222
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2225
 msgid "Game Console IPs"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2210
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2213
 msgid "Game Console Optimizer (NAT Type 1)"
 msgstr ""
 
@@ -3910,7 +3910,7 @@ msgstr ""
 msgid "Hosts Lists Update Interval"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3115
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3118
 msgid "How many hours of metrics to keep (default 24)."
 msgstr ""
 
@@ -3922,15 +3922,15 @@ msgstr ""
 msgid "How often the currently selected server is checked"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3076
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3079
 msgid "How often to check DNS health in seconds (default 60)."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3030
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3033
 msgid "How often to check proxy health in seconds (fast tier, default 30)."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3499
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3502
 msgid "How often to check Telegram for new messages (default: 5)."
 msgstr ""
 
@@ -3977,7 +3977,7 @@ msgstr ""
 msgid "Idle timeout"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3155
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3158
 msgid "If one health check fails with an error, continue running other checks instead of stopping."
 msgstr ""
 
@@ -3986,7 +3986,7 @@ msgstr ""
 msgid "If Tachyon powers your daily networking and keeps your connection fast and secure, consider supporting ongoing development! ☕ 🧀 🌭"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2502
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2505
 msgid "Immediately upon release"
 msgstr ""
 
@@ -4160,7 +4160,7 @@ msgstr ""
 msgid "Installed version is newer than release"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2816
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2819
 msgid "Interface"
 msgstr ""
 
@@ -4807,7 +4807,7 @@ msgstr ""
 msgid "Keep Priority before latency-sorted servers"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2555
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2558
 msgid "Keep the previous working binary/package on the router flash for instant offline rollback if needed. Consumes extra storage."
 msgstr ""
 
@@ -4841,7 +4841,7 @@ msgstr ""
 msgid "LAN Devices"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2948
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2951
 msgid "Language for AI Doctor diagnosis responses"
 msgstr ""
 
@@ -4861,7 +4861,7 @@ msgstr ""
 msgid "Latency test failed"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2566
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2569
 msgid "Latency test URL"
 msgstr ""
 
@@ -4894,11 +4894,11 @@ msgstr ""
 msgid "List must be an HTTP(S) URL or a local .lst / .txt path"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3267
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3270
 msgid "List of domains automatically detected and the section they were added to. To edit or remove them, open the routing rules of the respective section."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2253
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2256
 msgid "List Update Frequency"
 msgstr ""
 
@@ -4915,19 +4915,19 @@ msgstr ""
 msgid "Listening port"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2383
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2386
 msgid "Lists and rule sets successfully updated!"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2331
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2334
 msgid "Lists update is continuing in the background."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2370
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2373
 msgid "Lists update is still running in background. You can check system logs."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2926
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2929
 msgid "LM Studio (Local PC / Server)"
 msgstr ""
 
@@ -5018,7 +5018,7 @@ msgstr ""
 msgid "Location"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2713
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2716
 msgid "Log Level"
 msgstr ""
 
@@ -5027,7 +5027,7 @@ msgstr ""
 msgid "Loss"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2541
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2544
 msgid "LuCI Web UI"
 msgstr ""
 
@@ -5058,7 +5058,7 @@ msgstr ""
 msgid "Manual"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2290
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2293
 msgid "Manual list update"
 msgstr ""
 
@@ -5103,7 +5103,7 @@ msgstr ""
 msgid "Max Handshake Attempts"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3210
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3213
 msgid "Max reconnects per hour before alert (default 10)."
 msgstr ""
 
@@ -5140,7 +5140,7 @@ msgstr ""
 msgid "Method"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3114
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3117
 msgid "Metrics Retention (hours)"
 msgstr ""
 
@@ -5177,7 +5177,7 @@ msgstr ""
 msgid "Mode"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2935
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2938
 msgid "Model name to use. Leave empty to use default (gpt-4o-mini / claude-3-5-haiku / deepseek-chat / llama3:latest)."
 msgstr ""
 
@@ -5199,7 +5199,7 @@ msgstr ""
 msgid "Monitoring"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3197
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3200
 msgid "Monitors sing-box reconnect frequency. Alerts if too many reconnects per hour."
 msgstr ""
 
@@ -5216,7 +5216,7 @@ msgstr ""
 msgid "MTU"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3489
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3492
 msgid "Must be a comma-separated list of numeric IDs"
 msgstr ""
 
@@ -5426,7 +5426,7 @@ msgstr ""
 msgid "No DNS resolvers recorded"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3284
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3287
 msgid "No domains detected yet"
 msgstr ""
 
@@ -5634,27 +5634,27 @@ msgstr ""
 msgid "Notify in Telegram"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3571
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3574
 msgid "Notify on Certificate Warnings"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3519
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3522
 msgid "Notify on Core Crashes"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3584
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3587
 msgid "Notify on DNS Leaks"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3545
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3548
 msgid "Notify on Server Switches"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3532
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3535
 msgid "Notify on Service Restarts"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3558
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3561
 msgid "Notify on Subscription Updates"
 msgstr ""
 
@@ -5666,11 +5666,11 @@ msgstr ""
 msgid "Number of consecutive failed checks required before switching DNS servers."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2650
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2653
 msgid "Number of consecutive failed probes before switching sections"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3041
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3044
 msgid "Number of consecutive failures before restarting (default 3)."
 msgstr ""
 
@@ -5727,7 +5727,7 @@ msgstr ""
 msgid "OlcRTC Transport"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2925
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2928
 msgid "Ollama (Local PC / Server)"
 msgstr ""
 
@@ -5978,15 +5978,15 @@ msgstr ""
 msgid "Path cannot be empty"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2694
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2697
 msgid "Path must be absolute (start with /)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2703
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2706
 msgid "Path must contain at least one directory (like /tmp/cache.db)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2698
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2701
 msgid "Path must end with cache.db"
 msgstr ""
 
@@ -6068,7 +6068,7 @@ msgstr ""
 msgid "Periodically check the current level and switch to a faster server even when the current one works."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3017
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3020
 msgid "Periodically checks if the proxy is responding. Restarts Tachyon after consecutive failures."
 msgstr ""
 
@@ -6077,7 +6077,7 @@ msgstr ""
 msgid "Persistent Keepalive"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3168
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3171
 msgid "Persistent Smart Detect"
 msgstr ""
 
@@ -6111,11 +6111,11 @@ msgstr ""
 msgid "Policy Mode"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3498
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3501
 msgid "Polling Interval (seconds)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3511
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3514
 msgid "Polling interval must be at least 1 second"
 msgstr ""
 
@@ -6141,7 +6141,7 @@ msgstr ""
 msgid "Port range start must be less than or equal to end"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2199
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2202
 msgid "Port range start must not exceed its end"
 msgstr ""
 
@@ -6150,15 +6150,15 @@ msgstr ""
 msgid "Ports"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2195
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2198
 msgid "Ports must be between 1 and 65535"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2989
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2992
 msgid "Pre-built index of Tachyon documentation chunks. When enabled, AI Doctor searches relevant docs before generating a diagnosis."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2426
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2429
 msgid "Pre-download all preset lists"
 msgstr ""
 
@@ -6208,7 +6208,7 @@ msgstr ""
 msgid "Prevent guest devices from accessing router management services (LuCI Web UI, SSH, Clash API). DHCP and DNS remain accessible."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3088
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3091
 msgid "Prevents multiple reload_firewall calls within 120 seconds to avoid connection drops."
 msgstr ""
 
@@ -6217,7 +6217,7 @@ msgstr ""
 msgid "Primary DNS"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2756
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2759
 msgid "Prioritizes interactive DNS, VoIP/WebRTC and gaming via DSCP marking in nftables. Works cooperatively with OpenWrt SQM (CAKE/FQ_CoDel) without bufferbloat degradation."
 msgstr ""
 
@@ -6329,15 +6329,15 @@ msgstr ""
 msgid "Proxy / DPI"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3040
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3043
 msgid "Proxy Fail Threshold"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3029
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3032
 msgid "Proxy Health Check Interval (s)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3051
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3054
 msgid "Proxy Health Check URL"
 msgstr ""
 
@@ -6356,7 +6356,7 @@ msgstr ""
 msgid "Proxy outbound is inactive or not configured for local testing."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3595
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3598
 msgid "Proxy Section for Bot"
 msgstr ""
 
@@ -6384,7 +6384,7 @@ msgstr ""
 msgid "Public IP not required for this configuration"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2755
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2758
 msgid "QoS Priority Engine (DSCP)"
 msgstr ""
 
@@ -6504,7 +6504,7 @@ msgstr ""
 msgid "Recommended Quick Fixes:"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3209
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3212
 msgid "Reconnect Threshold"
 msgstr ""
 
@@ -6513,7 +6513,7 @@ msgstr ""
 msgid "Reconnect WAN"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3102
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3105
 msgid "Records proxy/DNS latency and health status in hourly buckets for analysis."
 msgstr ""
 
@@ -6623,7 +6623,7 @@ msgstr ""
 msgid "Reset Bootstrap DNS"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2851
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2854
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:416
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:457
 msgid "Reset Settings"
@@ -6756,7 +6756,7 @@ msgstr ""
 msgid "Restore Snapshot"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2852
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2855
 msgid "Restores the Tachyon factory defaults: all rules, subscriptions, custom DNS servers and other options will be lost."
 msgstr ""
 
@@ -6802,7 +6802,7 @@ msgstr ""
 msgid "Route all non-local LAN traffic through the tailnet exit node instead of the proxy engines."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3596
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3599
 msgid "Route bot API requests through this section. Leave empty to use the default mixed proxy."
 msgstr ""
 
@@ -6967,8 +6967,8 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:5611
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:5714
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:327
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3357
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3358
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3360
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3361
 #: src/tachyon/methods/custom/getDashboardSections.ts:1717
 #: src/tachyon/methods/custom/getDashboardSections.ts:1863
 #: src/tachyon/tabs/dashboard/partials/renderSections.ts:333
@@ -6981,7 +6981,7 @@ msgstr ""
 msgid "Running benchmarks..."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3664
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3667
 msgid "Running diagnostics…"
 msgstr ""
 
@@ -7011,11 +7011,11 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2866
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2869
 msgid "Save a snapshot of the working config and restore it later if something breaks."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2554
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2557
 msgid "Save component backup before update"
 msgstr ""
 
@@ -7032,7 +7032,7 @@ msgstr ""
 msgid "Schedule Rule"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2511
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2514
 msgid "Scheduled auto-update time"
 msgstr ""
 
@@ -7070,11 +7070,11 @@ msgstr ""
 msgid "Secret key for authenticating remote access to YACD when WAN access is enabled."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2893
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2896
 msgid "Secret token for authorizing WRITE operations (POST/PUT) on /cgi-bin/tachyon-agent/. Leave empty if auth is not required."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2795
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2798
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:527
 msgid "Section"
 msgstr ""
@@ -7091,7 +7091,7 @@ msgstr ""
 msgid "Section Rules Content"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2772
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2775
 msgid "Section used for Cloudflare WARP API registration. If your ISP blocks Cloudflare API on WAN, select a proxy section (with Mixed proxy enabled) or a tunnel interface section (WireGuard / AmneziaWG / VPN). Leave empty to use direct WAN / default mixed proxy."
 msgstr ""
 
@@ -7149,7 +7149,7 @@ msgstr ""
 msgid "Select active days. If none selected, the rule applies every day."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2918
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2921
 msgid "Select AI LLM provider for diagnostics"
 msgstr ""
 
@@ -7165,7 +7165,7 @@ msgstr ""
 msgid "Select an intermediate section"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3237
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3240
 msgid "Select and order the sections through which blocked domains are tested. Checked sections are tried top-to-bottom."
 msgstr ""
 
@@ -7193,15 +7193,15 @@ msgstr ""
 msgid "Select or enter a User-Agent"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2677
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2680
 msgid "Select or enter path for sing-box cache file. Change this ONLY if you know what you are doing"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2223
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2226
 msgid "Select or enter the IP addresses of your game consoles."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2663
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2666
 msgid "Select path for sing-box config file. Change this ONLY if you know what you are doing"
 msgstr ""
 
@@ -7215,7 +7215,7 @@ msgstr ""
 msgid "Select the fastest node"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2714
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2717
 msgid "Select the log level for sing-box"
 msgstr ""
 
@@ -7239,7 +7239,7 @@ msgstr ""
 msgid "Select whether to disable the target during the schedule or enable it ONLY during the schedule."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2536
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2539
 msgid "Select which components are permitted to update automatically"
 msgstr ""
 
@@ -7276,19 +7276,19 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3585
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3588
 msgid "Send a Telegram notification if a potential DNS leak is detected."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3520
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3523
 msgid "Send a Telegram notification if sing-box or nftables rules crash and get auto-restored."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3572
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3575
 msgid "Send a Telegram notification if SSL/TLS certificates are close to expiration."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3533
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3536
 msgid "Send a Telegram notification if the Tachyon service is restarted by the watchdog."
 msgstr ""
 
@@ -7296,11 +7296,11 @@ msgstr ""
 msgid "Send a Telegram notification to admins when a blocked site is accessed. Requires the Telegram bot to be enabled."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3546
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3549
 msgid "Send a Telegram notification when a URLTest group switches to a new server."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3559
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3562
 msgid "Send a Telegram notification when proxy subscriptions are successfully updated."
 msgstr ""
 
@@ -7538,7 +7538,7 @@ msgstr ""
 msgid "Simultaneous check of your public IP address and upstream DNS resolvers to verify network visibility through direct connection and proxy."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2542
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2545
 msgid "sing-box"
 msgstr ""
 
@@ -7790,7 +7790,7 @@ msgstr ""
 msgid "Start Benchmark"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3339
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3342
 msgid "Start bot"
 msgstr ""
 
@@ -7822,7 +7822,7 @@ msgstr ""
 msgid "Starting DNS benchmark..."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3386
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3389
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:360
 msgid "Starting…"
 msgstr ""
@@ -7852,7 +7852,7 @@ msgstr ""
 msgid "Stop"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3346
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3349
 msgid "Stop bot"
 msgstr ""
 
@@ -7870,7 +7870,7 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:5611
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:5714
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:333
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3363
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3366
 #: src/tachyon/methods/custom/getDashboardSections.ts:1717
 #: src/tachyon/methods/custom/getDashboardSections.ts:1867
 #: src/tachyon/tabs/dashboard/partials/renderSections.ts:337
@@ -7878,12 +7878,12 @@ msgstr ""
 msgid "Stopped"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3400
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3403
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:374
 msgid "Stopping…"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3169
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3172
 msgid "Store auto-detected domains in /etc instead of /tmp to survive reboots."
 msgstr ""
 
@@ -7916,7 +7916,7 @@ msgstr ""
 msgid "Strict (🔒)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2743
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2746
 msgid "Strict ECH + DoQ DNS Enforcer"
 msgstr ""
 
@@ -8075,7 +8075,7 @@ msgstr ""
 msgid "Tachyon"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2540
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2543
 msgid "Tachyon Core"
 msgstr ""
 
@@ -8139,7 +8139,7 @@ msgstr ""
 msgid "Tachyon update did not complete within the timeout"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2628
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2631
 msgid "Tachyon will not modify your DHCP configuration"
 msgstr ""
 
@@ -8194,7 +8194,7 @@ msgid "Tachyon-managed nfqws2 runtime is ready"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:9298
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2546
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2549
 #: src/tachyon/tabs/dashboard/initController.ts:2317
 msgid "Tailscale"
 msgstr ""
@@ -8293,7 +8293,7 @@ msgstr ""
 msgid "Telegram Bot"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3458
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3461
 msgid "Telegram Bot Token"
 msgstr ""
 
@@ -8307,10 +8307,10 @@ msgstr ""
 msgid "Test all sections"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3649
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3680
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3699
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3706
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3652
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3683
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3702
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3709
 msgid "Test Connection"
 msgstr ""
 
@@ -8354,7 +8354,7 @@ msgstr ""
 msgid "Test servers whose names match the expression."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3636
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3639
 msgid "Test Telegram Connection"
 msgstr ""
 
@@ -8397,7 +8397,7 @@ msgstr ""
 msgid "Testing..."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3661
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3664
 msgid "Testing…"
 msgstr ""
 
@@ -8475,7 +8475,7 @@ msgstr ""
 msgid "This flag does not accept a value."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2305
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2308
 msgid "This may take 1-2 minutes. The process runs in the background on the router."
 msgstr ""
 
@@ -8523,7 +8523,7 @@ msgstr ""
 msgid "Time in seconds for DNS record caching (default: 60)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2512
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2515
 msgid "Time of day to run scheduled component updates in HH:MM (24h) format, e.g. 04:00"
 msgstr ""
 
@@ -8563,7 +8563,7 @@ msgstr ""
 msgid "Toddler (👶)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3467
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3470
 msgid "Token is required when the bot is enabled"
 msgstr ""
 
@@ -8884,7 +8884,7 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:16065
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:2069
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:5714
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3380
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3383
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:354
 #: src/tachyon/methods/custom/getDashboardSections.ts:1869
 #: src/tachyon/tabs/dashboard/partials/renderSections.ts:339
@@ -8960,7 +8960,7 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2392
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2395
 msgid "Update failed"
 msgstr ""
 
@@ -8983,7 +8983,7 @@ msgstr ""
 msgid "Update is available:"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2293
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2296
 msgid "Update lists now"
 msgstr ""
 
@@ -9025,7 +9025,7 @@ msgstr ""
 msgid "Updating device routing mode..."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2339
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2342
 msgid "Updating lists..."
 msgstr ""
 
@@ -9070,7 +9070,7 @@ msgstr ""
 msgid "URL must use one of the following protocols:"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3052
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3055
 msgid "URL to test through the proxy (default: Cloudflare 204)."
 msgstr ""
 
@@ -9113,7 +9113,7 @@ msgstr ""
 msgid "URLTest settings"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3127
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3130
 msgid "Use 3-tier check intervals: fast (15s), normal (120s), slow (300s) instead of a single interval."
 msgstr ""
 
@@ -9179,11 +9179,11 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:5194
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:5201
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:5208
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2254
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2276
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2283
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2450
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2478
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2257
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2279
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2286
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2453
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2481
 msgid "Use sing-box duration format like 1d, 12h or 30m"
 msgstr ""
 
@@ -9264,7 +9264,7 @@ msgstr ""
 msgid "Valid"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3141
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3144
 msgid "Validates sing-box config before restart to prevent boot loops on broken configs."
 msgstr ""
 
@@ -9374,7 +9374,7 @@ msgstr ""
 msgid "WARP Account ID"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2771
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2774
 msgid "WARP Generator Proxy Section"
 msgstr ""
 
@@ -9382,11 +9382,11 @@ msgstr ""
 msgid "WARP Private Key"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2638
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2641
 msgid "Watchdog probes every Connection section; when the active one fails several checks in a row, traffic switches to a healthy backup and Telegram is notified. Requires a config reload to take effect."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3001
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:3004
 msgid "Watchdog Status"
 msgstr ""
 
@@ -9450,7 +9450,7 @@ msgstr ""
 msgid "WDTT Workers"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2731
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2734
 msgid "WebRTC Leak Protection"
 msgstr ""
 
@@ -9534,7 +9534,7 @@ msgstr ""
 msgid "You can select Output Network Interface, by default autodetect"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2543
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2546
 msgid "Zapret"
 msgstr ""
 
@@ -9598,7 +9598,7 @@ msgstr ""
 msgid "Zapret v2 (nfqws2)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2544
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2547
 msgid "Zapret2"
 msgstr ""
 

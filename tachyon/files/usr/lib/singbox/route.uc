@@ -18,45 +18,83 @@ function normalize_port_entry(value) {
 }
 
 // P2P leak protection can be pinned down to the torrent client's own ports so
-// nothing sneaks past the protocol sniffer. Each entry is "proto" or
-// "proto:port" or "proto:port-port" (tcp/udp, comma separated). Without a
-// port the whole protocol is routed direct.
+// nothing sneaks past the protocol sniffer. Each entry is:
+// "port", "port-port", "proto", "proto:port" or "proto:port-port" (tcp/udp, comma separated).
+// Without a port the whole protocol is routed direct.
 function p2p_direct_rules(settings) {
     let rules = [];
     for (let entry in split(option(settings, "p2p_ports", ""), ",")) {
         entry = trim(entry);
         if (entry == "")
             continue;
-        let proto = "tcp";
+        let proto = "both";
         let port_spec = "";
         let colon = index(entry, ":");
         if (colon >= 0) {
-            proto = trim(substr(entry, 0, colon));
-            port_spec = trim(substr(entry, colon + 1));
+            let p = lc(trim(substr(entry, 0, colon)));
+            if (p == "tcp" || p == "udp") {
+                proto = p;
+                port_spec = trim(substr(entry, colon + 1));
+            } else {
+                continue;
+            }
         } else {
-            proto = entry;
+            let p = lc(entry);
+            if (p == "tcp" || p == "udp") {
+                proto = p;
+                port_spec = "";
+            } else {
+                proto = "both";
+                port_spec = entry;
+            }
         }
-        if (proto != "tcp" && proto != "udp")
-            continue;
-        let rule = { protocol: [ proto ], action: "route", outbound: runtime_constants.DIRECT_OUTBOUND_TAG };
+
+        let networks = proto == "both" ? [ "tcp", "udp" ] : [ proto ];
+
         if (port_spec != "") {
             let dash = index(port_spec, "-");
             if (dash >= 0) {
                 let start = normalize_port_entry(substr(port_spec, 0, dash));
                 let end = normalize_port_entry(substr(port_spec, dash + 1));
-                if (start != null && end != null && start <= end)
-                    rule.source_port_range = [ sprintf("%d:%d", start, end) ];
-                else
-                    continue;
+                if (start != null && end != null && start <= end) {
+                    let range_str = sprintf("%d:%d", start, end);
+                    push(rules, {
+                        network: networks,
+                        source_port_range: [ range_str ],
+                        action: "route",
+                        outbound: runtime_constants.DIRECT_OUTBOUND_TAG
+                    });
+                    push(rules, {
+                        network: networks,
+                        port_range: [ range_str ],
+                        action: "route",
+                        outbound: runtime_constants.DIRECT_OUTBOUND_TAG
+                    });
+                }
             } else {
                 let port = normalize_port_entry(port_spec);
-                if (port != null)
-                    rule.source_port = port;
-                else
-                    continue;
+                if (port != null) {
+                    push(rules, {
+                        network: networks,
+                        source_port: port,
+                        action: "route",
+                        outbound: runtime_constants.DIRECT_OUTBOUND_TAG
+                    });
+                    push(rules, {
+                        network: networks,
+                        port: [ port ],
+                        action: "route",
+                        outbound: runtime_constants.DIRECT_OUTBOUND_TAG
+                    });
+                }
             }
+        } else {
+            push(rules, {
+                network: networks,
+                action: "route",
+                outbound: runtime_constants.DIRECT_OUTBOUND_TAG
+            });
         }
-        push(rules, rule);
     }
     return rules;
 }
@@ -175,5 +213,7 @@ return {
     config,
     target,
     has_resolve_matchers,
-    resolve_rule_for_section
+    resolve_rule_for_section,
+    p2p_direct_rules,
+    normalize_port_entry
 };
