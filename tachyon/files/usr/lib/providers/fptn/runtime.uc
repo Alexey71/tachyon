@@ -167,7 +167,7 @@ function sanitize_system() {
     }
 }
 
-function remove_kernel_routing() {
+function remove_kernel_routing(keep_link) {
     let p = cfg.rule_priority || "102";
     let mark_spec = cfg.fwmark + "/" + cfg.mark_mask;
 
@@ -178,14 +178,14 @@ function remove_kernel_routing() {
 
     command_status("ip route flush table " + cfg.route_table + " 2>/dev/null; true");
     command_status("ip -4 route del default dev " + shell_quote(cfg.tun_interface) + " table main 2>/dev/null; true");
-    if (command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0)
+    if (!keep_link && command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0)
         command_status("ip link set dev " + shell_quote(cfg.tun_interface) + " down 2>/dev/null; true");
 
     sanitize_system();
 }
 
 function install_kernel_routing() {
-    remove_kernel_routing();
+    remove_kernel_routing(true);
 
     command_status("ip link set dev " + shell_quote(cfg.tun_interface) + " up 2>/dev/null; true");
     let route_ok = command_status("ip route replace default dev " + shell_quote(cfg.tun_interface) + " table " + cfg.route_table + " 2>/dev/null") == 0;
@@ -274,13 +274,29 @@ function launch_fptn_process(section) {
     return true;
 }
 
-function supervise_runtime() {
+function launch_supervisor() {
     let sup_pid_file = cfg.state_dir + "/supervisor.pid";
     let cur_pid = trim(as_string(fs.readfile(sup_pid_file) || ""));
-    if (cur_pid != "" && !match(cur_pid, /[^0-9]/) && fs.stat("/proc/" + cur_pid) != null)
+    let my_pid = trim(as_string(fs.readlink("/proc/self") || ""));
+    if (cur_pid != "" && cur_pid != my_pid && !match(cur_pid, /[^0-9]/) && fs.stat("/proc/" + cur_pid) != null)
         return true;
 
-    let delays = [ 2, 5, 10, 20, 30, 30, 30 ];
+    let sup_exec = sprintf("ucode -L %s %s supervise-runtime",
+        shell_quote(LIB_DIR), shell_quote(LIB_DIR + "/providers/fptn/runtime.uc"));
+    system(common.background_command_with_pid(sup_exec, ">/dev/null", ">" + shell_quote(sup_pid_file)));
+    return true;
+}
+
+function supervise_runtime() {
+    let sup_pid_file = cfg.state_dir + "/supervisor.pid";
+    let my_pid = trim(as_string(fs.readlink("/proc/self") || ""));
+    let cur_pid = trim(as_string(fs.readfile(sup_pid_file) || ""));
+    if (cur_pid != "" && cur_pid != my_pid && !match(cur_pid, /[^0-9]/) && fs.stat("/proc/" + cur_pid) != null)
+        return true;
+    if (my_pid != "")
+        fs.writefile(sup_pid_file, my_pid);
+
+    let delays = [ 2, 3, 5, 5, 10, 10, 15, 20, 30, 30 ];
     for (let i = 0; i < length(delays); i++) {
         let sec_wait = delays[i];
         system(sprintf("sleep %d 2>/dev/null || sleep %d", sec_wait, sec_wait));
@@ -292,7 +308,16 @@ function supervise_runtime() {
         let tun_ok = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
         let p = running_pid();
 
-        if (!tun_ok || p == null) {
+        if (tun_ok) {
+            let routed = install_kernel_routing();
+            if (routed) {
+                log_message("FPTN supervisor: interface " + cfg.tun_interface + " is UP and routing installed", "info");
+                remove_file(sup_pid_file);
+                return true;
+            }
+        }
+
+        if (p == null || (i >= 5 && !tun_ok)) {
             log_message("FPTN supervisor: retrying start (attempt " + (i + 1) + ")", "info");
             stop_runtime();
             launch_fptn_process(sections[0]);
@@ -301,16 +326,15 @@ function supervise_runtime() {
                     tun_ok = true;
                     break;
                 }
-                system("sleep 0.2 2>/dev/null || sleep 1");
+                system("sleep 0.5 2>/dev/null || sleep 1");
             }
-        }
-
-        if (tun_ok) {
-            let routed = install_kernel_routing();
-            if (routed) {
-                log_message("FPTN supervisor: interface " + cfg.tun_interface + " is UP and routing installed", "info");
-                remove_file(sup_pid_file);
-                return true;
+            if (tun_ok) {
+                let routed = install_kernel_routing();
+                if (routed) {
+                    log_message("FPTN supervisor: interface " + cfg.tun_interface + " is UP and routing installed", "info");
+                    remove_file(sup_pid_file);
+                    return true;
+                }
             }
         }
     }
@@ -332,6 +356,10 @@ function ensure_routing() {
             return true;
         }
         return install_kernel_routing();
+    }
+    if (p != null && !tun_up) {
+        launch_supervisor();
+        return true;
     }
     return start_runtime();
 }
@@ -364,7 +392,7 @@ function start_runtime() {
         return false;
 
     let started = false;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 40; i++) {
         if (command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0) {
             started = true;
             break;
@@ -372,25 +400,19 @@ function start_runtime() {
         let p = running_pid();
         if (p == null && i > 5)
             break;
-        system("sleep 0.1 2>/dev/null || sleep 1");
+        system("sleep 0.25 2>/dev/null || sleep 1");
     }
 
     if (!started) {
         log_message("FPTN interface " + cfg.tun_interface + " did not come up immediately (WAN may be initializing); launching background retry supervisor", "warn");
-        let sup_pid_file = cfg.state_dir + "/supervisor.pid";
-        let sup_exec = sprintf("ucode -L %s %s supervise-runtime",
-            shell_quote(LIB_DIR), shell_quote(LIB_DIR + "/providers/fptn/runtime.uc"));
-        system(common.background_command_with_pid(sup_exec, ">/dev/null", ">" + shell_quote(sup_pid_file)));
+        launch_supervisor();
         return true;
     }
 
     let routing_ok = install_kernel_routing();
     if (!routing_ok) {
         log_message("FPTN interface " + cfg.tun_interface + " came up but routing failed; launching background supervisor", "warn");
-        let sup_pid_file = cfg.state_dir + "/supervisor.pid";
-        let sup_exec = sprintf("ucode -L %s %s supervise-runtime",
-            shell_quote(LIB_DIR), shell_quote(LIB_DIR + "/providers/fptn/runtime.uc"));
-        system(common.background_command_with_pid(sup_exec, ">/dev/null", ">" + shell_quote(sup_pid_file)));
+        launch_supervisor();
         return true;
     }
 
@@ -407,6 +429,15 @@ function status_json() {
     let tun_up = command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0;
     let route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
     let rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
+
+    // Auto-heal missing kernel routing if process is running and tun interface is UP
+    if (installed && running && tun_up && (!route_installed || !rule_installed) && rule_count > 0) {
+        if (install_kernel_routing()) {
+            route_installed = command_status("ip route show table " + cfg.route_table + " default dev " + shell_quote(cfg.tun_interface) + " 2>/dev/null | grep -q default") == 0;
+            rule_installed = command_status("ip rule show 2>/dev/null | grep -q " + shell_quote(cfg.route_table)) == 0;
+        }
+    }
+
     let ready = installed && running && tun_up && route_installed && rule_installed && rule_count > 0;
 
     let status_msg = "FPTN is running";

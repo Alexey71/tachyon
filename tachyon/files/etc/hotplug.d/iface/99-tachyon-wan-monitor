@@ -6,7 +6,7 @@ case "$INTERFACE" in
         case "$ACTION" in
             ifup)
                 /etc/init.d/tachyon retry_start_on_wan_up >/dev/null 2>&1 &
-                [ -x /usr/lib/tachyon/providers/fptn/runtime.uc ] && /usr/lib/tachyon/providers/fptn/runtime.uc ensure-routing >/dev/null 2>&1 &
+                [ -f /usr/lib/tachyon/providers/fptn/runtime.uc ] && ucode -L /usr/lib/tachyon /usr/lib/tachyon/providers/fptn/runtime.uc ensure-routing >/dev/null 2>&1 &
                 ;;
         esac
         ;;
