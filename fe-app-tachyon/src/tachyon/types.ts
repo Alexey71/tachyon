@@ -749,6 +749,12 @@ export namespace Tachyon {
         running: number;
         memory_rss_mb?: number;
       };
+      dnsmasq?: {
+        running: number;
+        memory_rss_mb?: number;
+        local_cache_enabled?: number;
+        cache_size?: number;
+      };
     };
     capabilities: GetUiCapabilities;
     actions: {

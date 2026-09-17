@@ -129,6 +129,18 @@ function applyServiceState(uiState: Tachyon.UiState) {
         zapret2MemoryMb: uiState.service.zapret2
           ? uiState.service.zapret2.memory_rss_mb
           : undefined,
+        dnsmasqRunning: uiState.service.dnsmasq
+          ? uiState.service.dnsmasq.running
+          : undefined,
+        dnsmasqMemoryMb: uiState.service.dnsmasq
+          ? uiState.service.dnsmasq.memory_rss_mb
+          : undefined,
+        dnsmasqLocalCacheEnabled: uiState.service.dnsmasq
+          ? uiState.service.dnsmasq.local_cache_enabled
+          : undefined,
+        dnsmasqCacheSize: uiState.service.dnsmasq
+          ? uiState.service.dnsmasq.cache_size
+          : undefined,
       },
     },
     diagnosticsSystemInfo: normalizeSingBoxVariantFields(nextSystemInfo),

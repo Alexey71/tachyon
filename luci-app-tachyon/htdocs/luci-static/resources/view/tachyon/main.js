@@ -6772,7 +6772,11 @@ function applyServiceState(uiState) {
         tachyonStatus: uiState.service.tachyon.status,
         watchdogRunning: store.get().servicesInfoWidget.data.watchdogRunning,
         zapret2Running: uiState.service.zapret2 ? uiState.service.zapret2.running : void 0,
-        zapret2MemoryMb: uiState.service.zapret2 ? uiState.service.zapret2.memory_rss_mb : void 0
+        zapret2MemoryMb: uiState.service.zapret2 ? uiState.service.zapret2.memory_rss_mb : void 0,
+        dnsmasqRunning: uiState.service.dnsmasq ? uiState.service.dnsmasq.running : void 0,
+        dnsmasqMemoryMb: uiState.service.dnsmasq ? uiState.service.dnsmasq.memory_rss_mb : void 0,
+        dnsmasqLocalCacheEnabled: uiState.service.dnsmasq ? uiState.service.dnsmasq.local_cache_enabled : void 0,
+        dnsmasqCacheSize: uiState.service.dnsmasq ? uiState.service.dnsmasq.cache_size : void 0
       }
     },
     diagnosticsSystemInfo: normalizeSingBoxVariantFields(nextSystemInfo)
@@ -7420,7 +7424,11 @@ async function fetchServicesInfo() {
         tachyonStatus: tachyon.success ? tachyon.data.status : previousData.tachyonStatus,
         watchdogRunning: watchdog.success ? Number(watchdog.data.running) : previousData.watchdogRunning,
         zapret2Running: previousData.zapret2Running,
-        zapret2MemoryMb: previousData.zapret2MemoryMb
+        zapret2MemoryMb: previousData.zapret2MemoryMb,
+        dnsmasqRunning: previousData.dnsmasqRunning,
+        dnsmasqMemoryMb: previousData.dnsmasqMemoryMb,
+        dnsmasqLocalCacheEnabled: previousData.dnsmasqLocalCacheEnabled,
+        dnsmasqCacheSize: previousData.dnsmasqCacheSize
       }
     }
   });
@@ -9236,6 +9244,20 @@ async function renderServicesInfoWidget() {
           value: data.zapret2MemoryMb ? `${_("✔ Running")} (${data.zapret2MemoryMb} MB)` : _("✔ Running"),
           attributes: {
             class: "tachyon_dashboard-page__widgets-section__item__row--success"
+          }
+        });
+      }
+      if (data.dnsmasqRunning != null) {
+        let cacheDetail = "";
+        if (data.dnsmasqLocalCacheEnabled && data.dnsmasqCacheSize) {
+          const approxMb = (data.dnsmasqCacheSize * 120 / (1024 * 1024)).toFixed(1);
+          cacheDetail = ` [${_("Cache")}: ${data.dnsmasqCacheSize} ≈ ${approxMb} MB]`;
+        }
+        items.push({
+          key: "Dnsmasq (DNS)",
+          value: data.dnsmasqRunning ? data.dnsmasqMemoryMb ? `${_("✔ Running")} (${data.dnsmasqMemoryMb} MB)${cacheDetail}` : `${_("✔ Running")}${cacheDetail}` : _("✘ Stopped"),
+          attributes: {
+            class: data.dnsmasqRunning ? "tachyon_dashboard-page__widgets-section__item__row--success" : "tachyon_dashboard-page__widgets-section__item__row--error"
           }
         });
       }

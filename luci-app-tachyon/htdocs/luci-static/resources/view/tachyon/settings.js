@@ -1869,13 +1869,74 @@ function createSettingsContent(section, capabilities) {
     "dns",
     form.Value,
     "dns_cache_size",
-    _("DNS Cache Size"),
-    _("Number of cached DNS domain entries in dnsmasq (default: 10000)."),
+    _("DNS Cache Size (entries)"),
+    _(
+      "Maximum number of cached domain entries in dnsmasq (default: 10000 ≈ 1.2 MB RAM). Memory is allocated dynamically per request (~120 B per domain), not pre-allocated upfront. Recommended: 10000 for routers with ≥128 MB RAM, 2500–5000 for 64 MB devices.",
+    ),
   );
   o.depends("dns_local_cache", "1");
   o.default = "10000";
   o.datatype = "uinteger";
+  o.placeholder = "10000";
   o.rmempty = true;
+
+  const originalDnsCacheRenderWidget = o.renderWidget;
+  o.renderWidget = function (section_id, option_index, cfgvalue) {
+    const node = originalDnsCacheRenderWidget.call(
+      this,
+      section_id,
+      option_index,
+      cfgvalue,
+    );
+    const input =
+      node && typeof node.querySelector === "function"
+        ? node.querySelector("input")
+        : node;
+
+    const calcNode = document.createElement("div");
+    calcNode.className = "cbi-value-description";
+    calcNode.style.marginTop = "4px";
+    calcNode.style.fontSize = "12px";
+
+    const updateCalc = () => {
+      const rawVal =
+        input && input.value !== undefined && input.value !== ""
+          ? input.value
+          : (cfgvalue || 10000);
+      const val = parseInt(rawVal, 10);
+      if (isNaN(val) || val <= 0) {
+        calcNode.textContent =
+          "⚡ " + _("Local DNS caching disabled (0 entries)");
+        return;
+      }
+      const bytes = val * 120;
+      const sizeText =
+        bytes < 1024 * 1024
+          ? (bytes / 1024).toFixed(0) + " KB"
+          : (bytes / (1024 * 1024)).toFixed(1) + " MB";
+
+      calcNode.innerHTML =
+        "📊 " +
+        _("Estimated RAM usage (max):") +
+        " <strong>~" +
+        sizeText +
+        "</strong> " +
+        "<span style='opacity: 0.8;'>(" +
+        _("allocated dynamically on demand, not upfront") +
+        ")</span>";
+    };
+
+    if (input && typeof input.addEventListener === "function") {
+      input.addEventListener("input", updateCalc);
+      input.addEventListener("change", updateCalc);
+    }
+    updateCalc();
+
+    if (node && typeof node.appendChild === "function") {
+      node.appendChild(calcNode);
+    }
+    return node;
+  };
 
   // ─── DNS Strategy ────────────────────────────────────────────────────────
 

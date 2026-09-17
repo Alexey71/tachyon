@@ -1109,6 +1109,10 @@ function process_memory_rss_mb(process_name) {
     return total_kb > 0 ? int(total_kb / 1024) : 0;
 }
 
+function truthy(value) {
+    return value == "1" || value == "true" || value == "on" || value == "yes";
+}
+
 function current_ui_state_json() {
     maybe_refresh_action_dirs(false);
 
@@ -1132,6 +1136,11 @@ function current_ui_state_json() {
 
     let sing_box_rss = sing_box_is_running ? process_memory_rss_mb("sing-box") : 0;
     let zapret2_rss = file_executable(ZAPRET2_PROVIDER_NFQWS2_BIN) ? process_memory_rss_mb("nfqws2") : 0;
+    let dnsmasq_pids = get_process_pids("dnsmasq");
+    let dnsmasq_is_running = length(dnsmasq_pids) > 0 ? 1 : 0;
+    let dnsmasq_rss = dnsmasq_is_running ? process_memory_rss_mb("dnsmasq") : 0;
+    let dns_local_cache = truthy(uci_core.get(CONFIG_NAME + ".settings.dns_local_cache"));
+    let dns_cache_size = dns_local_cache ? int(uci_core.get(CONFIG_NAME + ".settings.dns_cache_size") || 10000) : 0;
 
     write_json({
         service: {
@@ -1150,6 +1159,12 @@ function current_ui_state_json() {
             zapret2: {
                 running: zapret2_rss > 0 ? 1 : 0,
                 memory_rss_mb: zapret2_rss
+            },
+            dnsmasq: {
+                running: dnsmasq_is_running,
+                memory_rss_mb: dnsmasq_rss,
+                local_cache_enabled: dns_local_cache ? 1 : 0,
+                cache_size: dns_cache_size
             }
         },
         capabilities,

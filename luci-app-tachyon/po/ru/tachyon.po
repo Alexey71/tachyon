@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 19:42+0300\n"
-"PO-Revision-Date: 2026-09-17 19:42+0300\n"
+"POT-Creation-Date: 2026-09-17 20:48+0300\n"
+"PO-Revision-Date: 2026-09-17 20:48+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -424,6 +424,9 @@ msgstr "Все сервисы"
 
 msgid "All traffic from these IP addresses will be routed through the section unconditionally, ignoring all other conditions."
 msgstr "Весь трафик от этих IP-адресов будет маршрутизирован через секцию безусловно, игнорируя все остальные условия."
+
+msgid "allocated dynamically on demand, not upfront"
+msgstr "выделяется динамически по мере запросов, а не сразу"
 
 msgid "Allow / Enable ONLY in scheduled hours (White period)"
 msgstr "Разрешать / Включать ТОЛЬКО в указанные часы (Белый список)"
@@ -862,6 +865,9 @@ msgstr "Обходит UDP-трафик для выбранных игровых
 
 msgid "CA Certificate"
 msgstr "CA-сертификат"
+
+msgid "Cache"
+msgstr ""
 
 msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
 msgstr "Кэшировать все встроенные списки и базы данных, даже если они не выбраны ни в одной секции. Рекомендуется при большом объёме хранилища или USB-накопителе."
@@ -1439,8 +1445,8 @@ msgstr "Автоподбор и бенчмарк DNS"
 msgid "DNS Blocking"
 msgstr "Блокировка DNS"
 
-msgid "DNS Cache Size"
-msgstr "Размер кэша DNS"
+msgid "DNS Cache Size (entries)"
+msgstr "Размер DNS-кэша (записей)"
 
 msgid "DNS Check Interval"
 msgstr "Интервал проверки DNS"
@@ -1873,6 +1879,9 @@ msgstr "Ошибка выполнения трассировки:"
 
 msgid "Error updating lists:"
 msgstr "Ошибка обновления списков:"
+
+msgid "Estimated RAM usage (max):"
+msgstr "Ориентировочный объём RAM (макс.):"
 
 msgid "Every day"
 msgstr "Каждый день"
@@ -3104,6 +3113,9 @@ msgstr "Локальный адрес"
 msgid "Local DNS Cache"
 msgstr "Локальный кэш DNS"
 
+msgid "Local DNS caching disabled (0 entries)"
+msgstr "Локальное DNS-кэширование отключено (0 записей)"
+
 msgid "Local SOCKS proxy desynchronizer (ciadpi)"
 msgstr "Локальный десинхронизатор SOCKS-прокси (ciadpi)"
 
@@ -3175,6 +3187,9 @@ msgstr "Максимально допустимый суммарный траф�
 
 msgid "Maximum allowed online time per guest device per day. When reached, access is blocked until midnight. Enter 0 for unlimited."
 msgstr "Максимально допустимое время доступа в интернет на одно гостевое устройство в день. При исчерпании доступ блокируется до полуночи. Введите 0 для отсутствия ограничений."
+
+msgid "Maximum number of cached domain entries in dnsmasq (default: 10000 ≈ 1.2 MB RAM). Memory is allocated dynamically per request (~120 B per domain), not pre-allocated upfront. Recommended: 10000 for routers with ≥128 MB RAM, 2500–5000 for 64 MB devices."
+msgstr "Максимальный лимит кэшируемых доменов в dnsmasq (по умолчанию: 10000 ≈ 1.2 МБ RAM). Память выделяется динамически по мере запросов (~120 Б на домен), а не резервируется сразу. Рекомендуется: 10000 для роутеров от 128 МБ RAM, 2500–5000 для 64 МБ устройств."
 
 msgid "Maximum size of junk packets"
 msgstr "Максимальный размер мусорных пакетов"
@@ -3478,9 +3493,6 @@ msgstr "Уведомлять о перезапусках сервиса"
 
 msgid "Notify on Subscription Updates"
 msgstr "Уведомлять об обновлениях подписок"
-
-msgid "Number of cached DNS domain entries in dnsmasq (default: 10000)."
-msgstr "Количество кэшируемых доменных записей в dnsmasq (по умолчанию: 10000)."
 
 msgid "Number of consecutive failed checks required before switching DNS servers."
 msgstr "Количество последовательных неудачных проверок до переключения DNS-серверов."
@@ -5989,6 +6001,12 @@ msgstr "Правила маршрутизации sing-box для Zapret2 не �
 
 msgid "Zero config mesh VPN daemon"
 msgstr "Mesh VPN-демон с нулевой конфигурацией"
+
+msgid "DNS Cache Size"
+msgstr "Размер кэша DNS"
+
+msgid "Number of cached DNS domain entries in dnsmasq (default: 10000)."
+msgstr "Количество кэшируемых доменных записей в dnsmasq (по умолчанию: 10000)."
 
 msgid "Add URLs or local paths to .srs / .json lists. Only domain rules are supported."
 msgstr "Добавьте URL или локальные пути к спискам .srs / .json. Поддерживаются только правила доменов."

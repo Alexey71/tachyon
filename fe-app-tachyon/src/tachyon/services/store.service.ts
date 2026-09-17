@@ -170,6 +170,10 @@ export interface StoreType {
       singboxMemoryMb?: number;
       zapret2Running?: number;
       zapret2MemoryMb?: number;
+      dnsmasqRunning?: number;
+      dnsmasqMemoryMb?: number;
+      dnsmasqLocalCacheEnabled?: number;
+      dnsmasqCacheSize?: number;
     };
   };
   tailscaleWidget: {

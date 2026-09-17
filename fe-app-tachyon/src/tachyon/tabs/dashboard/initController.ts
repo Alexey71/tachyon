@@ -2251,6 +2251,30 @@ async function renderServicesInfoWidget() {
         });
       }
 
+      if (data.dnsmasqRunning != null) {
+        let cacheDetail = '';
+        if (data.dnsmasqLocalCacheEnabled && data.dnsmasqCacheSize) {
+          const approxMb = (
+            (data.dnsmasqCacheSize * 120) /
+            (1024 * 1024)
+          ).toFixed(1);
+          cacheDetail = ` [${_('Cache')}: ${data.dnsmasqCacheSize} ≈ ${approxMb} MB]`;
+        }
+        items.push({
+          key: 'Dnsmasq (DNS)',
+          value: data.dnsmasqRunning
+            ? data.dnsmasqMemoryMb
+              ? `${_('✔ Running')} (${data.dnsmasqMemoryMb} MB)${cacheDetail}`
+              : `${_('✔ Running')}${cacheDetail}`
+            : _('✘ Stopped'),
+          attributes: {
+            class: data.dnsmasqRunning
+              ? 'tachyon_dashboard-page__widgets-section__item__row--success'
+              : 'tachyon_dashboard-page__widgets-section__item__row--error',
+          },
+        });
+      }
+
       return items;
     },
     'renderServicesInfoWidget',

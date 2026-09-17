@@ -76,6 +76,10 @@ export async function fetchServicesInfo() {
           : previousData.watchdogRunning,
         zapret2Running: previousData.zapret2Running,
         zapret2MemoryMb: previousData.zapret2MemoryMb,
+        dnsmasqRunning: previousData.dnsmasqRunning,
+        dnsmasqMemoryMb: previousData.dnsmasqMemoryMb,
+        dnsmasqLocalCacheEnabled: previousData.dnsmasqLocalCacheEnabled,
+        dnsmasqCacheSize: previousData.dnsmasqCacheSize,
       },
     },
   });

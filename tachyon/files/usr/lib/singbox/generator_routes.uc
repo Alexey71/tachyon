@@ -1716,23 +1716,81 @@ function outbound_supports_udp(config, tag_name, visited) {
     return false;
 }
 
+const ACTION_KEYS = {
+    action: true,
+    outbound: true,
+    server: true,
+    rewrite_ttl: true,
+    client_subnet: true,
+    disable_cache: true,
+    disable_optimistic_cache: true,
+    timeout: true,
+    method: true,
+    no_drop: true,
+    strategy: true
+};
+
+function apply_section_geoip_filter(rule, geo_tags, country_mode) {
+    if (!rule || !geo_tags || length(geo_tags) == 0)
+        return rule;
+
+    let geo_rule = {
+        rule_set: single_or_array(geo_tags)
+    };
+    if (country_mode == "exclude")
+        geo_rule.invert = true;
+
+    if (rule.type == "logical" && rule.mode == "and" && type(rule.rules) == "array") {
+        let cloned = {};
+        for (let k, v in rule) {
+            if (k == "rules") {
+                cloned.rules = [];
+                for (let r in v) {
+                    if (r && length(keys(r)) > 0)
+                        push(cloned.rules, r);
+                }
+                push(cloned.rules, geo_rule);
+            } else {
+                cloned[k] = v;
+            }
+        }
+        return cloned;
+    }
+
+    let match_part = {};
+    for (let k, v in rule) {
+        if (!ACTION_KEYS[k] && substr(k, 0, 2) != "__")
+            match_part[k] = v;
+    }
+
+    if (length(keys(match_part)) == 0) {
+        let single_rule = {};
+        for (let k, v in rule)
+            single_rule[k] = v;
+        single_rule.rule_set = single_or_array(geo_tags);
+        if (country_mode == "exclude")
+            single_rule.invert = true;
+        return single_rule;
+    }
+
+    let logical_rule = {
+        type: "logical",
+        mode: "and",
+        rules: [
+            match_part,
+            geo_rule
+        ]
+    };
+    for (let k, v in rule) {
+        if (ACTION_KEYS[k] || substr(k, 0, 2) == "__")
+            logical_rule[k] = v;
+    }
+    return logical_rule;
+}
+
 function apply_excluded_source_ips(rule, excluded_cidrs) {
     if (!rule || !excluded_cidrs || length(excluded_cidrs) == 0)
         return rule;
-
-    let action_keys = {
-        action: true,
-        outbound: true,
-        server: true,
-        rewrite_ttl: true,
-        client_subnet: true,
-        disable_cache: true,
-        disable_optimistic_cache: true,
-        timeout: true,
-        method: true,
-        no_drop: true,
-        strategy: true
-    };
 
     if (rule.type == "logical" && rule.mode == "and" && type(rule.rules) == "array") {
         let cloned = {};
@@ -1756,7 +1814,7 @@ function apply_excluded_source_ips(rule, excluded_cidrs) {
 
     let match_part = {};
     for (let k, v in rule) {
-        if (!action_keys[k] && substr(k, 0, 2) != "__")
+        if (!ACTION_KEYS[k] && substr(k, 0, 2) != "__")
             match_part[k] = v;
     }
 
@@ -1781,22 +1839,27 @@ function apply_excluded_source_ips(rule, excluded_cidrs) {
         ]
     };
     for (let k, v in rule) {
-        if (action_keys[k] || substr(k, 0, 2) == "__")
+        if (ACTION_KEYS[k] || substr(k, 0, 2) == "__")
             logical_rule[k] = v;
     }
     return logical_rule;
 }
 
-function push_section_route_rule(config, rule, target_outbound, excluded_cidrs) {
+function push_section_route_rule(config, rule, target_outbound, excluded_cidrs, geo_tags, country_mode) {
+    let apply_filters = function(r) {
+        let filtered = apply_section_geoip_filter(r, geo_tags, country_mode);
+        return apply_excluded_source_ips(filtered, excluded_cidrs);
+    };
+
     if (target_outbound && !outbound_supports_udp(config, target_outbound)) {
         if (rule.network == "tcp") {
-            push_route_matcher_rule(config, apply_excluded_source_ips(rule, excluded_cidrs));
+            push_route_matcher_rule(config, apply_filters(rule));
             return;
         }
         if (rule.network == "udp") {
             delete rule.outbound;
             rule.action = "reject";
-            push_route_matcher_rule(config, apply_excluded_source_ips(rule, excluded_cidrs));
+            push_route_matcher_rule(config, apply_filters(rule));
             return;
         }
         let udp_rule = {};
@@ -1805,11 +1868,11 @@ function push_section_route_rule(config, rule, target_outbound, excluded_cidrs) 
         delete udp_rule.outbound;
         udp_rule.action = "reject";
         udp_rule.network = "udp";
-        push_route_matcher_rule(config, apply_excluded_source_ips(udp_rule, excluded_cidrs));
+        push_route_matcher_rule(config, apply_filters(udp_rule));
 
         rule.network = "tcp";
     }
-    push_route_matcher_rule(config, apply_excluded_source_ips(rule, excluded_cidrs));
+    push_route_matcher_rule(config, apply_filters(rule));
 }
 
 function add_fully_routed_ips_rule(config, section) {
@@ -1983,6 +2046,23 @@ function add_combined_route_for_section(config, section) {
     if (target.unsupported)
         ctx.runtime_generate_unsupported(target.unsupported);
 
+    let country_list = connections.geoip_country_list(section);
+    let country_mode = connections.geoip_country_mode(section);
+    let geo_tags = [];
+    if ((target.outbound || target.action) && length(country_list) > 0) {
+        for (let cc in country_list) {
+            let ip_ruleset = ensure_community_ruleset(config, section_name, "geoip_" + cc);
+            if (ip_ruleset && ip_ruleset.tag)
+                push(geo_tags, ip_ruleset.tag);
+
+            if (cc == "ru") {
+                let site_ruleset = ensure_community_ruleset(config, section_name, "geosite_ru");
+                if (site_ruleset && site_ruleset.tag)
+                    push(geo_tags, site_ruleset.tag);
+            }
+        }
+    }
+
     let has_domain = length(domain) > 0 || length(domain_suffix) > 0 ||
         length(domain_keyword) > 0 || length(domain_regex) > 0;
     let has_ruleset = length(rule_set_tags) > 0;
@@ -2016,7 +2096,7 @@ function add_combined_route_for_section(config, section) {
         else if (type(resolve) == "object" && resolve.rule)
             push_route_matcher_rule(config, apply_excluded_source_ips(resolve.rule, excluded_cidrs));
 
-        push_section_route_rule(config, domain_rule, target.outbound, excluded_cidrs);
+        push_section_route_rule(config, domain_rule, target.outbound, excluded_cidrs, geo_tags, country_mode);
     }
 
     if (has_ruleset) {
@@ -2029,13 +2109,13 @@ function add_combined_route_for_section(config, section) {
         else if (type(resolve) == "object" && resolve.rule)
             push_route_matcher_rule(config, apply_excluded_source_ips(resolve.rule, excluded_cidrs));
 
-        push_section_route_rule(config, rs_rule, target.outbound, excluded_cidrs);
+        push_section_route_rule(config, rs_rule, target.outbound, excluded_cidrs, geo_tags, country_mode);
     }
 
     if (has_ip_cidr) {
         let ip_rule = create_section_route_rule();
         ip_rule.ip_cidr = ip_cidr;
-        push_section_route_rule(config, ip_rule, target.outbound, excluded_cidrs);
+        push_section_route_rule(config, ip_rule, target.outbound, excluded_cidrs, geo_tags, country_mode);
     }
 
     if (length(discord_cf_subnets) > 0) {
@@ -2043,47 +2123,26 @@ function add_combined_route_for_section(config, section) {
         voice_rule.network = "udp";
         voice_rule.ip_cidr = discord_cf_subnets;
         voice_rule.port_range = core_ip.DISCORD_VOICE_PORT_RANGES || [ "5000:5020", "3478:3478", "19294:19344", "50000:65535" ];
-        push_section_route_rule(config, voice_rule, target.outbound, excluded_cidrs);
-    }
-
-    let country_list = connections.geoip_country_list(section);
-    let country_mode = connections.geoip_country_mode(section);
-
-    if (target.outbound && length(country_list) > 0) {
-        let geo_tags = [];
-        for (let cc in country_list) {
-            let ip_ruleset = ensure_community_ruleset(config, section_name, "geoip_" + cc);
-            if (ip_ruleset && ip_ruleset.tag)
-                push(geo_tags, ip_ruleset.tag);
-
-            if (cc == "ru") {
-                let site_ruleset = ensure_community_ruleset(config, section_name, "geosite_ru");
-                if (site_ruleset && site_ruleset.tag)
-                    push(geo_tags, site_ruleset.tag);
-            }
-        }
-
-        if (length(geo_tags) > 0) {
-            let geoip_route_rule = create_section_route_rule();
-            geoip_route_rule.rule_set = geo_tags;
-            if (country_mode == "exclude")
-                geoip_route_rule.invert = true;
-
-            push_section_route_rule(config, geoip_route_rule, target.outbound, excluded_cidrs);
-        }
+        push_section_route_rule(config, voice_rule, target.outbound, excluded_cidrs, geo_tags, country_mode);
     }
 
     if (bool_option(section, "match_all", false)) {
         let all_rule = create_section_route_rule();
-        push_section_route_rule(config, all_rule, target.outbound, excluded_cidrs);
+        push_section_route_rule(config, all_rule, target.outbound, excluded_cidrs, geo_tags, country_mode);
     }
-    else if (!has_domain && !has_ruleset && !has_ip_cidr && length(discord_cf_subnets) == 0 && length(country_list) == 0) {
-        let fallback_rule = create_section_route_rule();
-        let has_any_matcher = fallback_rule.source_ip_cidr != null ||
-            fallback_rule.port != null || fallback_rule.port_range != null ||
-            fallback_rule.protocol != null || fallback_rule.dscp != null;
-        if (has_any_matcher)
-            push_section_route_rule(config, fallback_rule, target.outbound, excluded_cidrs);
+    else if (!has_domain && !has_ruleset && !has_ip_cidr && length(discord_cf_subnets) == 0) {
+        if (length(geo_tags) > 0) {
+            let geoip_route_rule = create_section_route_rule();
+            push_section_route_rule(config, geoip_route_rule, target.outbound, excluded_cidrs, geo_tags, country_mode);
+        }
+        else {
+            let fallback_rule = create_section_route_rule();
+            let has_any_matcher = fallback_rule.source_ip_cidr != null ||
+                fallback_rule.port != null || fallback_rule.port_range != null ||
+                fallback_rule.protocol != null || fallback_rule.dscp != null;
+            if (has_any_matcher)
+                push_section_route_rule(config, fallback_rule, target.outbound, excluded_cidrs);
+        }
     }
 
     let rewrite_ttl = int_option(ctx.runtime_settings(), "dns_rewrite_ttl", "60");
@@ -2568,6 +2627,8 @@ return {
     add_server_routes,
     outbound_supports_udp,
     push_section_route_rule,
+    apply_section_geoip_filter,
+    apply_excluded_source_ips,
     is_valid_detour,
     load_community_subnet_cidrs
 };
