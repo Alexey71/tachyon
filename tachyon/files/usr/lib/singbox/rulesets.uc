@@ -48,7 +48,54 @@ const COMMUNITY_SERVICES = {
     geoip_ru: true,
     geosite_ru: true,
     geoip_us: true,
-    geoip_cn: true
+    geoip_cn: true,
+    google_meet: true
+};
+
+// Classification of community rule-sets based on upstream rule-set generation.
+// Upstream allow-domains (itdoginfo/allow-domains convert.py) compiles:
+// - general lists (russia_inside, russia_outside, ukraine_inside) and category lists as domain-only ("domains");
+// - SUBNET_SERVICES (discord, meta, twitter, telegram, cloudflare, hetzner, ovh, digitalocean, cloudfront, roblox, google_meet)
+//   as mixed containing both domain_suffix and ip_cidr ("mixed");
+// - geoip_* lists from MetaCubeX/meta-rules-dat contain only ip_cidr ("subnets");
+// - geosite_* lists from MetaCubeX/meta-rules-dat contain only domains ("domains");
+// - external lists (github, twitch, ads_hagezi_pro, supercell) are domain-only ("domains").
+//
+// In sing-box 1.14+, referencing a rule-set with ip_cidr in a DNS rule without match_response: true
+// is treated as a deprecated legacy address filter and rejected if query_type is present in DNS configuration.
+const COMMUNITY_SUBNET_SERVICES = {
+    discord: true,
+    meta: true,
+    twitter: true,
+    telegram: true,
+    cloudflare: true,
+    hetzner: true,
+    ovh: true,
+    digitalocean: true,
+    cloudfront: true,
+    roblox: true,
+    google_meet: true
+};
+
+const COMMUNITY_DOMAIN_SERVICES = {
+    russia_inside: true,
+    russia_outside: true,
+    ukraine_inside: true,
+    geoblock: true,
+    block: true,
+    porn: true,
+    news: true,
+    anime: true,
+    youtube: true,
+    hdrezka: true,
+    tiktok: true,
+    google_ai: true,
+    google_play: true,
+    hodca: true,
+    ads_hagezi_pro: true,
+    supercell: true,
+    github: true,
+    twitch: true
 };
 
 let as_string = common.as_string;
@@ -60,6 +107,19 @@ function is_community(name) {
     if (match(name, /^geoip_[a-z]{2}$/) != null || match(name, /^geosite_[a-z]{2}$/) != null)
         return true;
     return false;
+}
+
+function community_kind(name) {
+    name = as_string(name);
+    if (match(name, /^geoip_[a-z]{2}$/) != null)
+        return "subnets";
+    if (match(name, /^geosite_[a-z]{2}$/) != null)
+        return "domains";
+    if (COMMUNITY_SUBNET_SERVICES[name] === true)
+        return "mixed";
+    if (COMMUNITY_DOMAIN_SERVICES[name] === true)
+        return "domains";
+    return "unknown";
 }
 
 function community_url(name) {
@@ -179,8 +239,11 @@ function module_exports() {
         EMPTY_SRS_PATH,
         EMPTY_SRS_B64,
         COMMUNITY_SERVICES,
+        COMMUNITY_SUBNET_SERVICES,
+        COMMUNITY_DOMAIN_SERVICES,
         is_community,
         community_url,
+        community_kind,
         hash12,
         file_extension,
         kind_from_reference_hint,
@@ -200,6 +263,8 @@ if (mode == "file-extension")
     print(file_extension(ARGV[1]), "\n");
 else if (mode == "is-community")
     exit(is_community(ARGV[1]) ? 0 : 1);
+else if (mode == "community-kind")
+    print(community_kind(ARGV[1]), "\n");
 else if (mode == "kind-from-reference-hint")
     print(kind_from_reference_hint(ARGV[1]), "\n");
 else if (mode == "remote-format")
@@ -211,6 +276,6 @@ else if (mode == "is-valid-srs-file")
 else if (mode == "ensure-empty-srs-stub")
     exit(ensure_empty_srs_stub(ARGV[1]) ? 0 : 1);
 else {
-    warn("Usage: singbox/rulesets.uc <file-extension|is-community|kind-from-reference-hint|remote-format|is-valid-srs-file|ensure-empty-srs-stub> ...\n");
+    warn("Usage: singbox/rulesets.uc <file-extension|is-community|community-kind|kind-from-reference-hint|remote-format|is-valid-srs-file|ensure-empty-srs-stub> ...\n");
     exit(1);
 }

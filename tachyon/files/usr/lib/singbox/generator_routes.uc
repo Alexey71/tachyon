@@ -907,7 +907,7 @@ function ensure_custom_ruleset(config, reference) {
 
     if (runtime_rulesets.is_community(reference)) {
         tag_name = "builtin-" + reference + "-ruleset";
-        kind = "domains";
+        kind = runtime_rulesets.community_kind ? runtime_rulesets.community_kind(reference) : "domains";
         if (!ruleset_registered(config, tag_name)) {
             let folder = ctx.runtime_ruleset_folder || runtime_ruleset_folder;
             let tmp_srs = folder + "/community-" + reference + ".srs";
@@ -1149,7 +1149,7 @@ function ensure_community_ruleset(config, section_name, community) {
     }
     return {
         tag: tag_name,
-        kind: "domains"
+        kind: runtime_rulesets.community_kind ? runtime_rulesets.community_kind(community) : "domains"
     };
 }
 
@@ -1424,25 +1424,31 @@ function add_dns_action_rules_for_section(config, section) {
     let domain_suffix = domains.domain_suffix;
     let domain_keyword = domains.domain_keyword;
     let domain_regex = domains.domain_regex;
-    let rule_set_tags = [];
+    let query_rule_set_tags = [];
+    let response_rule_set_tags = [];
     let section_name = section[".name"];
     let source_ip_cidr = core_ip.normalize_to_cidrs(legacy_condition_values(section, "source_ip_cidr"));
     let fully_routed_ips = core_ip.normalize_to_cidrs(list_option(section, "fully_routed_ips"));
 
     for (let community in connections.community_lists(section)) {
         let ensured = ensure_community_ruleset(config, section_name, as_string(community));
-        push(rule_set_tags, ensured.tag);
+        if (ensured.kind == "domains")
+            push(query_rule_set_tags, ensured.tag);
+        else if (ensured.kind == "subnets" || ensured.kind == "mixed")
+            push(response_rule_set_tags, ensured.tag);
+        else
+            push(response_rule_set_tags, ensured.tag);
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
         if (ensured != null && ensured.kind == "domains")
-            push(rule_set_tags, ensured.tag);
+            push(query_rule_set_tags, ensured.tag);
     }
     add_domain_ip_list_ruleset(
         config,
         section_name,
         [],
-        rule_set_tags,
+        query_rule_set_tags,
         list_option(section, "domain_ip_lists"),
         true
     );
@@ -1482,17 +1488,58 @@ function add_dns_action_rules_for_section(config, section) {
         add_source_dns_matchers(dns_rule, source_ip_cidr);
         push_dns_matcher_rule(config, dns_rule);
     }
-    if (length(rule_set_tags) > 0) {
-        let dns_rule = {
-            action: "route",
-            server: server_tag,
-            rewrite_ttl,
-            rule_set: single_or_array(rule_set_tags)
-        };
-        add_source_dns_matchers(dns_rule, source_ip_cidr);
-        push_dns_matcher_rule(config, dns_rule);
+
+    let is_1_14 = ctx.is_sb_1_14_plus && ctx.is_sb_1_14_plus();
+    if (is_1_14) {
+        if (length(query_rule_set_tags) > 0) {
+            let dns_rule = {
+                action: "route",
+                server: server_tag,
+                rewrite_ttl,
+                rule_set: single_or_array(query_rule_set_tags)
+            };
+            add_source_dns_matchers(dns_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, dns_rule);
+        }
+        if (length(response_rule_set_tags) > 0) {
+            let eval_rule = {
+                action: "evaluate",
+                server: runtime_constants.DNS_SERVER_TAG
+            };
+            add_source_dns_matchers(eval_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, eval_rule);
+
+            let dns_rule = {
+                action: "route",
+                server: server_tag,
+                rewrite_ttl,
+                rule_set: single_or_array(response_rule_set_tags),
+                match_response: true
+            };
+            add_source_dns_matchers(dns_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, dns_rule);
+        }
     }
-    if (!has_inline_domains && length(rule_set_tags) == 0 && length(fully_routed_ips) == 0)
+    else {
+        let all_rule_set_tags = [];
+        for (let tag in query_rule_set_tags)
+            push(all_rule_set_tags, tag);
+        for (let tag in response_rule_set_tags)
+            push(all_rule_set_tags, tag);
+
+        if (length(all_rule_set_tags) > 0) {
+            let dns_rule = {
+                action: "route",
+                server: server_tag,
+                rewrite_ttl,
+                rule_set: single_or_array(all_rule_set_tags)
+            };
+            add_source_dns_matchers(dns_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, dns_rule);
+        }
+    }
+
+    if (!has_inline_domains && length(query_rule_set_tags) == 0 && length(response_rule_set_tags) == 0 && length(fully_routed_ips) == 0)
         ctx.runtime_generate_unsupported("DNS action '" + section_name + "' has no domain matchers");
 }
 
@@ -1749,7 +1796,8 @@ function add_combined_route_for_section(config, section) {
     let source_ip_cidr = core_ip.normalize_to_cidrs(legacy_condition_values(section, "source_ip_cidr"));
     let excluded_cidrs = core_ip.normalize_to_cidrs(list_option(section, "excluded_ips"));
     let rule_set_tags = [];
-    let dns_rule_set_tags = [];
+    let dns_query_rule_set_tags = [];
+    let dns_response_rule_set_tags = [];
     let section_name = section[".name"];
 
     add_excluded_protocol_rule(config, section);
@@ -1762,7 +1810,13 @@ function add_combined_route_for_section(config, section) {
         let service = as_string(community);
         let ensured = ensure_community_ruleset(config, section_name, service);
         push(rule_set_tags, ensured.tag);
-        push(dns_rule_set_tags, ensured.tag);
+        if (ensured.kind == "domains")
+            push(dns_query_rule_set_tags, ensured.tag);
+        else if (ensured.kind == "subnets" || ensured.kind == "mixed")
+            push(dns_response_rule_set_tags, ensured.tag);
+        else
+            push(dns_response_rule_set_tags, ensured.tag);
+
         if (include_community_subnets) {
             for (let cidr in load_community_subnet_cidrs(community, "exclude_cloudflare"))
                 push(ip_cidr, cidr);
@@ -1778,7 +1832,7 @@ function add_combined_route_for_section(config, section) {
             continue;
         push(rule_set_tags, ensured.tag);
         if (ensured.kind == "domains")
-            push(dns_rule_set_tags, ensured.tag);
+            push(dns_query_rule_set_tags, ensured.tag);
     }
     for (let reference in connections.rule_sets_with_subnets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
@@ -1786,13 +1840,13 @@ function add_combined_route_for_section(config, section) {
             continue;
         push(rule_set_tags, ensured.tag);
         if (ensured.kind == "domains")
-            push(dns_rule_set_tags, ensured.tag);
+            push(dns_query_rule_set_tags, ensured.tag);
     }
     add_domain_ip_list_ruleset(
         config,
         section_name,
         rule_set_tags,
-        dns_rule_set_tags,
+        dns_query_rule_set_tags,
         list_option(section, "domain_ip_lists"),
         false
     );
@@ -1914,15 +1968,54 @@ function add_combined_route_for_section(config, section) {
         add_source_dns_matchers(dns_rule, source_ip_cidr);
         push_dns_matcher_rule(config, apply_excluded_source_ips(dns_rule, excluded_cidrs));
     }
-    if (length(dns_rule_set_tags) > 0) {
-        let dns_rule = {
-            action: "route",
-            server: section_dns_server(section),
-            rewrite_ttl,
-            rule_set: single_or_array(dns_rule_set_tags)
-        };
-        add_source_dns_matchers(dns_rule, source_ip_cidr);
-        push_dns_matcher_rule(config, apply_excluded_source_ips(dns_rule, excluded_cidrs));
+    let is_1_14 = ctx.is_sb_1_14_plus && ctx.is_sb_1_14_plus();
+    if (is_1_14) {
+        if (length(dns_query_rule_set_tags) > 0) {
+            let dns_rule = {
+                action: "route",
+                server: section_dns_server(section),
+                rewrite_ttl,
+                rule_set: single_or_array(dns_query_rule_set_tags)
+            };
+            add_source_dns_matchers(dns_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, apply_excluded_source_ips(dns_rule, excluded_cidrs));
+        }
+        if (length(dns_response_rule_set_tags) > 0) {
+            let eval_rule = {
+                action: "evaluate",
+                server: runtime_constants.DNS_SERVER_TAG
+            };
+            add_source_dns_matchers(eval_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, apply_excluded_source_ips(eval_rule, excluded_cidrs));
+
+            let dns_rule = {
+                action: "route",
+                server: section_dns_server(section),
+                rewrite_ttl,
+                rule_set: single_or_array(dns_response_rule_set_tags),
+                match_response: true
+            };
+            add_source_dns_matchers(dns_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, apply_excluded_source_ips(dns_rule, excluded_cidrs));
+        }
+    }
+    else {
+        let all_dns_tags = [];
+        for (let tag in dns_query_rule_set_tags)
+            push(all_dns_tags, tag);
+        for (let tag in dns_response_rule_set_tags)
+            push(all_dns_tags, tag);
+
+        if (length(all_dns_tags) > 0) {
+            let dns_rule = {
+                action: "route",
+                server: section_dns_server(section),
+                rewrite_ttl,
+                rule_set: single_or_array(all_dns_tags)
+            };
+            add_source_dns_matchers(dns_rule, source_ip_cidr);
+            push_dns_matcher_rule(config, apply_excluded_source_ips(dns_rule, excluded_cidrs));
+        }
     }
 }
 

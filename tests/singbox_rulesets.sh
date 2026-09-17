@@ -58,5 +58,27 @@ assert_eq "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/g
   "$(ucode -L "$TACHYON_LIB" -e 'let rulesets = require("singbox.rulesets"); print(rulesets.community_url("twitch"));')" \
   "twitch community ruleset url"
 
+assert_eq mixed \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind telegram)" \
+  "telegram community kind"
+assert_eq mixed \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind discord)" \
+  "discord community kind"
+assert_eq domains \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind youtube)" \
+  "youtube community kind"
+assert_eq domains \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind russia_inside)" \
+  "russia_inside community kind"
+assert_eq domains \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind geosite_ru)" \
+  "geosite_ru community kind"
+assert_eq subnets \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind geoip_ru)" \
+  "geoip_ru community kind"
+assert_eq unknown \
+  "$(ucode -L "$TACHYON_LIB" "$RULESETS_UC" community-kind unknown_service)" \
+  "unknown_service community kind"
+
 printf 'singbox rulesets checks passed\n'
 

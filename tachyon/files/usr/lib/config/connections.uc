@@ -7,6 +7,7 @@ let as_string = common.as_string;
 let object_or_empty = common.object_or_empty;
 let bool_value_common = common.bool_value;
 let remove_file = common.remove_file;
+let list_option = common.list_option;
 
 function bool_value(value, fallback) {
     if (value == null || value == "")

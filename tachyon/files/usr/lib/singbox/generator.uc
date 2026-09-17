@@ -592,6 +592,7 @@ function base_config(settings, service_address, runtime_context) {
         : false);
 
     let is_sb_1_14_plus = is_sb_1_14_plus_detected(sb_version_val);
+    ctx.is_sb_1_14_plus = function() { return is_sb_1_14_plus; };
 
     let route_section = runtime_route.config(settings, runtime_context);
     if (is_sb_1_14_plus)
