@@ -4,6 +4,8 @@ set -eo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TACHYON_LIB="$ROOT_DIR/tachyon/files/usr/lib"
 CRYPT4="$ROOT_DIR/tachyon/files/usr/lib/subscription/crypt4.uc"
+CACHE="$ROOT_DIR/tachyon/files/usr/lib/subscription/cache.uc"
+RUNTIME="$ROOT_DIR/tachyon/files/usr/lib/diagnostics/runtime.uc"
 
 WORK_DIR="$(mktemp -d)"
 
