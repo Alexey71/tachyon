@@ -486,4 +486,105 @@ if [ -n "$SB_BIN" ]; then
   fi
 fi
 
+# 10. Test Issue #60: Section with mixed list and excluded_ips WITHOUT source_ip_cidr
+# Must generate evaluate rule with invert: true, NOT a logical rule with empty subrules
+cat > "$WORK_DIR/fixture_issue60.json" << 'EOF'
+{
+  "settings": {
+    ".name": "settings",
+    ".type": "settings",
+    "enabled": "1",
+    "dns_type": "udp",
+    "dns_server": "1.1.1.1",
+    "service_listen_address": "127.0.0.1"
+  },
+  "section": [
+    {
+      ".name": "vpn_issue60",
+      ".type": "section",
+      "enabled": "1",
+      "action": "connection",
+      "outbound_jsons": [ "{\"type\":\"direct\",\"tag\":\"vpn_issue60-out\"}" ],
+      "community_lists": [ "telegram" ],
+      "excluded_ips": [ "192.168.1.200" ]
+    }
+  ]
+}
+EOF
+
+output_issue60="$WORK_DIR/out_issue60.json"
+mkdir -p "$output_issue60.section-cache" "$output_issue60.rulesets"
+SB_VERSION_STATE_FILE="$WORK_DIR/sb_v14" \
+ucode -L "$TACHYON_LIB" "$GENERATOR_UC" generate-config-fixture \
+  "$WORK_DIR/fixture_issue60.json" "$output_issue60" "127.0.0.1" "0" "1"
+
+ucode -e '
+let fs = require("fs");
+let cfg = json(fs.readfile(ARGV[0]));
+
+let eval_rule = null;
+let resp_rule = null;
+
+for (let r in cfg.dns.rules || []) {
+    if (r.action == "evaluate")
+        eval_rule = r;
+    if (r.action == "route" && (r.match_response === true || (r.rules && r.rules[0] && r.rules[0].match_response === true)))
+        resp_rule = r;
+}
+
+if (!eval_rule) {
+    warn("eval_rule missing in issue60 reproduction config\n");
+    exit(1);
+}
+if (!resp_rule) {
+    warn("resp_rule missing in issue60 reproduction config\n");
+    exit(2);
+}
+
+// eval_rule MUST NOT be a logical rule with an empty condition sub-rule
+if (eval_rule.type == "logical") {
+    for (let child in eval_rule.rules || []) {
+        if (!child || length(keys(child)) == 0) {
+            warn("eval_rule contains empty condition sub-rule!\n");
+            exit(3);
+        }
+    }
+}
+
+// eval_rule must have invert: true and source_ip_cidr
+if (!eval_rule.invert || !eval_rule.source_ip_cidr) {
+    warn("eval_rule missing invert or source_ip_cidr\n");
+    exit(4);
+}
+
+// Check NO rule in dns.rules or route.rules has empty condition sub-rules
+for (let r in cfg.dns.rules || []) {
+    if (r.type == "logical") {
+        for (let child in r.rules || []) {
+            if (!child || length(keys(child)) == 0) {
+                warn("dns rule contains empty sub-rule!\n");
+                exit(5);
+            }
+        }
+    }
+}
+for (let r in cfg.route.rules || []) {
+    if (r.type == "logical") {
+        for (let child in r.rules || []) {
+            if (!child || length(keys(child)) == 0) {
+                warn("route rule contains empty sub-rule!\n");
+                exit(6);
+            }
+        }
+    }
+}
+' "$output_issue60" || fail "issue60 reproduction config verification failed"
+
+if [ -n "$SB_BIN" ]; then
+  INSTALLED_SB_VER="$("$SB_BIN" version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+' | head -n1 || echo '0.0')"
+  if [ "$(printf '%s\n1.14\n' "$INSTALLED_SB_VER" | sort -V | head -n1)" = "1.14" ]; then
+    "$SB_BIN" check -c "$output_issue60" || fail "sing-box 1.14 check failed on issue60 reproduction config!"
+  fi
+fi
+
 echo "sing-box 1.14 DNS rules tests passed"

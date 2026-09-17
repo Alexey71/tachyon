@@ -1352,8 +1352,42 @@ function add_domain_array(rule, key, values) {
         rule[key] = values;
 }
 
+function sanitize_rule(rule) {
+    if (!rule)
+        return null;
+    if (rule.type == "logical" && type(rule.rules) == "array") {
+        let clean_subrules = [];
+        for (let sub in rule.rules) {
+            if (sub && length(keys(sub)) > 0)
+                push(clean_subrules, sub);
+        }
+        if (length(clean_subrules) == 0)
+            return null;
+        if (length(clean_subrules) == 1) {
+            let single = {};
+            for (let k, v in rule) {
+                if (k != "type" && k != "mode" && k != "rules")
+                    single[k] = v;
+            }
+            for (let k, v in clean_subrules[0])
+                single[k] = v;
+            return single;
+        }
+        rule.rules = clean_subrules;
+    }
+    return rule;
+}
+
 function push_dns_matcher_rule(config, rule) {
-    push(config.dns.rules, rule);
+    rule = sanitize_rule(rule);
+    if (rule)
+        push(config.dns.rules, rule);
+}
+
+function push_route_matcher_rule(config, rule) {
+    rule = sanitize_rule(rule);
+    if (rule)
+        push(config.route.rules, rule);
 }
 
 function section_dns_server(section) {
@@ -1690,9 +1724,51 @@ function apply_excluded_source_ips(rule, excluded_cidrs) {
         action: true,
         outbound: true,
         server: true,
-        rewrite_ttl: true
+        rewrite_ttl: true,
+        client_subnet: true,
+        disable_cache: true,
+        disable_optimistic_cache: true,
+        timeout: true,
+        method: true,
+        no_drop: true,
+        strategy: true
     };
+
+    if (rule.type == "logical" && rule.mode == "and" && type(rule.rules) == "array") {
+        let cloned = {};
+        for (let k, v in rule) {
+            if (k == "rules") {
+                cloned.rules = [];
+                for (let r in v) {
+                    if (r && length(keys(r)) > 0)
+                        push(cloned.rules, r);
+                }
+                push(cloned.rules, {
+                    invert: true,
+                    source_ip_cidr: single_or_array(excluded_cidrs)
+                });
+            } else {
+                cloned[k] = v;
+            }
+        }
+        return cloned;
+    }
+
     let match_part = {};
+    for (let k, v in rule) {
+        if (!action_keys[k] && substr(k, 0, 2) != "__")
+            match_part[k] = v;
+    }
+
+    if (length(keys(match_part)) == 0) {
+        let single_rule = {};
+        for (let k, v in rule)
+            single_rule[k] = v;
+        single_rule.invert = true;
+        single_rule.source_ip_cidr = single_or_array(excluded_cidrs);
+        return single_rule;
+    }
+
     let logical_rule = {
         type: "logical",
         mode: "and",
@@ -1705,10 +1781,8 @@ function apply_excluded_source_ips(rule, excluded_cidrs) {
         ]
     };
     for (let k, v in rule) {
-        if (action_keys[k])
+        if (action_keys[k] || substr(k, 0, 2) == "__")
             logical_rule[k] = v;
-        else
-            match_part[k] = v;
     }
     return logical_rule;
 }
@@ -1716,13 +1790,13 @@ function apply_excluded_source_ips(rule, excluded_cidrs) {
 function push_section_route_rule(config, rule, target_outbound, excluded_cidrs) {
     if (target_outbound && !outbound_supports_udp(config, target_outbound)) {
         if (rule.network == "tcp") {
-            push(config.route.rules, apply_excluded_source_ips(rule, excluded_cidrs));
+            push_route_matcher_rule(config, apply_excluded_source_ips(rule, excluded_cidrs));
             return;
         }
         if (rule.network == "udp") {
             delete rule.outbound;
             rule.action = "reject";
-            push(config.route.rules, apply_excluded_source_ips(rule, excluded_cidrs));
+            push_route_matcher_rule(config, apply_excluded_source_ips(rule, excluded_cidrs));
             return;
         }
         let udp_rule = {};
@@ -1731,11 +1805,11 @@ function push_section_route_rule(config, rule, target_outbound, excluded_cidrs) 
         delete udp_rule.outbound;
         udp_rule.action = "reject";
         udp_rule.network = "udp";
-        push(config.route.rules, apply_excluded_source_ips(udp_rule, excluded_cidrs));
+        push_route_matcher_rule(config, apply_excluded_source_ips(udp_rule, excluded_cidrs));
 
         rule.network = "tcp";
     }
-    push(config.route.rules, apply_excluded_source_ips(rule, excluded_cidrs));
+    push_route_matcher_rule(config, apply_excluded_source_ips(rule, excluded_cidrs));
 }
 
 function add_fully_routed_ips_rule(config, section) {
@@ -1940,7 +2014,7 @@ function add_combined_route_for_section(config, section) {
         if (type(resolve) == "object" && resolve.warning)
             warn(resolve.warning, "\n");
         else if (type(resolve) == "object" && resolve.rule)
-            push(config.route.rules, apply_excluded_source_ips(resolve.rule, excluded_cidrs));
+            push_route_matcher_rule(config, apply_excluded_source_ips(resolve.rule, excluded_cidrs));
 
         push_section_route_rule(config, domain_rule, target.outbound, excluded_cidrs);
     }
@@ -1953,7 +2027,7 @@ function add_combined_route_for_section(config, section) {
         if (type(resolve) == "object" && resolve.warning)
             warn(resolve.warning, "\n");
         else if (type(resolve) == "object" && resolve.rule)
-            push(config.route.rules, apply_excluded_source_ips(resolve.rule, excluded_cidrs));
+            push_route_matcher_rule(config, apply_excluded_source_ips(resolve.rule, excluded_cidrs));
 
         push_section_route_rule(config, rs_rule, target.outbound, excluded_cidrs);
     }
