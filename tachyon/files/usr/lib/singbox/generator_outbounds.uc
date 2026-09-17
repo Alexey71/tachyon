@@ -1772,6 +1772,8 @@ function add_openvpn_endpoint(config, section) {
 }
 
 function enabled_action_index(sections, target_section, action_name) {
+    if (connections && connections.active_provider_section_index)
+        return connections.active_provider_section_index(action_name, sections, target_section);
     let index = 0;
     for (let section in sections) {
         if (option(section, "action", "") != action_name)
@@ -1784,6 +1786,8 @@ function enabled_action_index(sections, target_section, action_name) {
 }
 
 function add_zapret_outbound(config, section, sections) {
+    if (connections && !connections.section_is_active_provider(section, "zapret"))
+        return;
     let index = enabled_action_index(sections, section, "zapret");
     if (index <= 0)
         ctx.runtime_generate_unsupported("unable to resolve Zapret index for " + section[".name"]);
@@ -1795,6 +1799,8 @@ function add_zapret_outbound(config, section, sections) {
 }
 
 function add_zapret2_outbound(config, section, sections) {
+    if (connections && !connections.section_is_active_provider(section, "zapret2"))
+        return;
     let index = enabled_action_index(sections, section, "zapret2");
     if (index <= 0)
         ctx.runtime_generate_unsupported("unable to resolve Zapret2 index for " + section[".name"]);
@@ -1806,6 +1812,8 @@ function add_zapret2_outbound(config, section, sections) {
 }
 
 function add_byedpi_outbound(config, section, sections) {
+    if (connections && !connections.section_is_active_provider(section, "byedpi"))
+        return;
     let index = enabled_action_index(sections, section, "byedpi");
     if (index <= 0)
         ctx.runtime_generate_unsupported("unable to resolve ByeDPI index for " + section[".name"]);
@@ -1819,6 +1827,8 @@ function add_byedpi_outbound(config, section, sections) {
 }
 
 function add_wdtt_outbound(config, section, sections) {
+    if (connections && !connections.section_is_active_provider(section, "wdtt"))
+        return;
     let index = enabled_action_index(sections, section, "wdtt");
     if (index <= 0)
         ctx.runtime_generate_unsupported("unable to resolve WDTT index for " + section[".name"]);
@@ -1832,6 +1842,8 @@ function add_wdtt_outbound(config, section, sections) {
 }
 
 function add_olcrtc_outbound(config, section, sections) {
+    if (connections && !connections.section_is_active_provider(section, "olcrtc"))
+        return;
     let index = enabled_action_index(sections, section, "olcrtc");
     if (index <= 0)
         ctx.runtime_generate_unsupported("unable to resolve OlcRTC index for " + section[".name"]);
@@ -1847,6 +1859,8 @@ function add_olcrtc_outbound(config, section, sections) {
 // FPTN routes traffic through its TUN interface (tun-fptn) via kernel routing.
 // fwmark 0x00300000 (3145728) → ip rule → routing table 4249 → dev tun-fptn.
 function add_fptn_outbound(config, section, sections) {
+    if (connections && !connections.section_is_active_provider(section, "fptn"))
+        return;
     push(config.outbounds, {
         type: "direct",
         tag: outbound_tag(section[".name"]),

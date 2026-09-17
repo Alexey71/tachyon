@@ -1537,6 +1537,19 @@ function validate_rule(section, sections, context) {
             fail_validation("FPTN rule '" + name + "': " + vres.error + ". Aborted.");
     }
 
+    let provider_labels = {
+        zapret: "Zapret",
+        zapret2: "Zapret2",
+        byedpi: "ByeDPI",
+        wdtt: "WDTT",
+        olcrtc: "OlcRTC",
+        fptn: "FPTN"
+    };
+    if (provider_labels[action] != null) {
+        if (!connections.section_has_routing_matchers(section) && !bool_option(section, "match_all", false))
+            fail_validation(provider_labels[action] + " rule '" + name + "' has no routing conditions. Add domains, community lists, IP/subnet/port/protocol matchers or enable Match All explicitly. Aborted.");
+    }
+
     if (connections.is_connections_action(action)) {
         validate_dashboard_filter(section);
 

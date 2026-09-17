@@ -180,13 +180,26 @@ function file_extension(value) {
 
 function kind_from_reference_hint(reference) {
     reference = lc(as_string(reference));
-    if (index(reference, "geosite") >= 0 || index(reference, "domain") >= 0 ||
-        index(reference, "domains") >= 0 || index(reference, "adguard") >= 0 ||
-        index(reference, "filter") >= 0)
-        return "domains";
-    if (index(reference, "geoip") >= 0 || index(reference, "subnet") >= 0 ||
-        index(reference, "subnets") >= 0 || index(reference, "cidr") >= 0)
+    let has_ip_hint = index(reference, "geoip") >= 0 ||
+        index(reference, "subnet") >= 0 ||
+        index(reference, "subnets") >= 0 ||
+        index(reference, "cidr") >= 0 ||
+        match(reference, /(^|[-_.\/])ips?([-_.\/]|$)/) != null;
+
+    let has_domain_hint = index(reference, "geosite") >= 0 ||
+        index(reference, "domain") >= 0 ||
+        index(reference, "domains") >= 0 ||
+        index(reference, "adguard") >= 0 ||
+        index(reference, "adblock") >= 0 ||
+        index(reference, "host") >= 0 ||
+        index(reference, "hosts") >= 0;
+
+    if (has_ip_hint && has_domain_hint)
+        return "mixed";
+    if (has_ip_hint)
         return "subnets";
+    if (has_domain_hint)
+        return "domains";
     return "unknown";
 }
 

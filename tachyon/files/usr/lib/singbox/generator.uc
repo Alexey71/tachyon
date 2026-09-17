@@ -422,29 +422,76 @@ function tproxy_inbound_matcher() {
     return [ runtime_constants.TPROXY_INBOUND_TAG, runtime_constants.TPROXY_INBOUND6_TAG ];
 }
 
-function is_sb_1_14_plus_detected(sb_version_val) {
-    if (sb_version_val == null || sb_version_val == "") {
-        let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
-        sb_version_val = trim(fs.readfile(sb_version_file) || "");
-        if (sb_version_val == "") {
-            let sb_ui_cache = getenv("TACHYON_UI_SING_BOX_VERSION_CACHE_FILE") || "/var/run/tachyon/ui-state/sing-box-version";
-            sb_version_val = trim(fs.readfile(sb_ui_cache) || "");
-        }
-        if (sb_version_val == "") {
-            try {
-                let pipe = fs.popen("sing-box version 2>/dev/null", "r");
-                if (pipe) {
-                    let out = pipe.read("all");
-                    pipe.close();
-                    let m = match(out, /sing-box version ([^\s]+)/);
-                    if (m)
-                        sb_version_val = m[1];
-                }
-            } catch (e) {}
+let cached_sb_version = null;
+
+function detect_sing_box_version() {
+    if (cached_sb_version != null)
+        return cached_sb_version;
+
+    let env_file = getenv("SB_VERSION_STATE_FILE");
+    if (env_file != null && env_file != "") {
+        let ver = trim(fs.readfile(env_file) || "");
+        if (ver != "") {
+            cached_sb_version = ver;
+            return ver;
         }
     }
-    if (sb_version_val != "")
-        return match(sb_version_val, /^v?1\.(1[4-9]|[2-9][0-9])\./) != null;
+
+    try {
+        for (let cmd in [ "sing-box version 2>/dev/null", "/usr/bin/sing-box version 2>/dev/null" ]) {
+            let pipe = fs.popen(cmd, "r");
+            if (pipe) {
+                let out = pipe.read("all");
+                pipe.close();
+                let m = match(out, /sing-box version ([^\s]+)/);
+                if (m) {
+                    cached_sb_version = m[1];
+                    try {
+                        let cur_disk = trim(fs.readfile("/etc/tachyon/sing-box-version") || "");
+                        if (cur_disk != cached_sb_version)
+                            fs.writefile("/etc/tachyon/sing-box-version", cached_sb_version + "\n");
+                    } catch (e) {}
+                    return cached_sb_version;
+                }
+            }
+        }
+    } catch (e) {}
+
+    let sb_version_file = "/etc/tachyon/sing-box-version";
+    let sb_version_val = trim(fs.readfile(sb_version_file) || "");
+    if (sb_version_val == "") {
+        let sb_ui_cache = getenv("TACHYON_UI_SING_BOX_VERSION_CACHE_FILE") || "/var/run/tachyon/ui-state/sing-box-version";
+        sb_version_val = trim(fs.readfile(sb_ui_cache) || "");
+    }
+    cached_sb_version = sb_version_val;
+    return cached_sb_version;
+}
+
+function is_sb_1_14_plus_detected(sb_version_val) {
+    if (sb_version_val == null || sb_version_val == "")
+        sb_version_val = detect_sing_box_version();
+    if (sb_version_val != "") {
+        let m = match(sb_version_val, /^v?([0-9]+)\.([0-9]+)/);
+        if (m) {
+            let major = int(m[1]);
+            let minor = int(m[2]);
+            return major > 1 || (major == 1 && minor >= 14);
+        }
+    }
+    return false;
+}
+
+function is_sb_1_15_plus_detected(sb_version_val) {
+    if (sb_version_val == null || sb_version_val == "")
+        sb_version_val = detect_sing_box_version();
+    if (sb_version_val != "") {
+        let m = match(sb_version_val, /^v?([0-9]+)\.([0-9]+)/);
+        if (m) {
+            let major = int(m[1]);
+            let minor = int(m[2]);
+            return major > 1 || (major == 1 && minor >= 15);
+        }
+    }
     return false;
 }
 
@@ -567,38 +614,24 @@ function base_config(settings, service_address, runtime_context) {
         strategy: option(settings, "dns_strategy", "prefer_ipv4")
     };
 
-    let sb_version_file = getenv("SB_VERSION_STATE_FILE") || "/etc/tachyon/sing-box-version";
-    let sb_version_val = trim(fs.readfile(sb_version_file) || "");
-    if (sb_version_val == "") {
-        let sb_ui_cache = getenv("TACHYON_UI_SING_BOX_VERSION_CACHE_FILE") || "/var/run/tachyon/ui-state/sing-box-version";
-        sb_version_val = trim(fs.readfile(sb_ui_cache) || "");
-    }
-    if (sb_version_val == "") {
-        try {
-            let pipe = fs.popen("sing-box version 2>/dev/null", "r");
-            if (pipe) {
-                let out = pipe.read("all");
-                pipe.close();
-                let m = match(out, /sing-box version ([^\s]+)/);
-                if (m)
-                    sb_version_val = m[1];
-            }
-        } catch (e) {}
-    }
-    let sb_variant_file = getenv("SB_VARIANT_STATE_FILE") || "/etc/tachyon/sing-box-variant";
-    let sb_variant_val = trim(fs.readfile(sb_variant_file) || "");
-    let is_extended_variant = sb_variant_val == "extended" || sb_variant_val == "extended-compressed" || index(sb_version_val, "extended") >= 0;
-
-    let use_legacy_rdrc = is_extended_variant || (sb_version_val != ""
-        ? (match(sb_version_val, /^v?1\.1[0-3]\./) != null)
-        : false);
-
+    let sb_version_val = detect_sing_box_version();
     let is_sb_1_14_plus = is_sb_1_14_plus_detected(sb_version_val);
+    let is_sb_1_15_plus = is_sb_1_15_plus_detected(sb_version_val);
     ctx.is_sb_1_14_plus = function() { return is_sb_1_14_plus; };
+    ctx.is_sb_1_15_plus = function() { return is_sb_1_15_plus; };
+
+    let use_legacy_rdrc = !is_sb_1_14_plus;
 
     let route_section = runtime_route.config(settings, runtime_context);
     if (is_sb_1_14_plus)
         route_section.default_http_client = "ruleset-http";
+
+    if (is_sb_1_14_plus) {
+        dns_section.optimistic = {
+            enabled: true,
+            timeout: "3d"
+        };
+    }
 
     let cache_file_section = {
         enabled: true,
@@ -609,6 +642,11 @@ function base_config(settings, service_address, runtime_context) {
         cache_file_section.store_rdrc = true;
     else
         cache_file_section.store_dns = true;
+
+    if (is_sb_1_15_plus) {
+        cache_file_section.buffer_size = "1MB";
+        cache_file_section.flush_interval = "10m";
+    }
 
     let base_cfg = {
         log: {
@@ -1547,6 +1585,7 @@ ctx.uci_bin_to_hex = uci_bin_to_hex;
 ctx.download_detour_tag = download_detour_tag;
 ctx.atomic_write_json_file = atomic_write_json_file;
 ctx.is_sb_1_14_plus = is_sb_1_14_plus_detected;
+ctx.is_sb_1_15_plus = is_sb_1_15_plus_detected;
 
 generator_outbounds.init(ctx);
 generator_routes.init(ctx);

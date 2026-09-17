@@ -36,11 +36,13 @@ function provider_available() {
 }
 
 function enabled_sections() {
+    let sections = uci_core.section_objects(CONFIG_NAME, "section");
+    if (connections && connections.active_provider_sections)
+        return connections.active_provider_sections("fptn", sections);
     if (connections && connections.fptn_sections)
         return connections.fptn_sections();
 
     let result = [];
-    let sections = uci_core.section_objects(CONFIG_NAME, "section");
     for (let s in sections) {
         if (bool_option(s, "enabled", true) && option(s, "action", "") == "fptn")
             push(result, s);
@@ -94,6 +96,7 @@ function remove_kernel_routing() {
     }
 
     command_status("ip route flush table " + cfg.route_table + " 2>/dev/null; true");
+    command_status("ip -4 route del default dev " + shell_quote(cfg.tun_interface) + " table main 2>/dev/null; true");
     if (command_status("ip link show " + shell_quote(cfg.tun_interface) + " >/dev/null 2>&1") == 0)
         command_status("ip link set dev " + shell_quote(cfg.tun_interface) + " down 2>/dev/null; true");
 }
@@ -114,6 +117,13 @@ function install_kernel_routing() {
     if (!rule_ok) {
         log_message("Failed to add ip rule for table " + cfg.route_table, "warn");
         return false;
+    }
+
+    // Ensure table main default route was not hijacked by fptn-client-cli
+    let main_default_dev = trim(command_output("ip -4 route show table main default 2>/dev/null | awk '{print $5; exit}'"));
+    if (main_default_dev == cfg.tun_interface) {
+        log_message("FPTN client hijacked table main default route; restoring WAN route", "warn");
+        command_status("ip -4 route del default dev " + shell_quote(cfg.tun_interface) + " table main 2>/dev/null; true");
     }
 
     return true;

@@ -5,6 +5,7 @@ let common = require("core.common");
 let constants = require("core.constants");
 let uci_core = require("core.uci");
 let runtime_constants = require("singbox.constants");
+let connections = require("config.connections");
 
 let as_string = common.as_string;
 let bool_value = common.bool_value;
@@ -77,11 +78,7 @@ function strategy_words(value) {
 }
 
 function enabled_sections(cfg) {
-    let result = [];
-    for (let section in uci_sections("section"))
-        if (bool_option(section, "enabled", true) && option(section, "action", "") == cfg.action)
-            push(result, section);
-    return result;
+    return connections.active_provider_sections(cfg.action, uci_sections("section"));
 }
 
 let parse_number = common.parse_number;

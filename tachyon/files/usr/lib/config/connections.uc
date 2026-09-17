@@ -751,6 +751,93 @@ function rule_sets_with_subnets_value(section) {
     return list_option_value_from_array(rule_sets_with_subnets(section));
 }
 
+function section_has_routing_matchers(section) {
+    if (section == null || type(section) != "object")
+        return false;
+
+    if (has_dns_matchers(section))
+        return true;
+
+    if (length(list_option(section, "domain")) > 0 || option(section, "domain", "") != "" || option(section, "domain_text", "") != "" ||
+        length(list_option(section, "domain_suffix")) > 0 || option(section, "domain_suffix", "") != "" || option(section, "domain_suffix_text", "") != "" ||
+        length(list_option(section, "domain_keyword")) > 0 || option(section, "domain_keyword", "") != "" || option(section, "domain_keyword_text", "") != "" ||
+        length(list_option(section, "domain_regex")) > 0 || option(section, "domain_regex", "") != "" || option(section, "domain_regex_text", "") != "" ||
+        length(list_option(section, "user_domains")) > 0 || option(section, "user_domains", "") != "" || option(section, "user_domains_text", "") != "")
+        return true;
+
+    if (rule_condition_csv(section, "ip_cidr", "subnets") != "" ||
+        rule_condition_csv(section, "source_ip_cidr", "subnets") != "" ||
+        length(list_option(section, "fully_routed_ips")) > 0 ||
+        option(section, "fully_routed_ips", "") != "" ||
+        length(list_option(section, "ip_cidr")) > 0 ||
+        option(section, "ip_cidr", "") != "" ||
+        option(section, "ip_cidr_text", "") != "" ||
+        length(list_option(section, "source_ip_cidr")) > 0 ||
+        option(section, "source_ip_cidr", "") != "" ||
+        option(section, "source_ip_cidr_text", "") != "")
+        return true;
+
+    if (rule_condition_csv(section, "ports", "ports") != "" ||
+        length(list_option(section, "ports")) > 0 ||
+        option(section, "ports", "") != "" ||
+        option(section, "ports_text", "") != "" ||
+        option(section, "port", "") != "" ||
+        option(section, "port_range", "") != "")
+        return true;
+
+    if (length(list_option(section, "protocol")) > 0 ||
+        option(section, "protocol", "") != "")
+        return true;
+
+    if (length(dscp_list(section)) > 0)
+        return true;
+
+    if (length(geoip_country_list(section)) > 0)
+        return true;
+
+    return false;
+}
+
+function section_is_active_provider(section, action) {
+    if (section == null || type(section) != "object")
+        return false;
+    let name = section_name(section);
+    if (name == "")
+        return false;
+    if (!bool_option(section, "enabled", true))
+        return false;
+    if (action != null && action != "" && option(section, "action", "") != action)
+        return false;
+
+    return section_has_routing_matchers(section) || bool_option(section, "match_all", false);
+}
+
+function active_provider_sections(action, sections) {
+    let result = [];
+    let list = sections;
+    if (list == null)
+        list = uci_core.section_objects(CONFIG_NAME, "section");
+
+    for (let section in list) {
+        if (section_is_active_provider(section, action))
+            push(result, section);
+    }
+    return result;
+}
+
+function active_provider_section_index(action, sections, target_section) {
+    let target_name = type(target_section) == "object" ? section_name(target_section) : as_string(target_section);
+    if (target_name == "")
+        return 0;
+
+    let active = active_provider_sections(action, sections);
+    for (let i = 0; i < length(active); i++) {
+        if (section_name(active[i]) == target_name)
+            return i + 1;
+    }
+    return 0;
+}
+
 function has_connection_sources(section) {
     return length(connection_urls(section)) > 0 ||
         length(subscription_urls(section)) > 0 ||
@@ -1653,5 +1740,9 @@ return {
     fptn_sections,
     is_wdtt_action,
     is_olcrtc_action,
-    is_fptn_action
+    is_fptn_action,
+    section_has_routing_matchers,
+    section_is_active_provider,
+    active_provider_sections,
+    active_provider_section_index
 };

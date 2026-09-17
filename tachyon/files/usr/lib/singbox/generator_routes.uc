@@ -919,6 +919,9 @@ function ensure_custom_ruleset(config, reference) {
             else if (runtime_rulesets.is_valid_srs_file(etc_srs) || helpers.file_is_usable(etc_srs, 16))
                 local_path = etc_srs;
 
+            if (config.route.rule_set == null)
+                config.route.rule_set = [];
+
             if (local_path != null) {
                 push(config.route.rule_set, {
                     type: "local",
@@ -935,8 +938,7 @@ function ensure_custom_ruleset(config, reference) {
                     url: runtime_rulesets.community_url(reference)
                 };
                 let detour = ctx.download_detour_tag(ctx.runtime_settings());
-                let is_1_14 = ctx.is_sb_1_14_plus && ctx.is_sb_1_14_plus();
-                if (!is_1_14 && is_valid_detour(config, detour))
+                if (is_valid_detour(config, detour))
                     rule_set.download_detour = detour;
                 rule_set.update_interval = remote_ruleset_update_interval();
                 push(config.route.rule_set, rule_set);
@@ -946,8 +948,6 @@ function ensure_custom_ruleset(config, reference) {
     }
 
     tag_name = "inline-custom-" + runtime_rulesets.hash12(reference) + "-ruleset";
-    if (kind == "unknown")
-        kind = "domains";
     if (ruleset_registered(config, tag_name))
         return { tag: tag_name, kind };
 
@@ -1072,6 +1072,8 @@ function ensure_custom_ruleset(config, reference) {
         // Skip broken local ruleset files — nonexistent or suspiciously small
         if (!helpers.file_is_usable(reference, 100))
             return null;
+        if (config.route.rule_set == null)
+            config.route.rule_set = [];
         push(config.route.rule_set, {
             type: "local",
             tag: tag_name,
@@ -1087,10 +1089,11 @@ function ensure_custom_ruleset(config, reference) {
             url: reference
         };
         let detour = ctx.download_detour_tag(ctx.runtime_settings());
-        let is_1_14 = ctx.is_sb_1_14_plus && ctx.is_sb_1_14_plus();
-        if (!is_1_14 && is_valid_detour(config, detour))
+        if (is_valid_detour(config, detour))
             rule_set.download_detour = detour;
         rule_set.update_interval = remote_ruleset_update_interval();
+        if (config.route.rule_set == null)
+            config.route.rule_set = [];
         push(config.route.rule_set, rule_set);
     }
     else {
@@ -1118,6 +1121,9 @@ function ensure_community_ruleset(config, section_name, community) {
         else if (runtime_rulesets.is_valid_srs_file(etc_srs) || helpers.file_is_usable(etc_srs, 16))
             local_path = etc_srs;
 
+        if (config.route.rule_set == null)
+            config.route.rule_set = [];
+
         if (local_path != null) {
             push(config.route.rule_set, {
                 type: "local",
@@ -1141,8 +1147,7 @@ function ensure_community_ruleset(config, section_name, community) {
                     detour = sec_out;
                 }
             }
-            let is_1_14 = ctx.is_sb_1_14_plus && ctx.is_sb_1_14_plus();
-            if (!is_1_14 && is_valid_detour(config, detour))
+            if (is_valid_detour(config, detour))
                 rule_set.download_detour = detour;
             push(config.route.rule_set, rule_set);
         }
@@ -1210,7 +1215,7 @@ function rebuild_local_domain_ip_list_ruleset(section_name, references, domains_
     }
 }
 
-function add_domain_ip_list_ruleset(config, section_name, rule_set_tags, dns_rule_set_tags, references, domains_only) {
+function add_domain_ip_list_ruleset(config, section_name, rule_set_tags, dns_query_rule_set_tags, dns_response_rule_set_tags, references, domains_only) {
     if (length(references) == 0)
         return;
 
@@ -1222,6 +1227,8 @@ function add_domain_ip_list_ruleset(config, section_name, rule_set_tags, dns_rul
 
     let tag_name = domain_ip_list_ruleset_tag(section_name);
     if (!ruleset_registered(config, tag_name)) {
+        if (config.route.rule_set == null)
+            config.route.rule_set = [];
         push(config.route.rule_set, {
             type: "local",
             tag: tag_name,
@@ -1232,8 +1239,23 @@ function add_domain_ip_list_ruleset(config, section_name, rule_set_tags, dns_rul
 
     if (!domains_only)
         push(rule_set_tags, tag_name);
-    if (source_rulesets.has_domain_matchers(ruleset_path))
-        push(dns_rule_set_tags, tag_name);
+
+    let is_1_14 = ctx.is_sb_1_14_plus && ctx.is_sb_1_14_plus();
+    if (source_rulesets.has_domain_matchers(ruleset_path)) {
+        if (is_1_14 && source_rulesets.has_ip_matchers(ruleset_path)) {
+            if (dns_response_rule_set_tags != null)
+                push(dns_response_rule_set_tags, tag_name);
+            else if (dns_query_rule_set_tags != null)
+                push(dns_query_rule_set_tags, tag_name);
+        } else if (dns_query_rule_set_tags != null) {
+            push(dns_query_rule_set_tags, tag_name);
+        }
+    } else if (source_rulesets.has_ip_matchers(ruleset_path)) {
+        if (is_1_14 && dns_response_rule_set_tags != null)
+            push(dns_response_rule_set_tags, tag_name);
+        else if (!is_1_14 && dns_query_rule_set_tags != null)
+            push(dns_query_rule_set_tags, tag_name);
+    }
 }
 
 function legacy_condition_values(section, key) {
@@ -1441,14 +1463,25 @@ function add_dns_action_rules_for_section(config, section) {
     }
     for (let reference in connections.rule_sets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
-        if (ensured != null && ensured.kind == "domains")
+        if (ensured == null)
+            continue;
+        if (ensured.kind == "domains")
             push(query_rule_set_tags, ensured.tag);
+        else
+            push(response_rule_set_tags, ensured.tag);
+    }
+    for (let reference in connections.rule_sets_with_subnets(section)) {
+        let ensured = ensure_custom_ruleset(config, as_string(reference));
+        if (ensured == null)
+            continue;
+        push(response_rule_set_tags, ensured.tag);
     }
     add_domain_ip_list_ruleset(
         config,
         section_name,
         [],
         query_rule_set_tags,
+        response_rule_set_tags,
         list_option(section, "domain_ip_lists"),
         true
     );
@@ -1833,20 +1866,22 @@ function add_combined_route_for_section(config, section) {
         push(rule_set_tags, ensured.tag);
         if (ensured.kind == "domains")
             push(dns_query_rule_set_tags, ensured.tag);
+        else
+            push(dns_response_rule_set_tags, ensured.tag);
     }
     for (let reference in connections.rule_sets_with_subnets(section)) {
         let ensured = ensure_custom_ruleset(config, as_string(reference));
         if (ensured == null)
             continue;
         push(rule_set_tags, ensured.tag);
-        if (ensured.kind == "domains")
-            push(dns_query_rule_set_tags, ensured.tag);
+        push(dns_response_rule_set_tags, ensured.tag);
     }
     add_domain_ip_list_ruleset(
         config,
         section_name,
         rule_set_tags,
         dns_query_rule_set_tags,
+        dns_response_rule_set_tags,
         list_option(section, "domain_ip_lists"),
         false
     );
@@ -1945,7 +1980,11 @@ function add_combined_route_for_section(config, section) {
         }
     }
 
-    if (!has_domain && !has_ruleset && !has_ip_cidr && length(discord_cf_subnets) == 0 && length(country_list) == 0) {
+    if (bool_option(section, "match_all", false)) {
+        let all_rule = create_section_route_rule();
+        push_section_route_rule(config, all_rule, target.outbound, excluded_cidrs);
+    }
+    else if (!has_domain && !has_ruleset && !has_ip_cidr && length(discord_cf_subnets) == 0 && length(country_list) == 0) {
         let fallback_rule = create_section_route_rule();
         let has_any_matcher = fallback_rule.source_ip_cidr != null ||
             fallback_rule.port != null || fallback_rule.port_range != null ||
