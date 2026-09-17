@@ -14,6 +14,7 @@ const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
 const NFT_TABLE_NAME = getenv("NFT_TABLE_NAME") || "TachyonTable";
 const PID_FILE = "/var/run/tachyon_telegram.pid";
 const OFFSET_FILE = "/var/run/tachyon_telegram_offset";
+const COMPONENT_UPDATE_CHECK_TIMESTAMP = "/var/run/tachyon/component-update-check.timestamp";
 
 let as_string = common.as_string;
 let option = common.option;
@@ -3435,6 +3436,7 @@ function worker() {
 
     let last_report_day = -1;
     let last_update_check = 0;
+    let last_update_check_mtime = 0;
     let last_blocked_check = 0;
     let consecutive_failures = 0;
     let route_alert_sent = false;
@@ -3480,7 +3482,13 @@ function worker() {
                 send_daily_digest(cfg.bot_token, cfg.admin_ids);
             }
             
-            if (now - last_update_check > 3600) {
+            let ts_stat = fs.stat(COMPONENT_UPDATE_CHECK_TIMESTAMP);
+            let ts_mtime = ts_stat ? int(ts_stat.mtime || 0) : 0;
+            if (ts_mtime > 0 && ts_mtime != last_update_check_mtime) {
+                last_update_check_mtime = ts_mtime;
+                check_notified_updates(cfg.bot_token, cfg.admin_ids);
+                last_update_check = now;
+            } else if (now - last_update_check > 3600) {
                 check_notified_updates(cfg.bot_token, cfg.admin_ids);
                 last_update_check = now;
             }
@@ -3698,6 +3706,13 @@ function send_api(message) {
     return 0;
 }
 
+function notify_updates_cli() {
+    let cfg = settings();
+    if (cfg.enabled != "1" || !cfg.bot_token || !cfg.admin_ids) return 0;
+    check_notified_updates(cfg.bot_token, cfg.admin_ids);
+    return 0;
+}
+
 let mode = (ARGV[0] == "") ? ARGV[1] : ARGV[0];
 if (!mode) mode = "";
 
@@ -3711,6 +3726,8 @@ else if (mode == "status")
     exit(get_status());
 else if (mode == "diagnose")
     exit(diagnose());
+else if (mode == "notify-updates")
+    exit(notify_updates_cli());
 else if (mode == "send") {
     // Collect remaining args after "send" as the message text
     let msg_parts = [];
@@ -3724,6 +3741,6 @@ else if (mode == "mask-token") {
     exit(0);
 }
 else {
-    warn("Usage: service/telegram.uc <start-runtime|stop-runtime|worker|status|diagnose|send|mask-token ...> ...\n");
+    warn("Usage: service/telegram.uc <start-runtime|stop-runtime|worker|status|diagnose|notify-updates|send|mask-token ...> ...\n");
     exit(1);
 }

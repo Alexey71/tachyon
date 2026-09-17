@@ -822,7 +822,7 @@ function strip_unmarked_tachyon_cron_lines(data, bin, markers) {
         return "";
 
     let escaped_bin = replace(as_string(bin), /([^0-9A-Za-z_])/g, "\\$1");
-    let pattern = "^[^#\\n]*" + escaped_bin + "[ \\t]+(list_update|subscription_update|component_updates_if_due|component_auto_update_apply)([ \\t]|$)";
+    let pattern = regexp("^[^#\\n]*" + escaped_bin + "[ \\t]+(list_update(_if_due)?|subscription_update(_if_due)?|component_updates_if_due|component_auto_update_apply)([ \\t]|$)");
 
     let lines = split(data, "\n");
     let has_trailing_newline = substr(data, length(data) - 1) == "\n";
@@ -2173,6 +2173,9 @@ function component_updates_if_due() {
         exit(1);
     }
     release_runtime_lock(COMPONENT_UPDATE_CHECK_LOCK_DIR);
+
+    // Prompt Telegram bot to deliver any update notifications immediately
+    system(common.background_command(BIN_PATH + " telegram notify-updates"));
 }
 
 function download_via_proxy_option_for_purpose(purpose) {
