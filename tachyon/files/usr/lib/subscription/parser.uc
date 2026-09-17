@@ -346,19 +346,78 @@ function reality_public_key_valid(value) {
     return match(as_string(value), /^[A-Za-z0-9_-]{43}$/) != null;
 }
 
+function outbound_is_unsupported_stub(outbound) {
+    if (type(outbound) != "object")
+        return false;
+
+    let tag = lc(as_string(outbound.tag || outbound.name || outbound.remark || ""));
+    let server = lc(trim(as_string(outbound.server || "")));
+
+    if (index(tag, "не поддерживается") >= 0 ||
+        index(tag, "неподдерживаем") >= 0 ||
+        index(tag, "клиент не поддерживается") >= 0 ||
+        index(tag, "приложение не поддерживается") >= 0 ||
+        index(tag, "unsupported") >= 0 ||
+        index(tag, "not supported") >= 0 ||
+        index(tag, "update app") >= 0 ||
+        index(tag, "update client") >= 0 ||
+        index(tag, "обновите приложение") >= 0 ||
+        index(tag, "обновите клиент") >= 0 ||
+        index(tag, "скачайте happ") >= 0 ||
+        index(tag, "скачать happ") >= 0 ||
+        index(tag, "используйте happ") >= 0 ||
+        index(tag, "use happ") >= 0 ||
+        index(tag, "download happ") >= 0 ||
+        index(tag, "скачайте v2box") >= 0 ||
+        index(tag, "используйте v2box") >= 0 ||
+        index(tag, "скачайте v2rayn") >= 0 ||
+        index(tag, "используйте v2rayn") >= 0)
+        return true;
+
+    let is_dummy_server = (
+        server == "" ||
+        server == "127.0.0.1" ||
+        server == "0.0.0.0" ||
+        server == "localhost" ||
+        server == "::1" ||
+        server == "0.0.0.1"
+    );
+
+    if (is_dummy_server && (
+        index(tag, "⚠️") >= 0 ||
+        index(tag, "❗") >= 0 ||
+        index(tag, "❌") >= 0 ||
+        index(tag, "warning") >= 0 ||
+        index(tag, "error") >= 0 ||
+        index(tag, "notice") >= 0 ||
+        index(tag, "attention") >= 0 ||
+        index(tag, "внимание") >= 0 ||
+        index(tag, "ошибка") >= 0
+    ))
+        return true;
+
+    return false;
+}
+
 function validate_subscription(path) {
     let value = read_json_file(path);
     if (type(value) != "object" || type(value.outbounds) != "array" || length(value.outbounds) == 0)
         return false;
 
+    let usable_count = 0;
     for (let outbound in value.outbounds) {
+        if (outbound_is_unsupported_stub(outbound))
+            continue;
+
         let tls = type(outbound) == "object" && type(outbound.tls) == "object" ? outbound.tls : {};
         let reality = tls.reality;
         if (type(reality) == "object" && reality.enabled !== false && !reality_public_key_valid(reality.public_key))
             return false;
+
+        usable_count++;
     }
 
-    return true;
+    return usable_count > 0;
 }
 
 function write_json_file(path, value) {
@@ -1685,8 +1744,13 @@ function normalize_clash_yaml(input_file, output_file) {
 
     for (let record in clash_yaml_records(input_file)) {
         let outbound = parse_clash_record(record);
-        if (outbound)
+        if (outbound) {
+            if (outbound_is_unsupported_stub(outbound)) {
+                skipped++;
+                continue;
+            }
             push(outbounds, outbound);
+        }
         else
             skipped++;
     }
@@ -1724,6 +1788,10 @@ function normalize_uri_list_data(data, output_file) {
         if (line != "" && !starts_with(line, "#")) {
             let outbound = parse_share_link(line);
             if (outbound) {
+                if (outbound_is_unsupported_stub(outbound)) {
+                    skipped++;
+                    continue;
+                }
                 if (added > 0)
                     output.write(",");
                 output.write(sprintf("%J", outbound));
@@ -2136,6 +2204,10 @@ function normalize_uri_list_stream(input, output_file, strip_metadata) {
         if (line != "" && !starts_with(line, "#")) {
             let outbound = parse_share_link(line);
             if (outbound) {
+                if (outbound_is_unsupported_stub(outbound)) {
+                    skipped++;
+                    continue;
+                }
                 if (added > 0)
                     output.write(",");
                 output.write(sprintf("%J", outbound));
@@ -2906,7 +2978,7 @@ function normalize_sing_box_json_outbounds(candidates) {
     let detour_refs = {};
 
     for (let outbound in candidates) {
-        if (type(outbound) != "object")
+        if (type(outbound) != "object" || outbound_is_unsupported_stub(outbound))
             continue;
         outbound = normalize_sing_box_hysteria2_outbound(outbound);
         outbound = normalize_sing_box_tuic_outbound(outbound);
@@ -3177,7 +3249,8 @@ function module_exports() {
         normalized_skipped_message,
         try_decode_gzip_content_file,
         extract_ui_metadata_file,
-        runtime_outbounds_equal
+        runtime_outbounds_equal,
+        outbound_is_unsupported_stub
     };
 }
 
