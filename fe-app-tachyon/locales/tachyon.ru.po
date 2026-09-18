@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-18 19:08+0300\n"
-"PO-Revision-Date: 2026-09-18 19:08+0300\n"
+"POT-Creation-Date: 2026-09-18 21:48+0300\n"
+"PO-Revision-Date: 2026-09-18 21:48+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -1214,6 +1214,9 @@ msgstr "Страна"
 msgid "Country code (e.g. ru, us, de)"
 msgstr "Код страны (напр. ru, us, de)"
 
+msgid "Creating backup"
+msgstr ""
+
 msgid "Credit Cards / SBP / Tinkoff Pay"
 msgstr "Карты РФ / СБП / Tinkoff Pay"
 
@@ -1649,6 +1652,9 @@ msgstr "Загружать через"
 msgid "Downloaded"
 msgstr "Загружено"
 
+msgid "Downloading"
+msgstr ""
+
 msgid "Downloading and applying rule sets and lists..."
 msgstr "Загрузка и применение наборов правил и списков..."
 
@@ -1954,6 +1960,9 @@ msgstr "Внешние файлы конфигурации nfqws обходят 
 
 msgid "External nfqws2 config files bypass Tachyon queue management and explicit validation."
 msgstr "Внешние файлы конфигурации nfqws2 обходят управление очередями Tachyon и явную проверку."
+
+msgid "Extracting"
+msgstr ""
 
 msgid "FAILED"
 msgstr "СБОЙ"
@@ -2396,6 +2405,9 @@ msgstr "Скрыть отдельные узлы, уже включённые в
 msgid "Hide intermediate nodes used as detours by other subscription nodes"
 msgstr "Скрыть промежуточные узлы, используемые как detour другими узлами подписки"
 
+msgid "Hide N/A servers"
+msgstr "Скрыть недоступные серверы"
+
 msgid "Hide selected servers."
 msgstr "Скрыть выбранные серверы."
 
@@ -2404,6 +2416,9 @@ msgstr "Скрыть серверы из выбранных групп без п
 
 msgid "Hide servers from the specified countries."
 msgstr "Скрыть серверы из указанных стран."
+
+msgid "Hide servers that are configured in a section but not present in the sing-box runtime. These servers appear as N/A on the dashboard."
+msgstr "Скрыть серверы, настроенные в секции, но отсутствующие в runtime sing-box. Такие серверы отображаются как N/A на дашборде."
 
 msgid "Hide servers whose names match the expression."
 msgstr "Скрыть серверы, чьи имена соответствуют выражению."
@@ -2605,6 +2620,9 @@ msgstr "Установленная сборка → Доступная сбор�
 
 msgid "Installed version is newer than release"
 msgstr "Установлена версия новее релиза"
+
+msgid "Installing packages"
+msgstr ""
 
 msgid "Interface"
 msgstr "Интерфейс"
@@ -4084,6 +4102,9 @@ msgstr "Обновить"
 
 msgid "Refresh Device List"
 msgstr "Обновить список устройств"
+
+msgid "Refreshing package index"
+msgstr ""
 
 msgid "Registration Detour"
 msgstr "Маршрут регистрации"
@@ -5783,6 +5804,9 @@ msgstr "Значение не должно содержать символы у�
 msgid "Verdict"
 msgstr "Статус"
 
+msgid "Verifying installation"
+msgstr ""
+
 msgid "Verifying router and service readiness..."
 msgstr "Проверка готовности роутера и служб..."
 
@@ -5815,6 +5839,9 @@ msgstr "VLESS flow"
 
 msgid "vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2:// links"
 msgstr "Ссылки vless://, vmess://, ss://, trojan://, socks4/5://, http/s://, hy2/hysteria2://"
+
+msgid "Waiting for package manager"
+msgstr ""
 
 msgid "Waiting for router services to restart..."
 msgstr "Ожидание перезапуска служб роутера..."

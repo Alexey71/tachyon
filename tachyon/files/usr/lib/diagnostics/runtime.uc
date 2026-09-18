@@ -1329,6 +1329,13 @@ function build_system_info() {
         show_component_tailscale,
         show_component_direct_bypass,
         show_component_torrserver_direct,
+        dashboard_hide_na_servers: (() => {
+            let sections = uci_core.section_objects(CONFIG_NAME, "section");
+            for (let s in sections)
+                if (uci_core.get(CONFIG_NAME, s, "dashboard_hide_na_servers") == "1")
+                    return 1;
+            return 0;
+        })(),
         openwrt_version: openwrt_release(),
         device_model,
         generated_at: int(clock()[0])

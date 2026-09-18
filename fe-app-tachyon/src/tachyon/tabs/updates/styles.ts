@@ -242,6 +242,20 @@ export const styles = `
     color: var(--text-color-medium, #6c757d);
 }
 
+.tachyon-update-modal__phase-badge {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--color-blue-base, #3498db);
+    background: var(--color-blue-bg, #ebf5fb);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.tachyon-update-modal__phase-badge--hidden {
+    display: none;
+}
+
 .tachyon-update-modal__success-banner {
     display: flex;
     align-items: center;

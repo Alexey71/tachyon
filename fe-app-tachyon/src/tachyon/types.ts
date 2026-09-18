@@ -397,6 +397,7 @@ export namespace Tachyon {
     dashboard_exclude_transports?: string[];
     dashboard_exclude_securities?: string[];
     dashboard_exclude_groups?: string[];
+    dashboard_hide_na_servers?: '0' | '1';
     urltest_proxy_links?: string[];
     subscription_url?: string;
     subscription_user_agent?: string;
@@ -683,6 +684,7 @@ export namespace Tachyon {
     show_component_tailscale?: 0 | 1;
     show_component_direct_bypass?: 0 | 1;
     show_component_torrserver_direct?: 0 | 1;
+    dashboard_hide_na_servers?: 0 | 1;
     openwrt_version: string;
     device_model: string;
     generated_at?: number;
@@ -815,6 +817,12 @@ export namespace Tachyon {
     started_at?: number;
     updated_at?: number | null;
     exit_code?: number | null;
+    /** Current operation phase (e.g. "package_index", "package_transaction") */
+    phase?: string;
+    /** Timestamp when the current phase started */
+    phase_started_at?: number;
+    /** Timestamp of the last heartbeat from the worker */
+    heartbeat_at?: number;
   }
 
   export interface ComponentUpdateCheckCache {

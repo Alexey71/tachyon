@@ -3743,7 +3743,7 @@ var TachyonShellMethods = {
       data: parsed
     };
   },
-  waitComponentActionJob: async (jobId, component, action, expectedLatestVersion) => {
+  waitComponentActionJob: async (jobId, component, action, expectedLatestVersion, onPhaseChange) => {
     const jobStartedAt = Date.now();
     const isSelfUpdate = component === "tachyon" && (action === "install" || action === "reinstall" || action === "install_version");
     const targetVersion = expectedLatestVersion || "";
@@ -3828,9 +3828,16 @@ var TachyonShellMethods = {
       success: true,
       data
     });
+    let lastPhase = "";
     while (true) {
       await sleep(COMPONENT_ACTION_POLL_INTERVAL_MS);
       const stateResponse = await readComponentActionState(jobId);
+      if (stateResponse && stateResponse.phase && stateResponse.phase !== lastPhase) {
+        lastPhase = stateResponse.phase;
+        if (onPhaseChange) {
+          onPhaseChange(stateResponse.phase, stateResponse.message);
+        }
+      }
       if (isSelfUpdate && Date.now() - jobStartedAt >= COMPONENT_ACTION_SELF_UPDATE_HARD_TIMEOUT_MS) {
         if (stateResponse && !stateResponse.running) {
           return jobDoneResult(stateResponse);
@@ -4734,6 +4741,11 @@ function getUrlTestIds(section) {
 }
 function isUrlTestEnabled(section) {
   return getUrlTestIds(section).length > 0;
+}
+function shouldHideNaServers(configSections) {
+  return configSections.some(
+    (s) => s.action === "connection" && s.dashboard_hide_na_servers === "1"
+  );
 }
 function shouldUseProxyGroup(section) {
   return getManualProxyLinks(section).length > 0 || hasSubscriptionSources(section) || getConnectionInterfaces(section).length > 0 || getJsonOutbounds(section).length > 0 || isUrlTestEnabled(section) || hasConfiguredPriorityList(section);
@@ -5644,6 +5656,8 @@ async function getDashboardSections(options = {}) {
           priorityGroups,
           cachedProxyLinks
         );
+        const hideNa = shouldHideNaServers(configSections);
+        const filteredOutbounds = hideNa ? outbounds.filter((o) => o.runtimeAvailable !== false) : outbounds;
         return {
           withTagSelect: true,
           code: selector?.code || sectionName,
@@ -5655,7 +5669,7 @@ async function getDashboardSections(options = {}) {
           proxyConfigType,
           subscriptionSourceCount,
           subscriptionMetadata,
-          outbounds
+          outbounds: filteredOutbounds
         };
       }
       if (SINGLE_ENDPOINT_ACTIONS.has(sectionAction || "")) {
@@ -20827,6 +20841,13 @@ function showUpdateProgressModal(options) {
     { class: "tachyon-update-modal__timer-badge" },
     "⏱️ 00:00"
   );
+  const phaseBadgeEl = E(
+    "div",
+    {
+      class: "tachyon-update-modal__phase-badge tachyon-update-modal__phase-badge--hidden"
+    },
+    ""
+  );
   const titleBadgeEl = E(
     "span",
     { class: "tachyon-update-modal__version-badge" },
@@ -20841,6 +20862,7 @@ function showUpdateProgressModal(options) {
       ),
       titleBadgeEl
     ]),
+    phaseBadgeEl,
     timerBadgeEl
   ]);
   const logPreEl = E(
@@ -20973,6 +20995,22 @@ function showUpdateProgressModal(options) {
     updateStep: (_stepIndex, _statusText) => {
     },
     updateStatus: (_statusText) => {
+    },
+    updatePhase: (phase, _message) => {
+      const phaseLabels = {
+        package_index: _("Refreshing package index"),
+        waiting_package_lock: _("Waiting for package manager"),
+        package_transaction: _("Installing packages"),
+        downloading: _("Downloading"),
+        extracting: _("Extracting"),
+        backup: _("Creating backup"),
+        verify: _("Verifying installation")
+      };
+      const label = phaseLabels[phase] || phase;
+      phaseBadgeEl.textContent = label;
+      phaseBadgeEl.classList.remove(
+        "tachyon-update-modal__phase-badge--hidden"
+      );
     },
     updateVersions: (opts) => {
       currentModalVersions = {
@@ -21691,7 +21729,10 @@ async function followComponentActionState(state) {
       jobId,
       state.component,
       state.action,
-      state.latest_version || void 0
+      state.latest_version || void 0,
+      (phase, message) => {
+        getActiveProgressModalController()?.updatePhase(phase, message);
+      }
     ) : {
       success: true,
       data: state
@@ -21868,7 +21909,10 @@ async function handleComponentAction(button) {
       jobId,
       button.component,
       button.action,
-      getExpectedLatestVersionForAction(button)
+      getExpectedLatestVersionForAction(button),
+      (phase, message) => {
+        modalController.updatePhase(phase, message);
+      }
     );
     await completeComponentActionJob(button.key, jobId, response);
   } catch (error) {
@@ -23066,6 +23110,20 @@ var styles6 = `
     font-size: 13px;
     font-family: monospace;
     color: var(--text-color-medium, #6c757d);
+}
+
+.tachyon-update-modal__phase-badge {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--color-blue-base, #3498db);
+    background: var(--color-blue-bg, #ebf5fb);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.tachyon-update-modal__phase-badge--hidden {
+    display: none;
 }
 
 .tachyon-update-modal__success-banner {

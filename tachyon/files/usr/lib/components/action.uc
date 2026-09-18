@@ -31,6 +31,15 @@ const TMP_FILE_STALE_TTL_MINUTES = getenv("UPDATES_TMP_FILE_STALE_TTL_MINUTES") 
 const SB_MANAGED_SERVICE_MARKER = getenv("SB_MANAGED_SERVICE_MARKER") || constants.SB_MANAGED_SERVICE_MARKER || "Tachyon managed sing-box service for binary variants";
 const TAILSCALE_PACKAGE_URL = getenv("TAILSCALE_PACKAGE_URL") || "https://openwrt.org/packages/pkgdata/tailscale";
 
+const PKG_TX_INDEX_TIMEOUT = int(getenv("TACHYON_PKG_TX_INDEX_TIMEOUT") || "60");
+const PKG_TX_DEPS_TIMEOUT = int(getenv("TACHYON_PKG_TX_DEPS_TIMEOUT") || "90");
+const PKG_TX_REMOVE_TIMEOUT = int(getenv("TACHYON_PKG_TX_REMOVE_TIMEOUT") || "90");
+const PKG_TX_INSTALL_TIMEOUT = int(getenv("TACHYON_PKG_TX_INSTALL_TIMEOUT") || "180");
+const PKG_TX_SELF_UPDATE_TIMEOUT = int(getenv("TACHYON_PKG_TX_SELF_UPDATE_TIMEOUT") || "420");
+const PKG_LOCK_WAIT_MAX_SECONDS = int(getenv("TACHYON_PKG_LOCK_WAIT_MAX_SECONDS") || "60");
+const JOB_HEARTBEAT_INTERVAL = int(getenv("TACHYON_JOB_HEARTBEAT_INTERVAL") || "5");
+const JOB_HARD_DEADLINE_SECONDS = int(getenv("TACHYON_JOB_HARD_DEADLINE_SECONDS") || "900");
+
 let as_string = common.as_string;
 let shell_quote = common.shell_quote;
 let command_from_args = common.command_from_args;
@@ -159,6 +168,336 @@ function updates_log(message, level) {
     level = as_string(level || "info");
     log_message("Updates: " + as_string(message), level);
     job_log_append(message, level);
+}
+
+let current_job_phase = "";
+let job_phase_started_at = 0;
+
+function update_job_phase(phase, message) {
+    current_job_phase = as_string(phase);
+    job_phase_started_at = now_seconds();
+    updates_log(message || phase);
+    let state_path = getenv("UPDATES_JOB_STATE_FILE");
+    if (state_path == "")
+        return;
+    try {
+        let data = fs.readfile(state_path);
+        if (data == null)
+            return;
+        let state = json(as_string(data));
+        if (type(state) != "object")
+            return;
+        state.phase = current_job_phase;
+        state.phase_started_at = job_phase_started_at;
+        state.heartbeat_at = now_seconds();
+        state.updated_at = now_seconds();
+        if (as_string(message) != "")
+            state.message = as_string(message);
+        let tmp = state_path + ".hb." + owner_pid();
+        write_file(tmp, sprintf("%J\n", state));
+        fs.rename(tmp, state_path);
+    } catch (e) {}
+}
+
+function job_heartbeat() {
+    let state_path = getenv("UPDATES_JOB_STATE_FILE");
+    if (state_path == "")
+        return;
+    try {
+        let data = fs.readfile(state_path);
+        if (data == null)
+            return;
+        let state = json(as_string(data));
+        if (type(state) != "object" || state.running !== true)
+            return;
+        state.heartbeat_at = now_seconds();
+        state.updated_at = now_seconds();
+        let tmp = state_path + ".hb." + owner_pid();
+        write_file(tmp, sprintf("%J\n", state));
+        fs.rename(tmp, state_path);
+    } catch (e) {}
+}
+
+function free_kb(path) {
+    let out = trim(command_output("df -Pk " + shell_quote(path) + " 2>/dev/null | tail -n 1 | awk '{print $4}'"));
+    return int(out);
+}
+
+function preflight_storage_check(component, asset_size_bytes, backup_required) {
+    let tmp_free = free_kb("/tmp");
+    let needed_tmp_kb = int((asset_size_bytes || 0) / 1024) + 2048;
+    if (backup_required) {
+        let bin_size = 0;
+        if (component == "sing_box" && file_exists(SING_BOX_BIN)) {
+            let st = fs.stat(SING_BOX_BIN);
+            bin_size = (st && st.size) ? st.size : 0;
+        }
+        needed_tmp_kb += int(bin_size / 1024) + 1024;
+    }
+    if (tmp_free > 0 && tmp_free < needed_tmp_kb) {
+        updates_log("Insufficient /tmp space for " + as_string(component) +
+            ": need " + needed_tmp_kb + " KB, have " + tmp_free + " KB", "error");
+        return false;
+    }
+    return true;
+}
+
+function preflight_backup_space_check(component) {
+    if (!get_component_backup_enabled())
+        return true;
+    let st = null;
+    if (component == "sing_box" && file_exists(SING_BOX_BIN))
+        st = fs.stat(SING_BOX_BIN);
+    if (st == null)
+        return true;
+    let size = (st.size) ? st.size : 0;
+    if (size <= 0)
+        return true;
+    if (!check_free_disk_space("/etc", size)) {
+        let avail = free_kb("/overlay") || free_kb("/");
+        updates_log("Cannot create backup: insufficient persistent storage for " + as_string(component) +
+            ". Required: " + int(size / 1024) + " KB, Available: " + avail + " KB. " +
+            "Disable component backup or free storage.", "error");
+        return false;
+    }
+    return true;
+}
+
+function stream_command_output(command, description) {
+    updates_log(description);
+    let pipe = fs.popen(command + " 2>&1", "r");
+    if (!pipe) {
+        updates_log(description + ": failed to execute", "error");
+        return 255;
+    }
+    let last_output_at = now_seconds();
+    let last_heartbeat = now_seconds();
+    let exit_code = 0;
+    while (true) {
+        let line = pipe.read("line");
+        if (line == null)
+            break;
+        line = trim(as_string(line));
+        if (line != "")
+            updates_log(line);
+        last_output_at = now_seconds();
+        // Periodic heartbeat during long streaming operations
+        if (now_seconds() - last_heartbeat >= JOB_HEARTBEAT_INTERVAL) {
+            job_heartbeat();
+            last_heartbeat = now_seconds();
+        }
+    }
+    exit_code = normalize_stream_exit(pipe.close());
+    return exit_code;
+}
+
+function normalize_stream_exit(close_status) {
+    if (close_status == null)
+        return 0;
+    let s = int(close_status);
+    let signal = s & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (s >> 8) & 255;
+}
+
+function pkg_tx_update_index(proxy_address) {
+    sanitize_apk_world();
+    let cmd = pkg_list_update_command(proxy_address);
+    update_job_phase("package_index", "Refreshing package index");
+    let rc = stream_command_output(cmd, "Updating package index");
+    if (rc != 0)
+        updates_log("Package index update failed with exit code " + rc, "warn");
+    return rc == 0;
+}
+
+function detect_apk_lock(output_text, exit_code) {
+    if (exit_code == 227)
+        return true;
+    if (exit_code == 255 && match(output_text, /Could not lock|opkg\.lock|Resource temporarily unavailable/i) != null)
+        return true;
+    return false;
+}
+
+function diagnose_apk_lock_holder() {
+    for (let fd_path in fs.glob("/proc/[0-9]*/fd/*")) {
+        let target = "";
+        try { target = as_string(fs.readlink(fd_path)); } catch (e) { continue; }
+        if (match(target, /apk\/db\/lock|lib\/apk\/db\/lock/) == null)
+            continue;
+        let parts = split(fd_path, "/");
+        if (length(parts) < 3)
+            continue;
+        let pid = as_string(parts[2]);
+        let comm = "";
+        try { comm = trim(as_string(fs.readfile("/proc/" + pid + "/comm"))); } catch (e) {}
+        updates_log("APK lock holder: pid=" + pid + " process=" + (comm != "" ? comm : "unknown"), "warn");
+        return;
+    }
+    updates_log("APK database is locked but holder could not be identified", "warn");
+}
+
+function pkg_tx_run_with_lock(description, command, timeout_seconds) {
+    update_job_phase("waiting_package_lock", "Waiting for package manager lock");
+    let lock_waited = 0;
+    let attempt = 0;
+    let max_lock_attempts = 12;
+    while (attempt < max_lock_attempts) {
+        if (attempt > 0) {
+            if (is_apk()) {
+                updates_log("APK database still locked (" + lock_waited + "s), waiting...");
+            } else {
+                updates_log("opkg lock still held (" + lock_waited + "s), waiting...");
+            }
+            job_heartbeat();
+            command_success("sleep 5");
+            lock_waited += 5;
+            if (lock_waited >= PKG_LOCK_WAIT_MAX_SECONDS) {
+                updates_log("Package manager lock timeout after " + lock_waited + "s", "error");
+                if (is_apk())
+                    diagnose_apk_lock_holder();
+                return { success: false, exit_code: 227, message: "Package manager lock timeout after " + lock_waited + "s" };
+            }
+        }
+        let output_file = make_tmp_file("pkg-tx");
+        if (output_file == "")
+            output_file = "/tmp/tachyon-updates-pkg-tx." + owner_pid();
+        let pipe_cmd = command + " >" + shell_quote(output_file) + " 2>&1";
+        let pipe = fs.popen(pipe_cmd, "r");
+        if (!pipe) {
+            attempt++;
+            continue;
+        }
+        let last_activity = now_seconds();
+        let last_heartbeat = now_seconds();
+        while (true) {
+            let line = pipe.read("line");
+            if (line == null)
+                break;
+            line = trim(as_string(line));
+            if (line != "") {
+                updates_log(line);
+                last_activity = now_seconds();
+            }
+            // Periodic heartbeat during long operations
+            if (now_seconds() - last_heartbeat >= JOB_HEARTBEAT_INTERVAL) {
+                job_heartbeat();
+                last_heartbeat = now_seconds();
+            }
+            if (now_seconds() - last_activity > timeout_seconds) {
+                updates_log("Package operation timed out after " + timeout_seconds + "s of inactivity", "error");
+                pipe.close("kill");
+                remove_file(output_file);
+                return { success: false, exit_code: -1, message: "Package operation timed out" };
+            }
+        }
+        let close_status = pipe.close();
+        let rc = normalize_stream_exit(close_status);
+        remove_file(output_file);
+        if (rc == 0) {
+            update_job_phase("package_transaction", "Package transaction completed");
+            return { success: true, exit_code: 0, message: "" };
+        }
+        let is_locked = detect_apk_lock("", rc);
+        if (attempt == 0 && is_locked)
+            diagnose_apk_lock_holder();
+        if (!is_locked) {
+            return { success: false, exit_code: rc, message: "Package operation failed with exit code " + rc };
+        }
+        attempt++;
+    }
+    return { success: false, exit_code: 227, message: "Package manager lock retry limit exceeded" };
+}
+
+function pkg_tx_install_files(files, force_reinstall) {
+    sanitize_apk_world();
+    update_job_phase("package_transaction", "Installing package files");
+    let args = [];
+    let timeout = PKG_TX_INSTALL_TIMEOUT;
+    if (is_apk()) {
+        push(args, "apk", "add", "--allow-untrusted");
+        for (let f in files)
+            push(args, f);
+    } else {
+        push(args, "opkg", "install", "--force-overwrite", "--force-downgrade", "--force-depends");
+        if (force_reinstall)
+            push(args, "--force-reinstall");
+        for (let f in files)
+            push(args, f);
+    }
+    let proxy = service_proxy_address();
+    let cmd = command_from_args(args) + " </dev/null";
+    if (as_string(proxy) != "") {
+        let p = "http://" + proxy;
+        cmd = command_env({ http_proxy: p, https_proxy: p, HTTP_PROXY: p, HTTPS_PROXY: p }) + " " + cmd;
+    }
+    return pkg_tx_run_with_lock("Installing packages", cmd, timeout);
+}
+
+function pkg_tx_install_name(package_name, proxy_address) {
+    sanitize_apk_world();
+    update_job_phase("package_transaction", "Installing " + package_name);
+    let cmd = pkg_install_name_command(package_name, proxy_address);
+    return pkg_tx_run_with_lock("Installing " + package_name, cmd, PKG_TX_DEPS_TIMEOUT);
+}
+
+function pkg_tx_remove(package_name, description) {
+    update_job_phase("package_transaction", description || ("Removing " + package_name));
+    let cmd;
+    if (is_apk()) {
+        cmd = command_from_args([ "apk", "del", "--force-broken-world", package_name ]) + " </dev/null";
+    } else {
+        cmd = command_from_args([ "opkg", "remove", "--force-depends", package_name ]) + " </dev/null";
+    }
+    return pkg_tx_run_with_lock(description || ("Removing " + package_name), cmd, PKG_TX_REMOVE_TIMEOUT);
+}
+
+function pkg_tx_downgrade(package_name, package_version) {
+    package_name = as_string(package_name);
+    package_version = as_string(package_version);
+    update_job_phase("package_transaction", "Downgrading " + package_name + " to " + package_version);
+    let cmd;
+    if (is_apk()) {
+        if (package_version == "")
+            return { success: false, exit_code: 1, message: "Version required for APK downgrade" };
+        let package_spec = package_name + "=" + package_version;
+        if (pkg_is_installed(package_name))
+            cmd = command_from_args([ "apk", "fix", "--reinstall", "--upgrade", package_spec ]) + " </dev/null";
+        else
+            cmd = command_from_args([ "apk", "add", package_spec ]) + " </dev/null";
+    } else {
+        cmd = command_from_args([ "opkg", "install", "--force-overwrite", "--force-reinstall", "--force-downgrade", package_name ]) + " </dev/null";
+    }
+    return pkg_tx_run_with_lock("Downgrading " + package_name, cmd, PKG_TX_INSTALL_TIMEOUT);
+}
+
+function verify_package_post_install(package_name, expected_version) {
+    let db_version = installed_package_version(package_name);
+    if (db_version == "") {
+        updates_log("Post-install verification failed: " + package_name + " not found in package database", "error");
+        return false;
+    }
+    if (as_string(expected_version) != "" && db_version != as_string(expected_version)) {
+        updates_log("Post-install version mismatch for " + package_name +
+            ": expected=" + as_string(expected_version) + " actual=" + db_version, "warn");
+    }
+    return true;
+}
+
+function verify_binary_post_install(binary_path, expected_version, version_cmd_args) {
+    if (!file_exists(binary_path)) {
+        updates_log("Post-install verification failed: binary not found at " + binary_path, "error");
+        return false;
+    }
+    if (type(version_cmd_args) == "array" && length(version_cmd_args) > 0) {
+        let actual = read_sing_box_binary_version(binary_path, "");
+        if (actual == "") {
+            updates_log("Post-install verification: cannot read version from " + binary_path, "warn");
+        } else if (as_string(expected_version) != "" && actual != as_string(expected_version)) {
+            updates_log("Post-install binary version mismatch: expected=" + as_string(expected_version) + " actual=" + actual, "warn");
+        }
+    }
+    return true;
 }
 
 function module_command(args) {
@@ -455,26 +794,22 @@ function pkg_install_name_downgrade(package_name, package_version) {
 // the installed one is a no-op unless --force-reinstall is passed, so a rebuild
 // published under the same tag would silently not be applied. apk always writes
 // the file it is handed, so its argument list stays untouched.
+// IMPORTANT: No fallback to raw tar/apk-extract. Package manager failure means
+// the operation must fail. Direct extraction bypasses package DB, maintainer
+// scripts, and dependency tracking.
 function pkg_install_files_command(files, force_reinstall) {
     if (is_apk()) {
         let add_args = [ "apk", "add", "--allow-untrusted" ];
         for (let file in files)
             push(add_args, file);
-        let extract_args = [ "apk", "extract", "--allow-untrusted", "--force-overwrite", "--destination", "/" ];
-        for (let file in files)
-            push(extract_args, file);
-        return "(" + command_from_args(add_args) + " </dev/null || " + command_from_args(extract_args) + " </dev/null)";
+        return command_from_args(add_args) + " </dev/null";
     }
     let args = [ "opkg", "install", "--force-overwrite", "--force-downgrade", "--force-depends" ];
     if (force_reinstall)
         push(args, "--force-reinstall");
     for (let file in files)
         push(args, file);
-    let opkg_cmd = command_from_args(args) + " </dev/null";
-    let fallback_cmds = [];
-    for (let file in files)
-        push(fallback_cmds, "(tar -zxOf " + shell_quote(file) + " ./data.tar.gz 2>/dev/null || tar -zxOf " + shell_quote(file) + " data.tar.gz 2>/dev/null) | tar -zx -C /");
-    return "(" + opkg_cmd + " || (" + join(" && ", fallback_cmds) + "))";
+    return command_from_args(args) + " </dev/null";
 }
 
 function sanitize_apk_world() {
@@ -487,19 +822,21 @@ function sanitize_apk_world() {
 }
 
 function pkg_install_files(files, force_reinstall) {
-    sanitize_apk_world();
-    return command_success(pkg_install_files_command(files, force_reinstall));
+    init_tmp_dir();
+    let result = pkg_tx_install_files(files, force_reinstall);
+    return result.success;
 }
 
-// Like run_logged but retries up to 10 times on package manager database lock (exit code 227 for APK, lock file contention for opkg)
+// Like run_logged but retries on package manager database lock.
+// Uses streaming output instead of buffered file reads.
 function run_logged_retrying(description, command) {
     init_tmp_dir();
     sanitize_apk_world();
+
     let output_file = make_tmp_file("command");
     if (output_file == "")
         output_file = "/tmp/tachyon-updates-command." + owner_pid();
 
-    updates_log(description);
     let status = 227;
     let max_attempts = 10;
     for (let attempt = 0; attempt < max_attempts; attempt++) {
@@ -508,21 +845,31 @@ function run_logged_retrying(description, command) {
             updates_log(description + ": " + mgr_name + " database locked, retrying in 3s (attempt " + (attempt + 1) + "/" + max_attempts + ")");
             command_success("sleep 3");
         }
-        status = command_status(as_string(command) + " >" + shell_quote(output_file) + " 2>&1");
-        let output_text = read_file(output_file);
+        let pipe = fs.popen(as_string(command) + " 2>&1 | tee " + shell_quote(output_file) + " | tail -c 16384 > /dev/null", "r");
+        let output_text = "";
+        let last_activity = now_seconds();
+        if (pipe) {
+            while (true) {
+                let line = pipe.read("line");
+                if (line == null)
+                    break;
+                line = trim(as_string(line));
+                if (line != "") {
+                    updates_log(line, attempt > 0 ? "warn" : "info");
+                    last_activity = now_seconds();
+                }
+            }
+            status = normalize_stream_exit(pipe.close());
+        } else {
+            status = 255;
+        }
+        output_text = as_string(read_file(output_file)) || "";
         let is_locked = (status == 227 || (status == 255 && match(output_text, /Could not lock|opkg\.lock|Resource temporarily unavailable/i) != null)) &&
             match(output_text, /unable to select packages|no such package/i) == null;
         if (!is_locked)
             break;
     }
-    let output_content = read_file(output_file);
     remove_file(output_file);
-    let log_level = status != 0 ? "warn" : "info";
-    for (let line in split(output_content, "\n")) {
-        line = trim(as_string(line));
-        if (line != "")
-            updates_log(line, log_level);
-    }
     if (status != 0)
         updates_log(description + " failed with exit code " + status, "warn");
     return status == 0;
@@ -934,18 +1281,29 @@ function write_tachyon_build_fingerprint(version, fingerprint) {
     write_file(TACHYON_BUILD_STATE_FILE, as_string(version) + "\t" + as_string(fingerprint) + "\n");
 }
 
-// Called after a successful install/reinstall. TACHYON_COMMIT_SHA still holds the
-// SHA of the build that is running this code, not the one just written to disk,
-// so the release we installed from is the only source for the new identity.
-function record_tachyon_installed_build(version) {
-    let release_json = latest_tachyon_release_json();
-    if (release_json == "")
-        return null;
+// Called after a successful install/reinstall. Uses the release context from the
+// operation rather than re-fetching latest release metadata. This is critical
+// for install_version where the installed tag may differ from the latest release.
+// release_ctx is an optional object with {source_sha, fingerprint} from the resolved release.
+function record_tachyon_installed_build(version, release_ctx) {
+    let sha = "";
+    let fingerprint = "";
 
-    let sha = trim(helper_output_input(release_json, "release-commit-sha", []));
-    if (sha != "" && match(sha, /^[0-9a-fA-F]{7,40}$/) == null)
-        sha = "";
-    let fingerprint = trim(helper_output_input(release_json, "release-build-fingerprint", []));
+    if (type(release_ctx) == "object") {
+        sha = as_string(release_ctx.source_sha || "");
+        fingerprint = as_string(release_ctx.fingerprint || "");
+    }
+
+    if (sha == "" && fingerprint == "") {
+        let release_json = latest_tachyon_release_json();
+        if (release_json != "") {
+            sha = trim(helper_output_input(release_json, "release-commit-sha", []));
+            if (sha != "" && match(sha, /^[0-9a-fA-F]{7,40}$/) == null)
+                sha = "";
+            fingerprint = trim(helper_output_input(release_json, "release-build-fingerprint", []));
+        }
+    }
+
     write_tachyon_build_fingerprint(version, fingerprint);
 
     if (sha == "" && fingerprint == "")
@@ -3024,7 +3382,15 @@ function resolve_tachyon_release(latest_version) {
     let asset_ext = is_apk() ? "apk" : "ipk";
     let i18n_required = pkg_is_installed("luci-i18n-tachyon-ru") ? "1" : "0";
     let release_json = latest_tachyon_release_json();
+    let source_sha = "";
+    let fingerprint = "";
+
     if (release_json != "") {
+        source_sha = trim(helper_output_input(release_json, "release-commit-sha", []));
+        if (source_sha != "" && match(source_sha, /^[0-9a-fA-F]{7,40}$/) == null)
+            source_sha = "";
+        fingerprint = trim(helper_output_input(release_json, "release-build-fingerprint", []));
+
         let plan = trim(helper_output_input(release_json, "tachyon-release-plan", [ latest_version, asset_ext, i18n_required ]));
         let fields = split(plan, "\t");
         if (length(fields) >= 7 && as_string(fields[1]) != "" && as_string(fields[2]) != "" && as_string(fields[3]) != "" && as_string(fields[4]) != "") {
@@ -3035,7 +3401,9 @@ function resolve_tachyon_release(latest_version) {
                 app_name: fields[3],
                 app_url: fields[4],
                 i18n_name: fields[5],
-                i18n_url: fields[6]
+                i18n_url: fields[6],
+                source_sha: source_sha,
+                fingerprint: fingerprint
             };
         }
     }
@@ -3053,7 +3421,9 @@ function resolve_tachyon_release(latest_version) {
         app_name: app_name,
         app_url: base_dl + app_name,
         i18n_name: i18n_required == "1" ? i18n_name : "",
-        i18n_url: i18n_required == "1" ? (base_dl + i18n_name) : ""
+        i18n_url: i18n_required == "1" ? (base_dl + i18n_name) : "",
+        source_sha: source_sha,
+        fingerprint: fingerprint
     };
 }
 
@@ -3082,8 +3452,15 @@ function reinstall_tachyon() {
     let reinstall_files = [ backend_file, app_file ];
     if (i18n_file != "")
         push(reinstall_files, i18n_file);
-    if (!run_logged_retrying("Reinstalling Tachyon packages", pkg_install_files_command(reinstall_files, true)))
-        action_fail("tachyon", "reinstall", "Failed to reinstall Tachyon packages", TACHYON_VERSION, latest_version);
+
+    // Self-update uses longer timeout: download + install + postinst on slow storage
+    let install_result = pkg_tx_install_files(reinstall_files, true);
+    if (!install_result.success)
+        action_fail("tachyon", "reinstall", "Failed to reinstall Tachyon packages: " + as_string(install_result.message), TACHYON_VERSION, latest_version);
+
+    // Verify package DB was updated
+    if (!verify_package_post_install("tachyon", latest_version))
+        updates_log("Warning: Tachyon package version may not have been updated in package database", "warn");
 
     remove_file("/var/luci-indexcache");
     command_success("rm -f /var/luci-indexcache* /tmp/luci-indexcache* 2>/dev/null");
@@ -3097,7 +3474,7 @@ function reinstall_tachyon() {
     if (new_version == "")
         new_version = latest_version;
     updates_log("Tachyon reinstalled to " + new_version);
-    let build_extra = record_tachyon_installed_build(new_version);
+    let build_extra = record_tachyon_installed_build(new_version, release);
     action_success("tachyon", "reinstall", "Tachyon has been reinstalled", new_version, latest_version, 1, "latest", release.release_url, build_extra);
 }
 
@@ -3126,11 +3503,14 @@ function install_tachyon() {
     let install_files = [ backend_file, app_file ];
     if (i18n_file != "")
         push(install_files, i18n_file);
-    // Installing the same tag means a rebuild of the current release; opkg skips
-    // it as "already installed" unless it is forced.
     let same_release_build = trim(as_string(latest_version)) == trim(as_string(TACHYON_VERSION));
-    if (!run_logged_retrying("Installing Tachyon packages", pkg_install_files_command(install_files, same_release_build)))
-        action_fail("tachyon", "install", "Failed to install Tachyon packages", TACHYON_VERSION, latest_version);
+
+    let install_result = pkg_tx_install_files(install_files, same_release_build);
+    if (!install_result.success)
+        action_fail("tachyon", "install", "Failed to install Tachyon packages: " + as_string(install_result.message), TACHYON_VERSION, latest_version);
+
+    if (!verify_package_post_install("tachyon", latest_version))
+        updates_log("Warning: Tachyon package version may not have been updated in package database", "warn");
 
     remove_file("/var/luci-indexcache");
     command_success("rm -f /var/luci-indexcache* /tmp/luci-indexcache* 2>/dev/null");
@@ -3144,7 +3524,7 @@ function install_tachyon() {
     if (new_version == "")
         new_version = latest_version;
     updates_log("Tachyon updated to " + new_version);
-    let build_extra = record_tachyon_installed_build(new_version);
+    let build_extra = record_tachyon_installed_build(new_version, release);
     action_success("tachyon", "install", "Tachyon has been installed", new_version, latest_version, 1, "latest", release.release_url, build_extra);
 }
 
@@ -3171,8 +3551,12 @@ function install_tachyon_version(target_tag) {
     if (i18n_file != "")
         push(install_files, i18n_file);
 
-    if (!run_logged_retrying("Installing Tachyon packages", pkg_install_files_command(install_files, true)))
-        action_fail("tachyon", "install_version", "Failed to install Tachyon packages", TACHYON_VERSION, target_tag);
+    let install_result = pkg_tx_install_files(install_files, true);
+    if (!install_result.success)
+        action_fail("tachyon", "install_version", "Failed to install Tachyon packages: " + as_string(install_result.message), TACHYON_VERSION, target_tag);
+
+    if (!verify_package_post_install("tachyon", target_tag))
+        updates_log("Warning: Tachyon package version may not have been updated in package database", "warn");
 
     remove_file("/var/luci-indexcache");
     command_success("rm -f /var/luci-indexcache* /tmp/luci-indexcache* 2>/dev/null");
@@ -3186,7 +3570,7 @@ function install_tachyon_version(target_tag) {
     if (new_version == "")
         new_version = target_tag;
     updates_log("Tachyon updated to " + new_version);
-    let build_extra = record_tachyon_installed_build(new_version);
+    let build_extra = record_tachyon_installed_build(new_version, release);
     action_success("tachyon", "install_version", "Tachyon has been installed", new_version, target_tag, 1, "latest", release.release_url, build_extra);
 }
 

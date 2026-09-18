@@ -58,6 +58,7 @@ const COMPONENT_UPDATE_CHECK_LOCK_DIR = getenv("TACHYON_COMPONENT_UPDATE_CHECK_L
 const COMPONENT_JOB_FINISHED_TTL_MINUTES = getenv("UPDATES_JOB_FINISHED_TTL_MINUTES") || "60";
 const COMPONENT_JOB_ORPHAN_OUTPUT_TTL_MINUTES = getenv("UPDATES_JOB_ORPHAN_OUTPUT_TTL_MINUTES") || "60";
 const COMPONENT_JOB_STALE_GRACE_SECONDS = getenv("UPDATES_JOB_STALE_GRACE_SECONDS") || getenv("TACHYON_UI_ACTION_STALE_GRACE_SECONDS") || "15";
+const JOB_HARD_DEADLINE_SECONDS = int(getenv("TACHYON_JOB_HARD_DEADLINE_SECONDS") || "900");
 const SUBSCRIPTION_JOB_FINISHED_TTL_MINUTES = getenv("TACHYON_SUBSCRIPTION_UPDATE_JOB_FINISHED_TTL_MINUTES") || "60";
 const SUBSCRIPTION_JOB_ORPHAN_OUTPUT_TTL_MINUTES = getenv("TACHYON_SUBSCRIPTION_UPDATE_JOB_ORPHAN_OUTPUT_TTL_MINUTES") || "60";
 const SUBSCRIPTION_JOB_STALE_GRACE_SECONDS = getenv("TACHYON_UI_ACTION_STALE_GRACE_SECONDS") || "15";
@@ -1681,6 +1682,20 @@ function refresh_component_running_job_state(path) {
     let within_grace = job_started_at_within_grace(value.started_at, now, COMPONENT_JOB_STALE_GRACE_SECONDS);
     let pid = as_string(value.pid || "");
 
+    // Heartbeat freshness: if the job has been running longer than the hard deadline
+    // and no heartbeat was recorded, the worker is likely stuck.
+    let heartbeat_at = int(value.heartbeat_at || 0);
+    let started_at = int(value.started_at || 0);
+    if (heartbeat_at > 0 && started_at > 0) {
+        let elapsed = now - started_at;
+        let since_heartbeat = now - heartbeat_at;
+        if (elapsed > JOB_HARD_DEADLINE_SECONDS && since_heartbeat > JOB_HARD_DEADLINE_SECONDS) {
+            log_message("Component job exceeded hard deadline (" + elapsed + "s elapsed, " + since_heartbeat + "s since heartbeat), marking stale", "warn");
+            write_component_stale_job_state(path);
+            return;
+        }
+    }
+
     if (!job_pid_valid(pid)) {
         if (!within_grace)
             write_component_stale_job_state(path);
@@ -1919,6 +1934,7 @@ function component_action_worker(state_file, output_file, component, action, ext
     // execute" with the tail of a log as its message.
     let worker_env = component_worker_env();
     worker_env.UPDATES_JOB_LOG = substr(output_file, 0, length(output_file) - 4) + ".log";
+    worker_env.UPDATES_JOB_STATE_FILE = state_file;
     let action_args = [
         "ucode",
         "-L", LIB_DIR,

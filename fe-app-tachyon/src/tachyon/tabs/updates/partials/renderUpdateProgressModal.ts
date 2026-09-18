@@ -29,6 +29,7 @@ export interface CompleteSuccessOptions {
 export interface UpdateProgressModalController {
   updateStep: (stepIndex: number, statusText?: string) => void;
   updateStatus: (statusText: string) => void;
+  updatePhase: (phase: string, message?: string) => void;
   updateVersions: (opts: {
     currentVersion?: string;
     targetVersion?: string;
@@ -131,6 +132,15 @@ export function showUpdateProgressModal(
     '⏱️ 00:00',
   );
 
+  const phaseBadgeEl = E(
+    'div',
+    {
+      class:
+        'tachyon-update-modal__phase-badge tachyon-update-modal__phase-badge--hidden',
+    },
+    '',
+  );
+
   const titleBadgeEl = E(
     'span',
     { class: 'tachyon-update-modal__version-badge' },
@@ -146,6 +156,7 @@ export function showUpdateProgressModal(
       ),
       titleBadgeEl,
     ]),
+    phaseBadgeEl,
     timerBadgeEl,
   ]);
 
@@ -303,6 +314,22 @@ export function showUpdateProgressModal(
     },
     updateStatus: (_statusText: string) => {
       // noop — status merged into log
+    },
+    updatePhase: (phase: string, _message?: string) => {
+      const phaseLabels: Record<string, string> = {
+        package_index: _('Refreshing package index'),
+        waiting_package_lock: _('Waiting for package manager'),
+        package_transaction: _('Installing packages'),
+        downloading: _('Downloading'),
+        extracting: _('Extracting'),
+        backup: _('Creating backup'),
+        verify: _('Verifying installation'),
+      };
+      const label = phaseLabels[phase] || phase;
+      phaseBadgeEl.textContent = label;
+      phaseBadgeEl.classList.remove(
+        'tachyon-update-modal__phase-badge--hidden',
+      );
     },
     updateVersions: (opts: {
       currentVersion?: string;

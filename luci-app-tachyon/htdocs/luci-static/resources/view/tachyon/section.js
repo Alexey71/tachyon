@@ -3754,6 +3754,18 @@ function addDashboardServerFilterOptions(section) {
   );
   o.default = "flag_emoji";
 
+  o = optionSection.option(
+    form.Flag,
+    "dashboard_hide_na_servers",
+    _("Hide N/A servers"),
+    _(
+      "Hide servers that are configured in a section but not present in the sing-box runtime. These servers appear as N/A on the dashboard.",
+    ),
+  );
+  o.default = "0";
+  o.depends("action", "connection");
+  o.modalonly = true;
+
   const includeProxyParameterOptions = {
     prefix: "dashboard_include",
     toggleLabel: _("Include by proxy parameters"),

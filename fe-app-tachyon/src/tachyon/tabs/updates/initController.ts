@@ -813,6 +813,9 @@ async function followComponentActionState(
           state.component,
           state.action,
           state.latest_version || undefined,
+          (phase: string, message?: string) => {
+            getActiveProgressModalController()?.updatePhase(phase, message);
+          },
         )
       : ({
           success: true,
@@ -1033,6 +1036,9 @@ async function handleComponentAction(button: ComponentActionButton) {
       button.component,
       button.action,
       getExpectedLatestVersionForAction(button),
+      (phase: string, message?: string) => {
+        modalController.updatePhase(phase, message);
+      },
     );
 
     await completeComponentActionJob(button.key, jobId, response);

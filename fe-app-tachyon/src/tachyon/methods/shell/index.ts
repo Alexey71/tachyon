@@ -791,6 +791,7 @@ export const TachyonShellMethods = {
     component: Tachyon.ComponentName,
     action: Tachyon.ComponentAction,
     expectedLatestVersion?: string,
+    onPhaseChange?: (phase: string, message?: string) => void,
   ) => {
     const jobStartedAt = Date.now();
     const isSelfUpdate =
@@ -914,10 +915,24 @@ export const TachyonShellMethods = {
       data,
     });
 
+    let lastPhase = '';
+
     while (true) {
       await sleep(COMPONENT_ACTION_POLL_INTERVAL_MS);
 
       const stateResponse = await readComponentActionState(jobId);
+
+      // Track phase changes for UI updates
+      if (
+        stateResponse &&
+        stateResponse.phase &&
+        stateResponse.phase !== lastPhase
+      ) {
+        lastPhase = stateResponse.phase;
+        if (onPhaseChange) {
+          onPhaseChange(stateResponse.phase, stateResponse.message);
+        }
+      }
 
       // Hard ceiling: the modal must never hang forever. Report whatever we
       // actually know and close it.

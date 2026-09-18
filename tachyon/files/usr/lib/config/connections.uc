@@ -466,6 +466,10 @@ function dashboard_filter_mode(section) {
     return option(section, "dashboard_filter_mode", "disabled") || "disabled";
 }
 
+function dashboard_hide_na_servers(section) {
+    return bool_option(section, "dashboard_hide_na_servers", false);
+}
+
 function dashboard_detect_server_country(section) {
     return option(section, "dashboard_detect_server_country", "flag_emoji") || "flag_emoji";
 }
@@ -1613,6 +1617,7 @@ return {
     outbound_jsons,
     urltests,
     dashboard_filter_mode,
+    dashboard_hide_na_servers,
     dashboard_detect_server_country,
     dashboard_include_countries,
     dashboard_include_outbounds,

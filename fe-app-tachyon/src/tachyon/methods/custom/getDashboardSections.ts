@@ -457,6 +457,12 @@ function isUrlTestEnabled(section: Tachyon.ConfigSection) {
   return getUrlTestIds(section).length > 0;
 }
 
+function shouldHideNaServers(configSections: Tachyon.ConfigSection[]) {
+  return configSections.some(
+    (s) => s.action === 'connection' && s.dashboard_hide_na_servers === '1',
+  );
+}
+
 function shouldUseProxyGroup(section: Tachyon.ConfigSection) {
   return (
     getManualProxyLinks(section).length > 0 ||
@@ -1769,6 +1775,11 @@ export async function getDashboardSections(
               cachedProxyLinks,
             );
 
+          const hideNa = shouldHideNaServers(configSections);
+          const filteredOutbounds = hideNa
+            ? outbounds.filter((o) => o.runtimeAvailable !== false)
+            : outbounds;
+
           return {
             withTagSelect: true,
             code: selector?.code || sectionName,
@@ -1780,7 +1791,7 @@ export async function getDashboardSections(
             proxyConfigType,
             subscriptionSourceCount,
             subscriptionMetadata,
-            outbounds,
+            outbounds: filteredOutbounds,
           };
         }
 
