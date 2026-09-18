@@ -59,6 +59,31 @@ let lock_held = false;
 let tachyon_was_running = false;
 let tachyon_stopped_for_sing_box_change = false;
 
+// ============================================================================
+// Helper constants and functions hoisted to avoid forward references
+// ============================================================================
+
+const SING_BOX_BIN = getenv("TACHYON_SING_BOX_BIN") || "/usr/bin/sing-box";
+const COMPONENT_BACKUP_BASE_DIR = getenv("TACHYON_COMPONENT_BACKUPS_DIR") || "/etc/tachyon/component-backups";
+
+function get_component_backup_enabled() {
+    let uci_core = require("core.uci");
+    let settings = (uci_core && uci_core.get_all) ? (uci_core.get_all("tachyon", "settings") || {}) : {};
+    let val = as_string(settings.component_backup_enabled || "");
+    return val == "1" || val == "true" || val == "yes" || val == "on";
+}
+
+function check_free_disk_space(target_dir, needed_bytes) {
+    let out = trim(command_output("df -k " + shell_quote(target_dir) + " 2>/dev/null | tail -n 1 | awk '{print $4}'"));
+    let free_kb = int(out);
+    if (free_kb <= 0)
+        return true;
+    let needed_kb = int((needed_bytes || 0) / 1024) + 1024;
+    return free_kb > (needed_kb * 2) && (free_kb - needed_kb) > 4096;
+}
+
+// ============================================================================
+
 function str_startswith(value, prefix) {
     value = as_string(value);
     prefix = as_string(prefix);
@@ -2330,14 +2355,7 @@ function move_file_to_backup(target_path, backup_path) {
     return move_file_portable(target_path, backup_path);
 }
 
-const COMPONENT_BACKUP_BASE_DIR = getenv("TACHYON_COMPONENT_BACKUPS_DIR") || "/etc/tachyon/component-backups";
-
-function get_component_backup_enabled() {
-    let uci_core = require("core.uci");
-    let settings = (uci_core && uci_core.get_all) ? (uci_core.get_all("tachyon", "settings") || {}) : {};
-    let val = as_string(settings.component_backup_enabled || "");
-    return val == "1" || val == "true" || val == "yes" || val == "on";
-}
+// Moved to line ~67 to avoid forward reference
 
 // Binary variants are fully extracted and validated before this helper is
 // called. On storage-constrained routers the temporary rollback copy can
@@ -3648,16 +3666,9 @@ function read_component_backup_metadata(component) {
     return null;
 }
 
-function check_free_disk_space(target_dir, needed_bytes) {
-    let out = trim(command_output("df -k " + shell_quote(target_dir) + " 2>/dev/null | tail -n 1 | awk '{print $4}'"));
-    let free_kb = int(out);
-    if (free_kb <= 0)
-        return true;
-    let needed_kb = int((needed_bytes || 0) / 1024) + 1024;
-    return free_kb > (needed_kb * 2) && (free_kb - needed_kb) > 4096;
-}
+// Moved to line ~76 to avoid forward reference
 
-const SING_BOX_BIN = getenv("TACHYON_SING_BOX_BIN") || "/usr/bin/sing-box";
+// Moved to line ~66 to avoid forward reference
 
 function create_component_backup(component) {
     component = normalize_component_name(component);
