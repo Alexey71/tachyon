@@ -20,6 +20,7 @@ let option = common.option;
 let list_option = common.list_option;
 let bool_option = common.bool_option;
 let object_or_empty = common.object_or_empty;
+let shell_quote = common.shell_quote;
 
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const CONFIG_DIR = getenv("TACHYON_CONFIG_DIR") || "/etc/config";
@@ -48,9 +49,6 @@ const CHILD_ITEM_TYPES = [
     "priority_level"
 ];
 
-function shell_quote(value) {
-    return "'" + replace(as_string(value), /'/g, "'\\''") + "'";
-}
 
 function command_output(command) {
     let pipe = fs.popen(command, "r");

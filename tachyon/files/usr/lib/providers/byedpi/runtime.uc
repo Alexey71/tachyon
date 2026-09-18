@@ -18,6 +18,7 @@ let command_success_from_args = common.command_success_from_args;
 let object_or_empty = common.object_or_empty;
 let array_or_empty = common.array_or_empty;
 let option = common.option;
+let read_json_file = common.read_json_file;
 
 const CONFIG_NAME = getenv("TACHYON_CONFIG_NAME") || "tachyon";
 const LIB_DIR = getenv("TACHYON_LIB") || "/usr/lib/tachyon";
@@ -383,17 +384,6 @@ function runtime_tag(base, postfix) {
     return runtime_constants.tag(base, postfix);
 }
 
-function read_json_file(path) {
-    let data = fs.readfile(path);
-    if (data == null)
-        return null;
-    try {
-        return json(data);
-    }
-    catch (e) {
-        return null;
-    }
-}
 
 function value_contains(value, needle) {
     if (type(value) == "array") {

@@ -7,6 +7,9 @@ let as_string = common.as_string;
 let object_or_empty = common.object_or_empty;
 let array_or_empty = common.array_or_empty;
 let write_json = common.write_json;
+let read_json_file = common.read_json_file;
+let write_json_file = common.write_json_file;
+let shell_quote = common.shell_quote;
 
 function first_non_ws_char(value) {
     let m = match(as_string(value), /^[ \t\r\n]*([^ \t\r\n])/);
@@ -339,10 +342,6 @@ function read_file(path) {
     return fs.readfile(path);
 }
 
-function read_json_file(path) {
-    let data = read_file(path);
-    return data == null ? null : json_decode_text(data);
-}
 
 function reality_public_key_valid(value) {
     return match(as_string(value), /^[A-Za-z0-9_-]{43}$/) != null;
@@ -422,9 +421,6 @@ function validate_subscription(path) {
     return usable_count > 0;
 }
 
-function write_json_file(path, value) {
-    return fs.writefile(path, sprintf("%J", value) + "\n");
-}
 
 function canonical_runtime_value(value) {
     if (type(value) == "array") {
@@ -3117,9 +3113,6 @@ function temp_path(prefix) {
     return sprintf("/tmp/%s.%d.%d", prefix, stamp[0], stamp[1]);
 }
 
-function shell_quote(value) {
-    return "'" + replace(as_string(value), /'/g, "'\\''") + "'";
-}
 
 function gzip_decode_file(input_file, output_file) {
     if (as_string(input_file) == "" || as_string(output_file) == "" || !fs.stat(input_file))

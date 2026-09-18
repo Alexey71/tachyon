@@ -37,6 +37,7 @@ let object_or_empty = common.object_or_empty;
 let array_or_empty = common.array_or_empty;
 let shell_quote = common.shell_quote;
 let command_from_args = common.command_from_args;
+let read_json_file = common.read_json_file;
 
 function normalize_status(status) {
     status = int(status);
@@ -100,10 +101,6 @@ function parse_json(value) {
     }
 }
 
-function read_json_file(path) {
-    let data = fs.readfile(as_string(path));
-    return data == null ? null : parse_json(data);
-}
 
 function trim_newlines(value) {
     return replace(as_string(value), /[\r\n]+$/g, "");
