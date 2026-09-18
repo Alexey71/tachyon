@@ -10761,6 +10761,24 @@ function createSectionContent(section) {
 
   o = section.taboption(
     "settings",
+    form.ListValue,
+    "packet_encoding",
+    _("UDP over TCP (Packet Encoding)"),
+    _(
+      "Encapsulates UDP inside a TCP/TLS stream (UoT / xudp). Essential for mobile/LTE operators (MegaFon, MTS, etc.) that throttle, block, or drop incoming raw UDP in games (GTA RP, CS, etc.).",
+    ),
+  );
+  o.value("", _("Auto (from server link)"));
+  o.value("xudp", _("Force xudp (UDP over TCP - recommended for LTE / games)"));
+  o.value("packetaddr", _("Force packetaddr"));
+  o.value("disabled", _("Disabled (raw UDP)"));
+  o.default = "";
+  o.rmempty = true;
+  o.depends("action", "connection");
+  o.modalonly = true;
+
+  o = section.taboption(
+    "settings",
     form.Flag,
     "mixed_proxy_enabled",
     _("Enable Mixed Proxy"),
@@ -10940,7 +10958,15 @@ function createSectionContent(section) {
   geoipModeOption.value("exclude", _("Exclude selected countries"));
   geoipModeOption.value("include", _("Include selected countries"));
   geoipModeOption.default = "exclude";
+  geoipModeOption.rmempty = false;
   geoipModeOption.modalonly = true;
+  geoipModeOption.load = function (section_id) {
+    let mode = uci.get(UCI_PACKAGE, section_id, "geoip_mode");
+    if (mode === "exclude" || mode === "include") return mode;
+    let country = uci.get(UCI_PACKAGE, section_id, "geoip_country");
+    if (country === "non-ru") return "exclude";
+    return "exclude";
+  };
   [
     "connection",
     "awg",
@@ -10954,6 +10980,9 @@ function createSectionContent(section) {
     "zapret",
     "zapret2",
     "byedpi",
+    "wdtt",
+    "olcrtc",
+    "fptn",
   ].forEach((act) => geoipModeOption.depends("action", act));
 
   o = section.taboption(
@@ -11007,6 +11036,9 @@ function createSectionContent(section) {
     "zapret",
     "zapret2",
     "byedpi",
+    "wdtt",
+    "olcrtc",
+    "fptn",
   ].forEach((act) => o.depends("action", act));
 
   const domainConditionOption = addTextConditionField(section, {
@@ -12602,7 +12634,12 @@ function showSectionRulesModal(section_id) {
   const ruleSets = getCleanList("rule_set");
   const domainIpLists = getCleanList("domain_ip_lists");
   const geosite = getCleanList("geosite");
-  const geoip = getCleanList("geoip");
+  let geoipCountry = getCleanList("geoip_country");
+  if (geoipCountry.length === 1 && geoipCountry[0] === "non-ru") {
+    geoipCountry = ["ru"];
+  }
+  const geoipMode = uci.get(UCI_PACKAGE, section_id, "geoip_mode") || "exclude";
+  const geoip = geoipCountry.map((c) => (geoipMode === "exclude" ? "NOT " : "") + c.toUpperCase());
   const sourceIp = getCleanList("source_ip_cidr");
   const ports = getCleanList("ports");
   const dscp = getCleanList("dscp");

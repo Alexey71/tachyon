@@ -2,7 +2,11 @@
 set -eo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TACHYON_LIB="$ROOT_DIR/tachyon/files/usr/lib"
+if [ -d "$ROOT_DIR/tachyon/files/usr/lib" ]; then
+  TACHYON_LIB="$ROOT_DIR/tachyon/files/usr/lib"
+else
+  TACHYON_LIB="/usr/lib/tachyon"
+fi
 GENERATOR_UC="$TACHYON_LIB/singbox/generator.uc"
 WORK_DIR="$(mktemp -d)"
 

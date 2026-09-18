@@ -707,13 +707,24 @@ function log_file_lines(path, level, prefix) {
 }
 
 function sing_box_check(config_path, output_path) {
-    let status = command_status(
+    let check_cmd = "GODEBUG=\"madvdontneed=1\" GOGC=\"30\" " +
         command_from_args([ "sing-box", "-c", config_path, "check" ]) +
-        " >" + shell_quote(output_path) + " 2>&1"
-    );
+        " >" + shell_quote(output_path) + " 2>&1";
+    let status = command_status(check_cmd);
+    if ((status == 247 || status == 137) && fs.stat("/proc/sys/vm/drop_caches") != null) {
+        system("sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null");
+        check_cmd = "GODEBUG=\"madvdontneed=1\" GOGC=\"15\" " +
+            command_from_args([ "sing-box", "-c", config_path, "check" ]) +
+            " >" + shell_quote(output_path) + " 2>&1";
+        status = command_status(check_cmd);
+    }
     let reason = status == 0 ? "" : first_nonblank_line(output_path);
-    if (status != 0 && reason == "")
-        reason = "exit status " + status;
+    if (status != 0 && reason == "") {
+        if (status == 247 || status == 137)
+            reason = "Out of memory (OOM killed, exit status " + status + ")";
+        else
+            reason = "exit status " + status;
+    }
     return { status, reason };
 }
 

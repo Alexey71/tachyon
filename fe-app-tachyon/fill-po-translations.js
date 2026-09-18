@@ -250,6 +250,13 @@ const dictionary = {
   "Concurrency": "Параллелизм",
   "Connection URL": "URL подключения",
   "Connection": "Соединение",
+  "Cache": "Кэш",
+  "UDP over TCP (Packet Encoding)": "UDP over TCP (инкапсуляция UDP)",
+  "Encapsulates UDP inside a TCP/TLS stream (UoT / xudp). Essential for mobile/LTE operators (MegaFon, MTS, etc.) that throttle, block, or drop incoming raw UDP in games (GTA RP, CS, etc.).": "Инкапсулирует UDP внутри TCP/TLS потока (UoT / xudp). Критично для мобильных/LTE операторов (МегаФон, МТС и др.), которые блокируют, глушат или дропают входящий «сырой» UDP в онлайн-играх (GTA RP, CS и др.).",
+  "Auto (from server link)": "Авто (из ссылки сервера)",
+  "Force xudp (UDP over TCP - recommended for LTE / games)": "Принудительно xudp (UDP over TCP — рекомендовано для LTE / игр)",
+  "Force packetaddr": "Принудительно packetaddr",
+  "Disabled (raw UDP)": "Отключено (обычный сырой UDP)",
 
   // Валидация
   "This field is required": "Это поле обязательно",

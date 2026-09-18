@@ -1077,13 +1077,13 @@ function save_persistent_selector_choice(group_tag, proxy_tag) {
 function extract_clean_fptn_token(raw) {
     let text = trim(as_string(raw));
     if (text == "") return "";
-    let m = match(text, /(?:access_token|token)[\s:=]+["']?([A-Za-z0-9_\-\.]{8,})["']?/i);
+    let m = match(text, /(access_token|token)[[:space:]:=]+["']?([A-Za-z0-9_.-]{8,})["']?/i);
+    if (m && m[2])
+        return trim(m[2]);
+    m = match(text, /^["']([A-Za-z0-9_.-]{8,})["']$/);
     if (m && m[1])
         return trim(m[1]);
-    m = match(text, /^["']([A-Za-z0-9_\-\.]{8,})["']$/);
-    if (m && m[1])
-        return trim(m[1]);
-    m = match(text, /^([A-Za-z0-9_\-\.]{8,})$/);
+    m = match(text, /^([A-Za-z0-9_.-]{8,})$/);
     if (m && m[1])
         return trim(m[1]);
     return "";

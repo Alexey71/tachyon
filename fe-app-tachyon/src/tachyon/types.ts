@@ -321,7 +321,8 @@ export namespace Tachyon {
     action?: RuleAction;
     connection_type?: LegacyConnectionType;
     proxy_config_type?: ProxyConfigType;
-    geoip_country?: 'all' | 'non-ru' | 'ru' | 'us' | 'eu' | 'cn';
+    geoip_country?: string | string[];
+    geoip_mode?: 'exclude' | 'include';
     node?: string;
     rule_set?: string[];
     rule_set_with_subnets?: string[];

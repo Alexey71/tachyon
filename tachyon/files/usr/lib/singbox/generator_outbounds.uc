@@ -681,6 +681,8 @@ function manual_shadowsocks_outbound(link, tag_name) {
         outbound.plugin = as_string(query.plugin);
     if (as_string(query["plugin-opts"] || "") != "")
         outbound.plugin_opts = as_string(query["plugin-opts"]);
+    if (as_string(query.uot || query.udp_over_tcp || query["udp-over-tcp"] || "") != "")
+        outbound.udp_over_tcp = true;
     return outbound;
 }
 
@@ -706,7 +708,7 @@ function manual_vless_outbound(link, tag_name) {
     let encryption = as_string(query.encryption || "");
     if (encryption != "" && encryption != "none")
         outbound.encryption = encryption;
-    let packet_encoding = as_string(query.packetEncoding || "");
+    let packet_encoding = lc(trim(as_string(query.packetEncoding || query.packet_encoding || query["packet-encoding"] || query.packetencoding || "")));
     if (packet_encoding == "xudp" || packet_encoding == "packetaddr")
         outbound.packet_encoding = packet_encoding;
     apply_link_tls(outbound, "vless", query);
@@ -755,6 +757,10 @@ function manual_vmess_outbound(link, tag_name) {
 
     if (vmess_json_value(vmess.aid) != "")
         outbound.alter_id = int(vmess.aid || 0);
+
+    let packet_encoding = lc(trim(as_string(vmess.packetEncoding || vmess["packet-encoding"] || vmess.packet_encoding || vmess.packetencoding || "")));
+    if (packet_encoding == "xudp" || packet_encoding == "packetaddr")
+        outbound.packet_encoding = packet_encoding;
 
     let network = lc(vmess_json_value(vmess.net));
     if (vmess.tls === true || vmess.tls == "tls" || vmess.tls == "true") {
@@ -1383,6 +1389,34 @@ function apply_section_detour_to_connection_outbounds(config, start_index, detou
     }
 }
 
+function apply_section_packet_encoding_to_connection_outbounds(config, start_index, encoding) {
+    encoding = lc(trim(as_string(encoding || "")));
+    if (encoding == "" || encoding == "auto")
+        return;
+
+    let outbounds = array_or_empty(config.outbounds);
+    for (let i = int(start_index || 0); i < length(outbounds); i++) {
+        let outbound = outbounds[i];
+        if (type(outbound) != "object")
+            continue;
+
+        let outbound_type = lc(as_string(outbound.type || ""));
+        if (outbound_type == "vless" || outbound_type == "vmess") {
+            if (encoding == "disabled" || encoding == "none" || encoding == "off") {
+                delete outbound.packet_encoding;
+            } else if (encoding == "xudp" || encoding == "packetaddr") {
+                outbound.packet_encoding = encoding;
+            }
+        } else if (outbound_type == "shadowsocks") {
+            if (encoding == "xudp" || encoding == "packetaddr" || encoding == "1" || encoding == "true") {
+                outbound.udp_over_tcp = true;
+            } else if (encoding == "disabled" || encoding == "none" || encoding == "off" || encoding == "0") {
+                delete outbound.udp_over_tcp;
+            }
+        }
+    }
+}
+
 function add_connections_outbound(config, section, taken) {
     let section_name = section[".name"];
     let selector_tags = [];
@@ -1402,6 +1436,11 @@ function add_connections_outbound(config, section, taken) {
     );
     add_connection_interfaces(config, state, section, taken, selector_tags, urltest_candidate_tags);
     add_connection_json_outbounds(config, state, section, taken, selector_tags, urltest_candidate_tags);
+    apply_section_packet_encoding_to_connection_outbounds(
+        config,
+        cascade_start,
+        connections.packet_encoding(section)
+    );
 
     if (length(selector_tags) == 0) {
         if (ctx.deferred_sections && ctx.deferred_sections[section_name])
@@ -1907,5 +1946,6 @@ return {
     add_byedpi_outbound,
     add_wdtt_outbound,
     add_olcrtc_outbound,
-    add_fptn_outbound
+    add_fptn_outbound,
+    apply_section_packet_encoding_to_connection_outbounds
 };

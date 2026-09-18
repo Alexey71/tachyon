@@ -851,6 +851,11 @@ function normalize_vless_encryption(value) {
     return value != "" && value != "none" ? value : "";
 }
 
+function normalize_packet_encoding(value) {
+    value = lc(trim(as_string(value)));
+    return value == "xudp" || value == "packetaddr" ? value : "";
+}
+
 function process_vless(raw, url) {
     if (url.host == "" || is_dummy_server(url.host, url.port) || !valid_port(url.port) || url.userinfo == "")
         return null;
@@ -859,9 +864,7 @@ function process_vless(raw, url) {
     if (flow != "" && flow != "xtls-rprx-vision")
         return null;
 
-    let packet_encoding = url.query.packetEncoding || "";
-    if (packet_encoding != "xudp" && packet_encoding != "packetaddr")
-        packet_encoding = "";
+    let packet_encoding = normalize_packet_encoding(url.query.packetEncoding || url.query.packet_encoding || url.query["packet-encoding"] || url.query.packetencoding || "");
     let encryption = normalize_vless_encryption(url.query.encryption || "");
 
     let outbound = {
@@ -1221,6 +1224,10 @@ function process_vmess_json(raw, decoded) {
     if (as_string(vmess.aid) != "")
         outbound.alter_id = alter_id;
 
+    let packet_encoding = normalize_packet_encoding(vmess.packetEncoding || vmess["packet-encoding"] || vmess.packet_encoding || vmess.packetencoding || "");
+    if (packet_encoding != "")
+        outbound.packet_encoding = packet_encoding;
+
     let network = string_value(vmess.net);
     if (vmess.tls === true || vmess.tls == "tls" || vmess.tls == "true") {
         let fingerprint = normalize_utls_fingerprint(string_value(vmess.fp));
@@ -1537,11 +1544,6 @@ function clash_yaml_records(input_file) {
     return records;
 }
 
-function normalize_packet_encoding(value) {
-    value = as_string(value);
-    return value == "xudp" || value == "packetaddr" ? value : "";
-}
-
 function clash_vless_flow_supported(flow) {
     return flow == null || flow == "" || flow == "xtls-rprx-vision";
 }
@@ -1627,7 +1629,10 @@ function parse_clash_record(record) {
         let password = as_string(record.password);
         if (method == "" || method == "ss" || password == "")
             return null;
-        return { type: "shadowsocks", tag: name, server: server, server_port: port, method: method, password: password };
+        let outbound = { type: "shadowsocks", tag: name, server: server, server_port: port, method: method, password: password };
+        if (is_true(record.uot) || is_true(record.udp_over_tcp) || is_true(record["udp-over-tcp"]))
+            outbound.udp_over_tcp = true;
+        return outbound;
     }
     if (proxy_type == "vmess") {
         let uuid = as_string(record.uuid);
@@ -1643,6 +1648,9 @@ function parse_clash_record(record) {
         };
         if (as_string(record.alterId || record["alter-id"]) != "")
             outbound.alter_id = int(record.alterId || record["alter-id"]);
+        let packet_encoding = normalize_packet_encoding(record["packet-encoding"] || record.packetEncoding || record.packet_encoding || record.packetencoding || "");
+        if (packet_encoding != "")
+            outbound.packet_encoding = packet_encoding;
         add_clash_tls(outbound, options);
         add_clash_transport(outbound, options);
         return outbound;
@@ -1650,7 +1658,7 @@ function parse_clash_record(record) {
     if (proxy_type == "vless") {
         let uuid = as_string(record.uuid);
         let flow = as_string(record.flow);
-        let packet_encoding = normalize_packet_encoding(record["packet-encoding"] || record.packetEncoding || "");
+        let packet_encoding = normalize_packet_encoding(record["packet-encoding"] || record.packetEncoding || record.packet_encoding || record.packetencoding || "");
         let encryption = normalize_vless_encryption(record.encryption || "");
         if (uuid == "" || !clash_vless_flow_supported(flow))
             return null;

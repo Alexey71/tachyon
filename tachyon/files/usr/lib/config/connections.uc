@@ -732,15 +732,22 @@ function geoip_country_list(section) {
 }
 
 function geoip_country_mode(section) {
-    let raw = option(section, "geoip_country", "all");
     let mode = lc(trim(option(section, "geoip_mode", "")));
     if (mode == "exclude" || mode == "include")
         return mode;
 
+    let raw = option(section, "geoip_country", "all");
     if (raw == "non-ru")
         return "exclude";
 
-    return "include";
+    return "exclude";
+}
+
+function packet_encoding(section) {
+    let val = lc(trim(option(section, "packet_encoding", "")));
+    if (val == "xudp" || val == "packetaddr" || val == "disabled" || val == "none")
+        return val;
+    return "";
 }
 
 function geoip_country_value(section) {
@@ -1744,5 +1751,6 @@ return {
     section_has_routing_matchers,
     section_is_active_provider,
     active_provider_sections,
-    active_provider_section_index
+    active_provider_section_index,
+    packet_encoding
 };

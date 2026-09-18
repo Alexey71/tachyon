@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-18 16:39+0300\n"
-"PO-Revision-Date: 2026-09-18 16:39+0300\n"
+"POT-Creation-Date: 2026-09-18 19:08+0300\n"
+"PO-Revision-Date: 2026-09-18 19:08+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -608,6 +608,9 @@ msgstr "Авто"
 msgid "Auto (cooperative with SQM/CAKE)"
 msgstr "Авто (кооперация с SQM/CAKE)"
 
+msgid "Auto (from server link)"
+msgstr "Авто (из ссылки сервера)"
+
 msgid "Auto Modes (--auto)"
 msgstr "Авто-режимы (--auto)"
 
@@ -867,7 +870,7 @@ msgid "CA Certificate"
 msgstr "CA-сертификат"
 
 msgid "Cache"
-msgstr ""
+msgstr "Кэш"
 
 msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
 msgstr "Кэшировать все встроенные списки и базы данных, даже если они не выбраны ни в одной секции. Рекомендуется при большом объёме хранилища или USB-накопителе."
@@ -1427,6 +1430,9 @@ msgstr "Отключить протокол QUIC для улучшения со�
 msgid "Disabled"
 msgstr "Отключено"
 
+msgid "Disabled (raw UDP)"
+msgstr "Отключено (обычный сырой UDP)"
+
 msgid "Disabling interception is incompatible with action=zapret2 because Tachyon sends matched traffic through NFQUEUE."
 msgstr "Отключение перехвата несовместимо с action=zapret2, потому что Tachyon направляет совпавший трафик через NFQUEUE."
 
@@ -1810,6 +1816,9 @@ msgstr "Включает фоновый демон, который опраши�
 
 msgid "Enables the background watchdog process to monitor services and auto-recover on failures."
 msgstr "Включает фоновый процесс watchdog для мониторинга сервисов и автоматического восстановления при сбоях."
+
+msgid "Encapsulates UDP inside a TCP/TLS stream (UoT / xudp). Essential for mobile/LTE operators (MegaFon, MTS, etc.) that throttle, block, or drop incoming raw UDP in games (GTA RP, CS, etc.)."
+msgstr "Инкапсулирует UDP внутри TCP/TLS потока (UoT / xudp). Критично для мобильных/LTE операторов (МегаФон, МТС и др.), которые блокируют, глушат или дропают входящий «сырой» UDP в онлайн-играх (GTA RP, CS и др.)."
 
 msgid "End of allowed daily access window in HH:MM format (24-hour clock)."
 msgstr "Конец разрешенного ежедневного интервала доступа в формате ЧЧ:ММ (24-часовой формат)."
@@ -2215,6 +2224,12 @@ msgstr "Методы спуфинга (fooling)"
 
 msgid "Force immediate download and refresh of all remote lists and rule sets"
 msgstr "Принудительно скачать и обновить все удаленные списки и наборы правил"
+
+msgid "Force packetaddr"
+msgstr "Принудительно packetaddr"
+
+msgid "Force xudp (UDP over TCP - recommended for LTE / games)"
+msgstr "Принудительно xudp (UDP over TCP — рекомендовано для LTE / игр)"
 
 msgid "Forced device routing"
 msgstr "Принудительная маршрутизация устройств"
@@ -5479,6 +5494,9 @@ msgstr "UDP (незащищённый DNS)"
 
 msgid "UDP / QUIC protocols"
 msgstr "UDP / QUIC протоколы"
+
+msgid "UDP over TCP (Packet Encoding)"
+msgstr "UDP over TCP (инкапсуляция UDP)"
 
 msgid "Ukraine (ua)"
 msgstr "Украина (ua)"

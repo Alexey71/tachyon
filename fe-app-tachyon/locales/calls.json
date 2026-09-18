@@ -18,7 +18,7 @@
     "call": ".lst Lists",
     "key": ".lst Lists",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12670"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12707"
     ]
   },
   {
@@ -689,28 +689,28 @@
     "call": "Add URLs or local paths to .lst lists containing domains and subnets.",
     "key": "Add URLs or local paths to .lst lists containing domains and subnets.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11189"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11221"
     ]
   },
   {
     "call": "Add URLs or local paths to .lst lists containing domains. IP entries are ignored.",
     "key": "Add URLs or local paths to .lst lists containing domains. IP entries are ignored.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11213"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11245"
     ]
   },
   {
     "call": "Add URLs or local paths to .srs / .json / .lst / .txt lists. Only domain rules are supported.",
     "key": "Add URLs or local paths to .srs / .json / .lst / .txt lists. Only domain rules are supported.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11164"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11196"
     ]
   },
   {
     "call": "Add URLs or local paths to .srs / .json / .lst / .txt lists. Subnets are ignored by default.",
     "key": "Add URLs or local paths to .srs / .json / .lst / .txt lists. Subnets are ignored by default.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11135"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11167"
     ]
   },
   {
@@ -1088,7 +1088,7 @@
     "call": "All traffic from these IP addresses will be routed through the section unconditionally, ignoring all other conditions.",
     "key": "All traffic from these IP addresses will be routed through the section unconditionally, ignoring all other conditions.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11245"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11277"
     ]
   },
   {
@@ -1438,14 +1438,14 @@
     "call": "Apply rules of this section only to selected protocols.",
     "key": "Apply rules of this section only to selected protocols.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11343"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11375"
     ]
   },
   {
     "call": "Apply section rules only to the specified local IP addresses",
     "key": "Apply section rules only to the specified local IP addresses",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11236"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11268"
     ]
   },
   {
@@ -1554,6 +1554,13 @@
     ]
   },
   {
+    "call": "Auto (from server link)",
+    "key": "Auto (from server link)",
+    "places": [
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10771"
+    ]
+  },
+  {
     "call": "Auto Modes (--auto)",
     "key": "Auto Modes (--auto)",
     "places": [
@@ -1605,7 +1612,7 @@
     "call": "Auto-detected Domains",
     "key": "Auto-detected Domains",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11045"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11077"
     ]
   },
   {
@@ -1799,7 +1806,7 @@
     "call": "Belarus (by)",
     "key": "Belarus (by)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10980"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11009"
     ]
   },
   {
@@ -1862,8 +1869,8 @@
     "call": "BitTorrent / P2P",
     "key": "BitTorrent / P2P",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11326",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11345"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11358",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11377"
     ]
   },
   {
@@ -2059,7 +2066,7 @@
     "call": "Built-in rule sets",
     "key": "Built-in rule sets",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11066"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11098"
     ]
   },
   {
@@ -2542,7 +2549,7 @@
     "call": "China (cn)",
     "key": "China (cn)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10977"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11006"
     ]
   },
   {
@@ -2584,7 +2591,7 @@
     "call": "Choose whether to route traffic to all destinations except selected countries (Exclude) or only to selected countries (Include).",
     "key": "Choose whether to route traffic to all destinations except selected countries (Exclude) or only to selected countries (Include).",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10936"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10954"
     ]
   },
   {
@@ -2620,7 +2627,7 @@
     "call": "Clear",
     "key": "Clear",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12338"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12370"
     ]
   },
   {
@@ -2749,7 +2756,7 @@
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:21074",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:21115",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:8600",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12699",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12736",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:4078",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1835",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2400",
@@ -2846,7 +2853,7 @@
     "call": "Community Lists",
     "key": "Community Lists",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12666"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12703"
     ]
   },
   {
@@ -3182,7 +3189,7 @@
     "call": "Country code (e.g. ru, us, de)",
     "key": "Country code (e.g. ru, us, de)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10983"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11012"
     ]
   },
   {
@@ -3536,7 +3543,7 @@
     "call": "Device filter",
     "key": "Device filter",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11235"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11267"
     ]
   },
   {
@@ -3747,6 +3754,13 @@
     ]
   },
   {
+    "call": "Disabled (raw UDP)",
+    "key": "Disabled (raw UDP)",
+    "places": [
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10774"
+    ]
+  },
+  {
     "call": "Disabling interception is incompatible with action=zapret2 because Tachyon sends matched traffic through NFQUEUE.",
     "key": "Disabling interception is incompatible with action=zapret2 because Tachyon sends matched traffic through NFQUEUE.",
     "places": [
@@ -3773,8 +3787,8 @@
     "call": "DNS",
     "key": "DNS",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11329",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11348"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11361",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11380"
     ]
   },
   {
@@ -3934,7 +3948,7 @@
     "call": "DNS server addresses for domain resolution in this section (e.g. 1.1.1.1, https://cloudflare-dns.com/dns-query).",
     "key": "DNS server addresses for domain resolution in this section (e.g. 1.1.1.1, https://cloudflare-dns.com/dns-query).",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11294"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11326"
     ]
   },
   {
@@ -4027,14 +4041,14 @@
     "call": "DNS: Resolved %s to %s",
     "key": "DNS: Resolved %s to %s",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12484"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12516"
     ]
   },
   {
     "call": "DNS: Resolved to %s (no subnet rules matched)",
     "key": "DNS: Resolved to %s (no subnet rules matched)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12534"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12566"
     ]
   },
   {
@@ -4122,14 +4136,14 @@
     "call": "Domain and IP lists",
     "key": "Domain and IP lists",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11188"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11220"
     ]
   },
   {
     "call": "Domain lists",
     "key": "Domain lists",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11212"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11244"
     ]
   },
   {
@@ -4150,15 +4164,15 @@
     "call": "Domains",
     "key": "Domains",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11016",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12667"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11048",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12704"
     ]
   },
   {
     "call": "Domains automatically detected by Smart Detect or added via Telegram bot. You can manually edit or remove them here.",
     "key": "Domains automatically detected by Smart Detect or added via Telegram bot. You can manually edit or remove them here.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11046"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11078"
     ]
   },
   {
@@ -4369,8 +4383,8 @@
     "call": "DSCP marks (QoS)",
     "key": "DSCP marks (QoS)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11310",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12676"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11342",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12713"
     ]
   },
   {
@@ -4399,7 +4413,7 @@
     "call": "e.g. google.com, 1.1.1.1, 443",
     "key": "e.g. google.com, 1.1.1.1, 443",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12336"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12368"
     ]
   },
   {
@@ -4577,14 +4591,14 @@
     "call": "Enable Mixed Proxy",
     "key": "Enable Mixed Proxy",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10766"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10784"
     ]
   },
   {
     "call": "Enable Mixed Proxy Authentication",
     "key": "Enable Mixed Proxy Authentication",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10811"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10829"
     ]
   },
   {
@@ -4700,6 +4714,13 @@
     "key": "Enables the background watchdog process to monitor services and auto-recover on failures.",
     "places": [
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2944"
+    ]
+  },
+  {
+    "call": "Encapsulates UDP inside a TCP/TLS stream (UoT / xudp). Essential for mobile/LTE operators (MegaFon, MTS, etc.) that throttle, block, or drop incoming raw UDP in games (GTA RP, CS, etc.).",
+    "key": "Encapsulates UDP inside a TCP/TLS stream (UoT / xudp). Essential for mobile/LTE operators (MegaFon, MTS, etc.) that throttle, block, or drop incoming raw UDP in games (GTA RP, CS, etc.).",
+    "places": [
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10767"
     ]
   },
   {
@@ -4876,7 +4897,7 @@
     "call": "Error running trace:",
     "key": "Error running trace:",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12554"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12586"
     ]
   },
   {
@@ -4940,7 +4961,7 @@
     "call": "Exclude selected countries",
     "key": "Exclude selected countries",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10940"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10958"
     ]
   },
   {
@@ -4977,7 +4998,7 @@
     "call": "Exclude traffic types",
     "key": "Exclude traffic types",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11321"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11353"
     ]
   },
   {
@@ -4991,7 +5012,7 @@
     "call": "Excluded devices",
     "key": "Excluded devices",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11255"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11287"
     ]
   },
   {
@@ -5013,7 +5034,7 @@
     "call": "Expose this section as a local HTTP+SOCKS proxy",
     "key": "Expose this section as a local HTTP+SOCKS proxy",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10767"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10785"
     ]
   },
   {
@@ -5712,7 +5733,7 @@
     "call": "Finland (fi)",
     "key": "Finland (fi)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10974"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11003"
     ]
   },
   {
@@ -5789,10 +5810,24 @@
     ]
   },
   {
+    "call": "Force packetaddr",
+    "key": "Force packetaddr",
+    "places": [
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10773"
+    ]
+  },
+  {
+    "call": "Force xudp (UDP over TCP - recommended for LTE / games)",
+    "key": "Force xudp (UDP over TCP - recommended for LTE / games)",
+    "places": [
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10772"
+    ]
+  },
+  {
     "call": "Forced device routing",
     "key": "Forced device routing",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11244"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11276"
     ]
   },
   {
@@ -5849,7 +5884,7 @@
     "call": "France (fr)",
     "key": "France (fr)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10973"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11002"
     ]
   },
   {
@@ -6002,28 +6037,28 @@
     "call": "GeoIP Countries",
     "key": "GeoIP Countries",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10963"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10992"
     ]
   },
   {
     "call": "GeoIP Mode",
     "key": "GeoIP Mode",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10935"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10953"
     ]
   },
   {
     "call": "GeoSite / GeoIP",
     "key": "GeoSite / GeoIP",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12672"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12709"
     ]
   },
   {
     "call": "Germany (de)",
     "key": "Germany (de)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10970"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10999"
     ]
   },
   {
@@ -6386,8 +6421,8 @@
     "call": "HTTP",
     "key": "HTTP",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11330",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11349"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11362",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11381"
     ]
   },
   {
@@ -6572,7 +6607,7 @@
     "call": "Include selected countries",
     "key": "Include selected countries",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10941"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10959"
     ]
   },
   {
@@ -7108,7 +7143,7 @@
     "key": "Invalid port number. Must be between 1 and 65535",
     "places": [
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:404",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10804",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10822",
       "src/validators/validateShadowsocksUrl.ts:91"
     ]
   },
@@ -7486,7 +7521,7 @@
     "call": "IP Addresses (IP CIDR)",
     "key": "IP Addresses (IP CIDR)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12668"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12705"
     ]
   },
   {
@@ -7525,7 +7560,7 @@
     "call": "IPs",
     "key": "IPs",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11056"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11088"
     ]
   },
   {
@@ -7610,7 +7645,7 @@
     "call": "Japan (jp)",
     "key": "Japan (jp)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10978"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11007"
     ]
   },
   {
@@ -7764,7 +7799,7 @@
     "call": "Kazakhstan (kz)",
     "key": "Kazakhstan (kz)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10981"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11010"
     ]
   },
   {
@@ -8238,28 +8273,28 @@
     "call": "Match destination IPs or subnets",
     "key": "Match destination IPs or subnets",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11057"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11089"
     ]
   },
   {
     "call": "Match destination ports. Use a single port or a range",
     "key": "Match destination ports. Use a single port or a range",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11303"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11335"
     ]
   },
   {
     "call": "Match Found",
     "key": "Match Found",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12406"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12438"
     ]
   },
   {
     "call": "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)",
     "key": "Match traffic by packet DSCP mark (assigned in Windows via Policy-Based QoS). Examples: 46 (EF), 0x2e, 34 (AF41)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11311"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11343"
     ]
   },
   {
@@ -8378,21 +8413,21 @@
     "call": "Mixed Proxy Password",
     "key": "Mixed Proxy Password",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10868"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10886"
     ]
   },
   {
     "call": "Mixed Proxy Port",
     "key": "Mixed Proxy Port",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10784"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10802"
     ]
   },
   {
     "call": "Mixed Proxy Username",
     "key": "Mixed Proxy Username",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10827"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10845"
     ]
   },
   {
@@ -8551,7 +8586,7 @@
     "call": "Netherlands (nl)",
     "key": "Netherlands (nl)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10971"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11000"
     ]
   },
   {
@@ -8754,7 +8789,7 @@
     "call": "No Custom Rules Matched",
     "key": "No Custom Rules Matched",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12524"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12556"
     ]
   },
   {
@@ -9089,7 +9124,7 @@
     "call": "Not set",
     "key": "Not set",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12613"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12650"
     ]
   },
   {
@@ -9633,7 +9668,7 @@
     "call": "Password cannot be empty",
     "key": "Password cannot be empty",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10899"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10917"
     ]
   },
   {
@@ -9912,7 +9947,7 @@
     "call": "Port cannot be empty",
     "key": "Port cannot be empty",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10796"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10814"
     ]
   },
   {
@@ -9927,7 +9962,7 @@
     "call": "Port for the local mixed proxy of this section",
     "key": "Port for the local mixed proxy of this section",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10785"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10803"
     ]
   },
   {
@@ -9956,8 +9991,8 @@
     "call": "Ports",
     "key": "Ports",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11302",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12675"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11334",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12712"
     ]
   },
   {
@@ -10087,7 +10122,7 @@
     "key": "Priority",
     "places": [
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10649",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12471"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12503"
     ]
   },
   {
@@ -10199,7 +10234,7 @@
     "call": "Protocol for the routed DNS resolver.",
     "key": "Protocol for the routed DNS resolver.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11281"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11313"
     ]
   },
   {
@@ -10375,8 +10410,8 @@
     "call": "QUIC (HTTP/3)",
     "key": "QUIC (HTTP/3)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11327",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11346"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11359",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11378"
     ]
   },
   {
@@ -10414,8 +10449,8 @@
     "call": "RDP",
     "key": "RDP",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11333",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11352"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11365",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11384"
     ]
   },
   {
@@ -10724,7 +10759,7 @@
     "call": "Require a username and password for the local mixed proxy",
     "key": "Require a username and password for the local mixed proxy",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10812"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10830"
     ]
   },
   {
@@ -10762,7 +10797,7 @@
     "call": "Resolve domain names before routing so sing-box can use real destination IPs.",
     "key": "Resolve domain names before routing so sing-box can use real destination IPs.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10910"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10928"
     ]
   },
   {
@@ -10777,14 +10812,14 @@
     "call": "Resolve matched domains through an encrypted DNS server of this section instead of FakeIP. DNS queries traverse the same proxy as the section's outbound.",
     "key": "Resolve matched domains through an encrypted DNS server of this section instead of FakeIP. DNS queries traverse the same proxy as the section's outbound.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11267"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11299"
     ]
   },
   {
     "call": "Resolve real IP for routing",
     "key": "Resolve real IP for routing",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10909"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10927"
     ]
   },
   {
@@ -11043,14 +11078,14 @@
     "call": "Route community list subnets (IP/CIDR)",
     "key": "Route community list subnets (IP/CIDR)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11120"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11152"
     ]
   },
   {
     "call": "Route IP subnets associated with built-in community lists (e.g. Discord voice/media). Disable this if community subnets overlap with CDN/Anycast networks (such as Cloudflare/Google Cloud) and interfere with unrelated services (e.g. game launchers).",
     "key": "Route IP subnets associated with built-in community lists (e.g. Discord voice/media). Disable this if community subnets overlap with CDN/Anycast networks (such as Cloudflare/Google Cloud) and interfere with unrelated services (e.g. game launchers).",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11121"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11153"
     ]
   },
   {
@@ -11093,21 +11128,21 @@
     "call": "Routed DNS",
     "key": "Routed DNS",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11266"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11298"
     ]
   },
   {
     "call": "Routed DNS Protocol",
     "key": "Routed DNS Protocol",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11280"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11312"
     ]
   },
   {
     "call": "Routed DNS Servers",
     "key": "Routed DNS Servers",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11293"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11325"
     ]
   },
   {
@@ -11128,7 +11163,7 @@
     "call": "Routing Rule Tracer",
     "key": "Routing Rule Tracer",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12333"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12365"
     ]
   },
   {
@@ -11169,7 +11204,7 @@
     "call": "Rule",
     "key": "Rule",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12424"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12456"
     ]
   },
   {
@@ -11197,15 +11232,15 @@
     "call": "Rule sets",
     "key": "Rule sets",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11134",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11163"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11166",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11195"
     ]
   },
   {
     "call": "Rule Sets (.srs / .json)",
     "key": "Rule Sets (.srs / .json)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12669"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12706"
     ]
   },
   {
@@ -11333,7 +11368,7 @@
     "call": "Russia (ru)",
     "key": "Russia (ru)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10968"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10997"
     ]
   },
   {
@@ -11490,7 +11525,7 @@
     "call": "Section action",
     "key": "Section action",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12655"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12692"
     ]
   },
   {
@@ -11504,7 +11539,7 @@
     "call": "Section Rules Content",
     "key": "Section Rules Content",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12681"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12718"
     ]
   },
   {
@@ -11572,7 +11607,7 @@
     "call": "Select a predefined domain list",
     "key": "Select a predefined domain list",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11067"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11099"
     ]
   },
   {
@@ -11671,7 +11706,7 @@
     "call": "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua).",
     "key": "Select one or more country ISO codes (e.g. ru, us, de, nl, fr, fi, se, tr, cn, jp, sg, by, kz, ua).",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10964"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10993"
     ]
   },
   {
@@ -12091,7 +12126,7 @@
     "call": "Service list",
     "key": "Service list",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11071"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11103"
     ]
   },
   {
@@ -12147,7 +12182,7 @@
     "call": "Shared CDN / Anycast Warning",
     "key": "Shared CDN / Anycast Warning",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12509"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12541"
     ]
   },
   {
@@ -12330,7 +12365,7 @@
     "call": "Singapore (sg)",
     "key": "Singapore (sg)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10979"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11008"
     ]
   },
   {
@@ -12438,7 +12473,7 @@
     "places": [
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:19226",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:19269",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12436",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12468",
       "src/tachyon/tabs/monitoring/initController.ts:907",
       "src/tachyon/tabs/monitoring/initController.ts:962"
     ]
@@ -12447,7 +12482,7 @@
     "call": "Source Devices",
     "key": "Source Devices",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12674"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12711"
     ]
   },
   {
@@ -12523,8 +12558,8 @@
     "call": "SSH",
     "key": "SSH",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11332",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11351"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11364",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11383"
     ]
   },
   {
@@ -12871,29 +12906,29 @@
     "call": "STUN (P2P Calls)",
     "key": "STUN (P2P Calls)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11328",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11347"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11360",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11379"
     ]
   },
   {
     "call": "Subnet %s belongs to a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section.",
     "key": "Subnet %s belongs to a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11531"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11563"
     ]
   },
   {
     "call": "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19294-19344, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.",
     "key": "Subnet %s is a Cloudflare Anycast range used by Discord Voice. Only UDP voice traffic (ports 50000-65535, 3478, 19294-19344, 5000-5020) is routed through this section; web traffic (TCP 80/443) goes direct.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12037"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12069"
     ]
   },
   {
     "call": "Subnet %s is a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section.",
     "key": "Subnet %s is a shared Anycast/CDN range (%s). Third-party websites hosted on this CDN will also be routed through this section.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11523"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11555"
     ]
   },
   {
@@ -13044,7 +13079,7 @@
     "call": "Sweden (se)",
     "key": "Sweden (se)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10975"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11004"
     ]
   },
   {
@@ -13668,7 +13703,7 @@
     "call": "The rule applies to the domain and all its subdomains. Use full:, keyword:, or regex: prefixes for exact match, keyword match, or regular expression.",
     "key": "The rule applies to the domain and all its subdomains. Use full:, keyword:, or regex: prefixes for exact match, keyword match, or regular expression.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11017"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11049"
     ]
   },
   {
@@ -13715,7 +13750,7 @@
     "call": "This field is required",
     "key": "This field is required",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12909",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12946",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1936",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1955",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1960",
@@ -13879,8 +13914,8 @@
     "call": "TLS / HTTPS",
     "key": "TLS / HTTPS",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11331",
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11350"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11363",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11382"
     ]
   },
   {
@@ -13985,14 +14020,14 @@
     "call": "Trace",
     "key": "Trace",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12337"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12369"
     ]
   },
   {
     "call": "Tracing routing rules...",
     "key": "Tracing routing rules...",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12381"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12413"
     ]
   },
   {
@@ -14016,14 +14051,14 @@
     "call": "Traffic from these IP addresses, CIDRs, or MAC addresses will never be routed through this section, even if other conditions match.",
     "key": "Traffic from these IP addresses, CIDRs, or MAC addresses will never be routed through this section, even if other conditions match.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11256"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11288"
     ]
   },
   {
     "call": "Traffic of specified protocols (e.g. BitTorrent, QUIC, STUN) will bypass this section.",
     "key": "Traffic of specified protocols (e.g. BitTorrent, QUIC, STUN) will bypass this section.",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11322"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11354"
     ]
   },
   {
@@ -14045,14 +14080,14 @@
     "call": "Traffic type filter",
     "key": "Traffic type filter",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11342"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11374"
     ]
   },
   {
     "call": "Traffic will go through the default route (Direct/Default).",
     "key": "Traffic will go through the default route (Direct/Default).",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12525"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12557"
     ]
   },
   {
@@ -14192,7 +14227,7 @@
     "call": "Turkey (tr)",
     "key": "Turkey (tr)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10976"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11005"
     ]
   },
   {
@@ -14222,10 +14257,17 @@
     ]
   },
   {
+    "call": "UDP over TCP (Packet Encoding)",
+    "key": "UDP over TCP (Packet Encoding)",
+    "places": [
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10766"
+    ]
+  },
+  {
     "call": "Ukraine (ua)",
     "key": "Ukraine (ua)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10982"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11011"
     ]
   },
   {
@@ -14364,14 +14406,14 @@
     "call": "United Kingdom (gb)",
     "key": "United Kingdom (gb)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10972"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:11001"
     ]
   },
   {
     "call": "United States (us)",
     "key": "United States (us)",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10969"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10998"
     ]
   },
   {
@@ -14956,7 +14998,7 @@
     "call": "Username cannot be empty",
     "key": "Username cannot be empty",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10858"
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:10876"
     ]
   },
   {
@@ -15035,7 +15077,7 @@
     "call": "Value must not contain control characters",
     "key": "Value must not contain control characters",
     "places": [
-      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12912",
+      "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12949",
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1964"
     ]
   },
