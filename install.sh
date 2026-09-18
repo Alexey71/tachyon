@@ -673,7 +673,33 @@ prepare_transaction() {
     if [ -x /usr/bin/tachyon ]; then
         run_with_deadline 45 /usr/bin/tachyon stop >/dev/null 2>&1 || true
     fi
+    remove_legacy_packages
     release_tachyon_init_lock
+}
+
+remove_legacy_packages() {
+    _legacy_pkgs=""
+    if [ "$PKG_IS_APK" -eq 1 ]; then
+        for _pkg in forkop luci-app-forkop podkop luci-app-podkop forkop_plus luci-app-forkop_plus podkop_plus luci-app-podkop_plus netshift luci-app-netshift; do
+            if apk info -e "$_pkg" >/dev/null 2>&1; then
+                _legacy_pkgs="$_legacy_pkgs $_pkg"
+            fi
+        done
+        if [ -n "$_legacy_pkgs" ]; then
+            msg "Removing legacy packages:$_legacy_pkgs"
+            apk_run apk-legacy-cleanup "$PACKAGE_TIMEOUT_SECONDS" del --purge $_legacy_pkgs || warn "Could not remove legacy packages (will retry during install)"
+        fi
+    else
+        for _pkg in forkop luci-app-forkop podkop luci-app-podkop forkop_plus luci-app-forkop_plus podkop_plus luci-app-podkop_plus netshift luci-app-netshift; do
+            if opkg status "$_pkg" 2>/dev/null | grep -q '^Status:'; then
+                _legacy_pkgs="$_legacy_pkgs $_pkg"
+            fi
+        done
+        if [ -n "$_legacy_pkgs" ]; then
+            msg "Removing legacy packages:$_legacy_pkgs"
+            opkg remove --force-depends $_legacy_pkgs 2>/dev/null || warn "Could not remove legacy packages"
+        fi
+    fi
 }
 
 download_release() {
