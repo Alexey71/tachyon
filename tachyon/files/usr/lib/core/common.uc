@@ -495,7 +495,9 @@ function timeout_prefix() {
     if (timeout_prefix_cache != null)
         return timeout_prefix_cache;
 
-    if (command_status("timeout 1 /bin/true >/dev/null 2>&1") == 0)
+    if (command_status("timeout -k 1 1 /bin/true >/dev/null 2>&1") == 0)
+        timeout_prefix_cache = [ "timeout", "-k", "5" ];
+    else if (command_status("timeout 1 /bin/true >/dev/null 2>&1") == 0)
         timeout_prefix_cache = [ "timeout" ];
     else if (command_status("timeout -t 1 /bin/true >/dev/null 2>&1") == 0)
         timeout_prefix_cache = [ "timeout", "-t" ];
@@ -509,9 +511,9 @@ function bounded_command(command, seconds) {
     seconds = as_string(seconds || "30");
     let prefix = timeout_prefix();
     if (length(prefix) == 0)
-        return as_string(command);
+        return "sh -c " + shell_quote("(" + as_string(command) + ") & __p=$!; ( sleep " + seconds + "; kill -9 $__p 2>/dev/null || true ) & __w=$!; wait $__p 2>/dev/null; __rc=$?; kill -9 $__w 2>/dev/null || true; wait $__w 2>/dev/null || true; exit $__rc");
 
-    return join(" ", prefix) + " " + seconds + " " + as_string(command);
+    return join(" ", prefix) + " " + seconds + " sh -c " + shell_quote(as_string(command));
 }
 
 function kill_matching_command(grep_args) {

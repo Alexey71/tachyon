@@ -351,7 +351,8 @@ function run_logged(description, command, timeout_seconds) {
         output_file = "/tmp/tachyon-updates-command." + owner_pid();
 
     updates_log(description);
-    let run_cmd = timeout_seconds ? bounded_command(command, timeout_seconds) : as_string(command);
+    timeout_seconds = timeout_seconds || 120;
+    let run_cmd = bounded_command(command, timeout_seconds);
     let status = command_status(run_cmd + " >" + shell_quote(output_file) + " 2>&1");
     for (let line in split(read_file(output_file), "\n"))
         if (trim(as_string(line)) != "")
@@ -553,7 +554,7 @@ function run_logged_pkg_remove_sing_box_conflict(package_name, description) {
     let command = is_apk() ?
         command_from_args([ "apk", "del", "--force-broken-world", package_name ]) + " </dev/null" :
         command_from_args([ "opkg", "remove", "--force-depends", package_name ]) + " </dev/null";
-    return run_logged(description, command);
+    return run_logged(description, command, 60);
 }
 
 function compare_versions(lhs, rhs) {
@@ -970,8 +971,8 @@ function retry_resolve(description, fn) {
 function ensure_package_tool(tool_name, package_name, component, action) {
     if (command_exists(tool_name))
         return true;
-    run_logged("Updating package lists before installing " + as_string(package_name), pkg_list_update_command());
-    return run_logged("Installing bootstrap package " + as_string(package_name), pkg_install_name_command(package_name));
+    run_logged("Updating package lists before installing " + as_string(package_name), pkg_list_update_command(), 30);
+    return run_logged("Installing bootstrap package " + as_string(package_name), pkg_install_name_command(package_name), 60);
 }
 
 function ensure_sing_box_dependencies() {
@@ -987,10 +988,10 @@ function ensure_sing_box_dependencies() {
 
     if (length(missing) > 0) {
         updates_log("Installing missing dependencies for sing-box: " + join(", ", missing));
-        run_logged("Updating package lists for sing-box dependencies", pkg_list_update_command());
+        run_logged("Updating package lists for sing-box dependencies", pkg_list_update_command(), 30);
 
         for (let kmod in missing) {
-            if (!run_logged("Installing dependency " + kmod, pkg_install_name_command(kmod))) {
+            if (!run_logged("Installing dependency " + kmod, pkg_install_name_command(kmod), 60)) {
                 if (kmod == "kmod-tun" && file_exists("/dev/net/tun"))
                     continue;
                 updates_log("Could not install " + kmod + " (may be built-in or custom firmware)", "warn");
@@ -1120,20 +1121,37 @@ function capture_tachyon_running_state() {
 }
 
 function restart_tachyon_after_successful_change() {
-    if (!file_exists(SERVICE_INIT))
-        return;
     if (!tachyon_was_running) {
         updates_log("Tachyon was not running before component change; restart skipped");
         prepare_sing_box_service_disabled();
         return;
     }
+
     // Clear any stuck flock holders or pending rc.common waits
     system(kill_matching_command("-E '99-tachyon-wan|flock 1000|init[.]d/tachyon'"));
     // Kill orphaned logread -f processes before restart to prevent FD cascade.
     // Anchor with $ to avoid killing system logremote/logfile processes (which
     // have extra flags like -r/-F after -f).
     system("pkill -f 'logread -f$' 2>/dev/null; true");
-    run_logged("Restarting Tachyon after successful component change", command_from_args([ SERVICE_INIT, "restart" ]), 120);
+    system("rm -f /var/run/tachyon.reload.lock 2>/dev/null; true");
+
+    // If sing-box was NOT stopped for this component change (e.g. WDTT, Zapret, ByeDPI,
+    // FPTN, OlcRTC, rulesets, etc.), Tachyon is still running and sing-box routing is intact.
+    // Perform a soft reload (`reload force`) via BIN_PATH. This bypasses rc.common flock,
+    // reloads provider state and nftables without tearing down sing-box or dropping active connections.
+    if (!tachyon_stopped_for_sing_box_change && file_exists(BIN_PATH) && tachyon_status_running_with_timeout()) {
+        let reloaded = run_logged("Reloading Tachyon after successful component change", command_from_args([ BIN_PATH, "reload", "force" ]), 45);
+        if (reloaded)
+            return;
+        updates_log("Tachyon reload returned non-zero; falling back to full restart", "warn");
+    }
+
+    let target_bin = file_exists(BIN_PATH) ? BIN_PATH : SERVICE_INIT;
+    if (!file_exists(target_bin))
+        return;
+
+    let action_name = tachyon_status_running_with_timeout() ? "restart" : "start";
+    run_logged("Restarting Tachyon after successful component change", command_from_args([ target_bin, action_name ]), 90);
 }
 
 function stop_tachyon_before_sing_box_change() {
@@ -1141,8 +1159,9 @@ function stop_tachyon_before_sing_box_change() {
         return;
     tachyon_stopped_for_sing_box_change = true;
 
-    if (tachyon_was_running && file_exists(SERVICE_INIT))
-        run_logged("Stopping Tachyon before sing-box package change", command_from_args([ SERVICE_INIT, "stop" ]));
+    let stop_bin = file_exists(BIN_PATH) ? BIN_PATH : SERVICE_INIT;
+    if (tachyon_was_running && file_exists(stop_bin))
+        run_logged("Stopping Tachyon before sing-box package change", command_from_args([ stop_bin, "stop" ]), 30);
 
     if (tachyon_was_running && file_exists(BIN_PATH))
         command_success_from_args([ BIN_PATH, "restore_dnsmasq" ]);
@@ -1522,8 +1541,8 @@ function disable_standalone_service(name) {
     let init = "/etc/init.d/" + as_string(name);
     if (!file_exists(init))
         return;
-    run_logged("Stopping standalone " + as_string(name) + " service", command_from_args([ init, "stop" ]));
-    run_logged("Disabling standalone " + as_string(name) + " autostart", command_from_args([ init, "disable" ]));
+    run_logged("Stopping standalone " + as_string(name) + " service", command_from_args([ init, "stop" ]), 20);
+    run_logged("Disabling standalone " + as_string(name) + " autostart", command_from_args([ init, "disable" ]), 20);
 }
 
 function provider_installed(runtime_module) {
@@ -1565,7 +1584,7 @@ function install_zapret_like(component, action, runtime_module, resolve_fn, labe
     if (pkg == null)
         action_fail(component, action, "Failed to download " + label + " package", current_version, release.version, "", release.release_url || "");
 
-    if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+    if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ]), 60))
         action_fail(component, action, "Failed to install " + label + " package", current_version, pkg.version, "", release.release_url || "");
 
     disable_standalone_service(component);
@@ -1630,9 +1649,9 @@ function install_zapret2(action, target_tag) {
         uci_core.commit("zapret2");
     }
 
-    run_logged("Updating package lists before " + label + " package installation", pkg_list_update_command());
+    run_logged("Updating package lists before " + label + " package installation", pkg_list_update_command(), 30);
 
-    if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+    if (!run_logged("Installing " + label + " package " + pkg.name, pkg_install_files_command([ pkg.file ]), 60))
         action_fail(component, action, "Failed to install " + label + " package", current_version, pkg.version, "", release.release_url || "");
 
     for (let p in [ "/opt/zapret2/nfq2/nfqws2", "/opt/zapret2/nfq/nfqws2", "/opt/zapret2/nfqws2", "/usr/bin/nfqws2" ]) {
@@ -1681,9 +1700,9 @@ function install_byedpi(action, target_tag) {
     if (pkg == null)
         action_fail("byedpi", action, "Failed to download ByeDPI package");
 
-    run_logged("Updating package lists before ByeDPI package installation", pkg_list_update_command());
+    run_logged("Updating package lists before ByeDPI package installation", pkg_list_update_command(), 30);
 
-    if (!run_logged("Installing ByeDPI package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+    if (!run_logged("Installing ByeDPI package " + pkg.name, pkg_install_files_command([ pkg.file ]), 60))
         action_fail("byedpi", action, "Failed to install ByeDPI package", current_version, pkg.version);
 
     disable_standalone_service("byedpi");
@@ -1721,9 +1740,9 @@ function install_wdtt(action, target_tag) {
     if (pkg == null)
         action_fail("wdtt", action, "Failed to download WDTT package");
 
-    run_logged("Updating package lists before WDTT package installation", pkg_list_update_command());
+    run_logged("Updating package lists before WDTT package installation", pkg_list_update_command(), 30);
 
-    if (!run_logged("Installing WDTT package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+    if (!run_logged("Installing WDTT package " + pkg.name, pkg_install_files_command([ pkg.file ]), 60))
         action_fail("wdtt", action, "Failed to install WDTT package", current_version, pkg.version);
 
     disable_standalone_service("wdtt");
@@ -1761,9 +1780,9 @@ function install_olcrtc(action, target_tag) {
     if (pkg == null)
         action_fail("olcrtc", action, "Failed to download OlcRTC package");
 
-    run_logged("Updating package lists before OlcRTC package installation", pkg_list_update_command());
+    run_logged("Updating package lists before OlcRTC package installation", pkg_list_update_command(), 30);
 
-    if (!run_logged("Installing OlcRTC package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+    if (!run_logged("Installing OlcRTC package " + pkg.name, pkg_install_files_command([ pkg.file ]), 60))
         action_fail("olcrtc", action, "Failed to install OlcRTC package", current_version, pkg.version);
 
     disable_standalone_service("olcrtc");
@@ -1801,9 +1820,9 @@ function install_fptn(action, target_tag) {
     if (pkg == null)
         action_fail("fptn", action, "Failed to download FPTN package");
 
-    run_logged("Updating package lists before FPTN package installation", pkg_list_update_command());
+    run_logged("Updating package lists before FPTN package installation", pkg_list_update_command(), 30);
 
-    if (!run_logged("Installing FPTN package " + pkg.name, pkg_install_files_command([ pkg.file ])))
+    if (!run_logged("Installing FPTN package " + pkg.name, pkg_install_files_command([ pkg.file ]), 60))
         action_fail("fptn", action, "Failed to install FPTN package", current_version, pkg.version);
 
     disable_standalone_service("fptn");
@@ -1824,18 +1843,18 @@ function install_tailscale(action) {
 
     if (action == "check_update") {
         if (!pkg_is_installed("tailscale")) {
-            run_logged("Refreshing package index", pkg_list_update_command());
+            run_logged("Refreshing package index", pkg_list_update_command(), 30);
             let available_version = available_package_version("tailscale");
             action_success(component, action, label + " is not installed", "", available_version, 0, "", TAILSCALE_PACKAGE_URL);
         }
-        run_logged("Refreshing package index", pkg_list_update_command());
+        run_logged("Refreshing package index", pkg_list_update_command(), 30);
         check_success(component, installed_package_version("tailscale"), available_package_version("tailscale"), TAILSCALE_PACKAGE_URL);
     }
 
     let proxy_address = service_proxy_address();
-    if (!run_logged("Refreshing package index", pkg_list_update_command(proxy_address)))
+    if (!run_logged("Refreshing package index", pkg_list_update_command(proxy_address), 30))
         updates_log("Package index refresh failed; trying to install from the cached index", "warn");
-    if (!run_logged("Installing " + label + " package", pkg_install_name_command("tailscale", proxy_address))) {
+    if (!run_logged("Installing " + label + " package", pkg_install_name_command("tailscale", proxy_address), 60)) {
         if (proxy_address == "")
             updates_log("Upstream package download failed. If downloads.openwrt.org is blocked by your ISP, configure a proxy section and enable 'Download components via proxy' in Settings", "warn");
         action_fail(component, "install", "Failed to install " + label + " package from the feed");
@@ -1860,7 +1879,7 @@ function remove_optional_component(component, package_name, label, runtime_modul
     let command = is_apk() ?
         command_from_args([ "apk", "del", package_name ]) + " </dev/null" :
         command_from_args([ "opkg", "remove", "--force-depends", package_name ]) + " </dev/null";
-    if (!run_logged("Removing " + label + " package", command))
+    if (!run_logged("Removing " + label + " package", command, 60))
         action_fail(component, "remove", "Failed to remove " + label + " package", current_version);
 
     clear_version_caches();
@@ -2400,7 +2419,7 @@ function install_sing_box_extended_package(action, target_tag) {
     if (!download_with_retry(release.asset_url, package_file, release.asset_name))
         action_fail("sing_box", action, "Failed to download sing-box-extended package", current_version, latest_version);
 
-    run_logged("Updating package lists before sing-box-extended package installation", pkg_list_update_command());
+    run_logged("Updating package lists before sing-box-extended package installation", pkg_list_update_command(), 30);
 
     stop_tachyon_before_sing_box_change();
     prepare_sing_box_package_service_install();
@@ -2449,7 +2468,7 @@ function install_sing_box_extended_package(action, target_tag) {
         }
     }
 
-    if (!run_logged("Installing sing-box-extended package " + release.asset_name, pkg_install_files_command([ package_file ], true))) {
+    if (!run_logged("Installing sing-box-extended package " + release.asset_name, pkg_install_files_command([ package_file ], true), 90)) {
         restore_sing_box_after_failed_extended_package_install(current_variant, backup_binary, backup_cronet, previous_marker, previous_version_state, package_file, cronet_touched);
         action_fail("sing_box", action, "Failed to install sing-box-extended package", current_version, latest_version);
     }
@@ -2839,7 +2858,7 @@ function install_package_sing_box(action, tiny) {
     if (action == "check_update") {
         if (latest_version == "") {
             let proxy_address = service_proxy_address();
-            run_logged("Refreshing package index", pkg_list_update_command(proxy_address));
+            run_logged("Refreshing package index", pkg_list_update_command(proxy_address), 30);
             latest_version = available_package_version(package_name);
             if (latest_version == "")
                 latest_version = installed_package_version(package_name);
@@ -2854,7 +2873,7 @@ function install_package_sing_box(action, tiny) {
 
     ensure_sing_box_dependencies();
 
-    run_logged("Updating package lists before " + package_name + " installation", pkg_list_update_command());
+    run_logged("Updating package lists before " + package_name + " installation", pkg_list_update_command(), 30);
     latest_version = available_package_version(package_name);
     if (latest_version == "")
         latest_version = installed_package_version(package_name);
