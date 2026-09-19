@@ -943,6 +943,10 @@ function start_main() {
         return status;
     }
 
+    let sb_pid = module_output([ STATE_UC, "sing-box-service-pid-runtime" ]);
+    if (match(trim(sb_pid), /^[0-9]+$/) != null)
+        module_success(STATE_UC, [ "write-provenance", trim(sb_pid) ]);
+
     module_status(NFT_UC, [ "nft-sync-router-output-intercept", NFT_TABLE_NAME, NFT_LOCALV4_SET_NAME, NFT_OUTBOUND_MARK ]);
 
     status = module_status(PRIORITY_UC, [ "start-runtime" ]);
@@ -1080,10 +1084,15 @@ function stop_main() {
     if (module_success(NFT_UC, [ "tproxy-route6-present", RT_TABLE_NAME ]))
         command_success_from_args([ "ip", "-6", "route", "flush", "table", RT_TABLE_NAME ]);
 
+    if (module_success(STATE_UC, [ "sing-box-is-foreign" ]))
+        log_message("Sing-box PID provenance mismatch: the running sing-box was not started by Tachyon; stopping it anyway", "warn");
+
     let sing_box_status = command_status_from_args([ "/etc/init.d/sing-box", "stop" ]);
     command_success_from_args([ "killall", "-q", "-9", "sing-box" ]);
     if (sing_box_status != 0)
         status = sing_box_status;
+
+    module_success(STATE_UC, [ "cleanup-provenance" ]);
 
     return status;
 }
@@ -1533,6 +1542,11 @@ function reload(reason) {
             cleanup_failed_runtime();
             return status;
         }
+
+        let reload_sb_pid = trim(command_output_from_args([ "pidof", "sing-box" ]));
+        if (match(reload_sb_pid, /^[0-9]+$/) != null)
+            module_success(STATE_UC, [ "write-provenance", reload_sb_pid ]);
+
         status = module_status(PRIORITY_UC, [ "start-runtime" ]);
         if (status != 0) {
             log_message("Failed to start Priority runtime after sing-box reload", "fatal");

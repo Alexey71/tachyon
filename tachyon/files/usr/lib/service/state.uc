@@ -522,6 +522,81 @@ function process_age_seconds(pid) {
     return process_age_seconds_from_ticks(start_ticks, current_ticks);
 }
 
+const SING_BOX_PROVENANCE_FILE = getenv("TACHYON_SING_BOX_PROVENANCE_FILE") || "/var/run/tachyon/sing-box.provenance";
+
+function read_json_file_local(path) {
+    let data = fs.readfile(as_string(path));
+    if (data == null)
+        return null;
+    try {
+        return json(as_string(data));
+    }
+    catch (e) {
+        return null;
+    }
+}
+
+function write_provenance_file(pid) {
+    pid = as_string(pid);
+    if (match(pid, /^[0-9]+$/) == null || int(pid) <= 0)
+        return false;
+
+    let start_ticks = process_start_ticks(fs.readfile("/proc/" + pid + "/stat"));
+    if (start_ticks == null)
+        return false;
+
+    let provenance = {
+        pid: int(pid),
+        start_ticks: start_ticks,
+        launched_at: int(time())
+    };
+
+    ensure_parent_dir(SING_BOX_PROVENANCE_FILE);
+    let stamp = clock();
+    let tmp_path = sprintf("%s.%d.%d.tmp", SING_BOX_PROVENANCE_FILE, stamp[0], stamp[1]);
+    let text = sprintf("%J", provenance);
+    if (write_text_file(tmp_path, text)) {
+        if (fs.rename(tmp_path, SING_BOX_PROVENANCE_FILE))
+            return true;
+    }
+    try { fs.unlink(tmp_path); } catch(e) {}
+    return false;
+}
+
+function read_provenance_file() {
+    return read_json_file_local(SING_BOX_PROVENANCE_FILE);
+}
+
+function verify_provenance() {
+    let provenance = read_provenance_file();
+    if (!provenance)
+        return false;
+
+    let pid = int(provenance.pid || 0);
+    let recorded_ticks = as_string(provenance.start_ticks);
+    if (pid <= 0 || recorded_ticks == "")
+        return false;
+
+    if (!pid_is_sing_box(pid))
+        return false;
+
+    let current_ticks = process_start_ticks(fs.readfile("/proc/" + as_string(pid) + "/stat"));
+    return as_string(current_ticks) == recorded_ticks;
+}
+
+function sing_box_is_foreign() {
+    let pid = sing_box_service_pid_runtime();
+    if (pid <= 0)
+        return false;
+    if (!verify_provenance())
+        return true;
+    return false;
+}
+
+function cleanup_provenance_file() {
+    try { fs.unlink(SING_BOX_PROVENANCE_FILE); } catch(e) {}
+}
+
 function sing_box_pid_replaced(previous_pid, current_pid, current_is_sing_box) {
     previous_pid = int(previous_pid || 0);
     current_pid = int(current_pid || 0);
@@ -2406,6 +2481,16 @@ else if (mode == "has-hosts-list-update-sources")
     exit(has_hosts_list_update_sources_from_sections(uci_sections("section")) ? 0 : 1);
 else if (mode == "has-hosts-list-update-sources-fixture")
     exit(has_hosts_list_update_sources_from_sections(fixture_sections(ARGV[1])) ? 0 : 1);
+else if (mode == "write-provenance")
+    exit(write_provenance_file(as_string(ARGV[1])) ? 0 : 1);
+else if (mode == "verify-provenance")
+    exit(verify_provenance() ? 0 : 1);
+else if (mode == "sing-box-is-foreign")
+    exit(sing_box_is_foreign() ? 0 : 1);
+else if (mode == "cleanup-provenance") {
+    cleanup_provenance_file();
+    exit(0);
+}
 else {
     warn("Usage: service/state.uc <operation> ...\n");
     exit(1);

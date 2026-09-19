@@ -11,6 +11,10 @@ let shell_quote = common.shell_quote;
 
 const DNSMASQ_INIT = getenv("DNSMASQ_INIT") || "/etc/init.d/dnsmasq";
 const HOSTS_CACHE_FILE = getenv("TACHYON_HOSTS_CACHE_FILE") || "/etc/tachyon/hosts-lists/combined.txt";
+const DNSMASQ_SNAPSHOT_FILE = getenv("TACHYON_DNSMASQ_SNAPSHOT_FILE") || "/var/run/tachyon/dnsmasq-snapshot.json";
+
+const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_MANAGED_FIELDS = [ "server", "noresolv", "cachesize" ];
 
 function run(command) {
     return system(command) == 0;
@@ -74,6 +78,80 @@ function list_has(values, needle) {
 function log(message, level) {
     level = as_string(level || "info");
     run("logger -t " + shell_quote("tachyon") + " " + shell_quote("[" + level + "] " + as_string(message)));
+}
+
+function parent_dir(path) {
+    path = as_string(path);
+    let slash = rindex(path, "/");
+    return slash >= 0 ? substr(path, 0, slash) : "";
+}
+
+function ensure_parent_dir(path) {
+    let dir = parent_dir(path);
+    if (dir == "" || dir == ".")
+        return true;
+    return run("mkdir -p " + shell_quote(dir));
+}
+
+function write_json_file(path, value) {
+    ensure_parent_dir(path);
+    let stamp = clock();
+    let tmp_path = sprintf("%s.%d.%d.tmp", path, stamp[0], stamp[1]);
+    let text = sprintf("%J", value);
+    if (fs.writefile(tmp_path, text) == null) {
+        try { fs.unlink(tmp_path); } catch(e) {}
+        return false;
+    }
+    if (!fs.rename(tmp_path, path)) {
+        try { fs.unlink(tmp_path); } catch(e) {}
+        return false;
+    }
+    return true;
+}
+
+function read_json_file(path) {
+    let data = fs.readfile(as_string(path));
+    if (data == null)
+        return null;
+    try {
+        return json(as_string(data));
+    }
+    catch (e) {
+        return null;
+    }
+}
+
+function snapshot_current_field(field) {
+    if (field == "server") {
+        let servers = uci_get("dhcp.@dnsmasq[0].server");
+        if (type(servers) == "array")
+            return join(" ", servers);
+        return as_string(servers);
+    }
+    return as_string(uci_get("dhcp.@dnsmasq[0]." + field));
+}
+
+function save_dnsmasq_snapshot() {
+    let snapshot = { version: SNAPSHOT_VERSION, fields: {}, recorded_at: int(time()) };
+    for (let field in SNAPSHOT_MANAGED_FIELDS)
+        snapshot.fields[field] = snapshot_current_field(field);
+    return write_json_file(DNSMASQ_SNAPSHOT_FILE, snapshot);
+}
+
+function load_dnsmasq_snapshot() {
+    return read_json_file(DNSMASQ_SNAPSHOT_FILE);
+}
+
+function field_changed_since_snapshot(snapshot, field) {
+    if (!snapshot || !snapshot.fields)
+        return false;
+    let recorded = as_string(snapshot.fields[field]);
+    let current = snapshot_current_field(field);
+    return recorded != current;
+}
+
+function cleanup_dnsmasq_snapshot() {
+    try { fs.unlink(DNSMASQ_SNAPSHOT_FILE); } catch(e) {}
 }
 
 function restart_dnsmasq() {
@@ -328,6 +406,8 @@ function dnsmasq_configure(force) {
     dnsmasq_configure_default_instance();
     uci_commit("dhcp");
 
+    save_dnsmasq_snapshot();
+
     return reload_dnsmasq();
 }
 
@@ -345,9 +425,21 @@ function dnsmasq_restore(force, quiet) {
         log("Tachyon DNS settings are still present after a clean shutdown; restoring DNS settings in dnsmasq", "info");
     }
 
+    let snapshot = load_dnsmasq_snapshot();
+    if (snapshot) {
+        for (let field in SNAPSHOT_MANAGED_FIELDS) {
+            if (field_changed_since_snapshot(snapshot, field)) {
+                let current_value = snapshot_current_field(field);
+                let recorded_value = as_string(snapshot.fields[field]);
+                log("DNS rollback conflict: dnsmasq " + field + " changed outside Tachyon (current=\"" + current_value + "\", tachyon-set=\"" + recorded_value + "\"); preserving external value", "warn");
+            }
+        }
+    }
+
     dnsmasq_cleanup_legacy_instance();
     dnsmasq_restore_default_instance();
     uci_commit("dhcp");
+    cleanup_dnsmasq_snapshot();
 
     return reload_dnsmasq();
 }
@@ -389,6 +481,12 @@ else if (mode == "has-managed-state")
     exit(dnsmasq_has_tachyon_managed_state() ? 0 : 1);
 else if (mode == "default-config-complete")
     exit(dnsmasq_default_config_is_complete() ? 0 : 1);
+else if (mode == "save-snapshot")
+    exit(save_dnsmasq_snapshot() ? 0 : 1);
+else if (mode == "cleanup-snapshot") {
+    cleanup_dnsmasq_snapshot();
+    exit(0);
+}
 
-warn("Usage: dns/apply.uc <configure|restore|failsafe-restore|has-tachyon-dns|has-managed-state|default-config-complete>\n");
+warn("Usage: dns/apply.uc <configure|restore|failsafe-restore|has-tachyon-dns|has-managed-state|default-config-complete|save-snapshot|cleanup-snapshot>\n");
 exit(1);

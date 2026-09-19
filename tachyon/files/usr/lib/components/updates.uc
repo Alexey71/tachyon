@@ -2312,6 +2312,62 @@ function download_to_file(url, filepath, proxy_address) {
     return false;
 }
 
+const PERSISTENT_RULESET_DIR = getenv("TACHYON_PERSISTENT_RULESET_DIR") || "/etc/tachyon/rulesets";
+const RULESET_HASH_DIR = getenv("TACHYON_RULESET_HASH_DIR") || "/var/run/tachyon/ruleset-hashes";
+
+function file_sha256(path) {
+    path = as_string(path);
+    if (path == "" || fs.stat(path) == null)
+        return "";
+    let output = command_output_from_args([ "sha256sum", path ]);
+    let fields = split(trim(output), /[ \t\r\n]+/);
+    return length(fields) > 0 ? as_string(fields[0]) : "";
+}
+
+function url_to_hash_key(url) {
+    url = as_string(url);
+    let safe = replace(url, /[^a-zA-Z0-9]/g, "-");
+    return substr(safe, 0, 80);
+}
+
+function cached_hash_matches(url, content_path) {
+    let key = url_to_hash_key(url);
+    if (key == "")
+        return false;
+    let hash_file = RULESET_HASH_DIR + "/" + key + ".hash";
+    let cached_hash = trim(as_string(read_file_text(hash_file) || ""));
+    if (cached_hash == "")
+        return false;
+    let current_hash = file_sha256(content_path);
+    return current_hash != "" && cached_hash == current_hash;
+}
+
+function read_file_text(path) {
+    let data = fs.readfile(as_string(path));
+    return data == null ? "" : as_string(data);
+}
+
+function save_content_hash(url, content_path) {
+    let key = url_to_hash_key(url);
+    if (key == "")
+        return;
+    ensure_dir(RULESET_HASH_DIR);
+    let hash = file_sha256(content_path);
+    if (hash != "")
+        write_file(RULESET_HASH_DIR + "/" + key + ".hash", hash);
+}
+
+function download_to_file_if_changed(url, filepath, proxy_address) {
+    if (cached_hash_matches(url, filepath) && file_nonempty(filepath)) {
+        log_message("Content unchanged, skipping download: " + as_string(url), "debug");
+        return true;
+    }
+    let ok = download_to_file(url, filepath, proxy_address);
+    if (ok && file_nonempty(filepath))
+        save_content_hash(url, filepath);
+    return ok;
+}
+
 function convert_crlf_to_lf(path) {
     let data = fs.readfile(as_string(path));
     if (data == null || index(data, "\r") < 0)
