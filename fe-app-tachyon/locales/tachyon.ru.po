@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 08:57+0300\n"
-"PO-Revision-Date: 2026-09-19 08:57+0300\n"
+"POT-Creation-Date: 2026-09-19 09:56+0300\n"
+"PO-Revision-Date: 2026-09-19 09:56+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -577,6 +577,9 @@ msgstr "Применить это правило расписания ко вс�
 
 msgid "Applying fix"
 msgstr "Применение исправления"
+
+msgid "Applying rules"
+msgstr ""
 
 msgid "Applying..."
 msgstr "Применение..."
@@ -1658,8 +1661,8 @@ msgstr "Загружено"
 msgid "Downloading"
 msgstr ""
 
-msgid "Downloading and applying rule sets and lists..."
-msgstr "Загрузка и применение наборов правил и списков..."
+msgid "Downloading lists"
+msgstr ""
 
 msgid "DPI bandwidth throttling or delay detected — connection throttled during data transfer."
 msgstr "Обнаружено замедление DPI — соединение заблокировано или задушено при передаче данных."
@@ -3884,6 +3887,9 @@ msgstr "Предпочитаемый IP"
 msgid "Prefix text"
 msgstr "Текст префикса"
 
+msgid "Preparing"
+msgstr ""
+
 msgid "Preparing strategies and isolated nftables queue..."
 msgstr "Подготовка стратегий и изолированной очереди nftables..."
 
@@ -4943,6 +4949,9 @@ msgstr "Запустить watchdog"
 msgid "Starting DNS benchmark..."
 msgstr "Запуск бенчмарка DNS..."
 
+msgid "Starting lists update..."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Запуск…"
 
@@ -5341,9 +5350,6 @@ msgstr "Это поле должно запускать рабочую стра�
 
 msgid "This flag does not accept a value."
 msgstr "Этот флаг не принимает значение."
-
-msgid "This may take 1-2 minutes. The process runs in the background on the router."
-msgstr "Это может занять 1–2 минуты. Процесс выполняется в фоновом режиме на роутере."
 
 msgid "This option requires a value."
 msgstr "Этот параметр требует значение."
@@ -6052,6 +6058,12 @@ msgstr "Правила маршрутизации sing-box для Zapret2 не �
 
 msgid "Zero config mesh VPN daemon"
 msgstr "Mesh VPN-демон с нулевой конфигурацией"
+
+msgid "Downloading and applying rule sets and lists..."
+msgstr "Загрузка и применение наборов правил и списков..."
+
+msgid "This may take 1-2 minutes. The process runs in the background on the router."
+msgstr "Это может занять 1–2 минуты. Процесс выполняется в фоновом режиме на роутере."
 
 msgid "DNS Cache Size"
 msgstr "Размер кэша DNS"

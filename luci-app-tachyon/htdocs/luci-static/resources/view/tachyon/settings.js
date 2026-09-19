@@ -2358,27 +2358,84 @@ function createSettingsContent(section, capabilities) {
   updateListsBtn.inputstyle = "action";
   updateListsBtn.depends("list_update_enabled", "1");
   updateListsBtn.onclick = function () {
-    const statusText = E(
-      "p",
-      { class: "spinning" },
-      _("Downloading and applying rule sets and lists..."),
-    );
-    const helpText = E(
-      "p",
-      { style: "margin-top: 8px; font-size: 90%; opacity: 0.7;" },
-      _(
-        "This may take 1-2 minutes. The process runs in the background on the router.",
-      ),
-    );
+    const steps = [
+      { key: "starting", label: _("Preparing") },
+      { key: "downloading", label: _("Downloading lists") },
+      { key: "applying", label: _("Applying rules") },
+    ];
+
+    function renderStepIcon(state) {
+      if (state === "done")
+        return E("span", { style: "color: var(--color-green-base, #2ecc71); font-weight: bold;" }, "\u2713");
+      if (state === "error")
+        return E("span", { style: "color: var(--color-red-base, #e74c3c); font-weight: bold;" }, "\u2717");
+      if (state === "active")
+        return E("span", { class: "spinning", style: "color: var(--color-blue-base, #3498db);" }, "\u25CB");
+      return E("span", { style: "color: var(--text-color-medium, #999);" }, "\u25CB");
+    }
+
+    const stepsContainer = E("div", { style: "display: flex; flex-direction: column; gap: 8px; margin: 12px 0;" });
+    const stepEls = steps.map((step) => {
+      const row = E("div", { style: "display: flex; align-items: center; gap: 8px; padding: 4px 0; transition: opacity 0.3s;" }, [
+        renderStepIcon("pending"),
+        E("span", { style: "font-size: 13px; color: var(--text-color-medium, #666);" }, step.label),
+      ]);
+      stepsContainer.appendChild(row);
+      return { el: row, iconEl: row.childNodes[0], labelEl: row.childNodes[1], key: step.key };
+    });
+
+    const detailText = E("p", {
+      style: "margin: 4px 0 0; font-size: 12px; color: var(--text-color-medium, #999); min-height: 18px;",
+    }, _("Starting lists update..."));
 
     let pollTimer = null;
     let pollAttempts = 0;
-    const maxPollAttempts = 120; // 120 * 2s = 240s = 4 minutes
+    const maxPollAttempts = 120;
 
     function stopPolling() {
       if (pollTimer) {
         window.clearInterval(pollTimer);
         pollTimer = null;
+      }
+    }
+
+    function updateSteps(progress) {
+      let reached = false;
+      for (const s of stepEls) {
+        if (s.key === progress) {
+          s.iconEl.replaceChildren(renderStepIcon("active"));
+          s.labelEl.style.color = "var(--text-color-high, #333)";
+          s.labelEl.style.fontWeight = "500";
+          reached = true;
+        } else if (!reached) {
+          s.iconEl.replaceChildren(renderStepIcon("done"));
+          s.labelEl.style.color = "var(--text-color-medium, #999)";
+          s.labelEl.style.fontWeight = "normal";
+        } else {
+          s.iconEl.replaceChildren(renderStepIcon("pending"));
+          s.labelEl.style.color = "var(--text-color-medium, #999)";
+          s.labelEl.style.fontWeight = "normal";
+        }
+      }
+    }
+
+    function markAllDone() {
+      for (const s of stepEls) {
+        s.iconEl.replaceChildren(renderStepIcon("done"));
+        s.labelEl.style.color = "var(--text-color-medium, #999)";
+      }
+    }
+
+    function markError(failedKey) {
+      let found = false;
+      for (const s of stepEls) {
+        if (s.key === failedKey) {
+          s.iconEl.replaceChildren(renderStepIcon("error"));
+          s.labelEl.style.color = "var(--color-red-base, #e74c3c)";
+          found = true;
+        } else if (!found) {
+          s.iconEl.replaceChildren(renderStepIcon("done"));
+        }
       }
     }
 
@@ -2400,9 +2457,13 @@ function createSettingsContent(section, capabilities) {
       _("Close"),
     );
 
+    const modalBody = E("div", { style: "display: flex; flex-direction: column; gap: 4px;" }, [
+      stepsContainer,
+      detailText,
+    ]);
+
     ui.showModal(_("Updating lists..."), [
-      statusText,
-      helpText,
+      modalBody,
       E(
         "div",
         { class: "button-row", style: "margin-top: 16px; text-align: right;" },
@@ -2421,8 +2482,11 @@ function createSettingsContent(section, capabilities) {
           } catch (e) {}
 
           if (data.running) {
+            if (data.progress) {
+              updateSteps(data.progress);
+            }
             if (data.message) {
-              statusText.textContent = _(data.message) || data.message;
+              detailText.textContent = _(data.message) || data.message;
             }
             if (pollAttempts >= maxPollAttempts) {
               stopPolling();
@@ -2440,23 +2504,34 @@ function createSettingsContent(section, capabilities) {
             }
           } else {
             stopPolling();
-            ui.hideModal();
             if (data.success !== false) {
-              ui.addNotification(
-                null,
-                E("p", _("Lists and rule sets successfully updated!")),
-                "info",
-              );
+              markAllDone();
+              detailText.textContent = _("Lists and rule sets successfully updated!");
+              detailText.style.color = "var(--color-green-base, #2ecc71)";
+              setTimeout(function () {
+                ui.hideModal();
+                ui.addNotification(
+                  null,
+                  E("p", _("Lists and rule sets successfully updated!")),
+                  "info",
+                );
+              }, 1200);
             } else {
-              ui.addNotification(
-                null,
-                E(
-                  "p",
-                  _("Error updating lists: ") +
-                    (data.message || _("Update failed")),
-                ),
-                "error",
-              );
+              if (data.progress) markError(data.progress);
+              detailText.textContent = data.message || _("Update failed");
+              detailText.style.color = "var(--color-red-base, #e74c3c)";
+              setTimeout(function () {
+                ui.hideModal();
+                ui.addNotification(
+                  null,
+                  E(
+                    "p",
+                    _("Error updating lists: ") +
+                      (data.message || _("Update failed")),
+                  ),
+                  "error",
+                );
+              }, 2000);
             }
           }
         })
