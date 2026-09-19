@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 12:04+0300\n"
-"PO-Revision-Date: 2026-09-19 12:04+0300\n"
+"POT-Creation-Date: 2026-09-19 12:35+0300\n"
+"PO-Revision-Date: 2026-09-19 12:35+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -875,8 +875,8 @@ msgstr "CA-сертификат"
 msgid "Cache"
 msgstr "Кэш"
 
-msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
-msgstr "Кэшировать все встроенные списки и базы данных, даже если они не выбраны ни в одной секции. Рекомендуется при большом объёме хранилища или USB-накопителе."
+msgid "Cache all built-in lists, databases, and remote lists configured in sections. Recommended if you have plenty of storage space or USB drive."
+msgstr ""
 
 msgid "Cache File Path"
 msgstr "Путь к файлу кэша"
@@ -6064,6 +6064,9 @@ msgstr "Правила маршрутизации sing-box для Zapret2 не �
 
 msgid "Zero config mesh VPN daemon"
 msgstr "Mesh VPN-демон с нулевой конфигурацией"
+
+msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
+msgstr "Кэшировать все встроенные списки и базы данных, даже если они не выбраны ни в одной секции. Рекомендуется при большом объёме хранилища или USB-накопителе."
 
 msgid "✔ Running"
 msgstr "✔ Работает"

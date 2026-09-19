@@ -2564,7 +2564,7 @@ function createSettingsContent(section, capabilities) {
     "download_all_presets",
     _("Pre-download all preset lists"),
     _(
-      "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive.",
+      "Cache all built-in lists, databases, and remote lists configured in sections. Recommended if you have plenty of storage space or USB drive.",
     ),
   );
   o.depends("list_update_enabled", "1");

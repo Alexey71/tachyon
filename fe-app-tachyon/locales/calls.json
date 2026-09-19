@@ -2221,8 +2221,8 @@
     ]
   },
   {
-    "call": "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive.",
-    "key": "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive.",
+    "call": "Cache all built-in lists, databases, and remote lists configured in sections. Recommended if you have plenty of storage space or USB drive.",
+    "key": "Cache all built-in lists, databases, and remote lists configured in sections. Recommended if you have plenty of storage space or USB drive.",
     "places": [
       "../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2566"
     ]
