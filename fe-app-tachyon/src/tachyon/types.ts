@@ -621,6 +621,7 @@ export namespace Tachyon {
     enabled: number;
     status: string;
     dns_configured?: number;
+    memory_rss_mb?: number;
   }
 
   export interface GetOutboundMetadata {

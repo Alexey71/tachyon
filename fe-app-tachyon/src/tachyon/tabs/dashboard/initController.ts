@@ -2216,7 +2216,11 @@ async function renderServicesInfoWidget() {
       const items = [
         {
           key: 'Tachyon',
-          value: data.tachyonRunning ? _('✔ Running') : _('✘ Stopped'),
+          value: data.tachyonRunning
+            ? data.tachyonMemoryMb
+              ? `\u2713 (${data.tachyonMemoryMb} MB)`
+              : '\u2713'
+            : '\u2717',
           attributes: {
             class: data.tachyonRunning
               ? 'tachyon_dashboard-page__widgets-section__item__row--success'
@@ -2227,9 +2231,9 @@ async function renderServicesInfoWidget() {
           key: 'Sing-box',
           value: data.singbox
             ? data.singboxMemoryMb
-              ? `${_('✔ Running')} (${data.singboxMemoryMb} MB)`
-              : _('✔ Running')
-            : _('✘ Stopped'),
+              ? `\u2713 (${data.singboxMemoryMb} MB)`
+              : '\u2713'
+            : '\u2717',
           attributes: {
             class: data.singbox
               ? 'tachyon_dashboard-page__widgets-section__item__row--success'
@@ -2242,8 +2246,8 @@ async function renderServicesInfoWidget() {
         items.push({
           key: 'Zapret2',
           value: data.zapret2MemoryMb
-            ? `${_('✔ Running')} (${data.zapret2MemoryMb} MB)`
-            : _('✔ Running'),
+            ? `\u2713 (${data.zapret2MemoryMb} MB)`
+            : '\u2713',
           attributes: {
             class:
               'tachyon_dashboard-page__widgets-section__item__row--success',
@@ -2258,15 +2262,15 @@ async function renderServicesInfoWidget() {
             (data.dnsmasqCacheSize * 120) /
             (1024 * 1024)
           ).toFixed(1);
-          cacheDetail = ` [${_('Cache')}: ${data.dnsmasqCacheSize} ≈ ${approxMb} MB]`;
+          cacheDetail = ` [${_('Cache')}: ${data.dnsmasqCacheSize} \u2248 ${approxMb} MB]`;
         }
         items.push({
           key: 'Dnsmasq (DNS)',
           value: data.dnsmasqRunning
             ? data.dnsmasqMemoryMb
-              ? `${_('✔ Running')} (${data.dnsmasqMemoryMb} MB)${cacheDetail}`
-              : `${_('✔ Running')}${cacheDetail}`
-            : _('✘ Stopped'),
+              ? `\u2713 (${data.dnsmasqMemoryMb} MB)${cacheDetail}`
+              : `\u2713${cacheDetail}`
+            : '\u2717',
           attributes: {
             class: data.dnsmasqRunning
               ? 'tachyon_dashboard-page__widgets-section__item__row--success'

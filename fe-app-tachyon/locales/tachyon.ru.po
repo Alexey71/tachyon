@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 09:56+0300\n"
-"PO-Revision-Date: 2026-09-19 09:56+0300\n"
+"POT-Creation-Date: 2026-09-19 10:28+0300\n"
+"PO-Revision-Date: 2026-09-19 10:28+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -95,17 +95,11 @@ msgstr "✓ 32KB Прокачано"
 msgid "✔ Online"
 msgstr "✔ В сети"
 
-msgid "✔ Running"
-msgstr "✔ Работает"
-
 msgid "✗ Throttled at 16KB"
 msgstr "✗ Задушено на 16KB"
 
 msgid "✘ Offline"
 msgstr "✘ Не в сети"
-
-msgid "✘ Stopped"
-msgstr "✘ Остановлено"
 
 msgid "🌐 Custom Target URL..."
 msgstr "🌐 Пользовательский URL цели..."
@@ -5147,6 +5141,9 @@ msgstr "Настройки Tachyon"
 msgid "Tachyon update did not complete within the timeout"
 msgstr "Обновление Tachyon не завершилось в течение таймаута"
 
+msgid "Tachyon updated to"
+msgstr ""
+
 msgid "Tachyon will not modify your DHCP configuration"
 msgstr "Tachyon не будет изменять вашу конфигурацию DHCP"
 
@@ -6058,6 +6055,12 @@ msgstr "Правила маршрутизации sing-box для Zapret2 не �
 
 msgid "Zero config mesh VPN daemon"
 msgstr "Mesh VPN-демон с нулевой конфигурацией"
+
+msgid "✔ Running"
+msgstr "✔ Работает"
+
+msgid "✘ Stopped"
+msgstr "✘ Остановлено"
 
 msgid "Downloading and applying rule sets and lists..."
 msgstr "Загрузка и применение наборов правил и списков..."

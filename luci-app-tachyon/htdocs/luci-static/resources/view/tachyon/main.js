@@ -6788,6 +6788,7 @@ function applyServiceState(uiState) {
         tachyonRunning: uiState.service.tachyon.running,
         tachyonEnabled: uiState.service.tachyon.enabled,
         tachyonStatus: uiState.service.tachyon.status,
+        tachyonMemoryMb: uiState.service.tachyon.memory_rss_mb,
         watchdogRunning: store.get().servicesInfoWidget.data.watchdogRunning,
         zapret2Running: uiState.service.zapret2 ? uiState.service.zapret2.running : void 0,
         zapret2MemoryMb: uiState.service.zapret2 ? uiState.service.zapret2.memory_rss_mb : void 0,
@@ -7440,6 +7441,7 @@ async function fetchServicesInfo() {
         tachyonRunning: tachyon.success ? tachyon.data.running : previousData.tachyonRunning,
         tachyonEnabled: tachyon.success ? tachyon.data.enabled : previousData.tachyonEnabled,
         tachyonStatus: tachyon.success ? tachyon.data.status : previousData.tachyonStatus,
+        tachyonMemoryMb: tachyon.success ? tachyon.data.memory_rss_mb : previousData.tachyonMemoryMb,
         watchdogRunning: watchdog.success ? Number(watchdog.data.running) : previousData.watchdogRunning,
         zapret2Running: previousData.zapret2Running,
         zapret2MemoryMb: previousData.zapret2MemoryMb,
@@ -9243,14 +9245,14 @@ async function renderServicesInfoWidget() {
       const items = [
         {
           key: "Tachyon",
-          value: data.tachyonRunning ? _("✔ Running") : _("✘ Stopped"),
+          value: data.tachyonRunning ? data.tachyonMemoryMb ? `✓ (${data.tachyonMemoryMb} MB)` : "✓" : "✗",
           attributes: {
             class: data.tachyonRunning ? "tachyon_dashboard-page__widgets-section__item__row--success" : "tachyon_dashboard-page__widgets-section__item__row--error"
           }
         },
         {
           key: "Sing-box",
-          value: data.singbox ? data.singboxMemoryMb ? `${_("✔ Running")} (${data.singboxMemoryMb} MB)` : _("✔ Running") : _("✘ Stopped"),
+          value: data.singbox ? data.singboxMemoryMb ? `✓ (${data.singboxMemoryMb} MB)` : "✓" : "✗",
           attributes: {
             class: data.singbox ? "tachyon_dashboard-page__widgets-section__item__row--success" : "tachyon_dashboard-page__widgets-section__item__row--error"
           }
@@ -9259,7 +9261,7 @@ async function renderServicesInfoWidget() {
       if (data.zapret2Running) {
         items.push({
           key: "Zapret2",
-          value: data.zapret2MemoryMb ? `${_("✔ Running")} (${data.zapret2MemoryMb} MB)` : _("✔ Running"),
+          value: data.zapret2MemoryMb ? `✓ (${data.zapret2MemoryMb} MB)` : "✓",
           attributes: {
             class: "tachyon_dashboard-page__widgets-section__item__row--success"
           }
@@ -9273,7 +9275,7 @@ async function renderServicesInfoWidget() {
         }
         items.push({
           key: "Dnsmasq (DNS)",
-          value: data.dnsmasqRunning ? data.dnsmasqMemoryMb ? `${_("✔ Running")} (${data.dnsmasqMemoryMb} MB)${cacheDetail}` : `${_("✔ Running")}${cacheDetail}` : _("✘ Stopped"),
+          value: data.dnsmasqRunning ? data.dnsmasqMemoryMb ? `✓ (${data.dnsmasqMemoryMb} MB)${cacheDetail}` : `✓${cacheDetail}` : "✗",
           attributes: {
             class: data.dnsmasqRunning ? "tachyon_dashboard-page__widgets-section__item__row--success" : "tachyon_dashboard-page__widgets-section__item__row--error"
           }
@@ -21647,17 +21649,18 @@ async function applyCompletedComponentAction({
   patchSystemInfoAfterMutation(result);
   setActionLoading(key, false);
   if (result.component === "tachyon" && (result.action === "install" || result.action === "reinstall" || result.action === "install_version")) {
-    if (notify && result.message) {
-      showToast(result.message, "success", 1200);
-    }
+    const tachyonSuccessMsg = result.action === "install_version" ? _("Tachyon updated to") + " " + (result.latest_version || "") : _("Tachyon has been installed");
     if (notify) {
+      showToast(tachyonSuccessMsg, "success", 1200);
       if (modalController) {
-        modalController.completeSuccess(result.message, { reloadPage: true });
+        modalController.completeSuccess(tachyonSuccessMsg, {
+          reloadPage: true
+        });
       } else {
         reloadPageAfterTachyonUpdate(result.job_id);
       }
     } else {
-      modalController?.completeSuccess(result.message);
+      modalController?.completeSuccess(tachyonSuccessMsg);
     }
     return;
   }

@@ -697,18 +697,22 @@ async function applyCompletedComponentAction({
       result.action === 'reinstall' ||
       result.action === 'install_version')
   ) {
-    if (notify && result.message) {
-      showToast(result.message, 'success', 1200);
-    }
+    const tachyonSuccessMsg =
+      result.action === 'install_version'
+        ? _('Tachyon updated to') + ' ' + (result.latest_version || '')
+        : _('Tachyon has been installed');
 
     if (notify) {
+      showToast(tachyonSuccessMsg, 'success', 1200);
       if (modalController) {
-        modalController.completeSuccess(result.message, { reloadPage: true });
+        modalController.completeSuccess(tachyonSuccessMsg, {
+          reloadPage: true,
+        });
       } else {
         reloadPageAfterTachyonUpdate(result.job_id);
       }
     } else {
-      modalController?.completeSuccess(result.message);
+      modalController?.completeSuccess(tachyonSuccessMsg);
     }
     return;
   }

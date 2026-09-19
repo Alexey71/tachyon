@@ -122,6 +122,7 @@ function applyServiceState(uiState: Tachyon.UiState) {
         tachyonRunning: uiState.service.tachyon.running,
         tachyonEnabled: uiState.service.tachyon.enabled,
         tachyonStatus: uiState.service.tachyon.status,
+        tachyonMemoryMb: uiState.service.tachyon.memory_rss_mb,
         watchdogRunning: store.get().servicesInfoWidget.data.watchdogRunning,
         zapret2Running: uiState.service.zapret2
           ? uiState.service.zapret2.running

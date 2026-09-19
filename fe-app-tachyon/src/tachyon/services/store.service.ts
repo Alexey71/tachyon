@@ -166,6 +166,7 @@ export interface StoreType {
       tachyonRunning: number;
       tachyonEnabled: number;
       tachyonStatus: string;
+      tachyonMemoryMb?: number;
       watchdogRunning: number;
       singboxMemoryMb?: number;
       zapret2Running?: number;

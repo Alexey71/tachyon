@@ -71,6 +71,9 @@ export async function fetchServicesInfo() {
         tachyonStatus: tachyon.success
           ? tachyon.data.status
           : previousData.tachyonStatus,
+        tachyonMemoryMb: tachyon.success
+          ? tachyon.data.memory_rss_mb
+          : previousData.tachyonMemoryMb,
         watchdogRunning: watchdog.success
           ? Number((watchdog.data as { running: boolean }).running)
           : previousData.watchdogRunning,

@@ -1110,6 +1110,17 @@ function process_memory_rss_mb(process_name) {
     return total_kb > 0 ? int(total_kb / 1024) : 0;
 }
 
+function pidfile_memory_rss_mb(path) {
+    let pid = trim(read_file(path) || "");
+    if (!pid || match(pid, /^[0-9]+$/) == null)
+        return 0;
+    let status = fs.readfile("/proc/" + pid + "/status");
+    if (!status)
+        return 0;
+    let m = match(status, /VmRSS:[ \t]+([0-9]+)/);
+    return m ? int(int(m[1]) / 1024) : 0;
+}
+
 function truthy(value) {
     return value == "1" || value == "true" || value == "on" || value == "yes";
 }
@@ -1140,6 +1151,7 @@ function current_ui_state_json() {
     let dnsmasq_pids = get_process_pids("dnsmasq");
     let dnsmasq_is_running = length(dnsmasq_pids) > 0 ? 1 : 0;
     let dnsmasq_rss = dnsmasq_is_running ? process_memory_rss_mb("dnsmasq") : 0;
+    let tachyon_rss = tachyon_is_running ? (pidfile_memory_rss_mb("/var/run/tachyon_watchdog.pid") + pidfile_memory_rss_mb("/var/run/tachyon-feedback.pid")) : 0;
     let dns_local_cache = truthy(uci_core.get(CONFIG_NAME + ".settings.dns_local_cache"));
     let dns_cache_size = dns_local_cache ? int(uci_core.get(CONFIG_NAME + ".settings.dns_cache_size") || 10000) : 0;
 
@@ -1149,7 +1161,8 @@ function current_ui_state_json() {
                 running: tachyon_is_running,
                 enabled: tachyon_is_enabled,
                 status: tachyon_status,
-                dns_configured: dns_configured() ? 1 : 0
+                dns_configured: dns_configured() ? 1 : 0,
+                memory_rss_mb: tachyon_rss
             },
             sing_box: {
                 running: sing_box_is_running,
