@@ -71,8 +71,8 @@ function getRuleEditButtonText() {
   return _("Edit");
 }
 
-function createSvgIcon(children) {
-  const attrs = {
+function createSvgIcon(children, attrs = {}) {
+  const baseAttrs = {
     viewBox: "0 0 24 24",
     width: "16",
     height: "16",
@@ -83,16 +83,14 @@ function createSvgIcon(children) {
     "stroke-linejoin": "round",
     "aria-hidden": "true",
     focusable: "false",
+    ...attrs,
   };
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  Object.entries(attrs).forEach(([key, value]) =>
+  Object.entries(baseAttrs).forEach(([key, value]) =>
     svg.setAttribute(key, `${value}`),
   );
   children.forEach(({ tag, attrs: childAttrs }) => {
-    const node = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      tag,
-    );
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
     Object.entries(childAttrs).forEach(([key, value]) =>
       node.setAttribute(key, `${value}`),
     );
@@ -103,10 +101,15 @@ function createSvgIcon(children) {
 
 function createCloneIcon() {
   return createSvgIcon([
-    { tag: "rect", attrs: { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" } },
+    {
+      tag: "rect",
+      attrs: { x: "9", y: "9", width: "12", height: "12", rx: "2.5" },
+    },
     {
       tag: "path",
-      attrs: { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" },
+      attrs: {
+        d: "M6 15H5.5A2.5 2.5 0 0 1 3 12.5v-7A2.5 2.5 0 0 1 5.5 3h7A2.5 2.5 0 0 1 15 5.5V6",
+      },
     },
   ]);
 }
@@ -205,6 +208,8 @@ function configureGridSection(sectionRef, type, title, addTitle) {
           class: "btn cbi-button cbi-button-action",
           title: _("Clone"),
           "aria-label": _("Clone"),
+          style:
+            "display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px;",
           click: function (ev) {
             ev.preventDefault();
             ev.stopPropagation();

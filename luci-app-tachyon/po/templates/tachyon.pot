@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 04:45+0300\n"
-"PO-Revision-Date: 2026-09-19 04:45+0300\n"
+"POT-Creation-Date: 2026-09-19 04:59+0300\n"
+"PO-Revision-Date: 2026-09-19 04:59+0300\n"
 "Last-Translator: Dushnilin <dushnilin@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -317,7 +317,7 @@ msgstr ""
 msgid "🟣 Twitch Suite (Live Stream + HLS CDN)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:608
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:613
 msgid "Accept external proxy connections and route them with sing-box."
 msgstr ""
 
@@ -414,19 +414,19 @@ msgstr ""
 msgid "Active routes"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:636
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:641
 msgid "Add a family profile"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:654
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:659
 msgid "Add a schedule rule"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:596
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:601
 msgid "Add a section"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:614
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:619
 msgid "Add a server inbound"
 msgstr ""
 
@@ -1199,7 +1199,7 @@ msgstr ""
 msgid "Block in interval"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:646
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:651
 msgid "Block internet access or specific proxy sections for family profiles or individual devices based on time and days."
 msgstr ""
 
@@ -1717,8 +1717,8 @@ msgstr ""
 msgid "Client VPN IP address (e.g. 10.0.0.2/32)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:206
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:207
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:209
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:210
 msgid "Clone"
 msgstr ""
 
@@ -1831,7 +1831,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1051
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1513
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:708
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:713
 msgid "Components"
 msgstr ""
 
@@ -1866,7 +1866,7 @@ msgstr ""
 msgid "Configuration applied"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:493
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:498
 msgid "Configuration for Tachyon service"
 msgstr ""
 
@@ -1954,8 +1954,6 @@ msgid "Copied!"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/main.js:11687
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12996
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:12997
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:1785
 #: src/partials/modal/renderModal.ts:258
 msgid "Copy"
@@ -2135,7 +2133,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1506
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:995
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:577
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:582
 msgid "Dashboard"
 msgstr ""
 
@@ -2276,7 +2274,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1044
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1512
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:694
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:699
 msgid "Diagnostics"
 msgstr ""
 
@@ -2743,7 +2741,7 @@ msgstr ""
 msgid "DPI Type"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:592
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:597
 msgid "Drag rows to change priority. The rule at the top is checked first."
 msgstr ""
 
@@ -3539,13 +3537,13 @@ msgstr ""
 msgid "Family (🏠)"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:635
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:640
 msgid "Family Profile"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1016
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1509
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:627
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:632
 msgid "Family Profiles"
 msgstr ""
 
@@ -3818,7 +3816,7 @@ msgstr ""
 msgid "GOOD"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:628
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:633
 msgid "Group devices into family profiles to manage content filtering, SafeSearch, and screen time limits in one place."
 msgstr ""
 
@@ -3831,11 +3829,11 @@ msgid "Guest Devices (MAC / IP)"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1030
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:663
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:668
 msgid "Guest Mode"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:664
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:669
 msgid "Guest mode isolates guest devices from local LAN and router administration, while allowing internet access with daily quotas and schedules."
 msgstr ""
 
@@ -5276,7 +5274,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1037
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1511
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:680
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:685
 msgid "Monitoring"
 msgstr ""
 
@@ -6018,7 +6016,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1023
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1510
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:645
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:650
 msgid "Parental Control"
 msgstr ""
 
@@ -6998,8 +6996,8 @@ msgid "Rule:"
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/server.js:2751
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:191
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:198
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:194
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:201
 msgid "Rules"
 msgstr ""
 
@@ -7114,7 +7112,7 @@ msgstr ""
 msgid "Schedule"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:653
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:658
 msgid "Schedule Rule"
 msgstr ""
 
@@ -7161,7 +7159,7 @@ msgid "Secret token for authorizing WRITE operations (POST/PUT) on /cgi-bin/tach
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:2859
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:596
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:601
 msgid "Section"
 msgstr ""
 
@@ -7169,7 +7167,7 @@ msgstr ""
 msgid "Section action"
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:218
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:223
 msgid "Section cloned"
 msgstr ""
 
@@ -7187,7 +7185,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1002
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1507
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:591
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:596
 msgid "Sections"
 msgstr ""
 
@@ -7416,7 +7414,7 @@ msgid "Sequential: failover to the next server after N failures. Parallel: aggre
 msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:8109
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:613
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:618
 msgid "Server"
 msgstr ""
 
@@ -7503,7 +7501,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1009
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1508
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:607
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:612
 msgid "Servers"
 msgstr ""
 
@@ -7557,7 +7555,7 @@ msgstr ""
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/section.js:7745
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1058
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1514
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:722
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:727
 msgid "Settings"
 msgstr ""
 
@@ -8220,7 +8218,7 @@ msgstr ""
 msgid "Tachyon service is stopped. Start the service to display the dashboard."
 msgstr ""
 
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:492
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:497
 msgid "Tachyon Settings"
 msgstr ""
 
@@ -8379,7 +8377,7 @@ msgstr ""
 
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1065
 #: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/settings.js:1515
-#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:736
+#: ../luci-app-tachyon/htdocs/luci-static/resources/view/tachyon/tachyon.js:741
 msgid "Telegram Bot"
 msgstr ""
 

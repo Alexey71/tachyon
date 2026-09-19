@@ -12993,8 +12993,8 @@ function cloneSection(section_id) {
   const sourceName = uci.get(UCI_PACKAGE, section_id, "name") || section_id;
 
   copySectionOptions(section_id, targetId, {
-    label: `${sourceLabel} (${_("Copy")})`,
-    name: `${sourceName} (${_("Copy")})`,
+    label: `${sourceLabel} (Copy)`,
+    name: `${sourceName} (Copy)`,
   });
   copyChildSections(section_id, targetId);
 
