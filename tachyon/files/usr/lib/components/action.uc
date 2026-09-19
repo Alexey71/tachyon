@@ -2315,9 +2315,19 @@ function verify_binary_post_install(binary_path, expected_version, version_cmd_a
     return true;
 }
 
-function validate_sing_box_extended_binary(binary, library_dir) {
+function validate_sing_box_extended_binary(binary, library_dir, compressed) {
     let version = read_sing_box_binary_version(binary, library_dir || "");
-    return version != "" ? version : "";
+    if (version != "")
+        return version;
+    if (compressed) {
+        let file_type = trim(command_output_lenient("file " + shell_quote(binary) + " 2>&1"));
+        if (index(file_type, "ELF") >= 0) {
+            updates_log("Compressed binary validated via ELF header check: " + binary, "info");
+            return "compressed";
+        }
+        updates_log("Compressed binary is not a valid ELF executable: " + binary, "warn");
+    }
+    return "";
 }
 
 function move_file_portable(source_path, target_path) {
@@ -2948,7 +2958,7 @@ function install_sing_box_extended(action, compressed, target_tag) {
 
     remove_file(archive_file);
     stop_tachyon_before_sing_box_change();
-    let new_version = validate_sing_box_extended_binary(tmp_binary, tmp_dir);
+    let new_version = validate_sing_box_extended_binary(tmp_binary, tmp_dir, compressed);
     if (new_version == "") {
         remove_file(tmp_binary);
         remove_file(tmp_cronet);
@@ -3021,7 +3031,7 @@ function install_sing_box_extended(action, compressed, target_tag) {
     }
     remove_file(archive_file);
 
-    new_version = validate_sing_box_extended_binary("/usr/bin/sing-box", "/usr/lib");
+    new_version = validate_sing_box_extended_binary("/usr/bin/sing-box", "/usr/lib", compressed);
     if (new_version == "") {
         if (restore_sing_box_after_failed_extended_install(current_variant, backup_binary, backup_cronet, previous_marker, previous_version_state, archive_file, cronet_touched))
             action_fail("sing_box", action, "Installed " + label + " failed validation; previous sing-box variant was restored", current_version, latest_version);
