@@ -1111,7 +1111,7 @@ function process_memory_rss_mb(process_name) {
 }
 
 function pidfile_memory_rss_mb(path) {
-    let pid = trim(read_file(path) || "");
+    let pid = trim(fs.readfile(path) || "");
     if (!pid || match(pid, /^[0-9]+$/) == null)
         return 0;
     let status = fs.readfile("/proc/" + pid + "/status");
