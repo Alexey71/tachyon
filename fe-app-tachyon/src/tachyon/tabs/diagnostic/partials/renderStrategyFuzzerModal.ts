@@ -28,6 +28,7 @@ export function renderStrategyFuzzerModal(
   let isRunning = false;
   let currentState: Tachyon.FuzzerState | null = null;
   let resultFilter: 'all' | 'success' | 'fast' = 'all';
+  let sourceFilter = 'all';
   let autoApplyEnabled = false;
   let autoAppliedJobId: string | null = null;
   let stoppedManually = false;
@@ -480,6 +481,28 @@ export function renderStrategyFuzzerModal(
             bOk,
             bFast,
           ]);
+        })(),
+        (() => {
+          const sel = E('select', {
+            class: 'cbi-input-select',
+            style: 'padding: 2px 6px; font-size: 11px; max-width: 160px;',
+          }) as HTMLSelectElement;
+          const opts: Array<[string, string]> = [
+            ['all', _('All sources')],
+            ['tachyon', _('Built-in')],
+            ['zapret4rocket', 'zapret4rocket'],
+            ['homeproxy-hiddify', 'homeproxy-hiddify'],
+          ];
+          for (const [value, label] of opts) {
+            const o = E('option', { value }, label) as HTMLOptionElement;
+            sel.appendChild(o);
+          }
+          sel.value = sourceFilter;
+          sel.addEventListener('change', () => {
+            sourceFilter = sel.value;
+            if (currentState) renderResults(currentState);
+          });
+          return sel;
         })(),
       ]),
       E('div', { style: 'display: flex; gap: 8px;' }, [applyBestBtn]),
@@ -1374,6 +1397,9 @@ export function renderStrategyFuzzerModal(
     } else if (resultFilter === 'fast') {
       list = list.filter((r) => r.success && r.speed_kbps > 1024);
     }
+    if (sourceFilter !== 'all') {
+      list = list.filter((r) => (r.source || 'tachyon') === sourceFilter);
+    }
 
     if (list.length === 0) {
       tbody.appendChild(
@@ -1399,6 +1425,20 @@ export function renderStrategyFuzzerModal(
       const isBest = state.best_strategy && state.best_strategy.id === item.id;
 
       const nameChildren: (HTMLElement | string)[] = [E('span', {}, item.name)];
+      if (item.source && item.source !== 'tachyon') {
+        nameChildren.push(
+          E(
+            'span',
+            {
+              style:
+                'font-size: 9px; margin-left: 6px; padding: 1px 5px; border-radius: 3px; ' +
+                'background: rgba(255,255,255,0.08); opacity: 0.75; font-family: monospace;',
+              title: _('Strategy preset source'),
+            },
+            item.source,
+          ),
+        );
+      }
       if (item.badge) {
         nameChildren.push(
           E(

@@ -1328,7 +1328,7 @@ function createComponentsVisibilityWidget(option, section_id) {
     {
       id: "wdtt",
       label: "WDTT",
-      desc: _("Western Digital Tunnel Transport"),
+      desc: _("WireGuard over TURN Tunnel"),
       defaultVisible: true,
       fixed: false,
     },

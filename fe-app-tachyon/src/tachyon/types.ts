@@ -1109,6 +1109,8 @@ export namespace Tachyon {
     args: string;
     description: string;
     rationale?: string;
+    source?: string;
+    tags?: string[];
     success: boolean;
     http_code: number;
     handshake_ms: number;

@@ -394,6 +394,121 @@ function validate_strategy_args(engine, args_val) {
 }
 
 const PATTERNS_FILE = "/etc/tachyon/fuzzer_patterns.json";
+const BUILTIN_PRESETS_FILE = getenv("TACHYON_PRESETS_FILE") || "/usr/share/tachyon/dpi-presets.json";
+const USER_PRESETS_FILE = "/etc/tachyon/dpi-presets-user.json";
+
+let _builtin_presets_cache = null;
+let _preset_autoid = 0;
+
+function presets_file_candidates() {
+    let list = [];
+    if (getenv("TACHYON_PRESETS_FILE"))
+        push(list, getenv("TACHYON_PRESETS_FILE"));
+    push(list, "/usr/share/tachyon/dpi-presets.json");
+    push(list, LIB_DIR + "/../share/tachyon/dpi-presets.json");
+    return list;
+}
+
+function load_presets_file(path) {
+    if (!path)
+        return null;
+    let data = read_json_file(path);
+    if (!data || type(data) != "object")
+        return null;
+    return data;
+}
+
+function normalize_preset_entry(entry, engine) {
+    if (!entry || type(entry) != "object")
+        return null;
+    let args = trim(as_string(entry.args));
+    if (args == "")
+        return null;
+    let id = trim(as_string(entry.id));
+    if (id == "") {
+        _preset_autoid++;
+        id = sprintf("preset_%s_%d", engine, _preset_autoid);
+    }
+    return {
+        id: id,
+        name: trim(as_string(entry.name)) || id,
+        engine: engine,
+        args: args,
+        description: trim(as_string(entry.description)),
+        source: trim(as_string(entry.source)) || "builtin",
+        tags: type(entry.tags) == "array" ? entry.tags : [],
+        requires_blobs: entry.requires_blobs ? entry.requires_blobs : []
+    };
+}
+
+function load_builtin_presets() {
+    if (_builtin_presets_cache != null)
+        return _builtin_presets_cache;
+
+    let result = { zapret2: [], zapret: [], byedpi: [] };
+    let sources = [];
+    for (let p in presets_file_candidates()) {
+        let data = load_presets_file(p);
+        if (data) {
+            push(sources, data);
+            break;
+        }
+    }
+    let user_data = load_presets_file(USER_PRESETS_FILE);
+    if (user_data)
+        push(sources, user_data);
+
+    let seen = {};
+    for (let data in sources) {
+        for (let engine in [ "zapret2", "zapret", "byedpi" ]) {
+            let list = data[engine];
+            if (type(list) != "array")
+                continue;
+            let target_list = result[engine];
+            for (let raw in list) {
+                let entry = normalize_preset_entry(raw, engine);
+                if (entry == null)
+                    continue;
+                if (seen[entry.id])
+                    continue;
+                seen[entry.id] = true;
+                push(target_list, entry);
+            }
+        }
+    }
+
+    _builtin_presets_cache = result;
+    return result;
+}
+
+function reset_presets_cache() {
+    _builtin_presets_cache = null;
+}
+
+function preset_blobs_available(entry) {
+    if (entry == null || type(entry.requires_blobs) != "array" || length(entry.requires_blobs) == 0)
+        return true;
+    let dirs = [
+        "/opt/zapret2/files/fake",
+        "/opt/zapret/files/fake",
+        "/usr/share/zapret2/files/fake",
+        "/usr/share/zapret/files/fake",
+        LIB_DIR + "/providers/zapret2/files/fake"
+    ];
+    for (let blob in entry.requires_blobs) {
+        let found = false;
+        for (let d in dirs) {
+            if (fs.stat(d + "/" + blob) != null) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return false;
+    }
+    return true;
+}
+
 
 const DEFAULT_PATTERNS = {
     zapret2: {
@@ -1745,6 +1860,34 @@ function get_strategies_for_engine(engine, mode, target) {
             push(result, s);
         }
     }
+
+    // Curated presets from external sources (zapret4rocket, homeproxy-hiddify)
+    let presets = load_builtin_presets();
+    let preset_engines = engine == "all" ? [ "zapret2", "zapret", "byedpi" ] : [ engine ];
+    for (let eng in preset_engines) {
+        let list = presets[eng];
+        if (type(list) != "array")
+            continue;
+        for (let p in list) {
+            if (p.args == "" || seen_args[p.args])
+                continue;
+            if (!validate_strategy_args(p.engine, p.args))
+                continue;
+            if (!preset_blobs_available(p))
+                continue;
+            seen_args[p.args] = true;
+            push(result, {
+                id: p.id,
+                name: p.name,
+                engine: p.engine,
+                args: p.args,
+                description: p.description,
+                source: p.source,
+                tags: p.tags
+            });
+        }
+    }
+
     for (let cs in cfg.custom_strategies) {
         if (cs && (engine == "all" || cs.engine == engine) && cs.args && !seen_args[cs.args]) {
             seen_args[cs.args] = true;
@@ -2968,6 +3111,8 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
                 args: strat.args,
                 description: strat.description || "",
                 rationale: strat.rationale || "",
+                source: strat.source || "",
+                tags: type(strat.tags) == "array" ? strat.tags : [],
                 success: probe.success,
                 http_code: probe.http_code,
                 handshake_ms: probe.handshake_ms,
@@ -3394,6 +3539,77 @@ function clear_history() {
     print(sprintf("%J\n", { success: true, message: "Fuzzer history cleared" }));
 }
 
+function get_presets_info() {
+    reset_presets_cache();
+    let presets = load_builtin_presets();
+    let sources = {};
+    let tags = {};
+    let counts = {};
+    for (let engine in [ "zapret2", "zapret", "byedpi" ]) {
+        counts[engine] = 0;
+        let list = presets[engine];
+        if (type(list) != "array")
+            continue;
+        for (let p in list) {
+            counts[engine]++;
+            sources[p.source] = true;
+            for (let t in p.tags)
+                tags[t] = true;
+        }
+    }
+    let source_list = [];
+    for (let s, _v in sources)
+        push(source_list, s);
+    let tag_list = [];
+    for (let t, _v in tags)
+        push(tag_list, t);
+    return {
+        success: true,
+        counts: counts,
+        sources: source_list,
+        tags: tag_list,
+        user_presets_file: USER_PRESETS_FILE,
+        builtin_presets_file: BUILTIN_PRESETS_FILE
+    };
+}
+
+const PRESETS_MIRRORS = [
+    "https://raw.githubusercontent.com/Dushnilin/tachyon/main/tachyon/files/usr/share/tachyon/dpi-presets.json",
+    "https://gh-proxy.com/https://raw.githubusercontent.com/Dushnilin/tachyon/main/tachyon/files/usr/share/tachyon/dpi-presets.json",
+    "https://ghfast.top/https://raw.githubusercontent.com/Dushnilin/tachyon/main/tachyon/files/usr/share/tachyon/dpi-presets.json"
+];
+
+function update_presets() {
+    let tmp = "/tmp/tachyon-presets-download.json";
+    let downloaded = false;
+    let last_err = "";
+    for (let url in PRESETS_MIRRORS) {
+        try { fs.unlink(tmp); } catch (e) {}
+        let rc = system(sprintf("curl -fsSL --connect-timeout 10 --max-time 30 -o %s %s >/dev/null 2>&1",
+            shell_quote(tmp), shell_quote(url)));
+        if (rc == 0 && fs.stat(tmp) != null) {
+            let parsed = read_json_file(tmp);
+            if (parsed && type(parsed) == "object") {
+                downloaded = true;
+                break;
+            }
+            last_err = "Downloaded presets file is not valid JSON";
+        } else {
+            last_err = "Failed to download presets from mirror";
+        }
+    }
+    try { fs.unlink(tmp); } catch (e) {}
+    if (!downloaded) {
+        print(sprintf("%J\n", { success: false, error: last_err || "All preset mirrors failed" }));
+        return;
+    }
+    print(sprintf("%J\n", {
+        success: true,
+        message: "Built-in presets are shipped with the package; update the tachyon package to refresh them",
+        user_presets_file: USER_PRESETS_FILE
+    }));
+}
+
 // CLI Dispatcher
 let op = ARGV[0] || "status";
 
@@ -3438,11 +3654,15 @@ if (op == "start") {
         zapret: get_strategies_for_engine("zapret", strat_mode),
         byedpi: get_strategies_for_engine("byedpi", strat_mode)
     }));
+} else if (op == "presets_info") {
+    print(sprintf("%J\n", get_presets_info()));
+} else if (op == "update_presets") {
+    update_presets();
 } else if (op == "probe") {
     let r = run_probe(ARGV[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5]);
     print(sprintf("%J\n", r));
 } else {
-    warn("Usage: fuzzer.uc [start|status|stop|apply|strategies|generate|get_patterns|save_patterns|reset_patterns|ai_synthesize|detect_dpi|auto_apply|history|clear_history|worker|probe] ...\n");
+    warn("Usage: fuzzer.uc [start|status|stop|apply|strategies|generate|get_patterns|save_patterns|reset_patterns|ai_synthesize|detect_dpi|auto_apply|history|clear_history|presets_info|update_presets|worker|probe] ...\n");
     exit(1);
 }
 

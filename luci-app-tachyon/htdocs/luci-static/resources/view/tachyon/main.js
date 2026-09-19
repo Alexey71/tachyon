@@ -13075,6 +13075,7 @@ function renderStrategyFuzzerModal(ruleNames = []) {
   let isRunning = false;
   let currentState = null;
   let resultFilter = "all";
+  let sourceFilter = "all";
   let autoApplyEnabled = false;
   let autoAppliedJobId = null;
   let stoppedManually = false;
@@ -13457,6 +13458,28 @@ function renderStrategyFuzzerModal(ruleNames = []) {
             bOk,
             bFast
           ]);
+        })(),
+        (() => {
+          const sel = E("select", {
+            class: "cbi-input-select",
+            style: "padding: 2px 6px; font-size: 11px; max-width: 160px;"
+          });
+          const opts = [
+            ["all", _("All sources")],
+            ["tachyon", _("Built-in")],
+            ["zapret4rocket", "zapret4rocket"],
+            ["homeproxy-hiddify", "homeproxy-hiddify"]
+          ];
+          for (const [value, label] of opts) {
+            const o = E("option", { value }, label);
+            sel.appendChild(o);
+          }
+          sel.value = sourceFilter;
+          sel.addEventListener("change", () => {
+            sourceFilter = sel.value;
+            if (currentState) renderResults(currentState);
+          });
+          return sel;
         })()
       ]),
       E("div", { style: "display: flex; gap: 8px;" }, [applyBestBtn])
@@ -14251,6 +14274,9 @@ function renderStrategyFuzzerModal(ruleNames = []) {
     } else if (resultFilter === "fast") {
       list = list.filter((r) => r.success && r.speed_kbps > 1024);
     }
+    if (sourceFilter !== "all") {
+      list = list.filter((r) => (r.source || "tachyon") === sourceFilter);
+    }
     if (list.length === 0) {
       tbody.appendChild(
         E(
@@ -14271,6 +14297,18 @@ function renderStrategyFuzzerModal(ruleNames = []) {
     list.forEach((item, idx) => {
       const isBest = state.best_strategy && state.best_strategy.id === item.id;
       const nameChildren = [E("span", {}, item.name)];
+      if (item.source && item.source !== "tachyon") {
+        nameChildren.push(
+          E(
+            "span",
+            {
+              style: "font-size: 9px; margin-left: 6px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.08); opacity: 0.75; font-family: monospace;",
+              title: _("Strategy preset source")
+            },
+            item.source
+          )
+        );
+      }
       if (item.badge) {
         nameChildren.push(
           E(

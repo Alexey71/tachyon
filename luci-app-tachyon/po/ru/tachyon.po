@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 10:43+0300\n"
-"PO-Revision-Date: 2026-09-19 10:43+0300\n"
+"POT-Creation-Date: 2026-09-19 11:31+0300\n"
+"PO-Revision-Date: 2026-09-19 11:31+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -416,6 +416,9 @@ msgstr "Все серверы"
 msgid "All services"
 msgstr "Все сервисы"
 
+msgid "All sources"
+msgstr "Все источники"
+
 msgid "All traffic from these IP addresses will be routed through the section unconditionally, ignoring all other conditions."
 msgstr "Весь трафик от этих IP-адресов будет маршрутизирован через секцию безусловно, игнорируя все остальные условия."
 
@@ -805,6 +808,9 @@ msgstr "Браузер использует FakeIP"
 
 msgid "Bug report downloaded"
 msgstr "Отчёт об ошибке загружен"
+
+msgid "Built-in"
+msgstr "Встроенные"
 
 msgid "Built-in rule sets"
 msgstr "Встроенные наборы правил"
@@ -4994,6 +5000,9 @@ msgstr "Стратегия удалена"
 msgid "Strategy Name"
 msgstr "Имя стратегии"
 
+msgid "Strategy preset source"
+msgstr "Источник пресета стратегии"
+
 msgid "Strict (🔒)"
 msgstr "Строгий (🔒)"
 
@@ -5942,9 +5951,6 @@ msgstr "Будни (Пн-Пт)"
 msgid "Weekends (Sat-Sun)"
 msgstr "Выходные (Сб-Вс)"
 
-msgid "Western Digital Tunnel Transport"
-msgstr "Транспортный туннель Western Digital"
-
 msgid "What Tachyon should do when this section matches"
 msgstr "Что должен делать Tachyon при совпадении этой секции"
 
@@ -5959,6 +5965,9 @@ msgstr "WHIP"
 
 msgid "Why Discord fails?"
 msgstr "Почему не работает Discord?"
+
+msgid "WireGuard over TURN Tunnel"
+msgstr "WireGuard over TURN Tunnel"
 
 msgid "WireGuard private key from your Cloudflare account"
 msgstr "Приватный ключ WireGuard из вашего аккаунта Cloudflare"

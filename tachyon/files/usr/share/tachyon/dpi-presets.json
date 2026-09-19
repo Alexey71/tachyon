@@ -1,0 +1,340 @@
+{
+  "version": 1,
+  "updated": "2026-09-19",
+  "source": "tachyon-builtin",
+  "description": "Curated DPI bypass strategy presets. Sources: bol-van/zapret (v1 nfqws), IndeecFOX/zapret4rocket (v1 curated, 1.1k stars), 1andrevich/homeproxy-hiddify (v2 + ByeDPI). Zapret2 (nfqws2) entries use Tachyon-native lua-desync syntax; zapret (nfqws) entries use classic --dpi-desync flags. ByeDPI entries use ciadpi short flags.",
+  "zapret2": [
+    {
+      "id": "z2r_quic_fake_ipfrag2",
+      "name": "QUIC YouTube: fake + ipfrag2",
+      "args": "--filter-udp=443 --lua-desync=fake:blob=quic_google:repeats=3 --lua-desync=ipfrag2",
+      "description": "UDP QUIC fragmentation with fake QUIC initial. From zapret4rocket UDP/YT suite.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z2r_quic_udplen_4",
+      "name": "QUIC YouTube: fake + udplen +4",
+      "args": "--filter-udp=443 --lua-desync=fake:blob=quic_google:repeats=2 --lua-desync=udplen:increment=4",
+      "description": "UDP length desync with +4 byte increment against QUIC throttling.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z2r_quic_udplen_8_pattern",
+      "name": "QUIC YouTube: fake + udplen +8 (pattern)",
+      "args": "--filter-udp=443 --lua-desync=fake:blob=quic_google:repeats=2 --lua-desync=udplen:increment=8:pattern=0xFEA82025",
+      "description": "UDP length desync with +8 increment and fixed payload pattern.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z2r_quic_udplen_25",
+      "name": "QUIC YouTube: fake + udplen +25",
+      "args": "--filter-udp=443 --lua-desync=fake:blob=quic_google:repeats=2 --lua-desync=udplen:increment=25",
+      "description": "Aggressive UDP length inflation for stateful QUIC DPI.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z2r_quic_fake_repeats_11",
+      "name": "QUIC YouTube: fake burst repeats=11",
+      "args": "--filter-udp=443 --lua-desync=fake:blob=quic_google:repeats=11",
+      "description": "High-intensity fake QUIC burst to saturate DPI connection tracking.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z2r_rkn_fake_multidisorder",
+      "name": "RKN HTTPS: fake + multidisorder (fonts.google)",
+      "args": "--filter-tcp=443,8443 --lua-desync=fake:blob=tls_google:repeats=6:fooling=badsum --lua-desync=multidisorder:pos=1,midsld",
+      "description": "YouTube/RKN interface strategy from zapret4rocket strategies 1/2.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "youtube", "tcp"]
+    },
+    {
+      "id": "z2r_rkn_fake_ts_badsum",
+      "name": "RKN HTTPS: fake ts+badsum (msn.com SNI)",
+      "args": "--filter-tcp=443,2053,2083,2087,2096,8443 --lua-desync=fake:blob=tls_max:repeats=6:fooling=ts,badsum",
+      "description": "Multi-port HTTPS strategy covering all CDN ports used by Discord/RKN targets.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "discord", "tcp"]
+    },
+    {
+      "id": "z2r_hostfakesplit_rzd",
+      "name": "HostFakeSplit (rzd.ru, seqovl=726)",
+      "args": "--filter-tcp=443 --lua-desync=hostfakesplit:host=rzd.ru:midhost=host-2:seqovl=726:fooling=badsum,badseq",
+      "description": "Splits at a whitelisted hostname boundary. zapret4rocket user-domain strategy 5.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp", "advanced"]
+    },
+    {
+      "id": "z2r_hostfakesplit_google",
+      "name": "HostFakeSplit (www.google.com, repeats=4)",
+      "args": "--filter-tcp=443 --lua-desync=hostfakesplit:host=www.google.com:repeats=4:fooling=ts,badsum",
+      "description": "Google-host fake split. zapret4rocket strategy 9.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "youtube", "tcp"]
+    },
+    {
+      "id": "z2r_syndata_seqovl_endsld",
+      "name": "SYN data + multisplit (endsld-2)",
+      "args": "--filter-tcp=443 --lua-desync=syndata:blob=syn_packet --lua-desync=multisplit:pos=1,sld+1,endsld-2:seqovl=1",
+      "description": "SYN payload injection with SDN-boundary split. zapret4rocket user-domain strategy 6.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp", "advanced"]
+    },
+    {
+      "id": "z2r_badseq_increment_10000000",
+      "name": "Fake + badseq increment 1e7",
+      "args": "--filter-tcp=443 --lua-desync=fake:blob=tls_google:repeats=6:fooling=ts,badsum --lua-desync=multisplit:pos=1:fooling=badseq",
+      "description": "Large badseq increment to defeat strict stateful reassembly. zapret4rocket strategy 7.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp"]
+    },
+    {
+      "id": "z2r_fake_split2_google_blob",
+      "name": "Fake + split2 (google blob, repeats=6)",
+      "args": "--filter-tcp=443 --lua-desync=fake:blob=tls_google:repeats=6:fooling=ts,badsum --lua-desync=split2:pos=1",
+      "description": "zapret4rocket strategy 13 adapted to nfqws2.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp"]
+    },
+    {
+      "id": "z2r_multidisorder_gv_pos_chain",
+      "name": "GoogleVideo: multidisorder pos chain",
+      "args": "--filter-tcp=443 --lua-desync=multidisorder:pos=2,5,105,host+5,sld-1,endsld-5,endsld",
+      "description": "Deep multi-position disorder tailored for googlevideo CDN. zapret4rocket GV strategy 16.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "googlevideo", "tcp"]
+    },
+    {
+      "id": "z2r_fakeddisorder_vk_pattern",
+      "name": "Fake + fakedsplit disorder (vk/gosuslugi patterns)",
+      "args": "--filter-tcp=443 --lua-desync=fake:blob=tls_google --lua-desync=fakeddisorder:pos=10,midsld:seqovl=336:seqovl_pattern=tls_gosuslugi",
+      "description": "Composite fake + disorder with whitelist pattern overlap. zapret4rocket strategy 11.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp", "advanced"]
+    },
+    {
+      "id": "z2r_discord_voice_multi_profile",
+      "name": "Discord Voice: STUN + QUIC multi-profile",
+      "args": "--filter-udp=50000-50099,1400,3478-3481,5349,19294-19344 --lua-desync=fake:blob=discord_udp:repeats=3",
+      "description": "Full Discord voice RTC port set with STUN fake. From zapret4rocket + homeproxy-hiddify Discord voice profile.",
+      "source": "homeproxy-hiddify",
+      "tags": ["discord", "voice", "udp"]
+    },
+    {
+      "id": "z2r_games_udp_anyproto",
+      "name": "Games / unknown UDP: any-protocol fake",
+      "args": "--filter-udp=1026-65531 --lua-desync=fake:blob=quic_google:repeats=10",
+      "description": "Generic UDP desync for games and messengers. zapret4rocket strategy 10.",
+      "source": "zapret4rocket",
+      "tags": ["games", "udp"]
+    },
+    {
+      "id": "z2r_whatsapp_quic",
+      "name": "WhatsApp: QUIC fake (whatsapp.net)",
+      "args": "--filter-udp=443 --lua-desync=fake:blob=quic_google:repeats=4",
+      "description": "WhatsApp streaming/throttle bypass via QUIC fake. zapret4rocket changelog 26.12.25.",
+      "source": "zapret4rocket",
+      "tags": ["whatsapp", "quic", "udp"]
+    },
+    {
+      "id": "z2r_rutracker_http_md5sig",
+      "name": "RuTracker HTTP: multisplit md5sig",
+      "args": "--filter-tcp=80 --lua-desync=multisplit:pos=host+1:seqovl=2:fooling=md5sig",
+      "description": "Plain HTTP announcer bypass with host-boundary split. zapret4rocket rutracker strategy.",
+      "source": "zapret4rocket",
+      "tags": ["rutracker", "http"]
+    },
+    {
+      "id": "z2r_tlsrec_sniext_ladder",
+      "name": "TLS Record fragment + SNI ladder",
+      "args": "--filter-tcp=443 --lua-desync=multisplit:pos=1,midsld,sniext+4:seqovl=1:fooling=badseq",
+      "description": "Combined TLS record and SNI extension fragmentation.",
+      "source": "homeproxy-hiddify",
+      "tags": ["rkn", "tcp", "advanced"]
+    }
+  ],
+  "zapret": [
+    {
+      "id": "z1r_fake_multidisorder_fonts",
+      "name": "Fake + multidisorder (fonts.google SNI mod)",
+      "args": "--dpi-desync=fake,multidisorder --dpi-desync-split-pos=7,sld+1 --dpi-desync-fake-tls=0x0F0F0F0F --dpi-desync-fake-tls=! --dpi-desync-fake-tls-mod=rnd,dupsid,sni=fonts.google.com --dpi-desync-fooling=badseq",
+      "description": "zapret4rocket user-domain strategy 1. Top performer for RKN HTTPS.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp"]
+    },
+    {
+      "id": "z1r_fake_ts_badsum_msn",
+      "name": "Fake + ts,badsum (msn.com SNI)",
+      "args": "--dpi-desync=fake --dpi-desync-fooling=ts,badsum --dpi-desync-fake-tls-mod=sni=msn.com",
+      "description": "Lightweight TS+badsum fake. zapret4rocket strategies 2, 4.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp"]
+    },
+    {
+      "id": "z1r_fake_multisplit_md5sig_dup",
+      "name": "Fake + multisplit md5sig + dup=2",
+      "args": "--dpi-desync=fake,multisplit --dpi-desync-split-pos=sld+1 --dpi-desync-fake-tls=0x0F0F0E0F --dpi-desync-fake-tls-mod=rnd,dupsid --dpi-desync-fooling=md5sig --dup=2 --dup-fooling=md5sig --dup-cutoff=n3",
+      "description": "Duplicated md5sig packets with SDN split. zapret4rocket user-domain strategy 3.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp", "advanced"]
+    },
+    {
+      "id": "z1r_hostfakesplit_rzd_v1",
+      "name": "HostFakeSplit (rzd.ru)",
+      "args": "--dpi-desync=hostfakesplit --dpi-desync-hostfakesplit-mod=host=rzd.ru --dpi-desync-hostfakesplit-midhost=host-2 --dpi-desync-split-seqovl=726 --dpi-desync-fooling=badsum,badseq --dpi-desync-badseq-increment=0",
+      "description": "Whitelisted hostname boundary split. zapret4rocket user-domain strategy 5.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp", "advanced"]
+    },
+    {
+      "id": "z1r_syndata_multisplit_endsld",
+      "name": "SYN data + multisplit (endsld-2)",
+      "args": "--dpi-desync=syndata,multisplit --dpi-desync-split-seqovl=1 --dpi-desync-split-pos=1,sld+1,endsld-2 --dup=2 --dup-cutoff=n3",
+      "description": "SYN payload + boundary split. zapret4rocket user-domain strategy 6.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp", "advanced"]
+    },
+    {
+      "id": "z1r_fake_split2_google",
+      "name": "Fake + split2 (www.google blob)",
+      "args": "--dpi-desync=fake,split2 --dpi-desync-repeats=6 --dpi-desync-fooling=ts,badsum --dpi-desync-fake-tls=www.google.com",
+      "description": "zapret4rocket user-domain strategy 13.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp"]
+    },
+    {
+      "id": "z1r_fake_fakedsplit_google_sni",
+      "name": "Fake + fakedsplit (sni=www.google.com)",
+      "args": "--dpi-desync=fake,fakedsplit --dpi-desync-split-pos=1 --dpi-desync-fooling=ts,badsum --dpi-desync-badseq-increment=2 --dpi-desync-repeats=8 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com",
+      "description": "zapret4rocket user-domain strategy 15.",
+      "source": "zapret4rocket",
+      "tags": ["rkn", "tcp"]
+    },
+    {
+      "id": "z1r_multidisorder_chain_gv",
+      "name": "GoogleVideo: multidisorder pos chain",
+      "args": "--dpi-desync=multidisorder --dpi-desync-split-pos=2,5,105,host+5,sld-1,endsld-5,endsld",
+      "description": "googlevideo CDN deep disorder. zapret4rocket GV strategy 16.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "googlevideo", "tcp"]
+    },
+    {
+      "id": "z1r_ip_id_zero_fake",
+      "name": "IP-ID zero + fake (google blob)",
+      "args": "--ip-id=zero --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=ts,badsum --dpi-desync-fake-tls=www.google.com",
+      "description": "IP identification zeroing combined with fake. zapret4rocket GV strategy 9/17.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "tcp", "advanced"]
+    },
+    {
+      "id": "z1r_quic_udplen_8",
+      "name": "QUIC YouTube: fake + udplen +8",
+      "args": "--filter-udp=443 --dpi-desync=fake,udplen --dpi-desync-udplen-increment=8 --dpi-desync-udplen-pattern=0x0F0F0E0F --dpi-desync-cutoff=n3 --dpi-desync-repeats=2",
+      "description": "UDP QUIC length desync. zapret4rocket YouTube UDP strategy.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z1r_quic_fake_repeats_8",
+      "name": "QUIC YouTube: fake burst repeats=8",
+      "args": "--filter-udp=443 --dpi-desync=fake --dpi-desync-repeats=8",
+      "description": "Fake QUIC burst. zapret4rocket YouTube UDP strategy 7.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "quic", "udp"]
+    },
+    {
+      "id": "z1r_discord_voice_stun",
+      "name": "Discord Voice: STUN/QUIC fake",
+      "args": "--filter-udp=50000-50099,1400,3478-3481,5349,19294-19344 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord=stun.bin --dpi-desync-repeats=3",
+      "description": "Discord RTC voice bypass. zapret4rocket + homeproxy-hiddify Discord voice profile.",
+      "source": "homeproxy-hiddify",
+      "tags": ["discord", "voice", "udp"]
+    },
+    {
+      "id": "z1r_games_udp_anyproto",
+      "name": "Games / unknown UDP: any-protocol fake",
+      "args": "--filter-udp=1026-65531 --dpi-desync=fake --dpi-desync-repeats=10 --dpi-desync-any-protocol=1 --dpi-desync-cutoff=n2",
+      "description": "Generic UDP desync for games/messengers. zapret4rocket strategy 10.",
+      "source": "zapret4rocket",
+      "tags": ["games", "udp"]
+    },
+    {
+      "id": "z1r_rtmps_syndata",
+      "name": "RTMPS outgoing streams: syndata",
+      "args": "--filter-tcp=443 --dpi-desync=syndata --dup=2 --dup-cutoff=n3",
+      "description": "TLS/RTMPS outgoing stream unblock. zapret4rocket stream strategy.",
+      "source": "zapret4rocket",
+      "tags": ["streaming", "tcp"]
+    },
+    {
+      "id": "z1r_http_rutracker_multisplit",
+      "name": "RuTracker HTTP: multisplit md5sig",
+      "args": "--filter-tcp=80 --dpi-desync=fake,multisplit --dpi-desync-split-seqovl=2 --dpi-desync-split-pos=host+1 --dpi-desync-fake-http=0x0E0E0F0E --dpi-desync-fooling=md5sig",
+      "description": "Plain HTTP announcer bypass. zapret4rocket rutracker strategy.",
+      "source": "zapret4rocket",
+      "tags": ["rutracker", "http"]
+    },
+    {
+      "id": "z1r_orig_mod_start",
+      "name": "Original packet modifier (start=s1 cutoff=d1)",
+      "args": "--filter-tcp=443 --orig-mod-start=s1 --orig-mod-cutoff=d1",
+      "description": "Original-packet modifier variant. zapret4rocket GV strategy 7.",
+      "source": "zapret4rocket",
+      "tags": ["youtube", "tcp", "advanced"]
+    }
+  ],
+  "byedpi": [
+    {
+      "id": "bdr_auto_tr_ra_s",
+      "name": "ByeDPI Auto full (t,r,a,s)",
+      "args": "-o 2 --auto=t,r,a,s -d 2",
+      "description": "Universal adaptive auto-mode. homeproxy-hiddify ByeDPI default.",
+      "source": "homeproxy-hiddify",
+      "tags": ["universal", "auto"]
+    },
+    {
+      "id": "bdr_split1_disorder_fake_ttl8",
+      "name": "Split 1 + Disorder + Fake (TTL=8)",
+      "args": "--split 1 --disorder 1 --fake -1 --ttl 8",
+      "description": "Classic split/disorder/fake combo. homeproxy-hiddify preset.",
+      "source": "homeproxy-hiddify",
+      "tags": ["universal", "tcp"]
+    },
+    {
+      "id": "bdr_sniext_fake_ttl6",
+      "name": "SNI extension split + fake (TTL=6)",
+      "args": "-s 1+sniext -f -1 -t 6",
+      "description": "SNI extension fragmentation with fake. homeproxy-hiddify preset.",
+      "source": "homeproxy-hiddify",
+      "tags": ["universal", "tcp"]
+    },
+    {
+      "id": "bdr_aggressive_fake_ttl4",
+      "name": "Aggressive fake (TTL=4) + disorder + split",
+      "args": "--fake -1 --ttl 4 --disorder 1 --split 1",
+      "description": "Aggressive low-TTL fake. homeproxy-hiddify preset.",
+      "source": "homeproxy-hiddify",
+      "tags": ["universal", "tcp"]
+    },
+    {
+      "id": "bdr_tlsrec_split",
+      "name": "TLS record split (-r 1+sniext)",
+      "args": "-r 1+sniext -s 1+sniext -f -1 -t 8",
+      "description": "Splits ClientHello into multiple TLS records at SNI extension.",
+      "source": "homeproxy-hiddify",
+      "tags": ["universal", "tcp", "advanced"]
+    },
+    {
+      "id": "bdr_auto_ts_fake",
+      "name": "ByeDPI Auto (t,s) + fake (TTL=6)",
+      "args": "--auto=t,s -f -1 -t 6 -d 1",
+      "description": "TLS-record and split auto mode with fake injection.",
+      "source": "homeproxy-hiddify",
+      "tags": ["universal", "auto"]
+    }
+  ]
+}

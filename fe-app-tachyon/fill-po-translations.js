@@ -1385,6 +1385,9 @@ const dictionary = {
   "Stage 1: Exploration Scan": "Этап 1: Разведочное сканирование",
   "Tailscale does not require public WAN": "Tailscale не требует публичного WAN",
   "Public IP not required for this configuration": "Публичный IP не требуется для этой конфигурации",
+  "All sources": "Все источники",
+  "Built-in": "Встроенные",
+  "Strategy preset source": "Источник пресета стратегии",
 };
 
 function escapePoString(str) {
