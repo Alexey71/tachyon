@@ -28,7 +28,6 @@ export function renderStrategyFuzzerModal(
   let isRunning = false;
   let currentState: Tachyon.FuzzerState | null = null;
   let resultFilter: 'all' | 'success' | 'fast' = 'all';
-  let sourceFilter = 'all';
   let autoApplyEnabled = false;
   let autoAppliedJobId: string | null = null;
   let stoppedManually = false;
@@ -150,7 +149,7 @@ export function renderStrategyFuzzerModal(
 
   const controlsGrid = E('div', {
     style:
-      'display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; align-items: end;',
+      'display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; align-items: end; min-height: 80px;',
   });
 
   // 1. Engine Select
@@ -220,15 +219,17 @@ export function renderStrategyFuzzerModal(
       ),
       E('option', { value: 'rutracker_suite' }, _('🏴‍☠️ RuTracker Suite')),
       E('option', { value: 'quic_http3' }, _('⚡ QUIC / HTTP/3 (UDP 443)')),
-      E('option', { value: 'custom' }, _('🌐 Custom Target URL...')),
+      E('option', { value: 'custom' }, _('🌐 Custom Target URL(s)...')),
     ],
   );
 
-  const customUrlInput = E('input', {
-    type: 'text',
+  const customUrlInput = E('textarea', {
     class: 'cbi-input-text',
-    placeholder: 'https://example.com',
-    style: 'width: 100%; display: none; margin-top: 4px;',
+    placeholder:
+      'https://youtube.com\nhttps://instagram.com\nhttps://rutracker.org',
+    rows: 2,
+    style:
+      'width: 100%; display: none; margin-top: 4px; resize: vertical; min-height: 42px; font-size: 12px; font-family: monospace;',
   });
 
   targetSelect.addEventListener('change', () => {
@@ -239,7 +240,7 @@ export function renderStrategyFuzzerModal(
   });
 
   customUrlInput.addEventListener('input', () => {
-    customUrl = (customUrlInput as HTMLInputElement).value.trim();
+    customUrl = (customUrlInput as HTMLTextAreaElement).value.trim();
   });
 
   const targetGroup = E(
@@ -359,7 +360,7 @@ export function renderStrategyFuzzerModal(
   const dpiDetectionBanner = E('div', {
     id: 'tachyon-fuzzer-dpi-banner',
     style:
-      'display: none; padding: 10px 14px; border-radius: 6px; font-size: 12px; line-height: 1.4;',
+      'display: none; padding: 10px 14px; border-radius: 6px; font-size: 12px; line-height: 1.4; box-sizing: border-box;',
   });
 
   // Progress Bar
@@ -367,7 +368,7 @@ export function renderStrategyFuzzerModal(
     'div',
     {
       style:
-        'display: none; flex-direction: column; gap: 6px; padding: 10px 14px; background: var(--background-color-secondary, rgba(0,0,0,0.18)); border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.08));',
+        'display: none; flex-direction: column; gap: 6px; padding: 10px 14px; background: var(--background-color-secondary, rgba(0,0,0,0.18)); border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.08)); min-height: 62px; box-sizing: border-box;',
     },
     [
       E(
@@ -481,28 +482,6 @@ export function renderStrategyFuzzerModal(
             bOk,
             bFast,
           ]);
-        })(),
-        (() => {
-          const sel = E('select', {
-            class: 'cbi-input-select',
-            style: 'padding: 2px 6px; font-size: 11px; max-width: 160px;',
-          }) as HTMLSelectElement;
-          const opts: Array<[string, string]> = [
-            ['all', _('All sources')],
-            ['tachyon', _('Built-in')],
-            ['zapret4rocket', 'zapret4rocket'],
-            ['homeproxy-hiddify', 'homeproxy-hiddify'],
-          ];
-          for (const [value, label] of opts) {
-            const o = E('option', { value }, label) as HTMLOptionElement;
-            sel.appendChild(o);
-          }
-          sel.value = sourceFilter;
-          sel.addEventListener('change', () => {
-            sourceFilter = sel.value;
-            if (currentState) renderResults(currentState);
-          });
-          return sel;
         })(),
       ]),
       E('div', { style: 'display: flex; gap: 8px;' }, [applyBestBtn]),
@@ -1397,9 +1376,6 @@ export function renderStrategyFuzzerModal(
     } else if (resultFilter === 'fast') {
       list = list.filter((r) => r.success && r.speed_kbps > 1024);
     }
-    if (sourceFilter !== 'all') {
-      list = list.filter((r) => (r.source || 'tachyon') === sourceFilter);
-    }
 
     if (list.length === 0) {
       tbody.appendChild(
@@ -1694,6 +1670,9 @@ export function renderStrategyFuzzerModal(
     if (progressContainer) {
       progressContainer.style.display =
         state.running || state.results?.length ? 'flex' : 'none';
+      if (state.running || state.results?.length) {
+        progressContainer.style.minHeight = '62px';
+      }
     }
 
     if (pctText) pctText.innerText = `${state.progress_pct}%`;

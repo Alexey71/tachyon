@@ -1184,6 +1184,226 @@ const STRATEGIES_ZAPRET = [
     }
 ];
 
+const STRATEGIES_FLOWSEAL = [
+    {
+        id: "fs_split2",
+        name: "[Flowseal] Split2 (pos=2)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2",
+        description: "Flowseal general: basic TLS SNI split at position 2."
+    },
+    {
+        id: "fs_split2_pos1",
+        name: "[Flowseal] Split2 (pos=1)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=1",
+        description: "Flowseal general: 1-byte TLS ClientHello split."
+    },
+    {
+        id: "fs_disorder2",
+        name: "[Flowseal] Disorder2 (pos=1, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=1 --dpi-desync-fooling=badseq",
+        description: "Flowseal general: out-of-order packet with badseq fooling."
+    },
+    {
+        id: "fs_split2_ttl4",
+        name: "[Flowseal] Split2 + TTL=4",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-ttl=4",
+        description: "Flowseal ALT2: split with low TTL fake."
+    },
+    {
+        id: "fs_split2_ttl6",
+        name: "[Flowseal] Split2 + TTL=6",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-ttl=6",
+        description: "Flowseal ALT2: split with medium TTL fake."
+    },
+    {
+        id: "fs_disorder2_ttl4",
+        name: "[Flowseal] Disorder2 + TTL=4 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=1 --dpi-desync-ttl=4 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT2: disorder with TTL=4."
+    },
+    {
+        id: "fs_disorder2_ttl6",
+        name: "[Flowseal] Disorder2 + TTL=6 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=1 --dpi-desync-ttl=6 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT2: disorder with TTL=6."
+    },
+    {
+        id: "fs_fake_split2_ttl4",
+        name: "[Flowseal] Fake + Split2 (TTL=4, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-ttl=4 --dpi-desync-fooling=badseq",
+        description: "Flowseal: fake packet + split at TTL=4."
+    },
+    {
+        id: "fs_fake_split2_ttl6",
+        name: "[Flowseal] Fake + Split2 (TTL=6, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-ttl=6 --dpi-desync-fooling=badseq",
+        description: "Flowseal: fake packet + split at TTL=6."
+    },
+    {
+        id: "fs_fake_split2_ttl8",
+        name: "[Flowseal] Fake + Split2 (TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal: fake packet + split at TTL=8."
+    },
+    {
+        id: "fs_fake_disorder2_ttl6",
+        name: "[Flowseal] Fake + Disorder2 (TTL=6, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,disorder2 --dpi-desync-split-pos=1 --dpi-desync-ttl=6 --dpi-desync-fooling=badseq",
+        description: "Flowseal: fake packet + disorder at TTL=6."
+    },
+    {
+        id: "fs_fake_disorder2_ttl8",
+        name: "[Flowseal] Fake + Disorder2 (TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,disorder2 --dpi-desync-split-pos=1 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal: fake packet + disorder at TTL=8."
+    },
+    {
+        id: "fs_split2_seqovl1",
+        name: "[Flowseal] Split2 + SeqOvl=1 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-split-seqovl=1 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT3: split with 1-byte sequence overlap."
+    },
+    {
+        id: "fs_split2_seqovl2",
+        name: "[Flowseal] Split2 + SeqOvl=2 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-split-seqovl=2 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT3: split with 2-byte sequence overlap."
+    },
+    {
+        id: "fs_split2_seqovl1_ttl6",
+        name: "[Flowseal] Split2 + SeqOvl=1 + TTL=6 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-split-seqovl=1 --dpi-desync-ttl=6 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT3: split with overlap and TTL=6."
+    },
+    {
+        id: "fs_split2_seqovl2_ttl8",
+        name: "[Flowseal] Split2 + SeqOvl=2 + TTL=8 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-split-seqovl=2 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT3: split with overlap and TTL=8."
+    },
+    {
+        id: "fs_split2_repeats6",
+        name: "[Flowseal] Split2 + Repeats=6 (TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-repeats=6 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT4: burst repeats with split."
+    },
+    {
+        id: "fs_disorder2_repeats6",
+        name: "[Flowseal] Disorder2 + Repeats=6 (TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=1 --dpi-desync-repeats=6 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT4: burst repeats with disorder."
+    },
+    {
+        id: "fs_fake_split2_cutoff4",
+        name: "[Flowseal] Fake + Split2 + Cutoff=d4 (TTL=6, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-cutoff=d4 --dpi-desync-ttl=6 --dpi-desync-fooling=badseq",
+        description: "Flowseal: stops desync after 4 server data packets."
+    },
+    {
+        id: "fs_split2_cutoff3",
+        name: "[Flowseal] Split2 + Cutoff=n3 (TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-cutoff=n3 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT6: cutoff after 3 packets."
+    },
+    {
+        id: "fs_midsld_disorder",
+        name: "[Flowseal] Disorder2 (pos=midsld, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=midsld --dpi-desync-fooling=badseq",
+        description: "Flowseal: disorder at middle of second-level domain."
+    },
+    {
+        id: "fs_midsld_split",
+        name: "[Flowseal] Split2 (pos=midsld, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=midsld --dpi-desync-fooling=badseq",
+        description: "Flowseal: split at middle of second-level domain."
+    },
+    {
+        id: "fs_fake_split2_midsld_ttl8",
+        name: "[Flowseal] Fake + Split2 (pos=midsld, TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=midsld --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT7: fake + split at midsld with TTL=8."
+    },
+    {
+        id: "fs_md5sig_disorder_ttl4",
+        name: "[Flowseal] Disorder2 + MD5Sig (TTL=4)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=1 --dpi-desync-ttl=4 --dpi-desync-fooling=md5sig",
+        description: "Flowseal ALT8: MD5 signature fooling with disorder."
+    },
+    {
+        id: "fs_badack_split_ttl6",
+        name: "[Flowseal] Split2 + BadACK (TTL=6)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-ttl=6 --dpi-desync-fooling=badack",
+        description: "Flowseal ALT9: BadACK fooling with split."
+    },
+    {
+        id: "fs_fake_split2_seqovl_ttl4",
+        name: "[Flowseal] Fake + Split2 + SeqOvl=1 (TTL=4, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-split-seqovl=1 --dpi-desync-ttl=4 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT10: fake + split with overlap at TTL=4."
+    },
+    {
+        id: "fs_fake_disorder2_seqovl_ttl6",
+        name: "[Flowseal] Fake + Disorder2 + SeqOvl=2 (TTL=6, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,disorder2 --dpi-desync-split-pos=1 --dpi-desync-split-seqovl=2 --dpi-desync-ttl=6 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT10: fake + disorder with overlap at TTL=6."
+    },
+    {
+        id: "fs_split2_repeats12_ttl4",
+        name: "[Flowseal] Split2 + Repeats=12 (TTL=4, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=split2 --dpi-desync-split-pos=2 --dpi-desync-repeats=12 --dpi-desync-ttl=4 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT11: heavy burst at low TTL."
+    },
+    {
+        id: "fs_fake_split2_repeats8_ttl8",
+        name: "[Flowseal] Fake + Split2 + Repeats=8 (TTL=8, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-repeats=8 --dpi-desync-ttl=8 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT12: heavy burst fake+split at TTL=8."
+    },
+    {
+        id: "fs_disorder2_ttl8_cutoff4",
+        name: "[Flowseal] Disorder2 + TTL=8 + Cutoff=d4 (badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=disorder2 --dpi-desync-split-pos=1 --dpi-desync-ttl=8 --dpi-desync-cutoff=d4 --dpi-desync-fooling=badseq",
+        description: "Flowseal ALT13: disorder with cutoff after 4 data pkts."
+    },
+    {
+        id: "fs_fake_split2_repeats6_ttl10",
+        name: "[Flowseal] Fake + Split2 + Repeats=6 (TTL=10, badseq)",
+        engine: "zapret",
+        args: "--dpi-desync=fake,split2 --dpi-desync-split-pos=1 --dpi-desync-repeats=6 --dpi-desync-ttl=10 --dpi-desync-fooling=badseq",
+        description: "Flowseal EXP: higher TTL for distant DPI."
+    }
+];
+
 const STRATEGIES_BYEDPI = [
     // ── 1. COMBAT MULTI-SPLIT & LADDER CHAINS (Real TSPU Bypass) ───────────────
     {
@@ -1577,6 +1797,7 @@ function generate_combinatorial_zapret() {
     };
     
     for (let s in STRATEGIES_ZAPRET) add(s.name, s.args, s.description);
+    for (let s in STRATEGIES_FLOWSEAL) add(s.name, s.args, s.description);
     
     if (cfg.custom_strategies && length(cfg.custom_strategies) > 0) {
         for (let cs in cfg.custom_strategies) {
@@ -1870,11 +2091,12 @@ function get_strategies_for_engine(engine, mode, target) {
     
     let base = [];
     if (engine == "zapret2") base = STRATEGIES_ZAPRET2;
-    else if (engine == "zapret") base = STRATEGIES_ZAPRET;
+    else if (engine == "zapret") { base = []; for (let s in STRATEGIES_ZAPRET) push(base, s); for (let s in STRATEGIES_FLOWSEAL) push(base, s); }
     else if (engine == "byedpi") base = STRATEGIES_BYEDPI;
     else if (engine == "all") {
         for (let s in STRATEGIES_ZAPRET2) push(base, s);
         for (let s in STRATEGIES_ZAPRET) push(base, s);
+        for (let s in STRATEGIES_FLOWSEAL) push(base, s);
         for (let s in STRATEGIES_BYEDPI) push(base, s);
     }
     
@@ -1959,6 +2181,22 @@ function resolve_target_url(target_key, custom_url) {
 
 function resolve_target_urls_list(target_key, custom_url) {
     if (custom_url && custom_url != "") {
+        let urls = split(custom_url, /[,\n]+/);
+        let result = [];
+        let idx = 0;
+        for (let u in urls) {
+            let trimmed = trim(as_string(u));
+            if (trimmed == "") continue;
+            idx++;
+            push(result, {
+                name: sprintf("Custom Target %d", idx),
+                url: trimmed,
+                weight: 100,
+                required: true,
+                probe_kind: "tls_http"
+            });
+        }
+        if (length(result) > 0) return result;
         return [ { name: "Custom Target", url: custom_url, weight: 100, required: true, probe_kind: "tls_http" } ];
     }
     target_key = as_string(target_key || "youtube_suite");
@@ -3451,9 +3689,15 @@ function start_fuzzer(engine, target, custom_url, rule_section, custom_file, mod
         system("sleep 0.25");
     }
     
-    if (custom_url && custom_url != "" && !fuzzer_runner.is_valid_url(custom_url)) {
-        print(sprintf("%J\n", { success: false, error: "Invalid custom URL: malformed or forbidden characters" }));
-        return;
+    if (custom_url && custom_url != "") {
+        let urls = split(custom_url, /[,\n]+/);
+        for (let u in urls) {
+            let trimmed = trim(as_string(u));
+            if (trimmed != "" && !fuzzer_runner.is_valid_url(trimmed)) {
+                print(sprintf("%J\n", { success: false, error: sprintf("Invalid custom URL: '%s' is malformed or contains forbidden characters", trimmed) }));
+                return;
+            }
+        }
     }
 
     ensure_state_dir();

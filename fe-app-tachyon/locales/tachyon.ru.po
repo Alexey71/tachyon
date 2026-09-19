@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 19:57+0300\n"
-"PO-Revision-Date: 2026-09-19 19:57+0300\n"
+"POT-Creation-Date: 2026-09-19 20:58+0300\n"
+"PO-Revision-Date: 2026-09-19 20:58+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -101,8 +101,8 @@ msgstr "✗ Задушено на 16KB"
 msgid "✘ Offline"
 msgstr "✘ Не в сети"
 
-msgid "🌐 Custom Target URL..."
-msgstr "🌐 Пользовательский URL цели..."
+msgid "🌐 Custom Target URL(s)..."
+msgstr ""
 
 msgid "🎬 YouTube Full Suite (Web + 4K Stream + CDN)"
 msgstr "🎬 YouTube (Веб + 4K видеопоток + CDN)"
@@ -415,9 +415,6 @@ msgstr "Все серверы"
 
 msgid "All services"
 msgstr "Все сервисы"
-
-msgid "All sources"
-msgstr "Все источники"
 
 msgid "All traffic from these IP addresses will be routed through the section unconditionally, ignoring all other conditions."
 msgstr "Весь трафик от этих IP-адресов будет маршрутизирован через секцию безусловно, игнорируя все остальные условия."
@@ -808,9 +805,6 @@ msgstr "Браузер использует FakeIP"
 
 msgid "Bug report downloaded"
 msgstr "Отчёт об ошибке загружен"
-
-msgid "Built-in"
-msgstr "Встроенные"
 
 msgid "Built-in rule sets"
 msgstr "Встроенные наборы правил"
@@ -6064,6 +6058,15 @@ msgstr "Правила маршрутизации sing-box для Zapret2 не �
 
 msgid "Zero config mesh VPN daemon"
 msgstr "Mesh VPN-демон с нулевой конфигурацией"
+
+msgid "🌐 Custom Target URL..."
+msgstr "🌐 Пользовательский URL цели..."
+
+msgid "All sources"
+msgstr "Все источники"
+
+msgid "Built-in"
+msgstr "Встроенные"
 
 msgid "Cache all built-in lists and databases even if they are not currently selected in any section. Recommended if you have plenty of storage space or USB drive."
 msgstr "Кэшировать все встроенные списки и базы данных, даже если они не выбраны ни в одной секции. Рекомендуется при большом объёме хранилища или USB-накопителе."
