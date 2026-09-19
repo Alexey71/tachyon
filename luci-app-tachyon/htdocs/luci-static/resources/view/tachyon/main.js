@@ -9271,7 +9271,7 @@ async function renderServicesInfoWidget() {
         let cacheDetail = "";
         if (data.dnsmasqLocalCacheEnabled && data.dnsmasqCacheSize) {
           const approxMb = (data.dnsmasqCacheSize * 120 / (1024 * 1024)).toFixed(1);
-          cacheDetail = ` [${_("Cache")}: ${data.dnsmasqCacheSize} ≈ ${approxMb} MB]`;
+          cacheDetail = ` [${_("Cache")}: ${approxMb} MB]`;
         }
         items.push({
           key: "Dnsmasq (DNS)",

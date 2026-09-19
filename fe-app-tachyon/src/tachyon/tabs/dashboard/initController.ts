@@ -2262,7 +2262,7 @@ async function renderServicesInfoWidget() {
             (data.dnsmasqCacheSize * 120) /
             (1024 * 1024)
           ).toFixed(1);
-          cacheDetail = ` [${_('Cache')}: ${data.dnsmasqCacheSize} \u2248 ${approxMb} MB]`;
+          cacheDetail = ` [${_('Cache')}: ${approxMb} MB]`;
         }
         items.push({
           key: 'Dnsmasq (DNS)',
