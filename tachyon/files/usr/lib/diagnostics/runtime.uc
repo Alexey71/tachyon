@@ -3218,11 +3218,19 @@ function run_doctor_checks_impl(repair) {
         }
     }
 
-    // 6d. DPI bypass providers health (Zapret, Zapret2, ByeDPI)
+    // 6d. DPI bypass / tunnel provider health (Zapret, Zapret2, ByeDPI, WDTT,
+    // OLCRTC, FPTN). Two readiness shapes share this loop: the worker-based
+    // engines report running/expected process counts, while the service-based
+    // tunnels (WDTT/OLCRTC/FPTN) report a single service state plus a
+    // human-readable status_message. Both shapes expose "ready" and accept
+    // "start-runtime", so one loop covers all of them.
     let providers_to_check = [
-        { name: "Zapret", kind: "zapret", runtime: ZAPRET_RUNTIME_UC },
-        { name: "Zapret2", kind: "zapret2", runtime: ZAPRET2_RUNTIME_UC },
-        { name: "ByeDPI", kind: "byedpi", runtime: BYEDPI_RUNTIME_UC }
+        { name: "Zapret", kind: "zapret", runtime: ZAPRET_RUNTIME_UC, style: "workers" },
+        { name: "Zapret2", kind: "zapret2", runtime: ZAPRET2_RUNTIME_UC, style: "workers" },
+        { name: "ByeDPI", kind: "byedpi", runtime: BYEDPI_RUNTIME_UC, style: "workers" },
+        { name: "WDTT", kind: "wdtt", runtime: WDTT_RUNTIME_UC, style: "service" },
+        { name: "OLCRTC", kind: "olcrtc", runtime: OLCRTC_RUNTIME_UC, style: "service" },
+        { name: "FPTN", kind: "fptn", runtime: FPTN_RUNTIME_UC, style: "service" }
     ];
 
     for (let p in providers_to_check) {
@@ -3232,14 +3240,23 @@ function run_doctor_checks_impl(repair) {
         try { st = json(raw_st); } catch (e) {}
         if (!st || st.configured != true) continue;
 
+        // Service-style providers carry their own status text (it names the
+        // degraded reason: tun down, route missing, service stopped); the
+        // worker-style engines only expose counts.
+        let is_service = (p.style == "service");
+        let detail = is_service
+            ? as_string(st.status_message || (st.ready ? "ready" : "not ready"))
+            : sprintf("%d/%d workers", st.running_process_count || 0, st.expected_process_count || 0);
+        let unit = is_service ? "служба" : "воркеры";
+
         // Check if Tachyon-managed runtime is ready
         if (st.ready == true) {
-            doc_check("✅", p.name + " runtime", sprintf("ready (%d/%d workers)", st.running_process_count || 0, st.expected_process_count || 0), "");
+            doc_check("✅", p.name + " runtime", "ready (" + detail + ")", "");
         } else {
             issues++;
             if (!DOCTOR_REPAIR_MODE) {
                 doc_plan("ucode -L " + LIB_DIR + " " + p.runtime + " start-runtime");
-                doc_check("⚠️", p.name + " runtime", sprintf("not ready (%d/%d workers)", st.running_process_count || 0, st.expected_process_count || 0), "→ WILL FIX: запуск воркеров Tachyon " + p.name);
+                doc_check("⚠️", p.name + " runtime", "not ready (" + detail + ")", "→ WILL FIX: запуск " + unit + " Tachyon " + p.name);
             } else {
                 command_status("ucode -L " + LIB_DIR + " " + p.runtime + " start-runtime >/dev/null 2>&1");
                 command_status("sleep 1");
@@ -3247,10 +3264,10 @@ function run_doctor_checks_impl(repair) {
                 let st2 = null;
                 try { st2 = json(raw_st2); } catch (e) {}
                 if (st2 && st2.ready == true) {
-                    doc_check("❌", p.name + " runtime", sprintf("not ready (%d/%d workers)", st.running_process_count || 0, st.expected_process_count || 0), "→ FIXED: воркеры " + p.name + " запущены");
+                    doc_check("❌", p.name + " runtime", "not ready (" + detail + ")", "→ FIXED: " + unit + " " + p.name + " запущены");
                     fixed++;
                 } else {
-                    doc_check("❌", p.name + " runtime", "failed to start", "→ не удалось запустить воркеры " + p.name);
+                    doc_check("❌", p.name + " runtime", "failed to start", "→ не удалось запустить " + unit + " " + p.name);
                 }
             }
         }
@@ -4388,6 +4405,10 @@ function apply_quick_fix(codes_str) {
             let rc = command_status("uci set tachyon.settings.bootstrap_dns_server='77.88.8.8'; uci commit tachyon; /etc/init.d/tachyon reload >/dev/null 2>&1");
             status = (rc == 0);
             msg = status ? "Bootstrap DNS reset to reliable public resolver (77.88.8.8) and reloaded" : "Bootstrap DNS fix failed (exit " + rc + ")";
+        } else if (c == "restart_providers") {
+            let rc = command_status("ucode -L " + LIB_DIR + " " + LIB_DIR + "/providers/wdtt/runtime.uc start-runtime >/dev/null 2>&1; ucode -L " + LIB_DIR + " " + LIB_DIR + "/providers/olcrtc/runtime.uc start-runtime >/dev/null 2>&1; ucode -L " + LIB_DIR + " " + LIB_DIR + "/providers/fptn/runtime.uc start-runtime >/dev/null 2>&1");
+            status = (rc == 0);
+            msg = status ? "WDTT/OLCRTC/FPTN provider runtimes restarted" : "Provider runtimes restart failed (exit " + rc + ")";
         } else if (c == "optimize_mtu") {
             let rc = command_status("/usr/bin/tachyon discover-awg-mtu 2>/dev/null; /etc/init.d/tachyon reload >/dev/null 2>&1");
             status = (rc == 0);
@@ -4446,6 +4467,7 @@ const DOCTOR_FIX_PRIORITIES = {
     "clear_dns_cache": 45,
     "start_singbox": 50,
     "restart_zapret": 60,
+    "restart_providers": 62,
     "optimize_mtu": 65,
     "rebuild_rules": 70,
     "update_subscriptions": 80,
@@ -5085,6 +5107,14 @@ function ai_doctor(user_query) {
             "- reset_firewall (restart router firewall)\n" +
             "- restart_network (restart network service)\n" +
             "- restart_zapret (restart Zapret/ByeDPI engines)\n" +
+            "- restart_providers (restart WDTT/OLCRTC/FPTN provider runtimes)\n" +
+            "- fix_system_time (system time is out of sync, breaking TLS)\n" +
+            "- flush_conntrack (conntrack table is full)\n" +
+            "- fix_bootstrap_dns (bootstrap DNS resolver is unreachable)\n" +
+            "- optimize_mtu (tunnel MTU is suboptimal, re-discover AWG MTU)\n" +
+            "- heal_network_stack (full network stack recovery)\n" +
+            "- enable_safe_bypass (enable safe Direct WAN bypass fallback)\n" +
+            "- restore_native_internet (restore native direct internet without Tachyon)\n" +
             "- optimize_memory (flush memory caches)\n" +
             "- switch_to_doh (switch DNS interception to DoH)\n\n" +
             "If no quick fix applies, do NOT output any FIX tag.", sys_context);
@@ -5111,6 +5141,14 @@ function ai_doctor(user_query) {
             "- reset_firewall (перезапустить файрвол роутера)\n" +
             "- restart_network (перезапустить сетевой стек)\n" +
             "- restart_zapret (перезапустить службы Zapret/ByeDPI)\n" +
+            "- restart_providers (перезапустить провайдеры WDTT/OLCRTC/FPTN)\n" +
+            "- fix_system_time (системное время сбито, ломает TLS)\n" +
+            "- flush_conntrack (таблица conntrack переполнена)\n" +
+            "- fix_bootstrap_dns (bootstrap DNS недоступен)\n" +
+            "- optimize_mtu (подобрать оптимальный MTU туннеля)\n" +
+            "- heal_network_stack (полное восстановление сетевого стека)\n" +
+            "- enable_safe_bypass (включить безопасный обход через WAN напрямую)\n" +
+            "- restore_native_internet (вернуть прямой интернет без Tachyon)\n" +
             "- optimize_memory (очистить оперативно память)\n" +
             "- switch_to_doh (переключить DNS на DoH)\n\n" +
             "Если авто-исправление не применимо, не пишите тег FIX.", sys_context);
