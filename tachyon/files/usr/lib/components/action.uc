@@ -2320,8 +2320,17 @@ function validate_sing_box_extended_binary(binary, library_dir, compressed) {
     if (version != "")
         return version;
     if (compressed) {
-        let file_type = trim(command_output_lenient("file " + shell_quote(binary) + " 2>&1"));
-        if (index(file_type, "ELF") >= 0) {
+        let is_elf = false;
+        try {
+            let f = fs.open(binary, "r");
+            if (f) {
+                let header = f.read("4");
+                f.close();
+                is_elf = (header == "\x7fELF");
+            }
+        }
+        catch (e) {}
+        if (is_elf) {
             updates_log("Compressed binary validated via ELF header check: " + binary, "info");
             return "compressed";
         }
