@@ -3235,10 +3235,22 @@ function run_doctor_checks_impl(repair) {
 
     for (let p in providers_to_check) {
         let raw_st = trim(command_capture("ucode -L " + LIB_DIR + " " + p.runtime + " status 2>/dev/null").output);
-        if (raw_st == "") continue;
         let st = null;
-        try { st = json(raw_st); } catch (e) {}
-        if (!st || st.configured != true) continue;
+        if (raw_st != "") {
+            try { st = json(raw_st); } catch (e) {}
+        }
+
+        // Every provider is always listed so the report shows the full
+        // Zapret/Zapret2/ByeDPI/WDTT/OLCRTC/FPTN picture. Providers that are
+        // absent or unused are informational, not failures.
+        if (!st || st.installed != true) {
+            doc_check("➖", p.name + " runtime", "not installed", "");
+            continue;
+        }
+        if (st.configured != true) {
+            doc_check("➖", p.name + " runtime", "installed, not configured", "");
+            continue;
+        }
 
         // Service-style providers carry their own status text (it names the
         // degraded reason: tun down, route missing, service stopped); the
