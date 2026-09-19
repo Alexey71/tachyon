@@ -30,6 +30,7 @@ const NFQUEUE_QNUM_ZAPRET = 298;
 const NFQUEUE_QNUM_ZAPRET2 = 299;
 const FUZZER_FWMARK = "0x40000000";
 const FUZZER_OUTBOUND_MARK = getenv("NFT_OUTBOUND_MARK") || "0x08000000";
+const JOB_HARD_DEADLINE_SECONDS = int(getenv("TACHYON_JOB_HARD_DEADLINE_SECONDS") || "900");
 
 function get_job_dir(job_id) {
     if (!job_id || job_id == "") return null;
@@ -2159,8 +2160,12 @@ function cleanup_temp_daemons(job_id) {
         }
     }
 
-    // Ensure ByeDPI port is released
-    system(sprintf("fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
+    // Ensure ByeDPI port is released (with timeout to avoid hangs)
+    if (command_success("command -v timeout")) {
+        system(sprintf("timeout -s KILL 3 fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
+    } else {
+        system(sprintf("fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
+    }
 
     // Notice: global kill of curl processes removed to avoid killing external curl operations
 
@@ -3084,6 +3089,16 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
             state.progress_pct = int(((i) / (1.0 * total)) * 70.0);
             save_fuzzer_state(state);
 
+            let elapsed = clock()[0] - state.started_at;
+            if (elapsed > JOB_HARD_DEADLINE_SECONDS) {
+                state.running = false;
+                state.error = sprintf("Hard deadline reached (%ds). Tested %d/%d strategies.", JOB_HARD_DEADLINE_SECONDS, i, total);
+                state.finished_at = clock()[0];
+                save_fuzzer_state(state);
+                cleanup_temp_daemons(state.job_id);
+                return;
+            }
+
             let probe = null;
             try {
                 probe = run_probe(strat.engine || engine, strat.args, target, custom_url, state.job_id);
@@ -3173,11 +3188,16 @@ function run_fuzzer_worker(engine, target, custom_url, rule_section, custom_file
             for (let v_idx = 0; v_idx < num_verify; v_idx++) {
                 let cand = working_candidates[v_idx];
                 state.current_strategy = {
-                    name: sprintf("[Stage 2 Verification %d/%d] %s", v_idx + 1, num_verify, cand.name),
+                    name: sprintf("[Stage 2: verifying %d/%d] %s", v_idx + 1, num_verify, cand.name),
                     args: cand.args
                 };
                 state.progress_pct = 70 + int(((v_idx) / (1.0 * num_verify)) * 30.0);
                 save_fuzzer_state(state);
+
+                let elapsed = clock()[0] - state.started_at;
+                if (elapsed > JOB_HARD_DEADLINE_SECONDS) {
+                    break;
+                }
 
                 let rep_ttfb = [];
                 let rep_speed = [];
