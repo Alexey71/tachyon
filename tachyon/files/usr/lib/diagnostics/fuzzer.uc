@@ -203,6 +203,37 @@ function wrap_cmd_timeout(cmd, sec, pid_file) {
     return cmd;
 }
 
+// Shell watchdog: runs cmd bounded by sec seconds even when the `timeout`
+// binary is unavailable. Blocking forever on system()/pipe.read() wedges the
+// whole fuzzer worker (deadline checks in ucode never get to run), so every
+// blocking call must carry a hard wall-clock bound.
+const _WATCHDOG_SUBSHELL = "( %s & _bp=$!; ( sleep %d; kill -9 $_bp 2>/dev/null ) & _bw=$!; wait $_bp 2>/dev/null; kill $_bw 2>/dev/null; wait $_bw 2>/dev/null )";
+
+function run_bounded(cmd, sec) {
+    sec = sec || 8;
+    if (_has_timeout === null) {
+        _has_timeout = (system("command -v timeout >/dev/null 2>&1") == 0);
+    }
+    if (_has_timeout) {
+        return system(sprintf("timeout -s KILL %d %s", sec, cmd));
+    }
+    return system(sprintf(_WATCHDOG_SUBSHELL, cmd, sec));
+}
+
+function wrap_probe_cmd(cmd, sec, pid_file) {
+    sec = sec || 8;
+    if (_has_timeout === null) {
+        _has_timeout = (system("command -v timeout >/dev/null 2>&1") == 0);
+    }
+    if (_has_timeout) {
+        return wrap_cmd_timeout(cmd, sec, pid_file);
+    }
+    if (pid_file && pid_file != "") {
+        return sprintf("( echo $$ > %s; %s )", shell_quote(pid_file), sprintf(_WATCHDOG_SUBSHELL, cmd, sec));
+    }
+    return sprintf(_WATCHDOG_SUBSHELL, cmd, sec);
+}
+
 let _fuzzer_curl_dns_flags = null;
 function get_fuzzer_curl_dns_flags() {
     if (_fuzzer_curl_dns_flags !== null)
@@ -370,7 +401,19 @@ function resolve_zapret2_blobs(args_str) {
 }
 
 function setup_fuzzer_direct_nftables(qnum, is_udp) {
-    system("nft add table inet tachyon_fuzzer 2>/dev/null");
+    // Start from a clean slate: a stale or partially-deleted table from a previous
+    // probe makes every "add" below fail silently (2>/dev/null) and test traffic
+    // then bypasses the daemon entirely, so every strategy reports a false failure.
+    run_bounded("nft delete table inet tachyon_fuzzer >/dev/null 2>&1", 5);
+
+    if (system("nft add table inet tachyon_fuzzer >/dev/null 2>&1") != 0) {
+        // Retry once: the first delete may have raced with a dying nfqueue binding
+        run_bounded("nft delete table inet tachyon_fuzzer >/dev/null 2>&1", 5);
+        if (system("nft add table inet tachyon_fuzzer >/dev/null 2>&1") != 0) {
+            return false;
+        }
+    }
+
     system("nft 'add chain inet tachyon_fuzzer output { type filter hook output priority -200 ; policy accept; }' 2>/dev/null");
     system(sprintf("nft add rule inet tachyon_fuzzer output meta mark %s counter return 2>/dev/null", FUZZER_FWMARK));
     system("nft 'add rule inet tachyon_fuzzer output ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 77.88.8.8 } counter return' 2>/dev/null");
@@ -388,6 +431,9 @@ function setup_fuzzer_direct_nftables(qnum, is_udp) {
     if (is_udp) {
         system(sprintf("nft 'add rule inet tachyon_fuzzer bypass_singbox meta l4proto udp udp dport { 80, 443, 19294-19344, 50000-65535 } meta mark set meta mark | %s counter' 2>/dev/null", FUZZER_OUTBOUND_MARK));
     }
+
+    // Verify the queue rule actually landed; without it probes silently test a direct connection
+    return command_success(sprintf("nft list table inet tachyon_fuzzer 2>/dev/null | grep -q 'queue num %d'", qnum));
 }
 
 function validate_strategy_args(engine, args_val) {
@@ -2160,16 +2206,14 @@ function cleanup_temp_daemons(job_id) {
         }
     }
 
-    // Ensure ByeDPI port is released (with timeout to avoid hangs)
-    if (command_success("command -v timeout")) {
-        system(sprintf("timeout -s KILL 3 fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
-    } else {
-        system(sprintf("fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT));
-    }
+    // Ensure ByeDPI port is released (hard-bounded to avoid hangs)
+    run_bounded(sprintf("fuser -k %d/tcp >/dev/null 2>&1", BYEDPI_PORT), 3);
 
     // Notice: global kill of curl processes removed to avoid killing external curl operations
 
-    system("nft delete table inet tachyon_fuzzer >/dev/null 2>&1");
+    // nft delete can block in-kernel on an orphaned nfqueue binding left by a killed
+    // daemon; without the bound it wedges the ucode interpreter permanently.
+    run_bounded("nft delete table inet tachyon_fuzzer >/dev/null 2>&1", 5);
     try { fs.unlink(STATE_DIR + "/fuzzer_daemon_err.log"); } catch (e) {}
 }
 
@@ -2312,7 +2356,7 @@ function detect_dpi_type(target_key, custom_url) {
     let target_flags = get_resolved_host_flags(target_url);
     if (target_flags == "") target_flags = dns_flags;
 
-    let curl_cmd = wrap_cmd_timeout(
+    let curl_cmd = wrap_probe_cmd(
         sprintf(
             "curl %s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>&1; printf '\\t%%d\\n' $?",
             target_flags,
@@ -2344,7 +2388,7 @@ function detect_dpi_type(target_key, custom_url) {
     let dm = match(domain, /https?:\/\/([^/]+)/);
     if (dm && dm[1]) domain = dm[1];
 
-    let dns_cmd = wrap_cmd_timeout(sprintf("nslookup %s 2>&1", shell_quote(domain)), 4);
+    let dns_cmd = wrap_probe_cmd(sprintf("nslookup %s 2>&1", shell_quote(domain)), 4);
     let dns_pipe = fs.popen(dns_cmd, "r");
     let dns_out = dns_pipe ? dns_pipe.read("all") : "";
     if (dns_pipe) dns_pipe.close();
@@ -2578,7 +2622,7 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
                 extra_flags = "-r 0-65535 ";
             }
 
-            let curl_cmd = wrap_cmd_timeout(
+            let curl_cmd = wrap_probe_cmd(
                 sprintf(
                     "curl %s-x socks5h://127.0.0.1:%d -so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
                     extra_flags,
@@ -2743,7 +2787,11 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
             return result;
         }
         
-        setup_fuzzer_direct_nftables(qnum, is_udp);
+        if (!setup_fuzzer_direct_nftables(qnum, is_udp)) {
+            result.error = "nftables setup failed: fuzzer queue rule could not be installed";
+            cleanup_temp_daemons(job_id);
+            return result;
+        }
         
         let passed_count = 0;
         let max_speed = 0;
@@ -2789,7 +2837,7 @@ function run_probe(engine, args_str, target_key, custom_url, job_id) {
             let target_flags = get_resolved_host_flags(target_item.url);
             if (target_flags == "") target_flags = dns_flags;
 
-            let curl_cmd = wrap_cmd_timeout(
+            let curl_cmd = wrap_probe_cmd(
                 sprintf(
                     "curl %s%s-so /dev/null -w '%%{http_code}\\t%%{time_appconnect}\\t%%{time_starttransfer}\\t%%{speed_download}\\t%%{size_download}' -L --connect-timeout 4 --max-time 6 %s 2>/dev/null; printf '\\t%%d\\n' $?",
                     extra_flags,
