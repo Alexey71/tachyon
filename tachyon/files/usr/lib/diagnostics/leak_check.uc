@@ -25,40 +25,122 @@ function is_tcp_port_listening(port) {
     if (!port || int(port) <= 0)
         return false;
     let hex_port = sprintf(":%04X", int(port));
+    // Local addresses in /proc/net/tcp are little-endian 32-bit hex. Loopback
+    // (127.0.0.1) is "0100007F"; wildcard bind is "00000000". IPv6 loopback is
+    // "00000000000000000000000001000000". Only loopback/wildcard listeners
+    // count: the mixed inbound is loopback-only, so a matching port on another
+    // interface must not make the proxy look reachable.
+    const LOOPBACK_V4 = "0100007F";
+    const WILDCARD_V4 = "00000000";
+    const LOOPBACK_V6 = "00000000000000000000000001000000";
+    const WILDCARD_V6 = "00000000000000000000000000000000";
     for (let path in [ "/proc/net/tcp", "/proc/net/tcp6" ]) {
         let content = fs.readfile(path);
-        if (content && index(content, hex_port) >= 0)
-            return true;
+        if (!content)
+            continue;
+        let lines = split(as_string(content), "\n");
+        for (let line in lines) {
+            line = trim(line);
+            if (line == "")
+                continue;
+            let fields = split(line, /[ \t]+/);
+            if (length(fields) < 4)
+                continue;
+            let local = fields[1];
+            if (local == null)
+                continue;
+            let sep = rindex(local, ":");
+            if (sep < 0)
+                continue;
+            let listen_port = substr(local, sep); // includes leading ':'
+            if (lc(listen_port) != lc(hex_port))
+                continue;
+            let addr = substr(local, 0, sep);
+            if (addr == LOOPBACK_V4 || addr == WILDCARD_V4 ||
+                addr == LOOPBACK_V6 || addr == WILDCARD_V6)
+                return true;
+        }
     }
     return false;
 }
 
-const KNOWN_PUBLIC_DNS_PATTERNS = [
-    "google", "cloudflare", "quad9", "opendns", "cisco", "adguard",
-    "nextdns", "controld", "control d", "yandex", "level 3", "lumen",
-    "centurylink", "dns.sb", "mullvad", "cleanbrowsing", "he.net"
-];
-
+/*
+ * Public/anycast DNS resolvers are identified by exact IP first. Brand name
+ * matching is only used to recognise *vendor-owned* resolvers, and it is
+ * deliberately anchored to the operator/ASN field rather than arbitrary
+ * substrings of a free-text name: a substring like "yandex" or "google" also
+ * appears in the reverse-DNS / org of countless ISP resolvers, which would
+ * mask a real leak as "safe". Matching is performed on word boundaries of the
+ * ASN/organization string, never on the resolver's own hostname.
+ */
 const KNOWN_PUBLIC_DNS_IPS = {
-    "1.1.1.1": true, "1.0.0.1": true, "1.1.1.2": true, "1.0.0.2": true, "1.1.1.3": true, "1.0.0.3": true,
-    "8.8.8.8": true, "8.8.4.4": true,
-    "9.9.9.9": true, "149.112.112.112": true, "9.9.9.10": true, "149.112.112.10": true,
-    "208.67.222.222": true, "208.67.220.220": true,
-    "94.140.14.14": true, "94.140.15.15": true, "94.140.14.140": true, "94.140.14.141": true,
-    "77.88.8.8": true, "77.88.8.1": true, "77.88.8.2": true, "77.88.8.3": true,
-    "4.2.2.1": true, "4.2.2.2": true, "4.2.2.3": true, "4.2.2.4": true,
-    "185.228.168.9": true, "185.228.169.9": true
+    "1.1.1.1": "cloudflare", "1.0.0.1": "cloudflare", "1.1.1.2": "cloudflare", "1.0.0.2": "cloudflare",
+    "1.1.1.3": "cloudflare", "1.0.0.3": "cloudflare",
+    "8.8.8.8": "google", "8.8.4.4": "google", "8.8.8.0": "google",
+    "9.9.9.9": "quad9", "149.112.112.112": "quad9", "9.9.9.10": "quad9", "149.112.112.10": "quad9",
+    "208.67.222.222": "opendns", "208.67.220.220": "opendns",
+    "94.140.14.14": "adguard", "94.140.15.15": "adguard", "94.140.14.140": "adguard", "94.140.14.141": "adguard",
+    "4.2.2.1": "level3", "4.2.2.2": "level3", "4.2.2.3": "level3", "4.2.2.4": "level3",
+    "185.228.168.9": "cleanbrowsing", "185.228.169.9": "cleanbrowsing",
+    "76.76.2.0": "controld", "76.76.10.0": "controld",
+    "45.90.28.0": "nextdns", "45.90.30.0": "nextdns",
+    "194.242.2.2": "mullvad", "194.242.2.3": "mullvad",
+    "185.222.222.222": "dns.sb", "45.11.45.11": "dns.sb"
 };
 
-function is_public_dns_resolver(ip, name, asn) {
-    if (ip && KNOWN_PUBLIC_DNS_IPS[ip])
-        return true;
-    let text = lc(as_string(name || "") + " " + as_string(asn || ""));
-    for (let pat in KNOWN_PUBLIC_DNS_PATTERNS) {
-        if (index(text, pat) >= 0)
-            return true;
+/* Organization/ASN tokens that identify a *vendor-operated* public resolver.
+ * These are matched on word boundaries against the operator field only. */
+const VENDOR_ASN_TOKENS = [
+    "cloudflare", "google", "quad9", "opendns", "cisco",
+    "adguard", "nextdns", "controld", "mullvad", "cleanbrowsing",
+    "dns.sb", "dnssb", "level 3", "level3", "lumen", "centurylink",
+    "he.net", "hurricane electric"
+];
+
+/* Yandex DNS (77.88.8.x) is a public resolver, but "yandex" also names the
+ * operator of many Russian ISP networks; only the exact Yandex DNS IPs and the
+ * Yandex DNS ASN are treated as public. */
+const YANDEX_DNS_IPS = {
+    "77.88.8.8": true, "77.88.8.1": true, "77.88.8.2": true, "77.88.8.3": true,
+    "77.88.8.7": true, "77.88.8.88": true
+};
+
+function vendor_matches(text) {
+    text = lc(trim(as_string(text || "")));
+    if (text == "")
+        return "";
+    for (let token in VENDOR_ASN_TOKENS) {
+        if (index(text, token) >= 0)
+            return token;
     }
-    return false;
+    return "";
+}
+
+/**
+ * Classify a resolver.
+ * Returns one of: "public", "isp", "unknown".
+ *  - "public"  : a known anycast/vendor resolver (exact IP or vendor ASN/org).
+ *  - "isp"     : resolver matches a resolver observed on the direct WAN path.
+ *  - "unknown" : could not be classified with confidence.
+ */
+function classify_resolver(ip, name, asn, direct_map, wan_map) {
+    ip = trim(as_string(ip || ""));
+    if (ip != "" && KNOWN_PUBLIC_DNS_IPS[ip])
+        return { kind: "public", vendor: KNOWN_PUBLIC_DNS_IPS[ip] };
+    if (ip != "" && YANDEX_DNS_IPS[ip])
+        return { kind: "public", vendor: "yandex" };
+
+    if (ip != "" && wan_map && wan_map[ip])
+        return { kind: "isp", vendor: "" };
+
+    let vendor = vendor_matches(asn) || vendor_matches(name);
+    if (vendor != "")
+        return { kind: "public", vendor: vendor };
+
+    if (ip != "" && direct_map && direct_map[ip])
+        return { kind: "isp", vendor: "" };
+
+    return { kind: "unknown", vendor: "" };
 }
 
 
@@ -265,37 +347,36 @@ function fetch_ip_info(use_proxy, wan_iface, mixed_port) {
 }
 
 /**
- * Check for IP Leaks by comparing direct WAN IP and proxy outbound IP.
- * Executes direct and proxy queries concurrently in parallel to avoid timeouts.
+ * Probe the direct WAN path and the proxy path concurrently.
+ *
+ * Returns { direct, proxy, proxy_listening, proxy_token_ok } where direct/proxy
+ * are parsed IP responses (or a sentinel with ok=false). This is the single
+ * source of truth for IP data; the DNS stage reuses the returned proxy token.
  */
-function check_ip_leak(wan_iface, mixed_port) {
-    mixed_port = mixed_port || common.get_mixed_port();
-    wan_iface = wan_iface != null ? wan_iface : get_wan_interface();
+function probe_ip_paths(wan_iface, mixed_port) {
+    let direct_flags = get_direct_curl_flags(wan_iface);
+    let proxy_flag = "--proxy http://127.0.0.1:" + mixed_port;
+    let proxy_listening = is_tcp_port_listening(mixed_port);
+
+    let direct = null;
+    let proxy = null;
 
     let tmp_res = command_capture("mktemp -d /tmp/tachyon_leak_ip_XXXXXX 2>/dev/null");
     let work_dir = (tmp_res && tmp_res.status == 0) ? trim(as_string(tmp_res.output)) : "";
 
-    let direct = null;
-    let proxy = null;
-    let proxy_listening = is_tcp_port_listening(mixed_port);
+    let ip_chain = function(flags, out) {
+        return sprintf("( curl -s -m 3 --connect-timeout 2 %s https://api.ip.sb/geoip || curl -s -m 3 --connect-timeout 2 %s https://ipwho.is/ || curl -s -m 2 --connect-timeout 2 %s 'https://api.ipify.org?format=json' || curl -s -m 2 --connect-timeout 2 %s https://cloudflare.com/cdn-cgi/trace ) > %s 2>/dev/null",
+            flags, flags, flags, flags, out);
+    };
 
     if (work_dir != "") {
-        let direct_flags = get_direct_curl_flags(wan_iface);
-        let cmd_direct = sprintf("( curl -s -m 3 --connect-timeout 2 %s https://api.ip.sb/geoip || curl -s -m 3 --connect-timeout 2 %s https://ipwho.is/ || curl -s -m 2 --connect-timeout 2 %s 'https://api.ipify.org?format=json' || curl -s -m 2 --connect-timeout 2 %s https://cloudflare.com/cdn-cgi/trace ) > %s/direct.out 2>/dev/null", direct_flags, direct_flags, direct_flags, direct_flags, work_dir);
+        let cmd_direct = ip_chain(direct_flags, work_dir + "/direct.out");
+        let cmd_proxy = proxy_listening ? ip_chain(proxy_flag, work_dir + "/proxy.out") : "true";
+        system(sprintf("{ %s & %s & wait; } 2>/dev/null", cmd_direct, cmd_proxy));
 
-        if (proxy_listening) {
-            let proxy_flag = "--proxy http://127.0.0.1:" + mixed_port;
-            let cmd_proxy = sprintf("( curl -s -m 3 --connect-timeout 2 %s https://api.ip.sb/geoip || curl -s -m 3 --connect-timeout 2 %s https://ipwho.is/ || curl -s -m 2 --connect-timeout 2 %s 'https://api.ipify.org?format=json' || curl -s -m 2 --connect-timeout 2 %s https://cloudflare.com/cdn-cgi/trace ) > %s/proxy.out 2>/dev/null", proxy_flag, proxy_flag, proxy_flag, proxy_flag, work_dir);
-            system(sprintf("{ %s & %s & wait; } 2>/dev/null", cmd_direct, cmd_proxy));
-            let proxy_out = fs.readfile(work_dir + "/proxy.out");
-            proxy = parse_ip_response(proxy_out);
-        } else {
-            system(sprintf("{ %s & wait; } 2>/dev/null", cmd_direct));
-            proxy = { ip: "—", country: "", country_code: "", city: "", isp: "", ok: false };
-        }
-
-        let direct_out = fs.readfile(work_dir + "/direct.out");
-        direct = parse_ip_response(direct_out);
+        direct = parse_ip_response(fs.readfile(work_dir + "/direct.out"));
+        if (proxy_listening)
+            proxy = parse_ip_response(fs.readfile(work_dir + "/proxy.out"));
 
         system(sprintf("rm -rf %s 2>/dev/null", shell_quote(work_dir)));
     }
@@ -304,9 +385,65 @@ function check_ip_leak(wan_iface, mixed_port) {
         direct = fetch_ip_info(false, wan_iface, mixed_port);
     if (proxy == null && proxy_listening)
         proxy = fetch_ip_info(true, wan_iface, mixed_port);
-    else if (proxy == null)
+    if (proxy == null)
         proxy = { ip: "—", country: "", country_code: "", city: "", isp: "", ok: false };
 
+    return {
+        direct: direct,
+        proxy: proxy,
+        proxy_listening: proxy_listening,
+        direct_flags: direct_flags,
+        proxy_flag: proxy_flag
+    };
+}
+
+/**
+ * Classify a resolver list and detect an ISP leak on the proxy path.
+ *
+ * A leak is reported when a proxy-path resolver is confidently an ISP/ISP-
+ * upstream resolver (exact match with a WAN-path resolver, or matching a
+ * resolver seen on the direct path). Unknown resolvers are surfaced as such
+ * instead of being silently treated as safe.
+ *
+ * Returns { servers, leaked, has_unknown }.
+ */
+function analyse_resolvers(resolvers, direct_map, wan_map, fallback_isp_label) {
+    let servers = [];
+    let leaked = false;
+    let has_unknown = false;
+    let seen = {};
+
+    for (let r in resolvers) {
+        if (type(r) != "object" || !r.ip)
+            continue;
+        let ip = trim(as_string(r.ip));
+        if (ip == "" || seen[ip])
+            continue;
+        seen[ip] = true;
+
+        let cls = classify_resolver(ip, r.name, r.asn, direct_map, wan_map);
+        let is_isp = (cls.kind == "isp");
+        if (is_isp)
+            leaked = true;
+        if (cls.kind == "unknown")
+            has_unknown = true;
+
+        push(servers, {
+            ip: ip,
+            country: as_string(r.country || r.country_name || ""),
+            isp: as_string(r.name || r.asn || fallback_isp_label),
+            is_isp: is_isp,
+            is_public: cls.kind == "public",
+            verdict: cls.kind
+        });
+    }
+
+    return { servers: servers, leaked: leaked, has_unknown: has_unknown };
+}
+
+function ip_stage_result(paths) {
+    let direct = paths.direct;
+    let proxy = paths.proxy;
     let proxy_online = (proxy.ok && proxy.ip != "—");
     let is_direct_routing = (proxy_online && direct.ok && direct.ip != "—" && proxy.ip == direct.ip);
 
@@ -328,343 +465,138 @@ function check_ip_leak(wan_iface, mixed_port) {
 }
 
 /**
- * Check for DNS Leaks using the bash.ws DNS Leak detection protocol.
- * Queries tokens and results in parallel with fast timeouts and OpenWrt resolv fallback.
+ * Unified diagnostic check for both IP and DNS leaks.
+ *
+ * Single implementation used by the CLI (`leak-check`, `ip-leak`, `dns-leak`)
+ * and the async worker, so the three callers can no longer drift apart.
+ *
+ * `want` is a set of stages: { ip: bool, dns: bool } — defaults to both.
  */
-function check_dns_leak(wan_iface, mixed_port, direct_ip, proxy_ip) {
+function run_leak_check_stages(wan_iface, mixed_port, want) {
     mixed_port = mixed_port || common.get_mixed_port();
     wan_iface = wan_iface != null ? wan_iface : get_wan_interface();
+    want = want || {};
+    let want_ip = want.ip != false;
+    let want_dns = want.dns != false;
 
     let direct_dns_servers = get_direct_dns_servers();
+    let paths = probe_ip_paths(wan_iface, mixed_port);
+    let ip_res = want_ip ? ip_stage_result(paths) : null;
 
-    let direct_flags = get_direct_curl_flags(wan_iface);
-    let proxy_flag = "--proxy http://127.0.0.1:" + mixed_port;
+    // A DNS "verdict" of proxy_online must mean the DNS stage actually reached
+    // the proxy path, not merely that a token was issued.
+    let dns_res = {
+        dns_leaked: false,
+        verdict: "unavailable",
+        direct_ip: paths.direct.ip,
+        proxy_ip: paths.proxy.ip,
+        dns_servers: [],
+        direct_dns_servers: direct_dns_servers,
+        proxy_online: false,
+        service_reachable: true
+    };
+
+    if (!want_dns)
+        return { ip_leak: ip_res, dns_leak: dns_res, timestamp: time() };
 
     let tmp_res = command_capture("mktemp -d /tmp/tachyon_leak_dns_XXXXXX 2>/dev/null");
     let work_dir = (tmp_res && tmp_res.status == 0) ? trim(as_string(tmp_res.output)) : "";
 
-    let direct_id = "";
-    let proxy_id = "";
-    let direct_resolvers = [];
-    let proxy_resolvers = [];
+    let proxy_stage = { resolvers: [], token_ok: false, query_ok: false, service_reachable: true };
+    let direct_stage = { resolvers: [], token_ok: false, query_ok: false, service_reachable: true };
 
     if (work_dir != "") {
-        // Step 1: Concurrently fetch leak tokens
-        let cmd_direct_id = sprintf("curl -s -m 3 --connect-timeout 2 %s https://bash.ws/id > %s/direct_id 2>/dev/null", direct_flags, work_dir);
-        let cmd_proxy_id = sprintf("curl -s -m 3 --connect-timeout 2 %s https://bash.ws/id > %s/proxy_id 2>/dev/null", proxy_flag, work_dir);
-        system(sprintf("{ %s & %s & wait; } 2>/dev/null", cmd_direct_id, cmd_proxy_id));
+        // Both token fetches in parallel, then both DNS bursts sequentially.
+        let token_direct = sprintf("curl -s -m 3 --connect-timeout 2 %s https://bash.ws/id > %s/direct_id 2>/dev/null", paths.direct_flags, work_dir);
+        let token_proxy = sprintf("curl -s -m 3 --connect-timeout 2 %s https://bash.ws/id > %s/proxy_id 2>/dev/null", paths.proxy_flag, work_dir);
+        system(sprintf("{ %s & %s & wait; } 2>/dev/null", token_direct, token_proxy));
 
-        direct_id = trim(as_string(fs.readfile(work_dir + "/direct_id") || ""));
-        proxy_id = trim(as_string(fs.readfile(work_dir + "/proxy_id") || ""));
+        let direct_id = trim(as_string(fs.readfile(work_dir + "/direct_id") || ""));
+        let proxy_id = trim(as_string(fs.readfile(work_dir + "/proxy_id") || ""));
 
-        // Step 2: Fire parallel DNS queries for subdomains
-        if (direct_id != "" || proxy_id != "") {
-            let burst_cmd = "{ ";
-            if (direct_id != "") {
-                for (let i = 1; i <= 4; i++) {
-                    burst_cmd += sprintf("curl -s -m 2 %s http://%d.%s.bash.ws >/dev/null 2>&1 & ", direct_flags, i, direct_id);
-                }
+        let run_stage = function(id, flags, tag, out_id) {
+            if (id == "") {
+                out_id.id = "";
+                return;
             }
-            if (proxy_id != "") {
-                for (let i = 1; i <= 4; i++) {
-                    burst_cmd += sprintf("curl -s -m 2 %s http://%d.%s.bash.ws >/dev/null 2>&1 & ", proxy_flag, i, proxy_id);
-                }
-            }
-            burst_cmd += "wait; } 2>/dev/null";
-            system(burst_cmd);
-
-            // Allow 1s propagation time for upstream resolvers
+            out_id.id = id;
+            out_id.token_ok = true;
+            let burst = "{ ";
+            for (let i = 1; i <= 4; i++)
+                burst += sprintf("curl -s -m 2 %s http://%d.%s.bash.ws >/dev/null 2>&1 & ", flags, i, id);
+            burst += "wait; } 2>/dev/null";
+            system(burst);
             system("sleep 1 2>/dev/null");
+            let rf = work_dir + "/" + tag + "_res";
+            let rs = command_capture(sprintf("curl -s -m 3 --connect-timeout 2 %s 'https://bash.ws/dnsleak/test/%s?json' > %s 2>/dev/null", flags, id, rf));
+            if (rs && rs.status != 0)
+                out_id.service_reachable = false;
+            let text = fs.readfile(rf);
+            if (text) {
+                try {
+                    let parsed = json(text);
+                    if (type(parsed) == "array")
+                        out_id.resolvers = parsed;
+                } catch (e) {}
+            }
+            out_id.query_ok = length(out_id.resolvers) > 0;
+        };
 
-            // Step 3: Concurrently fetch results
-            let cmd_res_direct = "";
-            let cmd_res_proxy = "";
-            if (direct_id != "") {
-                cmd_res_direct = sprintf("curl -s -m 3 --connect-timeout 2 %s 'https://bash.ws/dnsleak/test/%s?json' > %s/direct_res 2>/dev/null & ", direct_flags, direct_id, work_dir);
-            }
-            if (proxy_id != "") {
-                cmd_res_proxy = sprintf("curl -s -m 3 --connect-timeout 2 %s 'https://bash.ws/dnsleak/test/%s?json' > %s/proxy_res 2>/dev/null & ", proxy_flag, proxy_id, work_dir);
-            }
-            if (cmd_res_direct != "" || cmd_res_proxy != "") {
-                system(sprintf("{ %s%swait; } 2>/dev/null", cmd_res_direct, cmd_res_proxy));
-            }
-
-            if (direct_id != "") {
-                let text = fs.readfile(work_dir + "/direct_res");
-                if (text) {
-                    try {
-                        let parsed = json(text);
-                        if (type(parsed) == "array") direct_resolvers = parsed;
-                    } catch (e) {}
-                }
-            }
-            if (proxy_id != "") {
-                let text = fs.readfile(work_dir + "/proxy_res");
-                if (text) {
-                    try {
-                        let parsed = json(text);
-                        if (type(parsed) == "array") proxy_resolvers = parsed;
-                    } catch (e) {}
-                }
-            }
-        }
+        run_stage(direct_id, paths.direct_flags, "direct_res", direct_stage);
+        run_stage(proxy_id, paths.proxy_flag, "proxy_res", proxy_stage);
 
         system(sprintf("rm -rf %s 2>/dev/null", shell_quote(work_dir)));
     }
 
-    // Build lookup table of direct / ISP DNS resolvers
+    dns_res.service_reachable = proxy_stage.service_reachable && direct_stage.service_reachable;
+
+    // Direct-path resolver lookup: DHCP-assigned servers plus anything bash.ws
+    // observed on the direct path (plus, when known, the proxy itself).
     let direct_map = {};
+    let wan_map = {};
     for (let s in direct_dns_servers) {
-        if (s.ip) direct_map[s.ip] = true;
-    }
-    for (let r in direct_resolvers) {
-        if (r.ip) direct_map[r.ip] = true;
-    }
-
-    let formatted_proxy_servers = [];
-    let leak_found = false;
-
-    for (let pr in proxy_resolvers) {
-        if (type(pr) != "object" || !pr.ip) continue;
-
-        let is_public = is_public_dns_resolver(pr.ip, pr.name, pr.asn);
-        let is_direct_leak = false;
-
-        if (!is_public && direct_map[pr.ip] == true) {
-            is_direct_leak = true;
-            leak_found = true;
+        if (s.ip) {
+            direct_map[s.ip] = true;
+            wan_map[s.ip] = true;
         }
-
-        push(formatted_proxy_servers, {
-            ip: pr.ip,
-            country: as_string(pr.country || pr.country_name || ""),
-            isp: as_string(pr.name || pr.asn || "Unknown"),
-            is_isp: is_direct_leak,
-            is_public: is_public
-        });
+    }
+    for (let r in direct_stage.resolvers) {
+        if (type(r) == "object" && r.ip)
+            direct_map[r.ip] = true;
+    }
+    for (let r in proxy_stage.resolvers) {
+        if (type(r) == "object" && r.ip && direct_map[r.ip])
+            direct_map[r.ip] = true;
     }
 
-    let formatted_direct_servers = [];
-    for (let dr in direct_resolvers) {
-        if (type(dr) != "object" || !dr.ip) continue;
-        let is_public = is_public_dns_resolver(dr.ip, dr.name, dr.asn);
-        push(formatted_direct_servers, {
-            ip: dr.ip,
-            country: as_string(dr.country || dr.country_name || ""),
-            isp: as_string(dr.name || dr.asn || "ISP Upstream"),
-            is_isp: !is_public,
-            is_public: is_public
-        });
-    }
+    let proxy_analysis = analyse_resolvers(proxy_stage.resolvers, direct_map, wan_map, "Unknown");
+    let direct_analysis = analyse_resolvers(direct_stage.resolvers, direct_map, wan_map, "ISP Upstream");
 
-    // Fallback: If bash.ws returned no direct resolvers, populate with OpenWrt system resolv servers
-    if (length(formatted_direct_servers) == 0 && length(direct_dns_servers) > 0) {
-        formatted_direct_servers = direct_dns_servers;
-    }
+    let formatted_proxy = proxy_analysis.servers;
+    let formatted_direct = direct_analysis.servers;
+    if (length(formatted_direct) == 0 && length(direct_dns_servers) > 0)
+        formatted_direct = direct_dns_servers;
 
-    let proxy_online = (proxy_id != "" || (proxy_ip != null && proxy_ip != "" && proxy_ip != "—"));
-    let dns_leaked = false;
+    // proxy_online in the DNS context means: the proxy path actually produced a
+    // resolver list. A token alone is not proof the queries traversed the proxy.
+    let dns_proxy_online = proxy_stage.query_ok;
 
-    if (proxy_online && length(formatted_proxy_servers) > 0) {
-        dns_leaked = leak_found;
+    if (!dns_res.service_reachable) {
+        dns_res.verdict = "service_unreachable";
+    } else if (!dns_proxy_online) {
+        dns_res.verdict = "no_data";
+    } else if (proxy_analysis.leaked) {
+        dns_res.verdict = "leaked";
+        dns_res.dns_leaked = true;
+    } else if (proxy_analysis.has_unknown) {
+        dns_res.verdict = "inconclusive";
     } else {
-        dns_leaked = false;
+        dns_res.verdict = "secure";
     }
 
-    return {
-        dns_leaked: dns_leaked,
-        direct_ip: direct_ip || "—",
-        proxy_ip: proxy_ip || "—",
-        dns_servers: formatted_proxy_servers,
-        direct_dns_servers: formatted_direct_servers,
-        proxy_online: proxy_online
-    };
-}
-
-/**
- * Unified diagnostic check for both IP and DNS leaks.
- * Runs IP and DNS token acquisition concurrently, completing in 3-4s total.
- */
-function run_leak_check(wan_iface, mixed_port) {
-    mixed_port = mixed_port || common.get_mixed_port();
-    wan_iface = wan_iface != null ? wan_iface : get_wan_interface();
-
-    let tmp_res = command_capture("mktemp -d /tmp/tachyon_leak_all_XXXXXX 2>/dev/null");
-    let work_dir = (tmp_res && tmp_res.status == 0) ? trim(as_string(tmp_res.output)) : "";
-
-    if (work_dir == "") {
-        let ip_res = check_ip_leak(wan_iface, mixed_port);
-        let dns_res = check_dns_leak(wan_iface, mixed_port, ip_res.direct_ip, ip_res.proxy_ip);
-        return {
-            ip_leak: ip_res,
-            dns_leak: dns_res,
-            timestamp: time()
-        };
-    }
-
-    let direct_dns_servers = get_direct_dns_servers();
-    let direct_flags = get_direct_curl_flags(wan_iface);
-    let proxy_flag = "--proxy http://127.0.0.1:" + mixed_port;
-
-    // Stage 1: Run all 4 probes concurrently (direct IP, proxy IP, direct bash.ws ID, proxy bash.ws ID)
-    let cmd_direct_ip = sprintf("( curl -s -m 3 --connect-timeout 2 %s https://api.ip.sb/geoip || curl -s -m 3 --connect-timeout 2 %s https://ipwho.is/ || curl -s -m 2 --connect-timeout 2 %s 'https://api.ipify.org?format=json' || curl -s -m 2 --connect-timeout 2 %s https://cloudflare.com/cdn-cgi/trace ) > %s/direct_ip.out 2>/dev/null", direct_flags, direct_flags, direct_flags, direct_flags, work_dir);
-    let cmd_proxy_ip = sprintf("( curl -s -m 3 --connect-timeout 2 %s https://api.ip.sb/geoip || curl -s -m 3 --connect-timeout 2 %s https://ipwho.is/ || curl -s -m 2 --connect-timeout 2 %s 'https://api.ipify.org?format=json' || curl -s -m 2 --connect-timeout 2 %s https://cloudflare.com/cdn-cgi/trace ) > %s/proxy_ip.out 2>/dev/null", proxy_flag, proxy_flag, proxy_flag, proxy_flag, work_dir);
-    let cmd_direct_id = sprintf("curl -s -m 3 --connect-timeout 2 %s https://bash.ws/id > %s/direct_id.out 2>/dev/null", direct_flags, work_dir);
-    let cmd_proxy_id = sprintf("curl -s -m 3 --connect-timeout 2 %s https://bash.ws/id > %s/proxy_id.out 2>/dev/null", proxy_flag, work_dir);
-
-    system(sprintf("{ %s & %s & %s & %s & wait; } 2>/dev/null", cmd_direct_ip, cmd_proxy_ip, cmd_direct_id, cmd_proxy_id));
-
-    let direct_ip_info = parse_ip_response(fs.readfile(work_dir + "/direct_ip.out"));
-    let proxy_ip_info = parse_ip_response(fs.readfile(work_dir + "/proxy_ip.out"));
-    let direct_id = trim(as_string(fs.readfile(work_dir + "/direct_id.out") || ""));
-    let proxy_id = trim(as_string(fs.readfile(work_dir + "/proxy_id.out") || ""));
-
-    if (direct_ip_info == null) direct_ip_info = fetch_ip_info(false, wan_iface, mixed_port);
-    if (proxy_ip_info == null) proxy_ip_info = fetch_ip_info(true, wan_iface, mixed_port);
-
-    // Stage 2: DNS queries & result retrieval
-    let direct_resolvers = [];
-    let proxy_resolvers = [];
-
-    if (direct_id != "" || proxy_id != "") {
-        let burst_cmd = "{ ";
-        if (direct_id != "") {
-            for (let i = 1; i <= 4; i++) {
-                burst_cmd += sprintf("curl -s -m 2 %s http://%d.%s.bash.ws >/dev/null 2>&1 & ", direct_flags, i, direct_id);
-            }
-        }
-        if (proxy_id != "") {
-            for (let i = 1; i <= 4; i++) {
-                burst_cmd += sprintf("curl -s -m 2 %s http://%d.%s.bash.ws >/dev/null 2>&1 & ", proxy_flag, i, proxy_id);
-            }
-        }
-        burst_cmd += "wait; } 2>/dev/null";
-        system(burst_cmd);
-
-        system("sleep 1 2>/dev/null");
-
-        let cmd_res_direct = "";
-        let cmd_res_proxy = "";
-        if (direct_id != "") {
-            cmd_res_direct = sprintf("curl -s -m 3 --connect-timeout 2 %s 'https://bash.ws/dnsleak/test/%s?json' > %s/direct_res 2>/dev/null & ", direct_flags, direct_id, work_dir);
-        }
-        if (proxy_id != "") {
-            cmd_res_proxy = sprintf("curl -s -m 3 --connect-timeout 2 %s 'https://bash.ws/dnsleak/test/%s?json' > %s/proxy_res 2>/dev/null & ", proxy_flag, proxy_id, work_dir);
-        }
-        if (cmd_res_direct != "" || cmd_res_proxy != "") {
-            system(sprintf("{ %s%swait; } 2>/dev/null", cmd_res_direct, cmd_res_proxy));
-        }
-
-        if (direct_id != "") {
-            let text = fs.readfile(work_dir + "/direct_res");
-            if (text) {
-                try {
-                    let parsed = json(text);
-                    if (type(parsed) == "array") direct_resolvers = parsed;
-                } catch (e) {}
-            }
-        }
-        if (proxy_id != "") {
-            let text = fs.readfile(work_dir + "/proxy_res");
-            if (text) {
-                try {
-                    let parsed = json(text);
-                    if (type(parsed) == "array") proxy_resolvers = parsed;
-                } catch (e) {}
-            }
-        }
-    }
-
-    system(sprintf("rm -rf %s 2>/dev/null", shell_quote(work_dir)));
-
-    // Assemble IP check result
-    let proxy_online = (proxy_ip_info.ok && proxy_ip_info.ip != "—");
-    let ip_leaked = false;
-    if (proxy_online && direct_ip_info.ok && direct_ip_info.ip != "—") {
-        ip_leaked = (proxy_ip_info.ip == direct_ip_info.ip);
-    }
-
-    let ip_res = {
-        leaked: ip_leaked,
-        direct_ip: direct_ip_info.ip,
-        direct_country: direct_ip_info.country,
-        direct_country_code: direct_ip_info.country_code,
-        direct_city: direct_ip_info.city,
-        direct_isp: direct_ip_info.isp,
-        proxy_ip: proxy_ip_info.ip,
-        proxy_country: proxy_ip_info.country,
-        proxy_country_code: proxy_ip_info.country_code,
-        proxy_city: proxy_ip_info.city,
-        proxy_org: proxy_ip_info.isp,
-        proxy_online: proxy_online
-    };
-
-    // Assemble DNS check result
-    let direct_map = {};
-    for (let s in direct_dns_servers) {
-        if (s.ip) direct_map[s.ip] = true;
-    }
-    for (let r in direct_resolvers) {
-        if (r.ip) direct_map[r.ip] = true;
-    }
-
-    let formatted_proxy_servers = [];
-    let leak_found = false;
-
-    for (let pr in proxy_resolvers) {
-        if (type(pr) != "object" || !pr.ip) continue;
-
-        let is_public = is_public_dns_resolver(pr.ip, pr.name, pr.asn);
-        let is_direct_leak = false;
-
-        if (!is_public && direct_map[pr.ip] == true) {
-            is_direct_leak = true;
-            leak_found = true;
-        }
-
-        push(formatted_proxy_servers, {
-            ip: pr.ip,
-            country: as_string(pr.country || pr.country_name || ""),
-            isp: as_string(pr.name || pr.asn || "Unknown"),
-            is_isp: is_direct_leak,
-            is_public: is_public
-        });
-    }
-
-    let formatted_direct_servers = [];
-    for (let dr in direct_resolvers) {
-        if (type(dr) != "object" || !dr.ip) continue;
-        let is_public = is_public_dns_resolver(dr.ip, dr.name, dr.asn);
-        push(formatted_direct_servers, {
-            ip: dr.ip,
-            country: as_string(dr.country || dr.country_name || ""),
-            isp: as_string(dr.name || dr.asn || "ISP Upstream"),
-            is_isp: !is_public,
-            is_public: is_public
-        });
-    }
-
-    if (length(formatted_direct_servers) == 0 && length(direct_dns_servers) > 0) {
-        formatted_direct_servers = direct_dns_servers;
-    }
-
-    let dns_proxy_online = (proxy_id != "" || (proxy_ip_info.ok && proxy_ip_info.ip != "—"));
-    let dns_leaked = false;
-
-    if (dns_proxy_online && length(formatted_proxy_servers) > 0) {
-        dns_leaked = leak_found;
-    } else {
-        dns_leaked = false;
-    }
-
-    let dns_res = {
-        dns_leaked: dns_leaked,
-        direct_ip: ip_res.direct_ip,
-        proxy_ip: ip_res.proxy_ip,
-        dns_servers: formatted_proxy_servers,
-        direct_dns_servers: formatted_direct_servers,
-        proxy_online: dns_proxy_online
-    };
+    dns_res.dns_servers = formatted_proxy;
+    dns_res.direct_dns_servers = formatted_direct;
+    dns_res.proxy_online = dns_proxy_online;
 
     return {
         ip_leak: ip_res,
@@ -672,6 +604,37 @@ function run_leak_check(wan_iface, mixed_port) {
         timestamp: time()
     };
 }
+
+/**
+ * Full unified check (IP + DNS). Kept as the stable entry point used elsewhere.
+ */
+function run_leak_check(wan_iface, mixed_port) {
+    return run_leak_check_stages(wan_iface, mixed_port, { ip: true, dns: true });
+}
+
+/**
+ * IP-only check (public API used by the CLI `ip-leak` command).
+ */
+function check_ip_leak(wan_iface, mixed_port) {
+    let paths = probe_ip_paths(
+        wan_iface != null ? wan_iface : get_wan_interface(),
+        mixed_port || common.get_mixed_port()
+    );
+    return ip_stage_result(paths);
+}
+
+/**
+ * DNS-only check (public API used by the CLI `dns-leak` command).
+ */
+function check_dns_leak(wan_iface, mixed_port, direct_ip, proxy_ip) {
+    let res = run_leak_check_stages(
+        wan_iface != null ? wan_iface : get_wan_interface(),
+        mixed_port || common.get_mixed_port(),
+        { ip: false, dns: true }
+    );
+    return res.dns_leak;
+}
+
 
 /**
  * Start asynchronous leak check job and return job_id.

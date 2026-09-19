@@ -23507,15 +23507,45 @@ ${PartialStyles}
         max-width: 100%;
         box-sizing: border-box;
     }
+}
 
-    /* Modal responsiveness scoped to Tachyon */
-    .modal .fkp-server-info-modal,
-    .cbi-modal .fkp-server-info-modal,
+/* Tachyon modals: comfortable width on desktop, full-width overlay on small screens */
+.modal:has([class*="tachyon"]),
+.cbi-modal:has([class*="tachyon"]),
+.modal:has(.fkp-server-info-modal),
+.cbi-modal:has(.fkp-server-info-modal),
+.modal .fkp-server-info-modal,
+.cbi-modal .fkp-server-info-modal {
+    width: min(96vw, 1200px) !important;
+    max-width: min(96vw, 1200px) !important;
+    box-sizing: border-box;
+    margin: 10px auto;
+}
+
+/* Tablet / mobile: let the overlay use nearly the whole viewport */
+@media (max-width: 900px) {
     .modal:has([class*="tachyon"]),
-    .cbi-modal:has([class*="tachyon"]) {
-        max-width: min(96vw, 1100px) !important;
-        box-sizing: border-box;
-        margin: 10px auto;
+    .cbi-modal:has([class*="tachyon"]),
+    .modal:has(.fkp-server-info-modal),
+    .cbi-modal:has(.fkp-server-info-modal),
+    .modal .fkp-server-info-modal,
+    .cbi-modal .fkp-server-info-modal {
+        width: 96vw !important;
+        max-width: 96vw !important;
+    }
+}
+
+/* Phones: edge-to-edge with small gutters */
+@media (max-width: 640px) {
+    .modal:has([class*="tachyon"]),
+    .cbi-modal:has([class*="tachyon"]),
+    .modal:has(.fkp-server-info-modal),
+    .cbi-modal:has(.fkp-server-info-modal),
+    .modal .fkp-server-info-modal,
+    .cbi-modal .fkp-server-info-modal {
+        width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 16px) !important;
+        margin: 8px auto;
     }
 }
 `;
