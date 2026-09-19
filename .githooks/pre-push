@@ -2,6 +2,14 @@
 set -e
 
 echo "==> [pre-push] Running pre-push checks..."
+
+if command -v node >/dev/null 2>&1; then
+  node tests/lib/ucode_forward_refs.js tachyon/files/usr/lib || {
+    echo "ERROR: ucode forward references detected (ucode resolves functions definition-order)."
+    exit 1
+  }
+fi
+
 cd fe-app-tachyon
 
 npm run locales:actualize
