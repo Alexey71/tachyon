@@ -288,6 +288,16 @@ function preflight_backup_space_check(component) {
     return true;
 }
 
+function normalize_stream_exit(close_status) {
+    if (close_status == null)
+        return 0;
+    let s = int(close_status);
+    let signal = s & 127;
+    if (signal != 0)
+        return 128 + signal;
+    return (s >> 8) & 255;
+}
+
 function stream_command_output(command, description) {
     updates_log(description);
     let pipe = fs.popen(command + " 2>&1", "r");
@@ -316,26 +326,6 @@ function stream_command_output(command, description) {
     return exit_code;
 }
 
-function normalize_stream_exit(close_status) {
-    if (close_status == null)
-        return 0;
-    let s = int(close_status);
-    let signal = s & 127;
-    if (signal != 0)
-        return 128 + signal;
-    return (s >> 8) & 255;
-}
-
-function pkg_tx_update_index(proxy_address) {
-    sanitize_apk_world();
-    let cmd = pkg_list_update_command(proxy_address);
-    update_job_phase("package_index", "Refreshing package index");
-    let rc = stream_command_output(cmd, "Updating package index");
-    if (rc != 0)
-        updates_log("Package index update failed with exit code " + rc, "warn");
-    return rc == 0;
-}
-
 function detect_apk_lock(output_text, exit_code) {
     if (exit_code == 227)
         return true;
@@ -360,169 +350,6 @@ function diagnose_apk_lock_holder() {
         return;
     }
     updates_log("APK database is locked but holder could not be identified", "warn");
-}
-
-function pkg_tx_run_with_lock(description, command, timeout_seconds) {
-    update_job_phase("waiting_package_lock", "Waiting for package manager lock");
-    let lock_waited = 0;
-    let attempt = 0;
-    let max_lock_attempts = 12;
-    while (attempt < max_lock_attempts) {
-        if (attempt > 0) {
-            if (is_apk()) {
-                updates_log("APK database still locked (" + lock_waited + "s), waiting...");
-            } else {
-                updates_log("opkg lock still held (" + lock_waited + "s), waiting...");
-            }
-            job_heartbeat();
-            command_success("sleep 5");
-            lock_waited += 5;
-            if (lock_waited >= PKG_LOCK_WAIT_MAX_SECONDS) {
-                updates_log("Package manager lock timeout after " + lock_waited + "s", "error");
-                if (is_apk())
-                    diagnose_apk_lock_holder();
-                return { success: false, exit_code: 227, message: "Package manager lock timeout after " + lock_waited + "s" };
-            }
-        }
-        let output_file = make_tmp_file("pkg-tx");
-        if (output_file == "")
-            output_file = "/tmp/tachyon-updates-pkg-tx." + owner_pid();
-        let pipe_cmd = command + " >" + shell_quote(output_file) + " 2>&1";
-        let pipe = fs.popen(pipe_cmd, "r");
-        if (!pipe) {
-            attempt++;
-            continue;
-        }
-        let last_activity = now_seconds();
-        let last_heartbeat = now_seconds();
-        while (true) {
-            let line = pipe.read("line");
-            if (line == null)
-                break;
-            line = trim(as_string(line));
-            if (line != "") {
-                updates_log(line);
-                last_activity = now_seconds();
-            }
-            // Periodic heartbeat during long operations
-            if (now_seconds() - last_heartbeat >= JOB_HEARTBEAT_INTERVAL) {
-                job_heartbeat();
-                last_heartbeat = now_seconds();
-            }
-            if (now_seconds() - last_activity > timeout_seconds) {
-                updates_log("Package operation timed out after " + timeout_seconds + "s of inactivity", "error");
-                pipe.close("kill");
-                remove_file(output_file);
-                return { success: false, exit_code: -1, message: "Package operation timed out" };
-            }
-        }
-        let close_status = pipe.close();
-        let rc = normalize_stream_exit(close_status);
-        remove_file(output_file);
-        if (rc == 0) {
-            update_job_phase("package_transaction", "Package transaction completed");
-            return { success: true, exit_code: 0, message: "" };
-        }
-        let is_locked = detect_apk_lock("", rc);
-        if (attempt == 0 && is_locked)
-            diagnose_apk_lock_holder();
-        if (!is_locked) {
-            return { success: false, exit_code: rc, message: "Package operation failed with exit code " + rc };
-        }
-        attempt++;
-    }
-    return { success: false, exit_code: 227, message: "Package manager lock retry limit exceeded" };
-}
-
-function pkg_tx_install_files(files, force_reinstall) {
-    sanitize_apk_world();
-    update_job_phase("package_transaction", "Installing package files");
-    let args = [];
-    let timeout = PKG_TX_INSTALL_TIMEOUT;
-    if (is_apk()) {
-        push(args, "apk", "add", "--allow-untrusted");
-        for (let f in files)
-            push(args, f);
-    } else {
-        push(args, "opkg", "install", "--force-overwrite", "--force-downgrade", "--force-depends");
-        if (force_reinstall)
-            push(args, "--force-reinstall");
-        for (let f in files)
-            push(args, f);
-    }
-    let proxy = service_proxy_address();
-    let cmd = command_from_args(args) + " </dev/null";
-    if (as_string(proxy) != "") {
-        let p = "http://" + proxy;
-        cmd = command_env({ http_proxy: p, https_proxy: p, HTTP_PROXY: p, HTTPS_PROXY: p }) + " " + cmd;
-    }
-    return pkg_tx_run_with_lock("Installing packages", cmd, timeout);
-}
-
-function pkg_tx_install_name(package_name, proxy_address) {
-    sanitize_apk_world();
-    update_job_phase("package_transaction", "Installing " + package_name);
-    let cmd = pkg_install_name_command(package_name, proxy_address);
-    return pkg_tx_run_with_lock("Installing " + package_name, cmd, PKG_TX_DEPS_TIMEOUT);
-}
-
-function pkg_tx_remove(package_name, description) {
-    update_job_phase("package_transaction", description || ("Removing " + package_name));
-    let cmd;
-    if (is_apk()) {
-        cmd = command_from_args([ "apk", "del", "--force-broken-world", package_name ]) + " </dev/null";
-    } else {
-        cmd = command_from_args([ "opkg", "remove", "--force-depends", package_name ]) + " </dev/null";
-    }
-    return pkg_tx_run_with_lock(description || ("Removing " + package_name), cmd, PKG_TX_REMOVE_TIMEOUT);
-}
-
-function pkg_tx_downgrade(package_name, package_version) {
-    package_name = as_string(package_name);
-    package_version = as_string(package_version);
-    update_job_phase("package_transaction", "Downgrading " + package_name + " to " + package_version);
-    let cmd;
-    if (is_apk()) {
-        if (package_version == "")
-            return { success: false, exit_code: 1, message: "Version required for APK downgrade" };
-        let package_spec = package_name + "=" + package_version;
-        if (pkg_is_installed(package_name))
-            cmd = command_from_args([ "apk", "fix", "--reinstall", "--upgrade", package_spec ]) + " </dev/null";
-        else
-            cmd = command_from_args([ "apk", "add", package_spec ]) + " </dev/null";
-    } else {
-        cmd = command_from_args([ "opkg", "install", "--force-overwrite", "--force-reinstall", "--force-downgrade", package_name ]) + " </dev/null";
-    }
-    return pkg_tx_run_with_lock("Downgrading " + package_name, cmd, PKG_TX_INSTALL_TIMEOUT);
-}
-
-function verify_package_post_install(package_name, expected_version) {
-    let db_version = installed_package_version(package_name);
-    if (db_version == "") {
-        updates_log("Post-install verification failed: " + package_name + " not found in package database", "error");
-        return false;
-    }
-    if (as_string(expected_version) != "" && db_version != as_string(expected_version)) {
-        updates_log("Post-install version mismatch for " + package_name +
-            ": expected=" + as_string(expected_version) + " actual=" + db_version, "warn");
-    }
-    return true;
-}
-
-function verify_binary_post_install(binary_path, expected_version, version_cmd_args) {
-    if (!file_exists(binary_path)) {
-        updates_log("Post-install verification failed: binary not found at " + binary_path, "error");
-        return false;
-    }
-    if (type(version_cmd_args) == "array" && length(version_cmd_args) > 0) {
-        let actual = read_sing_box_binary_version(binary_path, "");
-        if (actual == "") {
-            updates_log("Post-install verification: cannot read version from " + binary_path, "warn");
-        } else if (as_string(expected_version) != "" && actual != as_string(expected_version)) {
-            updates_log("Post-install binary version mismatch: expected=" + as_string(expected_version) + " actual=" + actual, "warn");
-        }
-    }
-    return true;
 }
 
 function module_command(args) {
@@ -736,11 +563,113 @@ function is_apk() {
     return command_exists("apk");
 }
 
+function pkg_tx_run_with_lock(description, command, timeout_seconds) {
+    update_job_phase("waiting_package_lock", "Waiting for package manager lock");
+    let lock_waited = 0;
+    let attempt = 0;
+    let max_lock_attempts = 12;
+    while (attempt < max_lock_attempts) {
+        if (attempt > 0) {
+            if (is_apk()) {
+                updates_log("APK database still locked (" + lock_waited + "s), waiting...");
+            } else {
+                updates_log("opkg lock still held (" + lock_waited + "s), waiting...");
+            }
+            job_heartbeat();
+            command_success("sleep 5");
+            lock_waited += 5;
+            if (lock_waited >= PKG_LOCK_WAIT_MAX_SECONDS) {
+                updates_log("Package manager lock timeout after " + lock_waited + "s", "error");
+                if (is_apk())
+                    diagnose_apk_lock_holder();
+                return { success: false, exit_code: 227, message: "Package manager lock timeout after " + lock_waited + "s" };
+            }
+        }
+        let output_file = make_tmp_file("pkg-tx");
+        if (output_file == "")
+            output_file = "/tmp/tachyon-updates-pkg-tx." + owner_pid();
+        let pipe_cmd = command + " >" + shell_quote(output_file) + " 2>&1";
+        let pipe = fs.popen(pipe_cmd, "r");
+        if (!pipe) {
+            attempt++;
+            continue;
+        }
+        let last_activity = now_seconds();
+        let last_heartbeat = now_seconds();
+        while (true) {
+            let line = pipe.read("line");
+            if (line == null)
+                break;
+            line = trim(as_string(line));
+            if (line != "") {
+                updates_log(line);
+                last_activity = now_seconds();
+            }
+            // Periodic heartbeat during long operations
+            if (now_seconds() - last_heartbeat >= JOB_HEARTBEAT_INTERVAL) {
+                job_heartbeat();
+                last_heartbeat = now_seconds();
+            }
+            if (now_seconds() - last_activity > timeout_seconds) {
+                updates_log("Package operation timed out after " + timeout_seconds + "s of inactivity", "error");
+                pipe.close("kill");
+                remove_file(output_file);
+                return { success: false, exit_code: -1, message: "Package operation timed out" };
+            }
+        }
+        let close_status = pipe.close();
+        let rc = normalize_stream_exit(close_status);
+        remove_file(output_file);
+        if (rc == 0) {
+            update_job_phase("package_transaction", "Package transaction completed");
+            return { success: true, exit_code: 0, message: "" };
+        }
+        let is_locked = detect_apk_lock("", rc);
+        if (attempt == 0 && is_locked)
+            diagnose_apk_lock_holder();
+        if (!is_locked) {
+            return { success: false, exit_code: rc, message: "Package operation failed with exit code " + rc };
+        }
+        attempt++;
+    }
+    return { success: false, exit_code: 227, message: "Package manager lock retry limit exceeded" };
+}
+
+function pkg_tx_remove(package_name, description) {
+    update_job_phase("package_transaction", description || ("Removing " + package_name));
+    let cmd;
+    if (is_apk()) {
+        cmd = command_from_args([ "apk", "del", "--force-broken-world", package_name ]) + " </dev/null";
+    } else {
+        cmd = command_from_args([ "opkg", "remove", "--force-depends", package_name ]) + " </dev/null";
+    }
+    return pkg_tx_run_with_lock(description || ("Removing " + package_name), cmd, PKG_TX_REMOVE_TIMEOUT);
+}
+
 function pkg_is_installed(package_name) {
     package_name = as_string(package_name);
     if (is_apk())
         return command_success_from_args([ "apk", "info", "-e", package_name ]);
     return module_success([ LIB_DIR + "/core/packages.uc", "opkg-installed", package_name ]);
+}
+
+function pkg_tx_downgrade(package_name, package_version) {
+    package_name = as_string(package_name);
+    package_version = as_string(package_version);
+    update_job_phase("package_transaction", "Downgrading " + package_name + " to " + package_version);
+    let cmd;
+    if (is_apk()) {
+        if (package_version == "")
+            return { success: false, exit_code: 1, message: "Version required for APK downgrade" };
+        let package_spec = package_name + "=" + package_version;
+        if (pkg_is_installed(package_name))
+            cmd = command_from_args([ "apk", "fix", "--reinstall", "--upgrade", package_spec ]) + " </dev/null";
+        else
+            cmd = command_from_args([ "apk", "add", package_spec ]) + " </dev/null";
+    } else {
+        cmd = command_from_args([ "opkg", "install", "--force-overwrite", "--force-reinstall", "--force-downgrade", package_name ]) + " </dev/null";
+    }
+    return pkg_tx_run_with_lock("Downgrading " + package_name, cmd, PKG_TX_INSTALL_TIMEOUT);
 }
 
 function installed_package_version(package_name) {
@@ -751,6 +680,19 @@ function installed_package_version(package_name) {
         return trim(module_output([ LIB_DIR + "/core/packages.uc", "apk-version", package_name ]));
     }
     return trim(module_output([ LIB_DIR + "/core/packages.uc", "opkg-version", package_name ]));
+}
+
+function verify_package_post_install(package_name, expected_version) {
+    let db_version = installed_package_version(package_name);
+    if (db_version == "") {
+        updates_log("Post-install verification failed: " + package_name + " not found in package database", "error");
+        return false;
+    }
+    if (as_string(expected_version) != "" && db_version != as_string(expected_version)) {
+        updates_log("Post-install version mismatch for " + package_name +
+            ": expected=" + as_string(expected_version) + " actual=" + db_version, "warn");
+    }
+    return true;
 }
 
 function opkg_package_version_from_list(package_name, output) {
@@ -815,13 +757,6 @@ function pkg_install_name_downgrade(package_name, package_version) {
         command_success(command_from_args([ "opkg", "install", "--force-downgrade", package_name ]) + " </dev/null");
 }
 
-// force_reinstall matters only for opkg: installing an .ipk whose version equals
-// the installed one is a no-op unless --force-reinstall is passed, so a rebuild
-// published under the same tag would silently not be applied. apk always writes
-// the file it is handed, so its argument list stays untouched.
-// IMPORTANT: No fallback to raw tar/apk-extract. Package manager failure means
-// the operation must fail. Direct extraction bypasses package DB, maintainer
-// scripts, and dependency tracking.
 function pkg_install_files_command(files, force_reinstall) {
     if (is_apk()) {
         let add_args = [ "apk", "add", "--allow-untrusted" ];
@@ -846,14 +781,61 @@ function sanitize_apk_world() {
     }
 }
 
+function pkg_tx_update_index(proxy_address) {
+    sanitize_apk_world();
+    let cmd = pkg_list_update_command(proxy_address);
+    update_job_phase("package_index", "Refreshing package index");
+    let rc = stream_command_output(cmd, "Updating package index");
+    if (rc != 0)
+        updates_log("Package index update failed with exit code " + rc, "warn");
+    return rc == 0;
+}
+
+function pkg_tx_install_files(files, force_reinstall) {
+    sanitize_apk_world();
+    update_job_phase("package_transaction", "Installing package files");
+    let args = [];
+    let timeout = PKG_TX_INSTALL_TIMEOUT;
+    if (is_apk()) {
+        push(args, "apk", "add", "--allow-untrusted");
+        for (let f in files)
+            push(args, f);
+    } else {
+        push(args, "opkg", "install", "--force-overwrite", "--force-downgrade", "--force-depends");
+        if (force_reinstall)
+            push(args, "--force-reinstall");
+        for (let f in files)
+            push(args, f);
+    }
+    let proxy = service_proxy_address();
+    let cmd = command_from_args(args) + " </dev/null";
+    if (as_string(proxy) != "") {
+        let p = "http://" + proxy;
+        cmd = command_env({ http_proxy: p, https_proxy: p, HTTP_PROXY: p, HTTPS_PROXY: p }) + " " + cmd;
+    }
+    return pkg_tx_run_with_lock("Installing packages", cmd, timeout);
+}
+
+// force_reinstall matters only for opkg: installing an .ipk whose version equals
+// the installed one is a no-op unless --force-reinstall is passed, so a rebuild
+// published under the same tag would silently not be applied. apk always writes
+// the file it is handed, so its argument list stays untouched.
+// IMPORTANT: No fallback to raw tar/apk-extract. Package manager failure means
+// the operation must fail. Direct extraction bypasses package DB, maintainer
+// scripts, and dependency tracking.
+function pkg_tx_install_name(package_name, proxy_address) {
+    sanitize_apk_world();
+    update_job_phase("package_transaction", "Installing " + package_name);
+    let cmd = pkg_install_name_command(package_name, proxy_address);
+    return pkg_tx_run_with_lock("Installing " + package_name, cmd, PKG_TX_DEPS_TIMEOUT);
+}
+
 function pkg_install_files(files, force_reinstall) {
     init_tmp_dir();
     let result = pkg_tx_install_files(files, force_reinstall);
     return result.success;
 }
 
-// Like run_logged but retries on package manager database lock.
-// Uses streaming output instead of buffered file reads.
 function run_logged_retrying(description, command) {
     init_tmp_dir();
     sanitize_apk_world();
@@ -900,6 +882,8 @@ function run_logged_retrying(description, command) {
     return status == 0;
 }
 
+// Like run_logged but retries on package manager database lock.
+// Uses streaming output instead of buffered file reads.
 function pkg_remove_sing_box_conflict(package_name) {
     package_name = as_string(package_name);
     if (is_apk()) {
@@ -1287,9 +1271,6 @@ function write_tachyon_latest_version_cache(value, timestamp) {
     write_file("/tmp/tachyon.latest-version.cache", as_string(value) + "\n" + as_string(timestamp) + "\n");
 }
 
-// A release tag can be rebuilt, so the version alone cannot answer "is the build
-// on disk the build the release publishes now?". The fingerprint recorded at
-// install time answers it, including for releases that carry no commit SHA.
 function read_tachyon_build_fingerprint() {
     let fields = split(trim(read_file(TACHYON_BUILD_STATE_FILE)), "\t");
     if (length(fields) < 2 || trim(as_string(fields[0])) != trim(as_string(TACHYON_VERSION)))
@@ -1297,6 +1278,9 @@ function read_tachyon_build_fingerprint() {
     return trim(as_string(fields[1]));
 }
 
+// A release tag can be rebuilt, so the version alone cannot answer "is the build
+// on disk the build the release publishes now?". The fingerprint recorded at
+// install time answers it, including for releases that carry no commit SHA.
 function write_tachyon_build_fingerprint(version, fingerprint) {
     if (as_string(version) == "" || as_string(fingerprint) == "")
         return;
@@ -1306,10 +1290,6 @@ function write_tachyon_build_fingerprint(version, fingerprint) {
     write_file(TACHYON_BUILD_STATE_FILE, as_string(version) + "\t" + as_string(fingerprint) + "\n");
 }
 
-// Called after a successful install/reinstall. Uses the release context from the
-// operation rather than re-fetching latest release metadata. This is critical
-// for install_version where the installed tag may differ from the latest release.
-// release_ctx is an optional object with {source_sha, fingerprint} from the resolved release.
 function record_tachyon_installed_build(version, release_ctx) {
     let sha = "";
     let fingerprint = "";
@@ -1341,6 +1321,10 @@ function record_tachyon_installed_build(version, release_ctx) {
     return extra;
 }
 
+// Called after a successful install/reinstall. Uses the release context from the
+// operation rather than re-fetching latest release metadata. This is critical
+// for install_version where the installed tag may differ from the latest release.
+// release_ctx is an optional object with {source_sha, fingerprint} from the resolved release.
 function retry_resolve(description, fn) {
     for (let attempt = 1; attempt <= 3; attempt++) {
         if (fn())
@@ -2313,6 +2297,22 @@ function read_sing_box_binary_version(binary, library_dir) {
         updates_log("Failed to parse sing-box version from binary " + binary + (trimmed_raw != "" ? "; output: " + trimmed_raw : "; binary produced no output"), "warn");
     }
     return version;
+}
+
+function verify_binary_post_install(binary_path, expected_version, version_cmd_args) {
+    if (!file_exists(binary_path)) {
+        updates_log("Post-install verification failed: binary not found at " + binary_path, "error");
+        return false;
+    }
+    if (type(version_cmd_args) == "array" && length(version_cmd_args) > 0) {
+        let actual = read_sing_box_binary_version(binary_path, "");
+        if (actual == "") {
+            updates_log("Post-install verification: cannot read version from " + binary_path, "warn");
+        } else if (as_string(expected_version) != "" && actual != as_string(expected_version)) {
+            updates_log("Post-install binary version mismatch: expected=" + as_string(expected_version) + " actual=" + actual, "warn");
+        }
+    }
+    return true;
 }
 
 function validate_sing_box_extended_binary(binary, library_dir) {

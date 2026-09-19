@@ -71,6 +71,46 @@ function getRuleEditButtonText() {
   return _("Edit");
 }
 
+function createSvgIcon(children) {
+  const attrs = {
+    viewBox: "0 0 24 24",
+    width: "16",
+    height: "16",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+    "aria-hidden": "true",
+    focusable: "false",
+  };
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  Object.entries(attrs).forEach(([key, value]) =>
+    svg.setAttribute(key, `${value}`),
+  );
+  children.forEach(({ tag, attrs: childAttrs }) => {
+    const node = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      tag,
+    );
+    Object.entries(childAttrs).forEach(([key, value]) =>
+      node.setAttribute(key, `${value}`),
+    );
+    svg.appendChild(node);
+  });
+  return svg;
+}
+
+function createCloneIcon() {
+  return createSvgIcon([
+    { tag: "rect", attrs: { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" } },
+    {
+      tag: "path",
+      attrs: { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" },
+    },
+  ]);
+}
+
 function configureGridSection(sectionRef, type, title, addTitle) {
   sectionRef.anonymous = false;
   sectionRef.addremove = true;
@@ -158,14 +198,43 @@ function configureGridSection(sectionRef, type, title, addTitle) {
         _("Rules"),
       );
 
+      const cloneBtn = E(
+        "button",
+        {
+          type: "button",
+          class: "btn cbi-button cbi-button-action",
+          title: _("Clone"),
+          "aria-label": _("Clone"),
+          click: function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const newId = section.cloneSection(section_id);
+            if (newId) {
+              Promise.resolve(sectionRef.map.load())
+                .then(() => sectionRef.map.render())
+                .catch(() => null);
+              ui.addNotification(
+                null,
+                E("p", {}, _("Section cloned") + `: ${newId}`),
+                "info",
+              );
+            }
+          },
+        },
+        createCloneIcon(),
+      );
+
       if (els && els.lastElementChild) {
         const div = els.lastElementChild;
         const editBtn = div.querySelector(".cbi-button-edit");
         if (editBtn) {
           div.insertBefore(btn, editBtn);
+          div.insertBefore(cloneBtn, editBtn);
           btn.style.marginRight = "5px";
+          cloneBtn.style.marginRight = "5px";
         } else {
           div.appendChild(btn);
+          div.appendChild(cloneBtn);
         }
       }
     }

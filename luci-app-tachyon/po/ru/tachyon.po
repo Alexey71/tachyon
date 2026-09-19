@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TACHYON\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 06:47+0300\n"
-"PO-Revision-Date: 2026-09-19 06:47+0300\n"
+"POT-Creation-Date: 2026-09-19 07:31+0300\n"
+"PO-Revision-Date: 2026-09-19 07:31+0300\n"
 "Last-Translator: Dushnilin\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -1054,6 +1054,9 @@ msgstr "Публичный ключ клиента"
 
 msgid "Client VPN IP address (e.g. 10.0.0.2/32)"
 msgstr "VPN IP-адрес клиента (например, 10.0.0.2/32)"
+
+msgid "Clone"
+msgstr ""
 
 msgid "Close"
 msgstr "Закрыть"
@@ -4453,6 +4456,9 @@ msgstr "Секция"
 
 msgid "Section action"
 msgstr "Действие секции"
+
+msgid "Section cloned"
+msgstr ""
 
 msgid "Section name"
 msgstr "Имя секции"

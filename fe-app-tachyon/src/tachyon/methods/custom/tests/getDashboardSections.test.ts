@@ -181,6 +181,54 @@ describe('getDashboardSections', () => {
     ]);
   });
 
+  it('hides every N/A server when hide_na_servers is enabled', async () => {
+    mocks.getConfigSections.mockResolvedValue([
+      proxySection({ dashboard_hide_na_servers: '1' }),
+    ]);
+    mocks.getClashApiProxies.mockResolvedValue({
+      success: true,
+      data: {
+        proxies: {
+          'main-out': proxy('Selector', {
+            name: 'main-out',
+            now: 'main-1-out',
+            all: ['main-1-out', 'main-2-out', 'main-3-out'],
+          }),
+          'main-1-out': proxy('VLESS', {
+            name: 'Included 1',
+            history: [{ time: '2026-05-27T00:00:00Z', delay: 100 }],
+          }),
+          'main-2-out': proxy('VLESS', { name: 'Never tested' }),
+          'main-3-out': proxy('VLESS', {
+            name: 'Included 3',
+            history: [{ time: '2026-05-27T00:00:00Z', delay: -1 }],
+          }),
+        },
+      },
+    });
+
+    const result = await getDashboardSections();
+    const [section] = result.data;
+
+    expect(result.success).toBe(true);
+    expect(section.outbounds.map((item) => item.code)).toEqual(['main-1-out']);
+  });
+
+  it('keeps N/A servers visible when hide_na_servers is disabled', async () => {
+    mocks.getConfigSections.mockResolvedValue([proxySection()]);
+
+    const result = await getDashboardSections();
+    const [section] = result.data;
+
+    expect(result.success).toBe(true);
+    expect(section.outbounds.map((item) => item.code)).toEqual([
+      'main-urltest-out',
+      'main-1-out',
+      'main-2-out',
+      'main-3-out',
+    ]);
+  });
+
   it('hydrates URLTest details from the section cache and Clash API', async () => {
     mocks.getConfigSections.mockResolvedValue([proxySection()]);
     mocks.getClashApiProxies.mockResolvedValue({

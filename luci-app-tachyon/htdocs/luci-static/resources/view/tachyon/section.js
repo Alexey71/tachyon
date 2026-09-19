@@ -12880,6 +12880,127 @@ function cascadeDeleteSection(section_id) {
   } catch (_e) {}
 }
 
+function makeUniqueSectionId(baseId) {
+  const base = `${baseId || "section"}`.replace(/[^A-Za-z0-9_]/g, "_");
+  if (!uci.get(UCI_PACKAGE, base)) return base;
+
+  let index = 1;
+  let candidate = `${base}_copy`;
+  while (uci.get(UCI_PACKAGE, candidate)) {
+    index += 1;
+    candidate = `${base}_copy${index}`;
+  }
+  return candidate;
+}
+
+function copySectionOptions(sourceId, targetId, overrides = {}) {
+  const source = (uci.sections(UCI_PACKAGE, "section") || []).find(
+    (item) => item[".name"] === sourceId,
+  );
+  if (!source) return;
+
+  Object.entries(source).forEach(([key, value]) => {
+    if (key.startsWith(".")) return;
+    if (Object.prototype.hasOwnProperty.call(overrides, key)) return;
+    if (value === undefined || value === null) return;
+    uci.set(UCI_PACKAGE, targetId, key, value);
+  });
+
+  Object.entries(overrides).forEach(([key, value]) => {
+    uci.set(UCI_PACKAGE, targetId, key, value);
+  });
+}
+
+function copyChildSections(sourceId, targetId) {
+  // Subscriptions, interfaces and URLTest groups are owned directly by the
+  // section. Priority levels are owned by their group, so groups are cloned
+  // first and their levels remapped to the fresh group id.
+  try {
+    const groups = (uci.sections(UCI_PACKAGE, "priority_group") || []).filter(
+      (item) => item.section === sourceId,
+    );
+
+    groups.forEach((group) => {
+      const sourceGroupId = group[".name"];
+      const newGroupId = uci.add(UCI_PACKAGE, "priority_group");
+      if (!newGroupId) return;
+
+      Object.entries(group).forEach(([key, value]) => {
+        if (key.startsWith(".")) return;
+        if (key === "section") return;
+        if (value === undefined || value === null) return;
+        uci.set(UCI_PACKAGE, newGroupId, key, value);
+      });
+      uci.set(UCI_PACKAGE, newGroupId, "section", targetId);
+
+      (uci.sections(UCI_PACKAGE, "priority_level") || [])
+        .filter((level) => level.group === sourceGroupId)
+        .forEach((level) => {
+          const newLevelId = uci.add(UCI_PACKAGE, "priority_level");
+          if (!newLevelId) return;
+          Object.entries(level).forEach(([key, value]) => {
+            if (key.startsWith(".")) return;
+            if (key === "group" || key === "section") return;
+            if (value === undefined || value === null) return;
+            uci.set(UCI_PACKAGE, newLevelId, key, value);
+          });
+          uci.set(UCI_PACKAGE, newLevelId, "group", newGroupId);
+        });
+    });
+
+    (uci.sections(UCI_PACKAGE, "priority_level") || [])
+      .filter((level) => level.section === sourceId && !level.group)
+      .forEach((level) => {
+        const newLevelId = uci.add(UCI_PACKAGE, "priority_level");
+        if (!newLevelId) return;
+        Object.entries(level).forEach(([key, value]) => {
+          if (key.startsWith(".")) return;
+          if (key === "section") return;
+          if (value === undefined || value === null) return;
+          uci.set(UCI_PACKAGE, newLevelId, key, value);
+        });
+        uci.set(UCI_PACKAGE, newLevelId, "section", targetId);
+      });
+
+    ["subscription_url", "section_interface", "urltest"].forEach((typeName) => {
+      (uci.sections(UCI_PACKAGE, typeName) || [])
+        .filter((item) => item.section === sourceId)
+        .forEach((item) => {
+          const newItemId = uci.add(UCI_PACKAGE, typeName);
+          if (!newItemId) return;
+          Object.entries(item).forEach(([key, value]) => {
+            if (key.startsWith(".")) return;
+            if (key === "section") return;
+            if (value === undefined || value === null) return;
+            uci.set(UCI_PACKAGE, newItemId, key, value);
+          });
+          uci.set(UCI_PACKAGE, newItemId, "section", targetId);
+        });
+    });
+  } catch (_e) {}
+}
+
+function cloneSection(section_id) {
+  if (!section_id || !uci.get(UCI_PACKAGE, section_id)) return null;
+
+  const targetId = makeUniqueSectionId(section_id);
+  if (!uci.add(UCI_PACKAGE, "section", targetId)) return null;
+
+  const sourceLabel =
+    uci.get(UCI_PACKAGE, section_id, "label") ||
+    uci.get(UCI_PACKAGE, section_id, "name") ||
+    section_id;
+  const sourceName = uci.get(UCI_PACKAGE, section_id, "name") || section_id;
+
+  copySectionOptions(section_id, targetId, {
+    label: `${sourceLabel} (${_("Copy")})`,
+    name: `${sourceName} (${_("Copy")})`,
+  });
+  copyChildSections(section_id, targetId);
+
+  return targetId;
+}
+
 function configureSectionSection(sectionRef, options = {}) {
   setActionProvidersAvailabilityLoader(options.loadActionProvidersAvailability);
 
@@ -12944,6 +13065,7 @@ function configureSectionSection(sectionRef, options = {}) {
 
 const EntryPoint = {
   cascadeDeleteSection,
+  cloneSection,
   configureSectionSection,
   createSectionContent,
   setActionProvidersAvailabilityLoader,

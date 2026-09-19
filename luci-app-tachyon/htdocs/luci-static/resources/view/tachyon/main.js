@@ -4744,8 +4744,12 @@ function isUrlTestEnabled(section) {
 }
 function shouldHideNaServers(configSections) {
   return configSections.some(
-    (s) => s.action === "connection" && s.dashboard_hide_na_servers === "1"
+    (s) => isConnectionAction(s.action) && s.dashboard_hide_na_servers === "1"
   );
+}
+function isNaOutbound(outbound) {
+  if (outbound.runtimeAvailable === false) return true;
+  return !outbound.latency && outbound.latency !== -1;
 }
 function shouldUseProxyGroup(section) {
   return getManualProxyLinks(section).length > 0 || hasSubscriptionSources(section) || getConnectionInterfaces(section).length > 0 || getJsonOutbounds(section).length > 0 || isUrlTestEnabled(section) || hasConfiguredPriorityList(section);
@@ -5657,7 +5661,7 @@ async function getDashboardSections(options = {}) {
           cachedProxyLinks
         );
         const hideNa = shouldHideNaServers(configSections);
-        const filteredOutbounds = hideNa ? outbounds.filter((o) => o.runtimeAvailable !== false) : outbounds;
+        const filteredOutbounds = hideNa ? outbounds.filter((o) => !isNaOutbound(o)) : outbounds;
         return {
           withTagSelect: true,
           code: selector?.code || sectionName,

@@ -459,8 +459,16 @@ function isUrlTestEnabled(section: Tachyon.ConfigSection) {
 
 function shouldHideNaServers(configSections: Tachyon.ConfigSection[]) {
   return configSections.some(
-    (s) => s.action === 'connection' && s.dashboard_hide_na_servers === '1',
+    (s) => isConnectionAction(s.action) && s.dashboard_hide_na_servers === '1',
   );
+}
+
+// A server is rendered as N/A when it is missing from the sing-box runtime or
+// when no latency has ever been measured for it. "Not responding" (-1) is a
+// distinct, meaningful state and stays visible.
+function isNaOutbound(outbound: Tachyon.Outbound) {
+  if (outbound.runtimeAvailable === false) return true;
+  return !outbound.latency && outbound.latency !== -1;
 }
 
 function shouldUseProxyGroup(section: Tachyon.ConfigSection) {
@@ -1777,7 +1785,7 @@ export async function getDashboardSections(
 
           const hideNa = shouldHideNaServers(configSections);
           const filteredOutbounds = hideNa
-            ? outbounds.filter((o) => o.runtimeAvailable !== false)
+            ? outbounds.filter((o) => !isNaOutbound(o))
             : outbounds;
 
           return {
