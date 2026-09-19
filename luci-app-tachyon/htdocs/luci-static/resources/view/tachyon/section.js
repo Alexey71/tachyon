@@ -10995,6 +10995,7 @@ function createSectionContent(section) {
     "wdtt",
     "olcrtc",
     "fptn",
+    "bypass",
   ].forEach((act) => geoipModeOption.depends("action", act));
 
   o = section.taboption(
@@ -11051,6 +11052,7 @@ function createSectionContent(section) {
     "wdtt",
     "olcrtc",
     "fptn",
+    "bypass",
   ].forEach((act) => o.depends("action", act));
 
   const domainConditionOption = addTextConditionField(section, {
