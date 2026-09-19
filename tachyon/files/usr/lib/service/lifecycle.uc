@@ -943,7 +943,7 @@ function start_main() {
         return status;
     }
 
-    let sb_pid = module_output([ STATE_UC, "sing-box-service-pid-runtime" ]);
+    let sb_pid = module_output(STATE_UC, [ "sing-box-service-pid-runtime" ]);
     if (match(trim(sb_pid), /^[0-9]+$/) != null)
         module_success(STATE_UC, [ "write-provenance", trim(sb_pid) ]);
 
